@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { RefreshCw, TrendingUp, TrendingDown, Zap, AlertTriangle } from 'lucide-react'
 import { fetchWalletStats } from '../lib/helius'
 

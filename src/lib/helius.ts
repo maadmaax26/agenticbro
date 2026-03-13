@@ -10,7 +10,7 @@ interface WalletStats {
 }
 
 export async function fetchWalletStats(walletAddress: string): Promise<WalletStats> {
-  const apiKey = import.meta.env.VITE_HELIUS_API_KEY
+  const apiKey = (import.meta as any).env.VITE_HELIUS_API_KEY
 
   if (!apiKey) {
     console.warn('Helius API key not configured, using mock data')
@@ -39,7 +39,7 @@ export async function fetchWalletStats(walletAddress: string): Promise<WalletSta
   }
 }
 
-function analyzeTransactions(transactions: any[]): WalletStats {
+function analyzeTransactions(_transactions: any[]): WalletStats {
   // TODO: Implement real transaction analysis
   // This would:
   // 1. Filter for swap transactions (Jupiter, Raydium, etc.)

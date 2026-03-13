@@ -17,10 +17,10 @@ interface RoastResponse {
 }
 
 // Configuration
-const AI_PROVIDER = import.meta.env.VITE_AI_PROVIDER || 'ollama' // 'ollama' or 'openai'
-const OLLAMA_API_URL = import.meta.env.VITE_OLLAMA_API_URL || 'https://api.ollama.com'
-const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'glm-4.7:cloud'
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY
+const AI_PROVIDER = (import.meta as any).env.VITE_AI_PROVIDER || 'ollama' // 'ollama' or 'openai'
+const OLLAMA_API_URL = (import.meta as any).env.VITE_OLLAMA_API_URL || 'https://api.ollama.com'
+const OLLAMA_MODEL = (import.meta as any).env.VITE_OLLAMA_MODEL || 'glm-4.7:cloud'
+const OPENAI_API_KEY = (import.meta as any).env.VITE_OPENAI_API_KEY
 
 export async function generateRoast(options: RoastOptions): Promise<RoastResponse> {
   if (AI_PROVIDER === 'ollama') {
@@ -197,7 +197,7 @@ function generateMockRoast(options: RoastOptions): RoastResponse {
     },
     {
       condition: (stats: any) => stats.winRate < 35,
-      text: `${stats.winRate}% win rate? That's not bad for a blindfolded toddler throwing darts at a ticker tape. Maybe try staking SOL like a normal human.`,
+      text: `${options.walletStats.winRate}% win rate? That's not bad for a blindfolded toddler throwing darts at a ticker tape. Maybe try staking SOL like a normal human.`,
       sentiment: 'negative' as const
     },
     {
@@ -217,7 +217,7 @@ function generateMockRoast(options: RoastOptions): RoastResponse {
     },
     {
       condition: (stats: any) => stats.totalTrades > 50,
-      text: `${stats.totalTrades} trades? That's not investing, that's an unpaid internship for liquidity providers.`,
+      text: `${options.walletStats.totalTrades} trades? That's not investing, that's an unpaid internship for liquidity providers.`,
       sentiment: 'negative' as const
     },
   ]
