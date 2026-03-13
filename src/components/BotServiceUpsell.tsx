@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Zap, ExternalLink } from 'lucide-react'
 
 export default function BotServiceUpsell() {
