@@ -2,6 +2,11 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import PortfolioCard from './components/PortfolioCard'
 import RoastDisplay from './components/RoastDisplay'
+import SignalFeed from './components/dashboard/SignalFeed'
+import TradeAnalysis from './components/dashboard/TradeAnalysis'
+import AlertFeed from './components/dashboard/AlertFeed'
+import AutonomousAlphaUpsell from './components/AutonomousAlphaUpsell'
+import BotServiceUpsell from './components/BotServiceUpsell'
 
 function App() {
   const { connected } = useWallet()
@@ -67,11 +72,18 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
             <PortfolioCard />
             <RoastDisplay />
           </div>
-        )}
+
+          {/* New: Trading Signals Section */}
+          <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+            <SignalFeed />
+            <TradeAnalysis />
+            <AlertFeed />
+          </div>
+        )}}
       </main>
 
       <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
