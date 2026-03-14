@@ -83,7 +83,7 @@ function App() {
             <TradeAnalysis />
             <AlertFeed />
           </div>
-        )}}
+        )
       </main>
 
       <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
