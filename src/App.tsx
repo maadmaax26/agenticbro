@@ -105,9 +105,9 @@ function App() {
             </div>
           </>
         )}
-        </>
-      )}
       </main>
+      </>
+    )}
 
       {!showValueProp && (
         <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
