@@ -5,6 +5,7 @@ import RoastDisplay from './components/RoastDisplay'
 import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
+import DailyReport from './components/dashboard/DailyReport'
 
 function App() {
   const { connected } = useWallet()
@@ -76,11 +77,16 @@ function App() {
               <RoastDisplay />
             </div>
 
-            {/* New: Trading Signals Section */}
-            <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+            {/* Trading Signals Section */}
+            <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto mb-6">
               <SignalFeed />
               <TradeAnalysis />
               <AlertFeed />
+            </div>
+
+            {/* Daily Market Report */}
+            <div className="max-w-7xl mx-auto mb-6">
+              <DailyReport />
             </div>
           </>
         )}
