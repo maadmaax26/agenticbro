@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import PortfolioCard from './components/PortfolioCard'
@@ -6,29 +7,43 @@ import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
+import ValueProposition from './components/ValueProposition'
 
 function App() {
   const { connected } = useWallet()
+  const [showValueProp, setShowValueProp] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-black">
       {/* Animated background effect */}
       <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-30" />
 
-      <header className="relative z-10 p-6 flex justify-between items-center backdrop-blur-sm bg-black/20">
-        <div className="flex items-center gap-3">
-          <div className="text-4xl">🤖</div>
-          <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
-              Agentic Bro
-            </h1>
-            <p className="text-xs text-purple-300 font-mono">
-              Your agentic degen advisor
-            </p>
-          </div>
-        </div>
-        <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold" />
-      </header>
+      {showValueProp ? (
+        <ValueProposition onBack={() => setShowValueProp(false)} />
+      ) : (
+        <>
+          <header className="relative z-10 p-6 flex justify-between items-center backdrop-blur-sm bg-black/20">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl">🤖</div>
+              <div>
+                <h1 className="text-3xl font-bold text-white tracking-tight">
+                  Agentic Bro
+                </h1>
+                <p className="text-xs text-purple-300 font-mono">
+                  Your agentic degen advisor
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowValueProp(true)}
+                className="px-4 py-2 bg-purple-600/50 hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Why Agentic Bro?
+              </button>
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold" />
+            </div>
+          </header>
 
       <main className="relative z-10 container mx-auto p-6">
         {!connected ? (
@@ -90,11 +105,15 @@ function App() {
             </div>
           </>
         )}
+        </>
+      )}
       </main>
 
-      <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
-        <p>Built for degens, by degens • <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
-      </footer>
+      {!showValueProp && (
+        <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
+          <p>Built for degens, by degens • <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
+        </footer>
+      )}
     </div>
   )
 }
