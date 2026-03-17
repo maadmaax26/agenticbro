@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating } from './hooks/useTokenGating'
@@ -16,6 +16,19 @@ function App() {
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, loading: gatingLoading } = useTokenGating()
+
+  // Denial popover state — null = hidden, 'holder' | 'whale' = show message
+  const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
+
+  const handleTierClick = useCallback((tier: 'holder' | 'whale', url: string) => {
+    const unlocked = tier === 'holder' ? holderTierUnlocked : whaleTierUnlocked
+    if (unlocked) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      setDenied(tier)
+      setTimeout(() => setDenied(null), 3500)
+    }
+  }, [holderTierUnlocked, whaleTierUnlocked])
 
   return (
     <div className="min-h-screen" style={{
@@ -54,55 +67,68 @@ function App() {
               </div>
             </div>
 
-            {/* Center — live token-gated tier badges */}
+            {/* Center — tier access buttons (click-to-check balance) */}
             <div className="flex items-center gap-3">
-              {/* Holder Tier */}
-              {gatingLoading ? (
-                <div className="px-3 py-1 rounded-md border border-purple-500/30 text-purple-400 text-xs animate-pulse">…</div>
-              ) : holderTierUnlocked ? (
-                <div
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold"
-                  style={{background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}}
-                  title={`Balance: ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`}
-                >
-                  <span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span>
-                  💰 Holder Tier
-                </div>
-              ) : (
-                <a
-                  href="https://agenticbro.app/holder"
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-colors hover:brightness-125"
-                  style={{background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title="Hold 10,000 AGNTCBRO (~$100) to unlock"
-                >
-                  🔒 Holder Tier
-                </a>
-              )}
 
-              {/* Whale Tier */}
-              {gatingLoading ? (
-                <div className="px-3 py-1 rounded-md border border-cyan-500/30 text-cyan-400 text-xs animate-pulse">…</div>
-              ) : whaleTierUnlocked ? (
-                <div
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold"
-                  style={{background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}}
-                  title={`Balance: ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`}
+              {/* Holder Tier button */}
+              <div className="relative">
+                <button
+                  onClick={() => handleTierClick('holder', 'https://agenticbro.app/holder')}
+                  disabled={gatingLoading}
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
+                  style={holderTierUnlocked
+                    ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
+                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
+                  title={holderTierUnlocked
+                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`
+                    : 'Requires 10,000 AGNTCBRO (~$100)'}
                 >
-                  <span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span>
-                  🐋 Whale Tier
-                </div>
-              ) : (
-                <a
-                  href="https://agenticbro.app/whale"
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-colors hover:brightness-125"
-                  style={{background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title="Hold 100,000 AGNTCBRO (~$1,000) to unlock"
-                >
-                  🔒 Whale Tier
-                </a>
-              )}
+                  {gatingLoading ? (
+                    <span className="animate-pulse">…</span>
+                  ) : holderTierUnlocked ? (
+                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 💰 Holder Tier</>
+                  ) : (
+                    <>🔒 Holder Tier</>
+                  )}
+                </button>
+                {denied === 'holder' && (
+                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
+                    ⛔ You do not meet the access criteria
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
+                  </div>
+                )}
+              </div>
 
-              {/* Live balance pill — only show when wallet is connected */}
+              {/* Whale Tier button */}
+              <div className="relative">
+                <button
+                  onClick={() => handleTierClick('whale', 'https://agenticbro.app/whale')}
+                  disabled={gatingLoading}
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
+                  style={whaleTierUnlocked
+                    ? {background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}
+                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
+                  title={whaleTierUnlocked
+                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`
+                    : 'Requires 10,000 AGNTCBRO (~$100)'}
+                >
+                  {gatingLoading ? (
+                    <span className="animate-pulse">…</span>
+                  ) : whaleTierUnlocked ? (
+                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🐋 Whale Tier</>
+                  ) : (
+                    <>🔒 Whale Tier</>
+                  )}
+                </button>
+                {denied === 'whale' && (
+                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
+                    ⛔ You do not meet the access criteria
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
+                  </div>
+                )}
+              </div>
+
+              {/* Live balance pill — only when connected */}
               {connected && !gatingLoading && (
                 <div className="px-3 py-1 rounded-full text-xs font-mono border border-purple-500/30 text-purple-300 bg-black/30">
                   {balance.toLocaleString()} AGNTCBRO
@@ -209,36 +235,6 @@ function App() {
               <div className="flex justify-center">
                 <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-bold !text-base !px-8 !py-3 !rounded-xl" />
               </div>
-            </div>
-          </div>
-        ) : !holderTierUnlocked ? (
-          /* Wallet connected but insufficient AGNTCBRO balance */
-          <div className="max-w-xl mx-auto text-center py-20">
-            <div className="text-6xl mb-6">🔒</div>
-            <h2 className="text-3xl font-bold text-white mb-3">Access Restricted</h2>
-            <p className="text-gray-400 mb-2">
-              Your wallet holds <span className="text-white font-semibold">{balance.toLocaleString()} AGNTCBRO</span>
-              {balance > 0 && <span className="text-gray-500"> (~${usdValue.toFixed(2)})</span>}
-            </p>
-            <p className="text-gray-400 mb-8">
-              You need at least <span className="text-purple-300 font-semibold">10,000 AGNTCBRO (~$100)</span> to unlock the dashboard.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="https://agenticbro.app/holder"
-                className="px-8 py-3 rounded-xl font-bold text-white transition-colors"
-                style={{background: 'rgba(139,92,246,0.7)', border: '1px solid rgba(139,92,246,0.9)'}}
-              >
-                💰 Get Holder Tier — $100
-              </a>
-              <a
-                href="/AgenticBro_WhitePaper.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3 rounded-xl font-bold text-cyan-300 border border-cyan-500/50 bg-cyan-900/20 hover:bg-cyan-900/40 transition-colors"
-              >
-                Read White Paper
-              </a>
             </div>
           </div>
         ) : (
