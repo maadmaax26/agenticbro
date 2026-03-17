@@ -15,15 +15,16 @@ function App() {
   const { connected } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
+  const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
   const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
 
-  const handleTierClick = useCallback((tier: 'holder' | 'whale', url: string) => {
+  const handleTierClick = useCallback((tier: 'holder' | 'whale') => {
     const unlocked = tier === 'holder' ? holderTierUnlocked : whaleTierUnlocked
     if (unlocked) {
-      window.open(url, '_blank', 'noopener,noreferrer')
+      setShowTierPage(tier)
     } else {
       setDenied(tier)
       setTimeout(() => setDenied(null), 3500)
@@ -43,7 +44,35 @@ function App() {
       {/* Subtle purple grid on top */}
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-      {showValueProp ? (
+      {showTierPage ? (
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6">
+          <div className="text-center bg-black/40 backdrop-blur-md rounded-2xl border p-12 max-w-md"
+            style={{ borderColor: showTierPage === 'holder' ? 'rgba(139,92,246,0.4)' : 'rgba(6,182,212,0.4)' }}>
+            <div className="text-5xl mb-4">{showTierPage === 'holder' ? '💰' : '🐋'}</div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {showTierPage === 'holder' ? 'Holder Tier' : 'Whale Tier'}
+            </h2>
+            <p className="text-lg font-semibold mb-4"
+              style={{ color: showTierPage === 'holder' ? '#c4b5fd' : '#67e8f9' }}>
+              Coming Soon
+            </p>
+            <p className="text-sm text-gray-400 mb-8">
+              {showTierPage === 'holder'
+                ? 'Exclusive tools and insights for AGNTCBRO holders are on the way.'
+                : 'Premium whale-level analytics and alpha are being built.'}
+            </p>
+            <button
+              onClick={() => setShowTierPage(null)}
+              className="px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125"
+              style={showTierPage === 'holder'
+                ? { background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd' }
+                : { background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9' }}
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      ) : showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
         <Roadmap onBack={() => setShowRoadmap(false)} />
@@ -73,7 +102,7 @@ function App() {
               {/* Holder Tier button */}
               <div className="relative">
                 <button
-                  onClick={() => handleTierClick('holder', 'https://agenticbro.app/holder')}
+                  onClick={() => handleTierClick('holder')}
                   disabled={gatingLoading}
                   className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
                   style={holderTierUnlocked
@@ -102,7 +131,7 @@ function App() {
               {/* Whale Tier button */}
               <div className="relative">
                 <button
-                  onClick={() => handleTierClick('whale', 'https://agenticbro.app/whale')}
+                  onClick={() => handleTierClick('whale')}
                   disabled={gatingLoading}
                   className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
                   style={whaleTierUnlocked
@@ -142,23 +171,23 @@ function App() {
                 href="/AgenticBro_WhitePaper.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 White Paper
               </a>
               <button
                 onClick={() => setShowRoadmap(true)}
-                className="px-4 py-2 bg-purple-600/50 hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 Roadmap
               </button>
               <button
                 onClick={() => setShowValueProp(true)}
-                className="px-4 py-2 bg-purple-600/50 hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                className="px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 Why Agentic Bro?
               </button>
-              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold" />
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto" />
             </div>
           </header>
 
@@ -252,7 +281,7 @@ function App() {
       </>
     )}
 
-      {!showValueProp && !showRoadmap && (
+      {!showValueProp && !showRoadmap && !showTierPage && (
         <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
           <p className="text-gray-500">
             Built for degens, by degens •{' '}
