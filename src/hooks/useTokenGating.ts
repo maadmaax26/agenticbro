@@ -149,7 +149,7 @@ const FALLBACK_RPCS = [
 async function fetchTokenAccountsWithFallback(
   primaryConnection: import('@solana/web3.js').Connection,
   owner: import('@solana/web3.js').PublicKey,
-): Promise<import('@solana/web3.js').RpcResponseAndContext<Array<import('@solana/web3.js').ParsedTokenAccountData extends infer T ? any : any>> | null> {
+): Promise<{ value: Array<{ account: { data: any } }> } | null> {
   // We just need the raw result, use dynamic import to get Connection class
   const { Connection } = await import('@solana/web3.js')
 
