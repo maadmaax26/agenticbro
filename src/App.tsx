@@ -58,12 +58,10 @@ function App() {
             <div className="flex items-center gap-3">
               {/* Holder Tier */}
               {gatingLoading ? (
-                <div className="px-4 py-2 rounded-lg border border-purple-500/30 text-purple-400 text-sm animate-pulse">
-                  Checking balance…
-                </div>
+                <div className="px-3 py-1 rounded-md border border-purple-500/30 text-purple-400 text-xs animate-pulse">…</div>
               ) : holderTierUnlocked ? (
                 <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-bold"
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold"
                   style={{background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}}
                   title={`Balance: ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`}
                 >
@@ -73,7 +71,7 @@ function App() {
               ) : (
                 <a
                   href="https://agenticbro.app/holder"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-bold transition-colors hover:brightness-125"
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-colors hover:brightness-125"
                   style={{background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                   title="Hold 10,000 AGNTCBRO (~$100) to unlock"
                 >
@@ -83,12 +81,10 @@ function App() {
 
               {/* Whale Tier */}
               {gatingLoading ? (
-                <div className="px-4 py-2 rounded-lg border border-cyan-500/30 text-cyan-400 text-sm animate-pulse">
-                  Checking balance…
-                </div>
+                <div className="px-3 py-1 rounded-md border border-cyan-500/30 text-cyan-400 text-xs animate-pulse">…</div>
               ) : whaleTierUnlocked ? (
                 <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-bold"
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold"
                   style={{background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}}
                   title={`Balance: ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`}
                 >
@@ -98,9 +94,9 @@ function App() {
               ) : (
                 <a
                   href="https://agenticbro.app/whale"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-bold transition-colors hover:brightness-125"
+                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-colors hover:brightness-125"
                   style={{background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title="Hold 10,000 AGNTCBRO (~$100) to unlock"
+                  title="Hold 100,000 AGNTCBRO (~$1,000) to unlock"
                 >
                   🔒 Whale Tier
                 </a>
