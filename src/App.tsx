@@ -259,6 +259,18 @@ function App() {
           </div>
         ) : (
           <>
+            {/* Wallet bar — quick access to wallet functions */}
+            <div className="flex items-center justify-between max-w-6xl mx-auto mb-4 mt-4 px-1">
+              <div className="flex items-center gap-3">
+                <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto !leading-normal !min-w-0" />
+                {!gatingLoading && (
+                  <span className="px-3 py-1 rounded-full text-xs font-mono border border-purple-500/30 text-purple-300 bg-black/30">
+                    {balance.toLocaleString()} AGNTCBRO {usdValue > 0 ? `· $${usdValue.toFixed(2)}` : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
               <PortfolioCard />
               <RoastDisplay />

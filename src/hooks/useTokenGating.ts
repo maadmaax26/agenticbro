@@ -4,37 +4,35 @@
  * Checks the connected wallet's AGNTCBRO balance on Solana mainnet and
  * fetches the live USD price to calculate tier access.
  *
- * Price sources (in order):
- *   1. DexScreener — pair bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k
- *   2. pump.fun    — mint 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump (fallback)
+ * Price sources (tried in order):
+ *   1. DexScreener API
+ *   2. pump.fun API (fallback)
  *
- * Balance sources (in order):
- *   1. Primary RPC from ConnectionProvider
- *   2. publicnode.com, ankr.com, api.mainnet-beta (fallbacks)
- *   3. Raw JSON-RPC POST as last resort
+ * Balance source:
+ *   Raw JSON-RPC POST via fetch() to multiple RPC endpoints.
+ *   This bypasses @solana/web3.js entirely for maximum reliability.
  *
  * Tier logic:
- *   USD value >= $100   → Holder Tier unlocked
- *   USD value >= $1,000 → Whale Tier unlocked
+ *   USD value >= $100   → Holder Tier
+ *   USD value >= $1,000 → Whale Tier
  */
 
-import { useEffect, useState, useRef } from 'react'
-import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { Connection, PublicKey } from '@solana/web3.js'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { useWallet } from '@solana/wallet-adapter-react'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const AGNTCBRO_MINT_STR = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
-const AGNTCBRO_MINT = new PublicKey(AGNTCBRO_MINT_STR)
+const AGNTCBRO_MINT = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
 
 const DEXSCREENER_PAIR = 'bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k'
 const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${DEXSCREENER_PAIR}`
-const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT_STR}`
+const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
 
 const HOLDER_TIER_USD = 100
 const WHALE_TIER_USD = 1000
 
-const FALLBACK_RPCS = [
+// Multiple RPC endpoints — tried in order, first success wins
+const RPC_ENDPOINTS = [
   'https://solana-rpc.publicnode.com',
   'https://rpc.ankr.com/solana',
   'https://api.mainnet-beta.solana.com',
@@ -67,13 +65,17 @@ const DEFAULT_STATE: TokenGatingState = {
 async function fetchPriceFromDexScreener(): Promise<number | null> {
   try {
     const res = await fetch(DEXSCREENER_API, { headers: { Accept: 'application/json' } })
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.warn('[TokenGating] DexScreener returned', res.status)
+      return null
+    }
     const data = await res.json()
     const raw = data?.pair?.priceUsd ?? data?.pairs?.[0]?.priceUsd ?? null
     if (raw === null) return null
     const price = parseFloat(raw)
     return isNaN(price) || price <= 0 ? null : price
-  } catch {
+  } catch (err) {
+    console.warn('[TokenGating] DexScreener fetch error:', err)
     return null
   }
 }
@@ -108,186 +110,146 @@ async function fetchPriceFromPumpFun(): Promise<number | null> {
 async function fetchLivePrice(): Promise<number> {
   const dex = await fetchPriceFromDexScreener()
   if (dex !== null) {
-    console.log('[TokenGating] DexScreener price:', dex)
+    console.log('[TokenGating] Price (DexScreener):', dex)
     return dex
   }
 
   console.warn('[TokenGating] DexScreener unavailable, trying pump.fun...')
   const pump = await fetchPriceFromPumpFun()
   if (pump !== null) {
-    console.log('[TokenGating] pump.fun price:', pump)
+    console.log('[TokenGating] Price (pump.fun):', pump)
     return pump
   }
 
-  console.error('[TokenGating] Both price feeds failed')
+  console.error('[TokenGating] All price feeds failed')
   return 0
 }
 
-// ─── Balance fetching ────────────────────────────────────────────────────────
+// ─── Balance fetching (raw JSON-RPC only — no web3.js dependency) ────────────
 
-/**
- * Try getParsedTokenAccountsByOwner via @solana/web3.js Connection objects.
- * Tries the primary (from ConnectionProvider), then fallback RPCs.
- */
-async function fetchBalanceViaWeb3(
-  primaryConn: Connection,
-  owner: PublicKey,
+async function fetchBalanceFromRpc(
+  rpcUrl: string,
+  ownerAddress: string,
 ): Promise<number | null> {
-  const connections = [
-    { conn: primaryConn, label: 'primary RPC' },
-    ...FALLBACK_RPCS.map(url => ({ conn: new Connection(url, 'confirmed'), label: url })),
-  ]
+  try {
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getTokenAccountsByOwner',
+        params: [
+          ownerAddress,
+          { mint: AGNTCBRO_MINT },
+          { encoding: 'jsonParsed' },
+        ],
+      }),
+    })
 
-  for (const { conn, label } of connections) {
-    try {
-      console.log(`[TokenGating] Trying ${label}...`)
-      const result = await conn.getParsedTokenAccountsByOwner(owner, { mint: AGNTCBRO_MINT })
-      console.log(`[TokenGating] ${label} returned ${result.value.length} account(s)`)
+    if (!res.ok) {
+      console.warn(`[TokenGating] ${rpcUrl} HTTP ${res.status}`)
+      return null
+    }
 
-      let balance = 0
-      for (const item of result.value) {
-        const tokenAmount = (item.account.data as any)?.parsed?.info?.tokenAmount
-        if (tokenAmount) {
-          const amt = tokenAmount.uiAmount ?? 0
-          console.log(`[TokenGating] Account balance: ${amt}`)
+    const json = await res.json()
+
+    if (json.error) {
+      console.warn(`[TokenGating] ${rpcUrl} RPC error:`, json.error.message ?? json.error)
+      return null
+    }
+
+    const accounts = json?.result?.value ?? []
+    console.log(`[TokenGating] ${rpcUrl} → ${accounts.length} account(s)`)
+
+    let balance = 0
+    for (const acct of accounts) {
+      const tokenAmount = acct?.account?.data?.parsed?.info?.tokenAmount
+      if (tokenAmount) {
+        const amt = Number(tokenAmount.uiAmount ?? tokenAmount.uiAmountString ?? 0)
+        if (!isNaN(amt)) {
+          console.log(`[TokenGating]   account balance: ${amt}`)
           balance += amt
         }
       }
-      return balance
-    } catch (err) {
-      console.warn(`[TokenGating] ${label} failed:`, err)
     }
+
+    return balance
+  } catch (err) {
+    console.warn(`[TokenGating] ${rpcUrl} fetch failed:`, err)
+    return null
   }
-  return null
 }
 
-/**
- * Last-resort: raw JSON-RPC POST to fetch token accounts.
- * Bypasses @solana/web3.js entirely in case there's a bundling issue.
- */
-async function fetchBalanceViaJsonRpc(ownerBase58: string): Promise<number | null> {
-  const body = JSON.stringify({
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'getTokenAccountsByOwner',
-    params: [
-      ownerBase58,
-      { mint: AGNTCBRO_MINT_STR },
-      { encoding: 'jsonParsed' },
-    ],
-  })
-
-  for (const url of FALLBACK_RPCS) {
-    try {
-      console.log(`[TokenGating] JSON-RPC fallback: ${url}`)
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      })
-      if (!res.ok) continue
-      const json = await res.json()
-      if (json.error) {
-        console.warn(`[TokenGating] JSON-RPC error from ${url}:`, json.error)
-        continue
-      }
-
-      let balance = 0
-      const accounts = json?.result?.value ?? []
-      console.log(`[TokenGating] JSON-RPC ${url} returned ${accounts.length} account(s)`)
-      for (const acct of accounts) {
-        const tokenAmount = acct?.account?.data?.parsed?.info?.tokenAmount
-        if (tokenAmount) {
-          const amt = tokenAmount.uiAmount ?? 0
-          console.log(`[TokenGating] JSON-RPC account balance: ${amt}`)
-          balance += amt
-        }
-      }
-      return balance
-    } catch (err) {
-      console.warn(`[TokenGating] JSON-RPC ${url} failed:`, err)
+async function fetchBalance(ownerAddress: string): Promise<number> {
+  for (const rpc of RPC_ENDPOINTS) {
+    console.log(`[TokenGating] Trying RPC: ${rpc}`)
+    const result = await fetchBalanceFromRpc(rpc, ownerAddress)
+    if (result !== null) {
+      console.log(`[TokenGating] Balance from ${rpc}: ${result}`)
+      return result
     }
   }
-  return null
-}
 
-/**
- * Fetch AGNTCBRO balance using web3.js first, then raw JSON-RPC as fallback.
- */
-async function fetchBalance(primaryConn: Connection, owner: PublicKey): Promise<number> {
-  // Try via @solana/web3.js first
-  const web3Balance = await fetchBalanceViaWeb3(primaryConn, owner)
-  if (web3Balance !== null) return web3Balance
-
-  console.warn('[TokenGating] All web3.js RPCs failed — trying raw JSON-RPC...')
-
-  // Last resort: raw fetch to RPC
-  const rpcBalance = await fetchBalanceViaJsonRpc(owner.toBase58())
-  if (rpcBalance !== null) return rpcBalance
-
-  console.error('[TokenGating] ALL balance fetch methods failed')
+  console.error('[TokenGating] ALL RPCs failed — could not read balance')
   return 0
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useTokenGating(): TokenGatingState {
-  const { connection } = useConnection()
   const { publicKey, connected } = useWallet()
   const [state, setState] = useState<TokenGatingState>(DEFAULT_STATE)
   const walletAddr = publicKey?.toBase58() ?? ''
-
-  // Ref to track latest run and prevent stale state updates
   const runId = useRef(0)
 
-  useEffect(() => {
-    if (!connected || !publicKey) {
+  const refresh = useCallback(async () => {
+    if (!connected || !walletAddr) {
       setState(DEFAULT_STATE)
       return
     }
 
     const currentRun = ++runId.current
+    setState(prev => ({ ...prev, loading: true, error: null }))
+    console.log(`[TokenGating] ── Run #${currentRun} for ${walletAddr} ──`)
 
-    async function run() {
-      setState(prev => ({ ...prev, loading: true, error: null }))
-      console.log(`[TokenGating] ── Run #${currentRun} for ${publicKey!.toBase58()} ──`)
+    try {
+      const [balance, livePrice] = await Promise.all([
+        fetchBalance(walletAddr),
+        fetchLivePrice(),
+      ])
 
-      try {
-        const [balance, livePrice] = await Promise.all([
-          fetchBalance(connection, publicKey!),
-          fetchLivePrice(),
-        ])
+      if (currentRun !== runId.current) return
 
-        // Discard result if a newer run started
-        if (currentRun !== runId.current) return
+      const usdValue = balance * livePrice
+      console.log(`[TokenGating] RESULT: ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
+      console.log(`[TokenGating] Holder ($${HOLDER_TIER_USD}): ${usdValue >= HOLDER_TIER_USD ? 'UNLOCKED' : 'locked'}`)
+      console.log(`[TokenGating] Whale ($${WHALE_TIER_USD}): ${usdValue >= WHALE_TIER_USD ? 'UNLOCKED' : 'locked'}`)
 
-        const usdValue = balance * livePrice
-        console.log(`[TokenGating] Result: ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
-        console.log(`[TokenGating] Holder ($100): ${usdValue >= HOLDER_TIER_USD ? 'UNLOCKED' : 'locked'}`)
-        console.log(`[TokenGating] Whale ($1000): ${usdValue >= WHALE_TIER_USD ? 'UNLOCKED' : 'locked'}`)
-
-        setState({
-          balance,
-          usdValue,
-          tokenPriceUsd: livePrice,
-          holderTierUnlocked: usdValue >= HOLDER_TIER_USD,
-          whaleTierUnlocked: usdValue >= WHALE_TIER_USD,
-          loading: false,
-          error: null,
-        })
-      } catch (err) {
-        if (currentRun !== runId.current) return
-        console.error('[TokenGating] Unexpected error:', err)
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Could not verify AGNTCBRO balance. Please try again.',
-        }))
-      }
+      setState({
+        balance,
+        usdValue,
+        tokenPriceUsd: livePrice,
+        holderTierUnlocked: usdValue >= HOLDER_TIER_USD,
+        whaleTierUnlocked: usdValue >= WHALE_TIER_USD,
+        loading: false,
+        error: null,
+      })
+    } catch (err) {
+      if (currentRun !== runId.current) return
+      console.error('[TokenGating] Unexpected error:', err)
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Could not verify AGNTCBRO balance. Please try again.',
+      }))
     }
-
-    run()
   }, [connected, walletAddr])
+
+  // Auto-run on wallet connect / address change
+  useEffect(() => {
+    refresh()
+  }, [refresh])
 
   return state
 }
