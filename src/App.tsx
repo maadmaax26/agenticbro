@@ -165,15 +165,6 @@ function App() {
       <main className="relative z-10 container mx-auto px-6 pb-10">
         {!connected ? (
           <div className="max-w-6xl mx-auto">
-            {/* Hero banner image */}
-            <div className="rounded-2xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-900/50 mb-10">
-              <img
-                src="/hero-banner.png"
-                alt="Agentic Bro — tells you where your trading sucks and how to fix it"
-                className="w-full object-cover"
-              />
-            </div>
-
             {/* Feature action grid */}
             <div className="grid md:grid-cols-2 gap-6 mb-10">
               {/* Left column — action buttons */}
