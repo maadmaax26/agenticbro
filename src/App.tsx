@@ -39,6 +39,14 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <a
+                href="/AgenticBro_WhitePaper.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                White Paper
+              </a>
               <button
                 onClick={() => setShowRoadmap(true)}
                 className="px-4 py-2 bg-purple-600/50 hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors"

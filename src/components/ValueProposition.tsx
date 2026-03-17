@@ -279,12 +279,24 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 <h3 className="text-lg font-bold text-white mb-1">Holder Tier</h3>
                 <p className="text-3xl font-bold text-purple-300">10K AGNTCBRO</p>
                 <p className="text-sm text-gray-400 mt-2">Basic signals + market analysis</p>
+                <a
+                  href="https://agenticbro.app/holder"
+                  className="mt-4 inline-block px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                >
+                  Get Holder Access →
+                </a>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-2">🐋</div>
                 <h3 className="text-lg font-bold text-white mb-1">Whale Tier</h3>
                 <p className="text-3xl font-bold text-purple-300">100K AGNTCBRO</p>
                 <p className="text-sm text-gray-400 mt-2">Full access + API + bundle pricing</p>
+                <a
+                  href="https://agenticbro.app/whale"
+                  className="mt-4 inline-block px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                >
+                  Get Whale Access →
+                </a>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-2">🔥</div>
