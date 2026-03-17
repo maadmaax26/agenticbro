@@ -135,6 +135,46 @@ async function fetchLivePrice(): Promise<number> {
   return FALLBACK_PRICE_USD
 }
 
+// Reliable public RPC fallbacks tried in order when the primary fails
+const FALLBACK_RPCS = [
+  'https://solana-rpc.publicnode.com',
+  'https://rpc.ankr.com/solana',
+  'https://api.mainnet-beta.solana.com',
+]
+
+/**
+ * Try to fetch token accounts from multiple RPC endpoints until one succeeds.
+ * Uses the ConnectionProvider's connection first, then works through FALLBACK_RPCS.
+ */
+async function fetchTokenAccountsWithFallback(
+  primaryConnection: import('@solana/web3.js').Connection,
+  owner: import('@solana/web3.js').PublicKey,
+): Promise<import('@solana/web3.js').RpcResponseAndContext<Array<import('@solana/web3.js').ParsedTokenAccountData extends infer T ? any : any>> | null> {
+  // We just need the raw result, use dynamic import to get Connection class
+  const { Connection } = await import('@solana/web3.js')
+
+  const endpoints = [
+    primaryConnection,
+    ...FALLBACK_RPCS.map(url => new Connection(url, 'confirmed')),
+  ]
+
+  for (let i = 0; i < endpoints.length; i++) {
+    const conn = endpoints[i]
+    const label = i === 0 ? 'primary RPC' : FALLBACK_RPCS[i - 1]
+    try {
+      console.log(`[TokenGating] Trying ${label}...`)
+      const result = await conn.getParsedTokenAccountsByOwner(owner, { mint: AGNTCBRO_MINT })
+      console.log(`[TokenGating] ✓ ${label} responded — ${result.value.length} account(s) found`)
+      return result as any
+    } catch (err) {
+      console.warn(`[TokenGating] ✗ ${label} failed:`, err)
+    }
+  }
+
+  console.error('[TokenGating] All RPC endpoints failed')
+  return null
+}
+
 export function useTokenGating(): TokenGatingState {
   const { connection } = useConnection()
   const { publicKey, connected } = useWallet()
@@ -150,26 +190,34 @@ export function useTokenGating(): TokenGatingState {
 
     async function checkBalance() {
       setState(prev => ({ ...prev, loading: true, error: null }))
+      console.log('[TokenGating] Checking balance for:', publicKey!.toBase58())
 
       try {
-        // Run balance fetch and price fetch in parallel
+        // Fetch price and token accounts in parallel (accounts with RPC fallback)
         const [tokenAccounts, livePrice] = await Promise.all([
-          connection.getParsedTokenAccountsByOwner(publicKey!, { mint: AGNTCBRO_MINT }),
+          fetchTokenAccountsWithFallback(connection, publicKey!),
           fetchLivePrice(),
         ])
 
         if (cancelled) return
 
+        console.log('[TokenGating] Live price USD:', livePrice)
+
         // Sum balances across all accounts for this mint (usually just one)
         let rawBalance = 0
-        for (const { account } of tokenAccounts.value) {
-          const parsed = account.data.parsed?.info?.tokenAmount
-          if (parsed) {
-            rawBalance += parsed.uiAmount ?? 0
+        if (tokenAccounts) {
+          for (const { account } of tokenAccounts.value) {
+            const parsed = (account.data as any).parsed?.info?.tokenAmount
+            if (parsed) {
+              const amt = parsed.uiAmount ?? 0
+              console.log('[TokenGating] Account balance:', amt)
+              rawBalance += amt
+            }
           }
         }
 
         const usdValue = rawBalance * livePrice
+        console.log(`[TokenGating] Total: ${rawBalance} AGNTCBRO = $${usdValue.toFixed(4)} USD`)
 
         setState({
           balance: rawBalance,
@@ -178,11 +226,11 @@ export function useTokenGating(): TokenGatingState {
           holderTierUnlocked: usdValue >= HOLDER_TIER_USD,
           whaleTierUnlocked:  usdValue >= WHALE_TIER_USD,
           loading: false,
-          error: null,
+          error: tokenAccounts === null ? 'RPC unavailable — balance may be inaccurate' : null,
         })
       } catch (err) {
         if (cancelled) return
-        console.error('Token gating check failed:', err)
+        console.error('[TokenGating] Unexpected error:', err)
         setState(prev => ({
           ...prev,
           loading: false,
@@ -194,7 +242,7 @@ export function useTokenGating(): TokenGatingState {
     checkBalance()
 
     return () => { cancelled = true }
-  }, [connected, publicKey, connection])
+  }, [connected, publicKey?.toBase58()]) // use .toBase58() to avoid object ref changes
 
   return state
 }
