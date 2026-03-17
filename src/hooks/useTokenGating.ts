@@ -2,12 +2,13 @@
  * useTokenGating
  *
  * Checks the connected wallet's AGNTCBRO balance on Solana mainnet and
- * fetches the live USD price from DexScreener to calculate tier access.
+ * fetches the live USD price to calculate tier access.
  *
- * Token: 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump
- * Pair:  bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k (Solana)
+ * Price sources (in order):
+ *   1. DexScreener — pair bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k
+ *   2. pump.fun    — mint 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump (fallback)
  *
- * Tier logic (live price from DexScreener):
+ * Tier logic:
  *   USD value >= $100   → Holder Tier unlocked
  *   USD value >= $1,000 → Whale Tier unlocked
  */
@@ -17,17 +18,21 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { PublicKey } from '@solana/web3.js'
 
 // AGNTCBRO SPL token mint address
-const AGNTCBRO_MINT = new PublicKey('52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump')
+const AGNTCBRO_MINT_STR = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
+const AGNTCBRO_MINT = new PublicKey(AGNTCBRO_MINT_STR)
 
-// DexScreener pair address for AGNTCBRO/SOL on Solana
+// Price source 1: DexScreener
 const DEXSCREENER_PAIR = 'bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k'
 const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${DEXSCREENER_PAIR}`
+
+// Price source 2: pump.fun (backup)
+const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT_STR}`
 
 // USD thresholds for tier access
 const HOLDER_TIER_USD = 100    // $100 USD → Holder Tier
 const WHALE_TIER_USD  = 1000   // $1,000 USD → Whale Tier
 
-// Fallback price if DexScreener is unreachable (conservative — nearly nothing unlocks)
+// Last-resort fallback if both sources fail (conservative — blocks access)
 const FALLBACK_PRICE_USD = 0
 
 export interface TokenGatingState {
@@ -57,19 +62,77 @@ const DEFAULT_STATE: TokenGatingState = {
   error: null,
 }
 
-/** Fetch live AGNTCBRO price (USD) from DexScreener. Returns 0 on failure. */
-async function fetchLivePrice(): Promise<number> {
+/**
+ * Attempt to get price from DexScreener.
+ * Returns a valid positive number, or null if unavailable.
+ */
+async function fetchPriceFromDexScreener(): Promise<number | null> {
   try {
-    const res = await fetch(DEXSCREENER_API, {
-      headers: { 'Accept': 'application/json' },
-    })
-    if (!res.ok) return FALLBACK_PRICE_USD
+    const res = await fetch(DEXSCREENER_API, { headers: { 'Accept': 'application/json' } })
+    if (!res.ok) return null
     const data = await res.json()
-    const price = parseFloat(data?.pair?.priceUsd ?? data?.pairs?.[0]?.priceUsd ?? '0')
-    return isNaN(price) ? FALLBACK_PRICE_USD : price
+    const raw = data?.pair?.priceUsd ?? data?.pairs?.[0]?.priceUsd ?? null
+    if (raw === null) return null
+    const price = parseFloat(raw)
+    return isNaN(price) || price <= 0 ? null : price
   } catch {
-    return FALLBACK_PRICE_USD
+    return null
   }
+}
+
+/**
+ * Attempt to get price from pump.fun as a backup.
+ * pump.fun returns { usd_market_cap, virtual_sol_reserves, virtual_token_reserves, ... }
+ * Price (USD) = (virtual_sol_reserves / virtual_token_reserves) × SOL/USD price.
+ * pump.fun also exposes `usd_market_cap` and total supply so we can derive it directly.
+ * Returns a valid positive number, or null if unavailable.
+ */
+async function fetchPriceFromPumpFun(): Promise<number | null> {
+  try {
+    const res = await fetch(PUMPFUN_API, { headers: { 'Accept': 'application/json' } })
+    if (!res.ok) return null
+    const data = await res.json()
+
+    // pump.fun may return `usd_market_cap` and `total_supply`
+    const marketCap: number = data?.usd_market_cap ?? 0
+    const totalSupply: number = data?.total_supply ?? 0
+    if (marketCap > 0 && totalSupply > 0) {
+      // token decimals are 6 on pump.fun
+      const humanSupply = totalSupply / 1_000_000
+      const price = marketCap / humanSupply
+      if (price > 0) return price
+    }
+
+    // Alternative: derive from virtual reserves if market cap not available
+    const solReserves: number = data?.virtual_sol_reserves ?? 0
+    const tokenReserves: number = data?.virtual_token_reserves ?? 0
+    const solPriceUsd: number = data?.sol_price_usd ?? 0
+    if (solReserves > 0 && tokenReserves > 0 && solPriceUsd > 0) {
+      // token reserves use 6 decimals, SOL uses 9 decimals on pump.fun
+      const price = (solReserves / 1e9) / (tokenReserves / 1e6) * solPriceUsd
+      if (price > 0) return price
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch live AGNTCBRO price (USD).
+ * Tries DexScreener first, falls back to pump.fun, then returns 0.
+ */
+async function fetchLivePrice(): Promise<number> {
+  const dex = await fetchPriceFromDexScreener()
+  if (dex !== null) return dex
+
+  console.warn('DexScreener price unavailable — falling back to pump.fun')
+  const pump = await fetchPriceFromPumpFun()
+  if (pump !== null) return pump
+
+  console.warn('Both DexScreener and pump.fun price feeds unavailable')
+  return FALLBACK_PRICE_USD
 }
 
 export function useTokenGating(): TokenGatingState {
