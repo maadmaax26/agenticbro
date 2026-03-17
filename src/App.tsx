@@ -16,9 +16,12 @@ function App() {
   const [showRoadmap, setShowRoadmap] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-black">
-      {/* Animated background effect */}
-      <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-30" />
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black">
+      {/* Subtle grid / circuit-board background */}
+      <div className="fixed inset-0 opacity-10" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
+      {/* Neon glow orbs */}
+      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-1/4 right-1/4 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
@@ -26,15 +29,15 @@ function App() {
         <Roadmap onBack={() => setShowRoadmap(false)} />
       ) : (
         <>
-          <header className="relative z-10 p-6 flex justify-between items-center backdrop-blur-sm bg-black/20">
+          <header className="relative z-10 px-6 py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="text-4xl">🤖</div>
               <div>
                 <h1 className="text-3xl font-bold text-white tracking-tight">
                   Agentic Bro
                 </h1>
-                <p className="text-xs text-purple-300 font-mono">
-                  Your agentic degen advisor
+                <p className="text-xs font-mono" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
+                  $AGNTCBRO · Your agentic degen advisor
                 </p>
               </div>
             </div>
@@ -63,43 +66,78 @@ function App() {
             </div>
           </header>
 
-      <main className="relative z-10 container mx-auto p-6">
+      <main className="relative z-10 container mx-auto px-6 pb-10">
         {!connected ? (
-          <div className="text-center py-20 max-w-lg mx-auto">
-            <div className="mb-8">
-              <div className="text-8xl mb-4">🤖💸</div>
-              <h2 className="text-4xl font-bold text-white mb-4">
-                Ready to Get Roasted?
-              </h2>
-              <p className="text-xl text-gray-300 mb-2">
-                Connect your wallet and let Agentic Bro analyze your degen behavior
-              </p>
-              <p className="text-sm text-gray-500">
-                Brutal honesty. Agentic AI. No feelings spared.
-              </p>
+          <div className="max-w-6xl mx-auto">
+            {/* Hero banner image */}
+            <div className="rounded-2xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-900/50 mb-10">
+              <img
+                src="/hero-banner.png"
+                alt="Agentic Bro — tells you where your trading sucks and how to fix it"
+                className="w-full object-cover"
+              />
             </div>
 
-            <div className="grid gap-4 text-left bg-black/30 p-6 rounded-xl backdrop-blur-sm">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">📊</span>
-                <div>
-                  <p className="font-semibold text-white">Portfolio Analysis</p>
-                  <p className="text-sm text-gray-400">We'll analyze your last 7 days of trades</p>
+            {/* Feature action grid */}
+            <div className="grid md:grid-cols-2 gap-6 mb-10">
+              {/* Left column — action buttons */}
+              <div className="flex flex-col gap-4">
+                <h2 className="text-2xl font-bold text-white mb-2">Get Started</h2>
+                {[
+                  { icon: '👛', label: 'CONNECT WALLET', desc: 'Link your Solana wallet to begin', color: 'from-purple-600/40 to-purple-800/40 border-purple-500/50', action: null },
+                  { icon: '📊', label: 'ANALYZE TRADES', desc: 'Deep dive into your last 7 days', color: 'from-blue-600/40 to-blue-900/40 border-blue-500/50', action: null },
+                  { icon: '🔥', label: 'GET ROASTED', desc: 'Brutal AI critique of your portfolio', color: 'from-orange-600/40 to-red-900/40 border-orange-500/50', action: null },
+                  { icon: '💡', label: 'GET SMARTER', desc: 'Real-time signals & AI insights', color: 'from-cyan-600/40 to-teal-900/40 border-cyan-500/50', action: null },
+                ].map((item) => (
+                  <div key={item.label} className={`flex items-center gap-4 bg-gradient-to-r ${item.color} border rounded-xl px-5 py-4 cursor-pointer hover:brightness-125 transition-all`}>
+                    <span className="text-3xl">{item.icon}</span>
+                    <div>
+                      <p className="font-bold text-white tracking-wide text-sm">{item.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right column — feature checklist */}
+              <div className="flex flex-col justify-center bg-black/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 p-8">
+                <h2 className="text-2xl font-bold text-white mb-6">What You Get</h2>
+                {[
+                  { icon: '✅', text: 'Live AI roasting (Ollama-powered)' },
+                  { icon: '✅', text: 'Degen score calculation' },
+                  { icon: '✅', text: 'Portfolio breakdown & risk analysis' },
+                  { icon: '✅', text: 'Real-time BTC, ETH, SOL, BNB, XRP signals' },
+                  { icon: '✅', text: 'Liquidation level tracking' },
+                  { icon: '✅', text: 'Daily AI-synthesized market reports' },
+                  { icon: '✅', text: 'Direct access to AutonomousAlpha's AI Trading Playbook' },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-start gap-3 mb-4">
+                    <span className="text-green-400 text-lg mt-0.5">{item.icon}</span>
+                    <p className="text-gray-200 text-sm leading-snug">{item.text}</p>
+                  </div>
+                ))}
+
+                {/* Token tiers */}
+                <div className="mt-4 pt-4 border-t border-purple-500/20 grid grid-cols-2 gap-3">
+                  <div className="bg-purple-900/40 rounded-xl p-3 text-center border border-purple-500/30">
+                    <p className="text-xs text-gray-400 mb-1">Holder Tier</p>
+                    <p className="font-bold text-purple-300 text-sm">10K AGNTCBRO</p>
+                    <p className="text-xs text-gray-500">$100 one-time</p>
+                  </div>
+                  <div className="bg-cyan-900/40 rounded-xl p-3 text-center border border-cyan-500/30">
+                    <p className="text-xs text-gray-400 mb-1">Whale Tier</p>
+                    <p className="font-bold text-cyan-300 text-sm">100K AGNTCBRO</p>
+                    <p className="text-xs text-gray-500">$1,000 one-time</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">🔥</span>
-                <div>
-                  <p className="font-semibold text-white">Degen Detection</p>
-                  <p className="text-sm text-gray-400">Spot high-risk, low-cap plays</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💬</span>
-                <div>
-                  <p className="font-semibold text-white">AI Roasts</p>
-                  <p className="text-sm text-gray-400">Generated on the fly, never repeats</p>
-                </div>
+            </div>
+
+            {/* Connect CTA */}
+            <div className="text-center py-6 bg-black/20 rounded-2xl border border-purple-500/20">
+              <p className="text-gray-400 text-sm mb-4">Connect your wallet to unlock your dashboard</p>
+              <div className="flex justify-center">
+                <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-bold !text-base !px-8 !py-3 !rounded-xl" />
               </div>
             </div>
           </div>
@@ -128,8 +166,15 @@ function App() {
     )}
 
       {!showValueProp && !showRoadmap && (
-        <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
-          <p>Built for degens, by degens • <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
+        <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
+          <p className="text-gray-500">
+            Built for degens, by degens •{' '}
+            <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300">@AgenticBro11</a>
+            {' '}•{' '}
+            <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
+            {' '}•{' '}
+            <a href="/AgenticBro_WhitePaper.pdf" target="_blank" className="hover:text-white transition-colors" style={{color: '#39ff14'}}>White Paper</a>
+          </p>
         </footer>
       )}
     </div>
