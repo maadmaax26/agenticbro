@@ -15,7 +15,7 @@ function App() {
   const { connected } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
-  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, loading: gatingLoading } = useTokenGating()
+  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
   const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
@@ -80,8 +80,8 @@ function App() {
                     ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
                     : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                   title={holderTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`
-                    : 'Requires 10,000 AGNTCBRO (~$100)'}
+                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
+                    : `Requires $100 USD of AGNTCBRO${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
                 >
                   {gatingLoading ? (
                     <span className="animate-pulse">…</span>
@@ -109,8 +109,8 @@ function App() {
                     ? {background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}
                     : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                   title={whaleTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)})`
-                    : 'Requires 10,000 AGNTCBRO (~$100)'}
+                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
+                    : `Requires $1,000 USD of AGNTCBRO${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
                 >
                   {gatingLoading ? (
                     <span className="animate-pulse">…</span>
