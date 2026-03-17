@@ -183,7 +183,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-black">
+    <div className="min-h-screen">
       <header className="relative z-10 p-6 backdrop-blur-sm bg-black/20">
         <div className="container mx-auto">
           <button
