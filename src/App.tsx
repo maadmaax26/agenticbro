@@ -35,9 +35,10 @@ function App() {
       ) : (
         <>
           <header className="relative z-10 px-6 py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
+            {/* Left — icon + branding */}
             <div className="flex items-center gap-3">
               <img
-                src="/logo.png"
+                src="/icon.png"
                 alt="Agentic Bro"
                 className="w-12 h-12 rounded-xl object-cover ring-2 ring-purple-500/50"
               />
@@ -50,6 +51,30 @@ function App() {
                 </p>
               </div>
             </div>
+
+            {/* Center — tier access buttons */}
+            <div className="flex items-center gap-3">
+              <a
+                href="https://agenticbro.app/holder"
+                className="px-4 py-2 font-bold text-sm rounded-lg border transition-colors"
+                style={{background: 'rgba(139,92,246,0.25)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd'}}
+                onMouseOver={e => (e.currentTarget.style.background='rgba(139,92,246,0.5)')}
+                onMouseOut={e => (e.currentTarget.style.background='rgba(139,92,246,0.25)')}
+              >
+                💰 Holder Tier — 10K AGNTCBRO
+              </a>
+              <a
+                href="https://agenticbro.app/whale"
+                className="px-4 py-2 font-bold text-sm rounded-lg border transition-colors"
+                style={{background: 'rgba(6,182,212,0.2)', borderColor: 'rgba(6,182,212,0.6)', color: '#67e8f9'}}
+                onMouseOver={e => (e.currentTarget.style.background='rgba(6,182,212,0.4)')}
+                onMouseOut={e => (e.currentTarget.style.background='rgba(6,182,212,0.2)')}
+              >
+                🐋 Whale Tier — 100K AGNTCBRO
+              </a>
+            </div>
+
+            {/* Right — nav + wallet */}
             <div className="flex items-center gap-3">
               <a
                 href="/AgenticBro_WhitePaper.pdf"
