@@ -109,7 +109,7 @@ function App() {
                   { icon: '✅', text: 'Real-time BTC, ETH, SOL, BNB, XRP signals' },
                   { icon: '✅', text: 'Liquidation level tracking' },
                   { icon: '✅', text: 'Daily AI-synthesized market reports' },
-                  { icon: '✅', text: 'Direct access to AutonomousAlpha's AI Trading Playbook' },
+                  { icon: '✅', text: "Direct access to AutonomousAlpha\u2019s AI Trading Playbook" },
                 ].map((item) => (
                   <div key={item.text} className="flex items-start gap-3 mb-4">
                     <span className="text-green-400 text-lg mt-0.5">{item.icon}</span>
