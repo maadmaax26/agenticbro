@@ -16,12 +16,17 @@ function App() {
   const [showRoadmap, setShowRoadmap] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black">
-      {/* Subtle grid / circuit-board background */}
-      <div className="fixed inset-0 opacity-10" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
-      {/* Neon glow orbs */}
-      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed bottom-1/4 right-1/4 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen" style={{
+        backgroundImage: 'url(/hero-banner.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat',
+      }}>
+      {/* Dark overlay so all content stays readable over the background */}
+      <div className="fixed inset-0 bg-black/75 backdrop-blur-sm pointer-events-none" />
+      {/* Subtle purple grid on top */}
+      <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
       {showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
@@ -31,7 +36,11 @@ function App() {
         <>
           <header className="relative z-10 px-6 py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
             <div className="flex items-center gap-3">
-              <div className="text-4xl">🤖</div>
+              <img
+                src="/logo.png"
+                alt="Agentic Bro"
+                className="w-12 h-12 rounded-xl object-cover ring-2 ring-purple-500/50"
+              />
               <div>
                 <h1 className="text-3xl font-bold text-white tracking-tight">
                   Agentic Bro
