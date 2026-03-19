@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { MessageSquare, Share2, Copy, Check } from 'lucide-react'
 import { generateRoast } from '../lib/openai'
-import AutonomousAlphaUpsell from './AutonomousAlphaUpsell'
 import BotServiceUpsell from './BotServiceUpsell'
 
 interface Roast {
@@ -152,9 +151,6 @@ export default function RoastDisplay() {
               Powered by Agentic AI • 100% brutal honesty • No feelings spared
             </p>
           </div>
-
-          {/* AutonomousAlpha Upsell */}
-          <AutonomousAlphaUpsell />
 
           {/* Bot Service Upsell - Show after 3 roasts */}
           {roastCount >= 3 && <BotServiceUpsell />}
