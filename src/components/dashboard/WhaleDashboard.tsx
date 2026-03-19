@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, Users, DollarSign, Vote, Star, Eye, Clock } from 'lucide-react';
+import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, DollarSign, Vote, Star, Eye, Clock } from 'lucide-react';
 import WhaleChat from './WhaleChat';
 
 type ActiveTab = 'overview' | 'chat' | 'signals' | 'risk' | 'strategy' | 'governance';
@@ -131,8 +131,7 @@ const WHALE_FEATURES = [
   { icon: '🤖', title: 'Whale Chat',              badge: 'AI sub-agent',  badgeColor: 'rgba(139,92,246,0.2)', badgeBorder: 'rgba(139,92,246,0.6)', badgeText: '#c4b5fd',  desc: 'Interactive AI sub-agent trained on on-chain whale flows and macro data.' },
   { icon: '🔧', title: 'Custom Strategy Builder', badge: 'Backtest',      badgeColor: 'rgba(234,179,8,0.15)', badgeBorder: 'rgba(234,179,8,0.5)',  badgeText: '#facc15',  desc: 'Define your own signal rules and backtest them against full historical data.' },
   { icon: '🌡', title: 'Risk Dashboard',          badge: 'Live',          badgeColor: 'rgba(239,68,68,0.15)', badgeBorder: 'rgba(239,68,68,0.5)',  badgeText: '#f87171',  desc: 'Portfolio heat maps, liquidation cascade alerts, and cross-asset correlation breakdowns.' },
-  { icon: '💬', title: 'Whale Chat Access',        badge: 'Private',       badgeColor: 'rgba(6,182,212,0.2)',  badgeBorder: 'rgba(6,182,212,0.6)',  badgeText: '#67e8f9',  desc: 'Private Discord channel with direct access to the core team and co-whales.' },
-  { icon: '💰', title: 'Revenue Share',            badge: '10% monthly',   badgeColor: 'rgba(34,197,94,0.15)', badgeBorder: 'rgba(34,197,94,0.5)',  badgeText: '#4ade80',  desc: '10% of all platform fees distributed monthly to Whale Tier holders, pro-rata by balance.' },
+{ icon: '💰', title: 'Revenue Share',            badge: '10% monthly',   badgeColor: 'rgba(34,197,94,0.15)', badgeBorder: 'rgba(34,197,94,0.5)',  badgeText: '#4ade80',  desc: '10% of all platform fees distributed monthly to Whale Tier holders, pro-rata by balance.' },
   { icon: '🗳',  title: 'Governance Rights',        badge: 'On-chain vote', badgeColor: 'rgba(234,179,8,0.15)', badgeBorder: 'rgba(234,179,8,0.5)',  badgeText: '#facc15',  desc: 'Vote on new features, asset additions, and signal parameters. Your holdings = your weight.' },
   { icon: '🤝', title: 'White Glove Onboarding',  badge: '1:1 setup',     badgeColor: 'rgba(139,92,246,0.2)', badgeBorder: 'rgba(139,92,246,0.6)', badgeText: '#c4b5fd',  desc: '1:1 setup call with the team + custom alert configuration tailored to your strategy.' },
   { icon: '👁',  title: 'Unlimited Watchlist',      badge: 'All assets',    badgeColor: 'rgba(6,182,212,0.2)',  badgeBorder: 'rgba(6,182,212,0.6)',  badgeText: '#67e8f9',  desc: 'Track every supported asset simultaneously with no cap.' },
@@ -426,26 +425,6 @@ function WhaleGovernance() {
         <p className="text-xs text-gray-600 mt-4">On-chain voting via Realms — integration in progress.</p>
       </div>
 
-      <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-cyan-500/20 p-5 flex items-start gap-4"
-        style={{ background: 'rgba(6,182,212,0.05)' }}>
-        <Users className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold text-white text-sm mb-0.5">Whale Chat — Private Discord</p>
-          <p className="text-xs text-gray-400 mb-3">
-            Exclusive channel with direct team access, co-whale alpha sharing, and early feature previews.
-          </p>
-          <a
-            href="https://discord.gg/agenticbro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all hover:brightness-125"
-            style={{ background: 'rgba(88,101,242,0.3)', border: '1px solid rgba(88,101,242,0.6)', color: '#a5b4fc' }}
-          >
-            <MessageSquare className="w-3 h-3" />
-            Join Whale Discord
-          </a>
-        </div>
-      </div>
     </div>
   );
 }
