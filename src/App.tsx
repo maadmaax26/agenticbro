@@ -12,7 +12,6 @@ import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
-import PublicSignalFeed from './components/PublicSignalFeed'
 import MarketSentiment from './components/MarketSentiment'
 
 function App() {
@@ -260,9 +259,8 @@ function App() {
               <RoastDisplay />
             </div>
 
-            {/* Public feed + sentiment row */}
-            <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
-              <PublicSignalFeed />
+            {/* Market sentiment */}
+            <div className="max-w-6xl mx-auto mb-6">
               <MarketSentiment />
             </div>
 

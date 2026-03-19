@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating } from '../../hooks/useTokenGating';
+import PublicSignalFeed from '../PublicSignalFeed';
 import HolderSignalFeed from './HolderSignalFeed';
 import HolderAIInsights from './HolderAIInsights';
 import HolderMarketAnalysis from './HolderMarketAnalysis';
@@ -258,6 +259,9 @@ function DashboardOverview() {
           </p>
         </div>
       </div>
+
+      {/* 15-min delayed signal feed */}
+      <PublicSignalFeed mode="holder" />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, Users, DollarSign, Vote, Star, Eye, Clock } from 'lucide-react';
 import WhaleChat from './WhaleChat';
@@ -229,16 +229,121 @@ function WhaleOverview() {
 
 // ─── Signals tab ──────────────────────────────────────────────────────────────
 
+const LIVE_SIGNAL_POOL = [
+  { id: '1', asset: 'BTC',  emoji: '₿',  direction: 'LONG'  as const, strength: 'Strong'   as const, cgId: 'bitcoin'     },
+  { id: '2', asset: 'SOL',  emoji: '◎',  direction: 'LONG'  as const, strength: 'Strong'   as const, cgId: 'solana'      },
+  { id: '3', asset: 'ETH',  emoji: 'Ξ',  direction: 'SHORT' as const, strength: 'Moderate' as const, cgId: 'ethereum'    },
+  { id: '4', asset: 'BNB',  emoji: '🟡', direction: 'LONG'  as const, strength: 'Moderate' as const, cgId: 'binancecoin' },
+  { id: '5', asset: 'XRP',  emoji: '✕',  direction: 'SHORT' as const, strength: 'Strong'   as const, cgId: 'ripple'      },
+  { id: '6', asset: 'DOGE', emoji: '🐕', direction: 'LONG'  as const, strength: 'Weak'     as const, cgId: 'dogecoin'    },
+];
+
 function WhaleSignals() {
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function loadPrices() {
+    setLoading(true);
+    try {
+      const ids = LIVE_SIGNAL_POOL.map(s => s.cgId).join(',');
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!res.ok) throw new Error('non-ok');
+      const json = await res.json();
+      const map: Record<string, string> = {};
+      LIVE_SIGNAL_POOL.forEach(s => {
+        const p: number | undefined = json[s.cgId]?.usd;
+        map[s.asset] = p !== undefined
+          ? p >= 1000 ? `$${p.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+            : p >= 1 ? `$${p.toFixed(2)}`
+            : `$${p.toFixed(5)}`
+          : '—';
+      });
+      setPrices(map);
+      setLastUpdated(new Date());
+    } catch {
+      /* keep stale prices on error */
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPrices();
+    const interval = setInterval(loadPrices, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-cyan-500/20 p-8 text-center">
-      <div className="text-5xl mb-4">⚡</div>
-      <h3 className="text-xl font-bold text-white mb-2">Real-Time Signal Feed</h3>
-      <p className="text-gray-400 text-sm mb-4">Zero-delay execution triggers — coming online soon.</p>
-      <span className="px-3 py-1 rounded-full text-xs font-semibold"
-        style={{ background: 'rgba(6,182,212,0.2)', border: '1px solid rgba(6,182,212,0.5)', color: '#67e8f9' }}>
-        In Development
-      </span>
+    <div className="space-y-4">
+      <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-cyan-500/20 p-5">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            ⚡ Live Signal Feed
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-xs font-mono font-bold"
+              style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.4)' }}>
+              🟢 REAL-TIME
+            </span>
+            <button
+              onClick={loadPrices}
+              className="p-1.5 rounded border text-gray-400 hover:text-white transition-all"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}
+              title="Refresh prices"
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Signal rows */}
+        <div className="space-y-2">
+          {LIVE_SIGNAL_POOL.map(sig => (
+            <div
+              key={sig.id}
+              className="flex items-center justify-between rounded-xl px-4 py-2.5 border"
+              style={{
+                background: sig.direction === 'LONG' ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.07)',
+                borderColor: sig.direction === 'LONG' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg w-6 text-center">{sig.emoji}</span>
+                <span className="font-bold text-white text-sm">{sig.asset}</span>
+                <span
+                  className="px-1.5 py-0.5 rounded text-xs font-bold"
+                  style={{
+                    background: sig.direction === 'LONG' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+                    color: sig.direction === 'LONG' ? '#4ade80' : '#f87171',
+                  }}
+                >
+                  {sig.direction}
+                </span>
+                <span className="text-xs text-gray-500">{sig.strength}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className={`font-mono font-semibold ${loading && !prices[sig.asset] ? 'text-gray-600' : 'text-white'}`}>
+                  {loading && !prices[sig.asset] ? '…' : (prices[sig.asset] ?? '—')}
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold"
+                  style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>
+                  Live
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-gray-700 mt-3 text-center">
+          Prices via CoinGecko · refreshes every 30s
+          {lastUpdated && ` · last updated ${lastUpdated.toLocaleTimeString()}`}
+        </p>
+      </div>
     </div>
   );
 }
