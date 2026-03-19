@@ -20,7 +20,7 @@ const SIGNAL_POOL: Signal[] = [
   { id: '6', asset: 'DOGE', direction: 'LONG',  strength: 'Weak',     price: '—',    time: '2h ago',  emoji: '🐕' },
 ]
 
-export default function PublicSignalFeed() {
+export default function PublicSignalFeed({ mode = 'public' }: { mode?: 'public' | 'holder' }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -77,12 +77,19 @@ export default function PublicSignalFeed() {
         ))}
       </div>
 
-      {/* Upsell footer */}
+      {/* Footer */}
       <div className="mt-4 pt-3 border-t border-purple-500/15 text-center">
-        <p className="text-xs text-gray-500">
-          🔒 <span className="text-purple-400 font-semibold">Holder Tier</span> — 15-min delayed &nbsp;·&nbsp;{' '}
-          <span className="text-cyan-400 font-semibold">Whale Tier</span> — Real-time
-        </p>
+        {mode === 'holder' ? (
+          <p className="text-xs text-gray-500">
+            ⚡ Upgrade to{' '}
+            <span className="text-cyan-400 font-semibold">Whale Tier</span> for real-time signals with live prices
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            🔒 <span className="text-purple-400 font-semibold">Holder Tier</span> — 15-min delayed &nbsp;·&nbsp;{' '}
+            <span className="text-cyan-400 font-semibold">Whale Tier</span> — Real-time
+          </p>
+        )}
       </div>
     </div>
   )
