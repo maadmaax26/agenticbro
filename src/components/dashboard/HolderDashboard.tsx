@@ -6,13 +6,13 @@ import HolderAIInsights from './HolderAIInsights';
 import HolderMarketAnalysis from './HolderMarketAnalysis';
 import HolderUsageHistory from './HolderUsageHistory';
 import HolderSettings from './HolderSettings';
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft } from 'lucide-react';
+import { TrendingUp, Zap, Activity, Settings } from 'lucide-react';
 
 type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings';
 
 export default function HolderDashboard() {
   const { connected, publicKey } = useWallet();
-  const { holderTierUnlocked, whaleTierUnlocked, balance } = useTokenGating();
+  const { holderTierUnlocked, balance } = useTokenGating();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   if (!connected || !publicKey) {
@@ -138,7 +138,6 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 }
 
 function DashboardOverview() {
-  const { balance } = useTokenGating();
   const [currentMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
 
   return (
