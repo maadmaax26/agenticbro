@@ -29,7 +29,7 @@ const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${D
 const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
 
 const HOLDER_TIER_USD = 100
-const WHALE_TIER_USD = 1000
+const WHALE_TIER_USD = 200 // temporary test threshold (production: 1000)
 
 // Multiple RPC endpoints — tried in order, first success wins
 const RPC_ENDPOINTS = [
