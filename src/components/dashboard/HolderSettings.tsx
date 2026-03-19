@@ -42,7 +42,7 @@ export default function HolderSettings() {
         <div className="space-y-3">
           <TopUpLink
             label="Buy on Pump.fun"
-            url="https://pump.fun"
+            url="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
             description="Purchase additional AGNTCBRO tokens"
           />
           <TopUpLink
