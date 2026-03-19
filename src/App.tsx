@@ -10,6 +10,7 @@ import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
+import HolderDashboard from './components/dashboard/HolderDashboard'
 
 function App() {
   const { connected } = useWallet()
@@ -44,29 +45,28 @@ function App() {
       {/* Subtle purple grid on top */}
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-      {showTierPage ? (
+      {showTierPage === 'holder' ? (
+        <HolderDashboard />
+      ) : showTierPage === 'whale' ? (
         <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6">
           <div className="text-center bg-black/40 backdrop-blur-md rounded-2xl border p-12 max-w-md"
-            style={{ borderColor: showTierPage === 'holder' ? 'rgba(139,92,246,0.4)' : 'rgba(6,182,212,0.4)' }}>
-            <div className="text-5xl mb-4">{showTierPage === 'holder' ? '💰' : '🐋'}</div>
-            <h2 className="text-2xl font-bold text-white mb-2">
-              {showTierPage === 'holder' ? 'Holder Tier' : 'Whale Tier'}
-            </h2>
-            <p className="text-lg font-semibold mb-4"
-              style={{ color: showTierPage === 'holder' ? '#c4b5fd' : '#67e8f9' }}>
+            style={{ borderColor: 'rgba(6,182,212,0.4)' }}>
+            <div className="text-5xl mb-4">🐋</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Whale Tier</h2>
+            <p className="text-lg font-semibold mb-4" style={{ color: '#67e8f9' }}>
               Coming Soon
             </p>
             <p className="text-sm text-gray-400 mb-8">
-              {showTierPage === 'holder'
-                ? 'Exclusive tools and insights for AGNTCBRO holders are on the way.'
-                : 'Premium whale-level analytics and alpha are being built.'}
+              Premium whale-level analytics and alpha are being built.
             </p>
             <button
               onClick={() => setShowTierPage(null)}
               className="px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125"
-              style={showTierPage === 'holder'
-                ? { background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd' }
-                : { background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9' }}
+              style={{
+                background: 'rgba(6,182,212,0.25)',
+                borderColor: 'rgba(6,182,212,0.7)',
+                color: '#67e8f9'
+              }}
             >
               Back to Dashboard
             </button>
@@ -225,7 +225,6 @@ function App() {
                   { icon: '✅', text: 'Real-time BTC, ETH, SOL, BNB, XRP signals' },
                   { icon: '✅', text: 'Liquidation level tracking' },
                   { icon: '✅', text: 'Daily AI-synthesized market reports' },
-                  { icon: '✅', text: "Direct access to AutonomousAlpha\u2019s AI Trading Playbook" },
                 ].map((item) => (
                   <div key={item.text} className="flex items-start gap-3 mb-4">
                     <span className="text-green-400 text-lg mt-0.5">{item.icon}</span>
@@ -299,7 +298,7 @@ function App() {
             Built for degens, by degens •{' '}
             <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300">@AgenticBro11</a>
             {' '}•{' '}
-            <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
+            <a href="https://t.me/AgenticBro" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
             {' '}•{' '}
             <a href="/AgenticBro_WhitePaper.pdf" target="_blank" className="hover:text-white transition-colors" style={{color: '#39ff14'}}>White Paper</a>
           </p>
