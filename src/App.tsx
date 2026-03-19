@@ -48,7 +48,7 @@ function App() {
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
       {showTierPage === 'holder' ? (
-        <HolderDashboard />
+        <HolderDashboard onBack={() => setShowTierPage(null)} />
       ) : showTierPage === 'whale' ? (
         <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6">
           <div className="text-center bg-black/40 backdrop-blur-md rounded-2xl border p-12 max-w-md"

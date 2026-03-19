@@ -6,11 +6,11 @@ import HolderAIInsights from './HolderAIInsights';
 import HolderMarketAnalysis from './HolderMarketAnalysis';
 import HolderUsageHistory from './HolderUsageHistory';
 import HolderSettings from './HolderSettings';
-import { TrendingUp, Zap, Activity, Settings } from 'lucide-react';
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft } from 'lucide-react';
 
 type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings';
 
-export default function HolderDashboard() {
+export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
   const { holderTierUnlocked, balance } = useTokenGating();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -54,6 +54,18 @@ export default function HolderDashboard() {
     <div className="max-w-7xl mx-auto mt-6">
       {/* Header */}
       <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 mb-6">
+        {/* Back button row */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 mb-4 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125"
+            style={{ background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.5)', color: '#c4b5fd' }}
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back to Home
+          </button>
+        )}
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">💰 Holder Tier Dashboard</h1>
