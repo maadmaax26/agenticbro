@@ -144,23 +144,6 @@ async function fetchPriceFromPumpFun(): Promise<number | null> {
   }
 }
 
-async function fetchLivePrice(): Promise<number> {
-  const dex = await fetchPriceFromDexScreener()
-  if (dex !== null) {
-    console.log('[TokenGating] Price (DexScreener):', dex)
-    return dex
-  }
-
-  console.warn('[TokenGating] DexScreener unavailable, trying pump.fun...')
-  const pump = await fetchPriceFromPumpFun()
-  if (pump !== null) {
-    console.log('[TokenGating] Price (pump.fun):', pump)
-    return pump
-  }
-
-  console.error('[TokenGating] All price feeds failed')
-  return 0
-}
 
 // ─── Balance fetching (raw JSON-RPC only — no web3.js dependency) ────────────
 
@@ -218,7 +201,7 @@ async function fetchBalanceFromRpc(
   }
 }
 
-async function fetchBalance(ownerAddress: string): Promise<number> {
+async function fetchBalance(ownerAddress: string): Promise<number | null> {
   for (const rpc of RPC_ENDPOINTS) {
     console.log(`[TokenGating] Trying RPC: ${rpc}`)
     const result = await fetchBalanceFromRpc(rpc, ownerAddress)
@@ -229,7 +212,25 @@ async function fetchBalance(ownerAddress: string): Promise<number> {
   }
 
   console.error('[TokenGating] ALL RPCs failed — could not read balance')
-  return 0
+  return null // null = total failure (distinct from genuine 0 balance)
+}
+
+async function fetchLivePriceOrNull(): Promise<number | null> {
+  const dex = await fetchPriceFromDexScreener()
+  if (dex !== null) {
+    console.log('[TokenGating] Price (DexScreener):', dex)
+    return dex
+  }
+
+  console.warn('[TokenGating] DexScreener unavailable, trying pump.fun...')
+  const pump = await fetchPriceFromPumpFun()
+  if (pump !== null) {
+    console.log('[TokenGating] Price (pump.fun):', pump)
+    return pump
+  }
+
+  console.error('[TokenGating] All price feeds failed')
+  return null
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -241,8 +242,50 @@ export function useTokenGating(): TokenGatingState {
   const runId  = useRef(0)
   const lastAddr = useRef('') // survives publicKey → null on disconnect
 
-  // Stable check function — addr passed in so the function never needs to
-  // be recreated and never closes over stale wallet state.
+  // Core fetch logic — returns true on success, false on failure.
+  const runCheck = useCallback(async (addr: string, currentRun: number): Promise<boolean> => {
+    try {
+      const [balance, livePrice] = await Promise.all([
+        fetchBalance(addr),
+        fetchLivePriceOrNull(),
+      ])
+
+      if (currentRun !== runId.current) return false
+
+      // If either fetch totally failed, don't cache — allow retry
+      if (balance === null || livePrice === null) {
+        console.warn('[TokenGating] Fetch incomplete — balance:', balance, 'price:', livePrice)
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: balance === null
+            ? 'Could not read wallet balance — RPCs may be rate-limited.'
+            : 'Could not fetch token price — price feeds unavailable.',
+        }))
+        return false
+      }
+
+      const usdValue           = balance * livePrice
+      const holderTierUnlocked = usdValue >= HOLDER_TIER_USD
+      const whaleTierUnlocked  = usdValue >= WHALE_TIER_USD
+
+      console.log(`[TokenGating] ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
+      console.log(`[TokenGating] Holder: ${holderTierUnlocked ? 'UNLOCKED' : 'locked'} | Whale: ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
+
+      // Only cache successful results — never cache failures
+      writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
+
+      setState({ balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked, loading: false, error: null })
+      return true
+    } catch (err) {
+      if (currentRun !== runId.current) return false
+      console.error('[TokenGating] Error:', err)
+      setState(prev => ({ ...prev, loading: false, error: 'Could not verify AGNTCBRO balance. Please try again.' }))
+      return false
+    }
+  }, [])
+
+  // Stable check function — reads cache first, then fetches with one retry.
   const doCheck = useCallback(async (addr: string) => {
     // Return cached result immediately if already checked this session
     const cached = readCache(addr)
@@ -256,30 +299,17 @@ export function useTokenGating(): TokenGatingState {
     setState(prev => ({ ...prev, loading: true, error: null }))
     console.log(`[TokenGating] ── Checking balance for ${addr} ──`)
 
-    try {
-      const [balance, livePrice] = await Promise.all([
-        fetchBalance(addr),
-        fetchLivePrice(),
-      ])
+    const ok = await runCheck(addr, currentRun)
 
-      if (currentRun !== runId.current) return
-
-      const usdValue           = balance * livePrice
-      const holderTierUnlocked = usdValue >= HOLDER_TIER_USD
-      const whaleTierUnlocked  = usdValue >= WHALE_TIER_USD
-
-      console.log(`[TokenGating] ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
-      console.log(`[TokenGating] Holder: ${holderTierUnlocked ? 'UNLOCKED' : 'locked'} | Whale: ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
-
-      writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
-
-      setState({ balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked, loading: false, error: null })
-    } catch (err) {
-      if (currentRun !== runId.current) return
-      console.error('[TokenGating] Error:', err)
-      setState(prev => ({ ...prev, loading: false, error: 'Could not verify AGNTCBRO balance. Please try again.' }))
+    // If first attempt failed, retry once after 2 seconds
+    if (!ok && currentRun === runId.current) {
+      console.log('[TokenGating] First attempt failed — retrying in 2s…')
+      await new Promise(r => setTimeout(r, 2000))
+      if (currentRun !== runId.current) return // wallet changed during wait
+      setState(prev => ({ ...prev, loading: true, error: null }))
+      await runCheck(addr, currentRun)
     }
-  }, []) // stable — addr is a param, no stale-closure risk
+  }, [runCheck])
 
   // Single effect: fires exactly when the wallet address appears or disappears.
   // Using walletAddr (derived from publicKey) as the sole trigger avoids the
