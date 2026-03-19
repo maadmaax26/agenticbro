@@ -11,12 +11,19 @@ interface Roast {
   created_at: string
 }
 
+// Session-scoped key so the auto-roast fires once per login session per wallet
+function sessionRoastKey(wallet: string) {
+  return `agntcbro_roasted_${wallet.slice(0, 8)}`
+}
+
 export default function RoastDisplay() {
   const { publicKey, connected } = useWallet()
   const [loading, setLoading] = useState(false)
   const [roast, setRoast] = useState<Roast | null>(null)
   const [roastCount, setRoastCount] = useState(0)
   const [copied, setCopied] = useState(false)
+  // Tracks whether we've already auto-fired for this session
+  const [autoFired, setAutoFired] = useState(false)
 
   const generateRoastData = async () => {
     if (!publicKey) return
@@ -57,10 +64,14 @@ export default function RoastDisplay() {
   }
 
   useEffect(() => {
-    if (connected && publicKey) {
-      generateRoastData()
-    }
-  }, [connected, publicKey])
+    if (!connected || !publicKey) return
+    const key = sessionRoastKey(publicKey.toBase58())
+    // Only auto-generate once per session per wallet
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    setAutoFired(true)
+    generateRoastData()
+  }, [connected, publicKey?.toBase58()])
 
   const copyToClipboard = () => {
     if (roast?.text) {

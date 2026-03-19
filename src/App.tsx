@@ -11,6 +11,8 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
+import PublicSignalFeed from './components/PublicSignalFeed'
+import MarketSentiment from './components/MarketSentiment'
 
 function App() {
   const { connected } = useWallet()
@@ -273,6 +275,12 @@ function App() {
             <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
               <PortfolioCard />
               <RoastDisplay />
+            </div>
+
+            {/* Public feed + sentiment row */}
+            <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
+              <PublicSignalFeed />
+              <MarketSentiment />
             </div>
 
             {/* Trading Signals Section */}
