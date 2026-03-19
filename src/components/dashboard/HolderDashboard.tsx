@@ -178,15 +178,6 @@ const HOLDER_FEATURES = [
     badgeText: '#67e8f9',
   },
   {
-    icon: '🏆',
-    title: 'Community Alpha',
-    desc: 'Access to the holder-only Discord with curated trade ideas from top contributors.',
-    badge: 'Exclusive',
-    badgeColor: 'rgba(234,179,8,0.15)',
-    badgeBorder: 'rgba(234,179,8,0.5)',
-    badgeText: '#facc15',
-  },
-  {
     icon: '🔥',
     title: 'Burn Discounts',
     desc: '20% off all pay-per-use features when paying with AGNTCBRO tokens.',
