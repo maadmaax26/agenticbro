@@ -11,6 +11,7 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
+import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import PublicSignalFeed from './components/PublicSignalFeed'
 import MarketSentiment from './components/MarketSentiment'
 
@@ -50,30 +51,7 @@ function App() {
       {showTierPage === 'holder' ? (
         <HolderDashboard onBack={() => setShowTierPage(null)} />
       ) : showTierPage === 'whale' ? (
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6">
-          <div className="text-center bg-black/40 backdrop-blur-md rounded-2xl border p-12 max-w-md"
-            style={{ borderColor: 'rgba(6,182,212,0.4)' }}>
-            <div className="text-5xl mb-4">🐋</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Whale Tier</h2>
-            <p className="text-lg font-semibold mb-4" style={{ color: '#67e8f9' }}>
-              Coming Soon
-            </p>
-            <p className="text-sm text-gray-400 mb-8">
-              Premium whale-level analytics and alpha are being built.
-            </p>
-            <button
-              onClick={() => setShowTierPage(null)}
-              className="px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125"
-              style={{
-                background: 'rgba(6,182,212,0.25)',
-                borderColor: 'rgba(6,182,212,0.7)',
-                color: '#67e8f9'
-              }}
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
+        <WhaleDashboard onBack={() => setShowTierPage(null)} />
       ) : showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
