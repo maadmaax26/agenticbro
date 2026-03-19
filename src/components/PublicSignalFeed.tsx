@@ -40,7 +40,7 @@ export default function PublicSignalFeed() {
         </h2>
         <span className="px-2 py-0.5 rounded text-xs font-mono font-bold"
           style={{ background: 'rgba(234,179,8,0.15)', color: '#facc15', border: '1px solid rgba(234,179,8,0.4)' }}>
-          ⏱ 30-MIN DELAYED
+          ⏱ 15-MIN DELAYED
         </span>
       </div>
 
@@ -80,8 +80,8 @@ export default function PublicSignalFeed() {
       {/* Upsell footer */}
       <div className="mt-4 pt-3 border-t border-purple-500/15 text-center">
         <p className="text-xs text-gray-500">
-          🔒 Real-time signals & exact prices available in{' '}
-          <span className="text-purple-400 font-semibold">Holder Tier</span>
+          🔒 <span className="text-purple-400 font-semibold">Holder Tier</span> — 15-min delayed &nbsp;·&nbsp;{' '}
+          <span className="text-cyan-400 font-semibold">Whale Tier</span> — Real-time
         </p>
       </div>
     </div>
