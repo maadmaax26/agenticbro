@@ -235,84 +235,69 @@ async function fetchBalance(ownerAddress: string): Promise<number> {
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useTokenGating(): TokenGatingState {
-  const { publicKey, connected } = useWallet()
+  const { publicKey } = useWallet()
   const [state, setState] = useState<TokenGatingState>(DEFAULT_STATE)
   const walletAddr = publicKey?.toBase58() ?? ''
-  const runId = useRef(0)
+  const runId  = useRef(0)
+  const lastAddr = useRef('') // survives publicKey → null on disconnect
 
-  const refresh = useCallback(async () => {
-    if (!connected || !walletAddr) {
-      setState(DEFAULT_STATE)
-      return
-    }
-
-    // ── Return cached result immediately if we've already checked this session ──
-    const cached = readCache(walletAddr)
+  // Stable check function — addr passed in so the function never needs to
+  // be recreated and never closes over stale wallet state.
+  const doCheck = useCallback(async (addr: string) => {
+    // Return cached result immediately if already checked this session
+    const cached = readCache(addr)
     if (cached) {
-      console.log(`[TokenGating] Session cache hit for ${walletAddr}`)
-      setState({
-        ...cached,
-        loading: false,
-        error: null,
-      })
+      console.log(`[TokenGating] Session cache hit for ${addr}`)
+      setState({ ...cached, loading: false, error: null })
       return
     }
 
-    // ── First login for this wallet this session — do the full check ──
     const currentRun = ++runId.current
     setState(prev => ({ ...prev, loading: true, error: null }))
-    console.log(`[TokenGating] ── Run #${currentRun} for ${walletAddr} (no cache) ──`)
+    console.log(`[TokenGating] ── Checking balance for ${addr} ──`)
 
     try {
       const [balance, livePrice] = await Promise.all([
-        fetchBalance(walletAddr),
+        fetchBalance(addr),
         fetchLivePrice(),
       ])
 
       if (currentRun !== runId.current) return
 
-      const usdValue = balance * livePrice
+      const usdValue           = balance * livePrice
       const holderTierUnlocked = usdValue >= HOLDER_TIER_USD
       const whaleTierUnlocked  = usdValue >= WHALE_TIER_USD
 
-      console.log(`[TokenGating] RESULT: ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
-      console.log(`[TokenGating] Holder ($${HOLDER_TIER_USD}): ${holderTierUnlocked ? 'UNLOCKED' : 'locked'}`)
-      console.log(`[TokenGating] Whale ($${WHALE_TIER_USD}): ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
+      console.log(`[TokenGating] ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
+      console.log(`[TokenGating] Holder: ${holderTierUnlocked ? 'UNLOCKED' : 'locked'} | Whale: ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
 
-      // Persist result for this session so we never re-fetch on tab transitions
-      writeCache(walletAddr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
+      writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
 
-      setState({
-        balance,
-        usdValue,
-        tokenPriceUsd: livePrice,
-        holderTierUnlocked,
-        whaleTierUnlocked,
-        loading: false,
-        error: null,
-      })
+      setState({ balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked, loading: false, error: null })
     } catch (err) {
       if (currentRun !== runId.current) return
-      console.error('[TokenGating] Unexpected error:', err)
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Could not verify AGNTCBRO balance. Please try again.',
-      }))
+      console.error('[TokenGating] Error:', err)
+      setState(prev => ({ ...prev, loading: false, error: 'Could not verify AGNTCBRO balance. Please try again.' }))
     }
-  }, [connected, walletAddr])
+  }, []) // stable — addr is a param, no stale-closure risk
 
-  // Clear cache when wallet disconnects so next connect always re-checks
+  // Single effect: fires exactly when the wallet address appears or disappears.
+  // Using walletAddr (derived from publicKey) as the sole trigger avoids the
+  // race condition where `connected` and `publicKey` update in separate renders.
   useEffect(() => {
-    if (!connected && walletAddr) {
-      clearCache(walletAddr)
+    if (walletAddr) {
+      lastAddr.current = walletAddr
+      doCheck(walletAddr)
+    } else {
+      // publicKey became null — wallet disconnected or changed.
+      // Use lastAddr to clear the cache even though publicKey is now null.
+      if (lastAddr.current) {
+        clearCache(lastAddr.current)
+        lastAddr.current = ''
+      }
+      setState(DEFAULT_STATE)
     }
-  }, [connected, walletAddr])
-
-  // Auto-run on wallet connect / address change
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  }, [walletAddr, doCheck])
 
   return state
 }
