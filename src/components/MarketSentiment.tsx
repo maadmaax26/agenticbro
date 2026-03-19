@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 
-interface SentimentData {
-  fearGreedIndex: number
-  fearGreedLabel: string
-  assets: {
-    symbol: string
-    emoji: string
-    sentiment: 'Bullish' | 'Bearish' | 'Neutral'
-    score: number   // 0–100
-    change24h: string
-  }[]
-  dominance: { btc: number; eth: number; others: number }
+interface AssetRow {
+  symbol: string
+  emoji: string
+  sentiment: 'Bullish' | 'Bearish' | 'Neutral'
+  score: number   // 0–100
+  change24h: string
 }
 
 // Fetch Fear & Greed from public API, fall back to static data
@@ -29,6 +24,46 @@ async function fetchFearGreed(): Promise<{ value: number; label: string }> {
   }
 }
 
+// Fetch live 24h change % from CoinGecko free API
+async function fetchAssetPrices(): Promise<AssetRow[]> {
+  const FALLBACK: AssetRow[] = [
+    { symbol: 'BTC', emoji: '₿',  sentiment: 'Bullish', score: 68, change24h: '+2.1%' },
+    { symbol: 'ETH', emoji: 'Ξ',  sentiment: 'Neutral', score: 51, change24h: '-0.4%' },
+    { symbol: 'SOL', emoji: '◎',  sentiment: 'Bullish', score: 74, change24h: '+3.8%' },
+    { symbol: 'BNB', emoji: '🟡', sentiment: 'Neutral', score: 49, change24h: '+0.2%' },
+    { symbol: 'XRP', emoji: '✕',  sentiment: 'Neutral', score: 50, change24h: '+0.0%' },
+  ]
+  const META: Record<string, { symbol: string; emoji: string }> = {
+    bitcoin:      { symbol: 'BTC', emoji: '₿'  },
+    ethereum:     { symbol: 'ETH', emoji: 'Ξ'  },
+    solana:       { symbol: 'SOL', emoji: '◎'  },
+    binancecoin:  { symbol: 'BNB', emoji: '🟡' },
+    ripple:       { symbol: 'XRP', emoji: '✕'  },
+  }
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price' +
+      '?ids=bitcoin,ethereum,solana,binancecoin,ripple' +
+      '&vs_currencies=usd&include_24hr_change=true',
+      { signal: AbortSignal.timeout(6000) }
+    )
+    if (!res.ok) throw new Error('non-ok')
+    const json = await res.json()
+
+    return Object.entries(META).map(([id, meta]) => {
+      const change: number = json[id]?.usd_24h_change ?? 0
+      const sign = change >= 0 ? '+' : ''
+      const sentiment: AssetRow['sentiment'] =
+        change > 1.5 ? 'Bullish' : change < -1.5 ? 'Bearish' : 'Neutral'
+      // Map change % to a 0–100 score: 0% → 50, ±10% → 100/0
+      const score = Math.min(100, Math.max(0, Math.round(50 + change * 2.5)))
+      return { ...meta, sentiment, score, change24h: `${sign}${change.toFixed(1)}%` }
+    })
+  } catch {
+    return FALLBACK
+  }
+}
+
 function fearColor(v: number): string {
   if (v <= 25) return '#f87171'   // red   — Extreme Fear
   if (v <= 45) return '#fb923c'   // orange — Fear
@@ -37,20 +72,14 @@ function fearColor(v: number): string {
   return '#4ade80'                // green — Extreme Greed
 }
 
-const STATIC_ASSETS: SentimentData['assets'] = [
-  { symbol: 'BTC', emoji: '₿',  sentiment: 'Bullish', score: 68, change24h: '+2.1%' },
-  { symbol: 'ETH', emoji: 'Ξ',  sentiment: 'Neutral', score: 51, change24h: '-0.4%' },
-  { symbol: 'SOL', emoji: '◎',  sentiment: 'Bullish', score: 74, change24h: '+3.8%' },
-  { symbol: 'BNB', emoji: '🟡', sentiment: 'Neutral', score: 49, change24h: '+0.2%' },
-  { symbol: 'XRP', emoji: '✕',  sentiment: 'Bearish', score: 35, change24h: '-1.7%' },
-]
-
 export default function MarketSentiment() {
   const [fg, setFg] = useState<{ value: number; label: string } | null>(null)
+  const [assets, setAssets] = useState<AssetRow[]>([])
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     fetchFearGreed().then(setFg)
+    fetchAssetPrices().then(setAssets)
     const t = setTimeout(() => setVisible(true), 300)
     return () => clearTimeout(t)
   }, [])
@@ -98,7 +127,7 @@ export default function MarketSentiment() {
 
       {/* Per-asset sentiment */}
       <div className="space-y-2">
-        {STATIC_ASSETS.map(a => (
+        {assets.map(a => (
           <div key={a.symbol} className="flex items-center gap-3">
             <span className="w-5 text-center text-sm">{a.emoji}</span>
             <span className="text-xs font-bold text-white w-8">{a.symbol}</span>
@@ -137,7 +166,7 @@ export default function MarketSentiment() {
       </div>
 
       <p className="text-xs text-gray-600 mt-4 text-center">
-        Sentiment scores are indicative · 24h change is approximate
+        24h change via CoinGecko · sentiment derived from price action
       </p>
     </div>
   )
