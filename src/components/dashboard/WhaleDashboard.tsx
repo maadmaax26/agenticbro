@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useTokenGating } from '../../hooks/useTokenGating';
 import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, Users, DollarSign, Vote, Star, Eye, Clock } from 'lucide-react';
 import WhaleChat from './WhaleChat';
 
 type ActiveTab = 'overview' | 'chat' | 'signals' | 'risk' | 'strategy' | 'governance';
 
-export default function WhaleDashboard({ onBack }: { onBack?: () => void }) {
+interface WhaleDashboardProps {
+  onBack?: () => void;
+  whaleTierUnlocked: boolean;
+  balance: number;
+  usdValue: number;
+}
+
+export default function WhaleDashboard({ onBack, whaleTierUnlocked, balance, usdValue }: WhaleDashboardProps) {
   const { connected, publicKey } = useWallet();
-  const { whaleTierUnlocked, balance, usdValue } = useTokenGating();
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
 
   if (!connected || !publicKey) return null;
