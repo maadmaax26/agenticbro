@@ -60,6 +60,43 @@ const DEFAULT_STATE: TokenGatingState = {
   error: null,
 }
 
+// ─── Session cache ────────────────────────────────────────────────────────────
+// One balance+tier check per wallet per browser session. Clears on tab close.
+
+interface GatingCache {
+  balance: number
+  usdValue: number
+  tokenPriceUsd: number
+  holderTierUnlocked: boolean
+  whaleTierUnlocked: boolean
+}
+
+function cacheKey(addr: string) {
+  return `agntcbro_gating_${addr}`
+}
+
+function readCache(addr: string): GatingCache | null {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(addr))
+    if (!raw) return null
+    return JSON.parse(raw) as GatingCache
+  } catch {
+    return null
+  }
+}
+
+function writeCache(addr: string, data: GatingCache) {
+  try {
+    sessionStorage.setItem(cacheKey(addr), JSON.stringify(data))
+  } catch { /* storage quota — ignore */ }
+}
+
+function clearCache(addr: string) {
+  try {
+    sessionStorage.removeItem(cacheKey(addr))
+  } catch { /* ignore */ }
+}
+
 // ─── Price fetching ──────────────────────────────────────────────────────────
 
 async function fetchPriceFromDexScreener(): Promise<number | null> {
@@ -209,9 +246,22 @@ export function useTokenGating(): TokenGatingState {
       return
     }
 
+    // ── Return cached result immediately if we've already checked this session ──
+    const cached = readCache(walletAddr)
+    if (cached) {
+      console.log(`[TokenGating] Session cache hit for ${walletAddr}`)
+      setState({
+        ...cached,
+        loading: false,
+        error: null,
+      })
+      return
+    }
+
+    // ── First login for this wallet this session — do the full check ──
     const currentRun = ++runId.current
     setState(prev => ({ ...prev, loading: true, error: null }))
-    console.log(`[TokenGating] ── Run #${currentRun} for ${walletAddr} ──`)
+    console.log(`[TokenGating] ── Run #${currentRun} for ${walletAddr} (no cache) ──`)
 
     try {
       const [balance, livePrice] = await Promise.all([
@@ -222,16 +272,22 @@ export function useTokenGating(): TokenGatingState {
       if (currentRun !== runId.current) return
 
       const usdValue = balance * livePrice
+      const holderTierUnlocked = usdValue >= HOLDER_TIER_USD
+      const whaleTierUnlocked  = usdValue >= WHALE_TIER_USD
+
       console.log(`[TokenGating] RESULT: ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
-      console.log(`[TokenGating] Holder ($${HOLDER_TIER_USD}): ${usdValue >= HOLDER_TIER_USD ? 'UNLOCKED' : 'locked'}`)
-      console.log(`[TokenGating] Whale ($${WHALE_TIER_USD}): ${usdValue >= WHALE_TIER_USD ? 'UNLOCKED' : 'locked'}`)
+      console.log(`[TokenGating] Holder ($${HOLDER_TIER_USD}): ${holderTierUnlocked ? 'UNLOCKED' : 'locked'}`)
+      console.log(`[TokenGating] Whale ($${WHALE_TIER_USD}): ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
+
+      // Persist result for this session so we never re-fetch on tab transitions
+      writeCache(walletAddr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
 
       setState({
         balance,
         usdValue,
         tokenPriceUsd: livePrice,
-        holderTierUnlocked: usdValue >= HOLDER_TIER_USD,
-        whaleTierUnlocked: usdValue >= WHALE_TIER_USD,
+        holderTierUnlocked,
+        whaleTierUnlocked,
         loading: false,
         error: null,
       })
@@ -243,6 +299,13 @@ export function useTokenGating(): TokenGatingState {
         loading: false,
         error: 'Could not verify AGNTCBRO balance. Please try again.',
       }))
+    }
+  }, [connected, walletAddr])
+
+  // Clear cache when wallet disconnects so next connect always re-checks
+  useEffect(() => {
+    if (!connected && walletAddr) {
+      clearCache(walletAddr)
     }
   }, [connected, walletAddr])
 
