@@ -149,132 +149,128 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
-function DashboardOverview() {
-  const [currentMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
+const HOLDER_FEATURES = [
+  {
+    icon: '⚡',
+    title: 'Early Signal Access',
+    desc: '15-min delayed signals — twice as fast as the free 30-min feed.',
+    badge: '15-min delay',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '🔥',
+    title: 'Portfolio Roast',
+    desc: 'Weekly AI deep-dive into your trading mistakes with specific, actionable lessons.',
+    badge: 'Weekly',
+    badgeColor: 'rgba(234,88,12,0.2)',
+    badgeBorder: 'rgba(234,88,12,0.5)',
+    badgeText: '#fb923c',
+  },
+  {
+    icon: '🔔',
+    title: 'Smart Alerting',
+    desc: 'Custom price + sentiment alerts — e.g. "BTC funding rate spiking + whale inflows".',
+    badge: 'Custom',
+    badgeColor: 'rgba(6,182,212,0.2)',
+    badgeBorder: 'rgba(6,182,212,0.5)',
+    badgeText: '#67e8f9',
+  },
+  {
+    icon: '🏆',
+    title: 'Community Alpha',
+    desc: 'Access to the holder-only Discord with curated trade ideas from top contributors.',
+    badge: 'Exclusive',
+    badgeColor: 'rgba(234,179,8,0.15)',
+    badgeBorder: 'rgba(234,179,8,0.5)',
+    badgeText: '#facc15',
+  },
+  {
+    icon: '🔥',
+    title: 'Burn Discounts',
+    desc: '20% off all pay-per-use features when paying with AGNTCBRO tokens.',
+    badge: '20% off',
+    badgeColor: 'rgba(34,197,94,0.15)',
+    badgeBorder: 'rgba(34,197,94,0.5)',
+    badgeText: '#4ade80',
+  },
+  {
+    icon: '👁',
+    title: 'Multi-Asset Watchlist',
+    desc: 'Track and monitor up to 15 assets simultaneously with live sentiment overlays.',
+    badge: '15 assets',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '📜',
+    title: 'Signal History',
+    desc: '30 days of full historical signal data — backtest ideas and spot patterns.',
+    badge: '30-day history',
+    badgeColor: 'rgba(6,182,212,0.2)',
+    badgeBorder: 'rgba(6,182,212,0.5)',
+    badgeText: '#67e8f9',
+  },
+];
 
+function DashboardOverview() {
   return (
     <div className="space-y-6">
-      {/* Monthly Allowances */}
+      {/* Feature cards */}
       <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Monthly Allowances — {currentMonth}</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AllowanceCard
-            title="Market Analysis"
-            used={3}
-            total={10}
-            cost="10,000"
-            icon="📊"
-          />
-          <AllowanceCard
-            title="BTC Signals"
-            used={2}
-            total={5}
-            cost="10,000"
-            icon="₿"
-          />
-          <AllowanceCard
-            title="ETH Signals"
-            used={1}
-            total={5}
-            cost="10,000"
-            icon="Ξ"
-          />
-          <AllowanceCard
-            title="SOL Signals"
-            used={0}
-            total={5}
-            cost="10,000"
-            icon="◎"
-          />
-          <AllowanceCard
-            title="AI Insights"
-            used={1}
-            total={5}
-            cost="20,000"
-            icon="🤖"
-          />
-          <AllowanceCard
-            title="Market Impact"
-            used={0}
-            total={3}
-            cost="10,000"
-            icon="🌊"
-          />
+        <h2 className="text-xl font-bold text-white mb-5">💰 Holder Tier Features</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          {HOLDER_FEATURES.map(f => (
+            <div
+              key={f.title}
+              className="flex gap-4 rounded-xl p-4 border"
+              style={{ background: 'rgba(139,92,246,0.07)', borderColor: 'rgba(139,92,246,0.2)' }}
+            >
+              <span className="text-2xl flex-shrink-0 mt-0.5">{f.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="font-bold text-white text-sm">{f.title}</span>
+                  <span
+                    className="px-1.5 py-0.5 rounded text-xs font-semibold"
+                    style={{ background: f.badgeColor, border: `1px solid ${f.badgeBorder}`, color: f.badgeText }}
+                  >
+                    {f.badge}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Top-Up Rates */}
-      <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Top-Up Rates (Pay-Per-Use)</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-purple-500/20">
-                <th className="text-left py-2 text-gray-400">Feature</th>
-                <th className="text-right py-2 text-gray-400">Cost (USD)</th>
-                <th className="text-right py-2 text-gray-400">Tokens Burned</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-300">
-              <tr className="border-b border-purple-500/10">
-                <td className="py-2">Additional Signal</td>
-                <td className="text-right text-purple-300">$0.10</td>
-                <td className="text-right">10,000 AGNTCBRO</td>
-              </tr>
-              <tr className="border-b border-purple-500/10">
-                <td className="py-2">AI Insight</td>
-                <td className="text-right text-purple-300">$0.20</td>
-                <td className="text-right">20,000 AGNTCBRO</td>
-              </tr>
-              <tr>
-                <td className="py-2">Market Analysis</td>
-                <td className="text-right text-purple-300">$0.10</td>
-                <td className="text-right">10,000 AGNTCBRO</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-gray-500 mt-4">
-          Top-up limits: Max 50 extra signals, 10 AI insights, 5 market analyses per month. Estimated top-up spend: $5–15/month.
-        </p>
-      </div>
-
-      {/* Quick Stats */}
+      {/* Quick stat summary */}
       <div className="grid md:grid-cols-3 gap-4">
-        <StatCard label="Total Signals Available" value="25/month" icon="⚡" />
-        <StatCard label="AI Insights Available" value="5/month" icon="🤖" />
-        <StatCard label="Market Analysis" value="10/month" icon="📊" />
+        <StatCard label="Signal Delay" value="15 minutes" icon="⚡" />
+        <StatCard label="Watchlist Assets" value="Up to 15" icon="👁" />
+        <StatCard label="Signal History" value="30 days" icon="📜" />
+      </div>
+
+      {/* Burn discount callout */}
+      <div
+        className="rounded-2xl border p-5 flex items-center gap-4"
+        style={{ background: 'rgba(34,197,94,0.07)', borderColor: 'rgba(34,197,94,0.25)' }}
+      >
+        <span className="text-3xl flex-shrink-0">🔥</span>
+        <div>
+          <p className="font-bold text-white text-sm mb-0.5">Burn Discount Active</p>
+          <p className="text-xs text-gray-400">
+            Pay with AGNTCBRO on any pay-per-use feature and receive <span className="text-green-400 font-semibold">20% off</span> automatically.
+            Tokens are burned, reducing supply and rewarding long-term holders.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-function AllowanceCard({ title, used, total, cost, icon }: { title: string; used: number; total: number; cost: string; icon: string }) {
-  const remaining = total - used;
-  const percentage = (remaining / total) * 100;
-
-  return (
-    <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-2xl">{icon}</span>
-        <h3 className="font-semibold text-white">{title}</h3>
-      </div>
-      <div className="mb-2">
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-400">Remaining</span>
-          <span className="text-purple-300 font-semibold">{remaining} / {total}</span>
-        </div>
-        <div className="h-2 bg-purple-900/50 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-purple-500 rounded-full transition-all"
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-      </div>
-      <p className="text-xs text-gray-500">Cost: {cost} AGNTCBRO each</p>
-    </div>
-  );
-}
 
 function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
   return (
