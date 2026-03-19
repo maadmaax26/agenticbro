@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating } from '../../hooks/useTokenGating';
 import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, Users, DollarSign, Vote, Star, Eye, Clock } from 'lucide-react';
+import WhaleChat from './WhaleChat';
 
-type ActiveTab = 'overview' | 'signals' | 'risk' | 'strategy' | 'governance';
+type ActiveTab = 'overview' | 'chat' | 'signals' | 'risk' | 'strategy' | 'governance';
 
 export default function WhaleDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
@@ -82,6 +83,7 @@ export default function WhaleDashboard({ onBack }: { onBack?: () => void }) {
         <div className="flex flex-wrap gap-2">
           {([
             { id: 'overview',    label: 'Overview',    icon: <Star className="w-4 h-4" /> },
+            { id: 'chat',        label: 'Whale Chat',  icon: <MessageSquare className="w-4 h-4" /> },
             { id: 'signals',     label: 'Signals',     icon: <TrendingUp className="w-4 h-4" /> },
             { id: 'risk',        label: 'Risk',        icon: <BarChart2 className="w-4 h-4" /> },
             { id: 'strategy',    label: 'Strategy',    icon: <Sliders className="w-4 h-4" /> },
@@ -108,6 +110,7 @@ export default function WhaleDashboard({ onBack }: { onBack?: () => void }) {
 
       {/* Tab content */}
       {activeTab === 'overview'   && <WhaleOverview />}
+      {activeTab === 'chat'       && <WhaleChat />}
       {activeTab === 'signals'    && <WhaleSignals />}
       {activeTab === 'risk'       && <WhaleRisk />}
       {activeTab === 'strategy'   && <WhaleStrategy />}

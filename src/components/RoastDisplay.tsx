@@ -22,8 +22,6 @@ export default function RoastDisplay() {
   const [roast, setRoast] = useState<Roast | null>(null)
   const [roastCount, setRoastCount] = useState(0)
   const [copied, setCopied] = useState(false)
-  // Tracks whether we've already auto-fired for this session
-  const [autoFired, setAutoFired] = useState(false)
 
   const generateRoastData = async () => {
     if (!publicKey) return
@@ -69,7 +67,6 @@ export default function RoastDisplay() {
     // Only auto-generate once per session per wallet
     if (sessionStorage.getItem(key)) return
     sessionStorage.setItem(key, '1')
-    setAutoFired(true)
     generateRoastData()
   }, [connected, publicKey?.toBase58()])
 
