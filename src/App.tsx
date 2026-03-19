@@ -11,7 +11,7 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
-import WhaleChat from './components/dashboard/WhaleChat'
+import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 
 function App() {
@@ -50,7 +50,12 @@ function App() {
       {showTierPage === 'holder' ? (
         <HolderDashboard onBack={() => setShowTierPage(null)} />
       ) : showTierPage === 'whale' ? (
-        <WhaleChat />
+        <WhaleDashboard
+          onBack={() => setShowTierPage(null)}
+          whaleTierUnlocked={whaleTierUnlocked}
+          balance={balance}
+          usdValue={usdValue}
+        />
       ) : showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
