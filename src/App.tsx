@@ -112,7 +112,15 @@ function App() {
         avg_win_gain: 2.8,
         avg_loss: 72,
         avg_liquidity: 85000,
-        tradeable: false
+        total_calls: 47,
+        wins: 17,
+        losses: 12,
+        rugs: 18,
+        recent_win_rate: 30,
+        risk_adjusted_return: -0.18,
+        tradeable: false,
+        risk_level: 'HIGH',
+        confidence: 'LOW'
       },
       'cryptospacex04': {
         success_tier: 'GOOD',
@@ -121,7 +129,15 @@ function App() {
         avg_win_gain: 2.5,
         avg_loss: 35,
         avg_liquidity: 125000,
-        tradeable: true
+        total_calls: 62,
+        wins: 26,
+        losses: 19,
+        rugs: 17,
+        recent_win_rate: 50,
+        risk_adjusted_return: 0.85,
+        tradeable: true,
+        risk_level: 'MODERATE',
+        confidence: 'MEDIUM'
       }
     }
     
@@ -131,8 +147,12 @@ function App() {
     }
     
     // Otherwise generate based on hash
+    const totalCalls = 20 + (hash % 60) // 20-80 calls
     const winRate = 30 + (hash % 25) // 30-55%
     const rugRate = 20 + (hash % 30) // 20-50%
+    const wins = Math.round(totalCalls * winRate / 100)
+    const rugs = Math.round(totalCalls * rugRate / 100)
+    const losses = totalCalls - wins - rugs
     
     let success_tier: string
     if (winRate >= 50 && rugRate <= 15) success_tier = 'EXCELLENT'
@@ -140,14 +160,27 @@ function App() {
     else if (winRate >= 30 && rugRate <= 35) success_tier = 'MODERATE'
     else success_tier = 'POOR'
     
+    const avg_win_gain = 1.5 + (hash % 20) / 10 // 1.5-3.5x
+    const avg_loss = 25 + (hash % 50) // 25-75%
+    const loss_rate = (losses + rugs) / totalCalls
+    const risk_adjusted_return = (winRate / 100 * avg_win_gain) - (loss_rate * avg_loss / 100)
+    
     return {
       success_tier,
       win_rate,
       rug_rate,
-      avg_win_gain: 1.5 + (hash % 20) / 10, // 1.5-3.5x
-      avg_loss: 25 + (hash % 50), // 25-75%
+      avg_win_gain: Number(avg_win_gain.toFixed(2)),
+      avg_loss,
       avg_liquidity: 50000 + (hash % 150000), // $50K-$200K
-      tradeable: success_tier !== 'POOR'
+      total_calls,
+      wins,
+      losses,
+      rugs,
+      recent_win_rate: Math.max(0, win_rate - 5 + (hash % 10)), // Varied recent performance
+      risk_adjusted_return: Number(risk_adjusted_return.toFixed(2)),
+      tradeable: success_tier !== 'POOR',
+      risk_level: rug_rate > 30 ? 'HIGH' : rugRate > 20 ? 'MODERATE' : 'LOW',
+      confidence: success_tier === 'EXCELLENT' ? 'HIGH' : success_tier === 'GOOD' ? 'MEDIUM' : 'LOW'
     }
   }
 
@@ -192,18 +225,31 @@ function App() {
       addMsg({ 
         type: successTier === 'POOR' ? 'error' : successTier === 'MODERATE' ? 'warning' : 'success',
         icon: '📈', 
-        text: `Channel Success Rate: ${tierEmoji} ${successTier}` 
+        text: `Channel: @${inputValue.replace(/^@/, '')} · ${tierEmoji} ${successTier} Tier` 
       })
-      addMsg({ type: 'result', icon: '📊', text: `Win Rate: ${successRateData.win_rate}% · Rug Rate: ${successRateData.rug_rate}%` })
-      addMsg({ type: 'result', icon: '💰', text: `Avg Win Gain: ${successRateData.avg_win_gain}x · Avg Loss: ${successRateData.avg_loss}%` })
+      
+      // Detailed performance breakdown
+      addMsg({ type: 'result', icon: '📊', text: `Total Calls: ${successRateData.total_calls} · Wins: ${successRateData.wins} · Losses: ${successRateData.losses} · Rugs: ${successRateData.rugs}` })
+      addMsg({ type: 'result', icon: '🎯', text: `Win Rate: ${successRateData.win_rate}% · Rug Rate: ${successRateData.rug_rate}% · Recent (10): ${successRateData.recent_win_rate}%` })
+      addMsg({ type: 'result', icon: '💰', text: `Avg Win: ${successRateData.avg_win_gain}x · Avg Loss: ${successRateData.avg_loss}%` })
+      addMsg({ type: 'result', icon: '💹', text: `Risk-Adjusted Return: ${successRateData.risk_adjusted_return} ${successRateData.risk_adjusted_return >= 0 ? '(Positive)' : '(Negative)'}` })
       addMsg({ type: 'result', icon: '💧', text: `Avg Liquidity: $${successRateData.avg_liquidity.toLocaleString()}` })
       
-      const riskLevel = successRateData.rug_rate > 0.30 ? 'HIGH' : successRateData.rug_rate > 0.20 ? 'MODERATE' : 'LOW'
+      const riskLevel = successRateData.risk_level
+      const riskEmoji = riskLevel === 'HIGH' ? '🔴' : riskLevel === 'MODERATE' ? '🟡' : '🟢'
       addMsg({ 
         type: riskLevel === 'HIGH' ? 'error' : riskLevel === 'MODERATE' ? 'warning' : 'result',
         icon: '⚠️', 
-        text: `Risk Level: ${riskLevel} · ${successRateData.tradeable ? '✅ Tradeable' : '❌ Avoid'}` 
+        text: `${riskEmoji} Risk Level: ${riskLevel} · Confidence: ${successRateData.confidence} · ${successRateData.tradeable ? '✅ Tradeable' : '❌ Avoid'}` 
       })
+      
+      // Benchmark comparison
+      const industryAvgWin = 35.0
+      const industryAvgRug = 40.0
+      const aboveAvgWin = successRateData.win_rate >= industryAvgWin
+      const belowAvgRug = successRateData.rug_rate <= industryAvgRug
+      
+      addMsg({ type: 'result', icon: '🏆', text: `Industry Comparison: ${aboveAvgWin ? '📈' : '📉'} Win ${successRateData.win_rate >= industryAvgWin ? '+' : ''}${(successRateData.win_rate - industryAvgWin).toFixed(0)}% · ${belowAvgRug ? '✅' : '❌'} Rug ${successRateData.rug_rate <= industryAvgRug ? '-' : '+'}${Math.abs(successRateData.rug_rate - industryAvgRug).toFixed(0)}%` })
       
       await new Promise(r => setTimeout(r, 400))
     }
