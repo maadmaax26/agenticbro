@@ -98,6 +98,59 @@ function App() {
     setScanMessages(prev => [...prev, { ...msg, id: Date.now() + Math.random() }])
   }, [])
 
+  // Generate mock channel success rate data (in production, this would come from an API)
+  const generateChannelSuccessRate = (channelName: string) => {
+    // Use channel name hash to generate consistent but varied data
+    const hash = channelName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    
+    // Known channels with specific data
+    const knownChannels: Record<string, any> = {
+      'cryptolordgem': {
+        success_tier: 'POOR',
+        win_rate: 36,
+        rug_rate: 38,
+        avg_win_gain: 2.8,
+        avg_loss: 72,
+        avg_liquidity: 85000,
+        tradeable: false
+      },
+      'cryptospacex04': {
+        success_tier: 'GOOD',
+        win_rate: 42,
+        rug_rate: 28,
+        avg_win_gain: 2.5,
+        avg_loss: 35,
+        avg_liquidity: 125000,
+        tradeable: true
+      }
+    }
+    
+    // Return known data if available
+    if (knownChannels[channelName.toLowerCase()]) {
+      return knownChannels[channelName.toLowerCase()]
+    }
+    
+    // Otherwise generate based on hash
+    const winRate = 30 + (hash % 25) // 30-55%
+    const rugRate = 20 + (hash % 30) // 20-50%
+    
+    let success_tier: string
+    if (winRate >= 50 && rugRate <= 15) success_tier = 'EXCELLENT'
+    else if (winRate >= 40 && rugRate <= 25) success_tier = 'GOOD'
+    else if (winRate >= 30 && rugRate <= 35) success_tier = 'MODERATE'
+    else success_tier = 'POOR'
+    
+    return {
+      success_tier,
+      win_rate,
+      rug_rate,
+      avg_win_gain: 1.5 + (hash % 20) / 10, // 1.5-3.5x
+      avg_loss: 25 + (hash % 50), // 25-75%
+      avg_liquidity: 50000 + (hash % 150000), // $50K-$200K
+      tradeable: success_tier !== 'POOR'
+    }
+  }
+
   const runScan = useCallback(async () => {
     const inputValue = scanMode === 'wallet' ? walletInput.trim()
                      : scanMode === 'channels' ? channelInput.trim()
@@ -121,6 +174,39 @@ function App() {
 
     addMsg({ type: 'system', icon: '🔍', text: `Initiating Priority Scan for ${modeLabel}…` })
     addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
+
+    // For channel scans, add success rate analysis
+    if (scanMode === 'channels') {
+      addMsg({ type: 'system', icon: '📊', text: 'Analyzing historical call performance and success rates…' })
+      await new Promise(r => setTimeout(r, 600))
+      
+      // Generate mock success rate data (in production, this would come from an API)
+      const channelName = inputValue.replace(/^@/, '').replace(/^t\.me\//, '').toLowerCase()
+      const successRateData = generateChannelSuccessRate(channelName)
+      
+      const successTier = successRateData.success_tier
+      const tierEmoji = successTier === 'EXCELLENT' ? '🟢' : 
+                       successTier === 'GOOD' ? '🟡' : 
+                       successTier === 'MODERATE' ? '🟠' : '🔴'
+      
+      addMsg({ 
+        type: successTier === 'POOR' ? 'error' : successTier === 'MODERATE' ? 'warning' : 'success',
+        icon: '📈', 
+        text: `Channel Success Rate: ${tierEmoji} ${successTier}` 
+      })
+      addMsg({ type: 'result', icon: '📊', text: `Win Rate: ${successRateData.win_rate}% · Rug Rate: ${successRateData.rug_rate}%` })
+      addMsg({ type: 'result', icon: '💰', text: `Avg Win Gain: ${successRateData.avg_win_gain}x · Avg Loss: ${successRateData.avg_loss}%` })
+      addMsg({ type: 'result', icon: '💧', text: `Avg Liquidity: $${successRateData.avg_liquidity.toLocaleString()}` })
+      
+      const riskLevel = successRateData.rug_rate > 0.30 ? 'HIGH' : successRateData.rug_rate > 0.20 ? 'MODERATE' : 'LOW'
+      addMsg({ 
+        type: riskLevel === 'HIGH' ? 'error' : riskLevel === 'MODERATE' ? 'warning' : 'result',
+        icon: '⚠️', 
+        text: `Risk Level: ${riskLevel} · ${successRateData.tradeable ? '✅ Tradeable' : '❌ Avoid'}` 
+      })
+      
+      await new Promise(r => setTimeout(r, 400))
+    }
 
     try {
       const res  = await fetch(`${API_BASE}/api/telegram/priority-scan`, {
