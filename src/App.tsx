@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating } from './hooks/useTokenGating'
 import PortfolioCard from './components/PortfolioCard'
 import RoastDisplay from './components/RoastDisplay'
+import PriorityScan from './components/dashboard/PriorityScan'
 import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
@@ -20,6 +21,10 @@ function App() {
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
+  const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
+    const saved = localStorage.getItem('priorityFreeScans');
+    return saved ? Math.max(0, parseInt(saved, 10)) : 3;
+  });
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
@@ -253,6 +258,92 @@ function App() {
                     {balance.toLocaleString()} AGNTCBRO {usdValue > 0 ? `· $${usdValue.toFixed(2)}` : ''}
                   </span>
                 )}
+              </div>
+            </div>
+
+            {/* Priority Scan Section */}
+            <div className="max-w-6xl mx-auto mb-6">
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">🔍</div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Priority Scan</h2>
+                      <p className="text-sm text-gray-400">Deep scan your wallet, channels, or tokens</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                         style={{
+                           background: priorityScansRemaining > 0
+                             ? 'rgba(16,185,129,0.15)'
+                             : 'rgba(245,158,11,0.15)',
+                           border: priorityScansRemaining > 0
+                             ? '1px solid rgba(16,185,129,0.4)'
+                             : '1px solid rgba(245,158,11,0.4)',
+                           color: priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
+                         }}>
+                      {priorityScansRemaining > 0 ? (
+                        <>
+                          <span>🎁</span>
+                          <span>{priorityScansRemaining} Free Scans</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>💎</span>
+                          <span>10K AGNTCBRO/Scan</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-black/30 rounded-xl p-6 border border-purple-500/20">
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">⚡</div>
+                    <h3 className="text-lg font-bold text-white mb-2">Run Deep Analysis</h3>
+                    <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
+                      Priority Scan analyzes your wallet, favorite channels, or specific tokens to uncover opportunities and risks.
+                    </p>
+                    <div className="grid md:grid-cols-3 gap-3 mb-4">
+                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
+                        <p className="text-xs text-gray-400 mb-1">Wallet Scan</p>
+                        <p className="text-sm font-bold text-purple-300">Full portfolio analysis</p>
+                      </div>
+                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
+                        <p className="text-xs text-gray-400 mb-1">Channel Scan</p>
+                        <p className="text-sm font-bold text-purple-300">Alpha quality assessment</p>
+                      </div>
+                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
+                        <p className="text-xs text-gray-400 mb-1">Token Scan</p>
+                        <p className="text-sm font-bold text-purple-300">Deep token research</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (priorityScansRemaining > 0) {
+                          setPriorityScansRemaining(priorityScansRemaining - 1);
+                          localStorage.setItem('priorityFreeScans', String(priorityScansRemaining - 1));
+                          // Would trigger scan here
+                          alert('Priority scan initiated! (Demo mode)');
+                        } else {
+                          if (holderTierUnlocked) {
+                            setShowTierPage('holder');
+                          } else {
+                            alert('Scan limit reached. Unlock Holder Tier (10K AGNTCBRO) for unlimited priority scans.');
+                          }
+                        }
+                      }}
+                      className="px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+                      style={holderTierUnlocked || priorityScansRemaining > 0
+                        ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
+                        : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
+                      }
+                    >
+                      {priorityScansRemaining > 0 ? `Run Priority Scan (${priorityScansRemaining} remaining)` : 'Run Priority Scan (10K AGNTCBRO)'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
