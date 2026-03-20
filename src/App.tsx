@@ -295,7 +295,15 @@ function App() {
           token:   scanMode === 'token'    ? inputValue : undefined,
         }),
       })
-      const data = await res.json() as { results: ScanResult[]; mock?: boolean; ts?: number }
+      const data = await res.json() as { results?: ScanResult[]; mock?: boolean; ts?: number; error?: string; detail?: string }
+
+      // Surface server-side errors (e.g. channel not found) directly to the user
+      if (!res.ok || data.error) {
+        const msg = data.detail ?? data.error ?? `Server error (${res.status})`
+        addMsg({ type: 'error', icon: '❌', text: msg })
+        return
+      }
+
       const results: ScanResult[] = data.results ?? []
 
       if (data.mock) addMsg({ type: 'warning', icon: '⚠️', text: 'Running in demo mode — add Telegram credentials for live data' })
