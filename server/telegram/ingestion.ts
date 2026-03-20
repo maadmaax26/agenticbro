@@ -46,6 +46,55 @@ async function fetchChannelMessages(
     }))
 }
 
+/**
+ * Paginate through a channel's history, collecting all messages since
+ * `cutoffUnixSec` (Unix seconds). Stops when the oldest message in a batch
+ * pre-dates the cutoff, or when `maxMessages` is reached.
+ *
+ * Telegram's getMessages API returns messages newest-first.
+ * We walk backwards using `offsetId` (the ID of the last message seen).
+ */
+async function fetchChannelMessagesSince(
+  channelUsername: string,
+  cutoffUnixSec:   number,
+  maxMessages      = 1_000,
+): Promise<RawMessage[]> {
+  const client   = await getTelegramClient()
+  const all: RawMessage[] = []
+  let   offsetId = 0          // 0 = start from newest
+
+  console.log(`[telegram/ingestion] fetching ${channelUsername} since ${new Date(cutoffUnixSec * 1000).toISOString().slice(0, 10)} (max ${maxMessages} msgs)`)
+
+  while (all.length < maxMessages) {
+    const batchSize = Math.min(100, maxMessages - all.length)
+
+    const batch = await client.getMessages(channelUsername, {
+      limit:    batchSize,
+      offsetId: offsetId === 0 ? undefined : offsetId,
+    })
+
+    if (batch.length === 0) break    // channel exhausted
+
+    for (const m of batch) {
+      if (!m.text || m.text.length === 0) continue
+      if (m.date < cutoffUnixSec) {
+        // Reached messages older than cutoff — stop entirely
+        console.log(`[telegram/ingestion] ${channelUsername}: reached cutoff at msg ${m.id} (${new Date(m.date * 1000).toISOString().slice(0, 10)}), collected ${all.length} msgs`)
+        return all
+      }
+      all.push({ id: m.id, text: m.text, date: m.date, channelUsername })
+    }
+
+    if (batch.length < batchSize) break    // fewer than requested = no more messages
+
+    offsetId = batch[batch.length - 1].id  // oldest in this batch → next page starts here
+    await new Promise(r => setTimeout(r, 350))  // respect Telegram rate limits
+  }
+
+  console.log(`[telegram/ingestion] ${channelUsername}: collected ${all.length} msgs (limit reached)`)
+  return all
+}
+
 // ─── Rate-limited parallel fetch ─────────────────────────────────────────────
 
 async function fetchAllChannels(
@@ -192,7 +241,7 @@ export async function runPriorityScan(
     return allCalls.sort((a, b) => b.edgeScore - a.edgeScore)
   }
 
-  // ── Channel scan: deep-scan a specific channel ────────────────────────────
+  // ── Channel scan: deep-scan a specific channel (6 months of history) ────────
   if (target === 'channels' && opts.channel) {
     const rawInput = opts.channel.replace(/^@/, '').replace(/^t\.me\//, '').trim()
     // Try to match against tracked channels by username or display name
@@ -207,9 +256,12 @@ export async function runPriorityScan(
       classification: 'alpha' as const,
     }
     try {
-      const messages = await fetchChannelMessages(channelEntry.username, 50)
+      // 6 months back in Unix seconds
+      const sixMonthsAgo = Math.floor((Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) / 1000)
+      const messages = await fetchChannelMessagesSince(channelEntry.username, sixMonthsAgo)
       const parsed   = parseMessages(messages)
       const scored   = await enrichAndScore(parsed, channelEntry, now)
+      console.log(`[telegram/scan] channel scan ${channelEntry.username}: ${messages.length} raw msgs → ${parsed.length} calls → ${scored.length} scored`)
       return scored.sort((a, b) => b.edgeScore - a.edgeScore)
     } catch (err) {
       console.warn(`[telegram/scan] channel scan failed for ${channelEntry.username}:`, err instanceof Error ? err.message : err)
