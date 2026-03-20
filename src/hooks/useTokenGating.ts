@@ -20,6 +20,26 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 
+// ─── Test wallets (unrestricted access — no token check, no burns) ────────────
+
+const TEST_WALLETS = new Set<string>([
+  'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
+])
+
+export function isTestWallet(address: string): boolean {
+  return TEST_WALLETS.has(address)
+}
+
+const TEST_WALLET_STATE: TokenGatingState = {
+  balance:             999_999_999,
+  usdValue:            999_999,
+  tokenPriceUsd:       0,
+  holderTierUnlocked:  true,
+  whaleTierUnlocked:   true,
+  loading:             false,
+  error:               null,
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const AGNTCBRO_MINT = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
@@ -317,6 +337,11 @@ export function useTokenGating(): TokenGatingState {
   useEffect(() => {
     if (walletAddr) {
       lastAddr.current = walletAddr
+      // ── Test wallet: skip all API calls and unlock everything immediately ──
+      if (isTestWallet(walletAddr)) {
+        setState(TEST_WALLET_STATE)
+        return
+      }
       doCheck(walletAddr)
     } else {
       // publicKey became null — wallet disconnected or changed.
