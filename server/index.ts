@@ -12,6 +12,26 @@
  * Port:   3001
  */
 
+// ─── Load .env.local before anything else ────────────────────────────────────
+// tsx/Node does not auto-load .env.local (that's Vite-only). We parse it
+// manually so all process.env vars are available to every route module.
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+;(function loadEnvLocal() {
+  try {
+    const content = readFileSync(resolve(process.cwd(), '.env.local'), 'utf-8')
+    for (const raw of content.split('\n')) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) continue
+      const eq = line.indexOf('=')
+      if (eq === -1) continue
+      const key = line.slice(0, eq).trim()
+      const val = line.slice(eq + 1).trim().replace(/^["']|["']$/g, '') // strip optional quotes
+      if (key && !process.env[key]) process.env[key] = val              // don't overwrite shell exports
+    }
+  } catch { /* .env.local not present — fine in CI/production */ }
+})()
+
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import chatRouter from './routes/chat.js'
