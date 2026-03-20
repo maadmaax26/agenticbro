@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n SERVER,VITE -c blue,cyan \"npm run dev:server\" \"vite\"",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:vite": "vite",
     "build": "tsc -b --force && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-tabs": "^1.1.1",
     "@solana/wallet-adapter-base": "^0.9.23",
@@ -31,6 +35,10 @@
     "qrcode.react": "^3.1.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
     "@eslint/js": "^9.18.0",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.6",
