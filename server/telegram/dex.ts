@@ -165,7 +165,9 @@ async function fetchDexScreener(query: string): Promise<DexTokenData | null> {
 
   try {
     // DexScreener supports both ticker search and contract lookup
-    const isContract = /^0x[0-9a-fA-F]{40}$/.test(query)
+    const isEvmContract = /^0x[0-9a-fA-F]{40}$/.test(query)
+    const isSolContract = /^[1-9A-HJ-NP-Za-km-z]{40,44}$/.test(query)
+    const isContract = isEvmContract || isSolContract
     const url = isContract
       ? `https://api.dexscreener.com/latest/dex/tokens/${query}`
       : `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`
