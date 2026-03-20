@@ -25,8 +25,17 @@ export interface ParsedCall {
 
 // ─── Regex patterns ───────────────────────────────────────────────────────────
 
-const TICKER_RE    = /\$([A-Z]{2,10})\b/gi
-const CONTRACT_RE  = /0x[0-9a-fA-F]{40}/g
+const TICKER_RE = /\$([A-Z]{2,10})\b/gi
+
+// EVM contract addresses (0x + 40 hex chars)
+const EVM_CONTRACT_RE = /0x[0-9a-fA-F]{40}/g
+
+// Solana contract prefixed by CA:, contract:, token:, address:, or mint:
+const SOL_PREFIXED_RE = /(?:CA|contract|token|address|mint)\s*[:\-]\s*([1-9A-HJ-NP-Za-km-z]{32,44})\b/gi
+
+// Standalone Solana pubkey — exactly 43-44 base58 chars on a word boundary
+// (min 43 to avoid matching short common words in base58 alphabet)
+const SOL_ADDR_RE = /\b([1-9A-HJ-NP-Za-km-z]{43,44})\b/g
 
 // Directional heuristics — ordered by priority (first match wins)
 const CALL_HEURISTICS: { type: CallType; patterns: RegExp[] }[] = [
@@ -97,18 +106,22 @@ export function parseMessage(msg: RawMessage): ParsedCall | null {
   const text = msg.text?.trim()
   if (!text || text.length < 8) return null
 
-  // Extract tickers
+  // Extract tickers ($ABC format)
   const tickers = [...text.matchAll(TICKER_RE)].map(m => `$${m[1].toUpperCase()}`)
   const primaryTicker = tickers[0] ?? null
 
-  // Extract contract
-  const contracts = text.match(CONTRACT_RE) ?? []
-  const contract  = contracts[0] ?? null
+  // Extract contract — try EVM first, then Solana prefixed, then standalone Solana pubkey
+  const evmContracts  = text.match(EVM_CONTRACT_RE) ?? []
+  const solPrefixed   = [...text.matchAll(SOL_PREFIXED_RE)].map(m => m[1])
+  const solStandalone = [...text.matchAll(SOL_ADDR_RE)].map(m => m[1])
+
+  const contract = evmContracts[0] ?? solPrefixed[0] ?? solStandalone[0] ?? null
 
   // Must have at least a ticker or a contract to be actionable
   if (!primaryTicker && !contract) return null
 
-  const ticker = primaryTicker ?? (contract ? contract.slice(0, 8) + '…' : '???')
+  // Derive a short ticker label from the contract if no $TICKER found
+  const ticker = primaryTicker ?? (contract ? contract.slice(0, 6) + '…' : '???')
 
   // Detect call type
   let callType: CallType = 'alert'

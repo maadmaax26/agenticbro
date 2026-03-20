@@ -338,11 +338,37 @@ function App() {
         addMsg({ type: 'success', icon: '✅', text: `Scan complete — ${results.length} tokens evaluated, ${high} HIGH confidence` })
         for (const r of results) {
           await new Promise(res2 => setTimeout(res2, 180))
+          // Build a complete ScanResult from the ScoredCall (API doesn't return recommendation/flagged)
+          const scamVerdict = r.scamAnalysis?.verdict
+          const isScamFlagged = scamVerdict === 'SCAM' || scamVerdict === 'RISKY'
+          const scanResult: ScanResult = {
+            ticker:        r.ticker,
+            edgeScore:     r.edgeScore,
+            confidence:    r.confidence,
+            winRate:       r.winRate,
+            rugRate:       r.rugRate,
+            liquidity:     r.liquidity,
+            sourceChannel: r.sourceChannel,
+            recommendation: [
+              (r as any).priceChange1h ? `${(r as any).priceChange1h} 1h` : null,
+              (r as any).maxGain      ? `Max gain: ${(r as any).maxGain}` : null,
+              (r as any).volume24h    ? `Vol: $${((r as any).volume24h / 1000).toFixed(0)}K` : null,
+            ].filter(Boolean).join(' · ') || 'Live scan result',
+            flagged:     isScamFlagged || r.rugRate > 0.35,
+            flagReason:  scamVerdict === 'SCAM'  ? '🚨 Identified as potential scam token'
+                       : scamVerdict === 'RISKY'  ? '⚠ Security flags detected — trade with caution'
+                       : r.rugRate > 0.35         ? 'High rug rate detected on this channel'
+                       : undefined,
+            contract:    r.contract  ?? undefined,
+            chainId:     r.chainId   ?? undefined,
+            dexUrl:      r.dexUrl    ?? undefined,
+            scamAnalysis: r.scamAnalysis,
+          }
           addMsg({
-            type: r.flagged ? 'warning' : r.confidence === 'HIGH' ? 'success' : 'result',
-            icon: r.flagged ? '🚩' : r.confidence === 'HIGH' ? '💎' : r.confidence === 'MEDIUM' ? '📊' : '📉',
-            text: `${r.ticker} — ${r.confidence} confidence · Edge ${Math.round(r.edgeScore * 100)} · ${r.sourceChannel}`,
-            result: r,
+            type: scanResult.flagged ? 'warning' : scanResult.confidence === 'HIGH' ? 'success' : 'result',
+            icon: scamVerdict === 'SCAM' ? '🚨' : scanResult.flagged ? '🚩' : scanResult.confidence === 'HIGH' ? '💎' : scanResult.confidence === 'MEDIUM' ? '📊' : '📉',
+            text: `${scanResult.ticker} — ${scanResult.confidence} confidence · Edge ${Math.round(scanResult.edgeScore * 100)} · ${scanResult.sourceChannel}`,
+            result: scanResult,
           })
         }
       }
