@@ -228,7 +228,8 @@ function App() {
       await new Promise(r => setTimeout(r, 400))
 
       if (results.length === 0) {
-        addMsg({ type: 'warning', icon: '🔎', text: 'No token calls found for this target. Try a different input.' })
+        // Don't show "no tokens found" warning - just show success rate analysis
+        addMsg({ type: 'result', icon: '✅', text: `Scan complete — No recent token calls found, but channel metrics are available above.` })
       } else {
         const high = results.filter(r => r.confidence === 'HIGH').length
         addMsg({ type: 'success', icon: '✅', text: `Scan complete — ${results.length} tokens evaluated, ${high} HIGH confidence` })
