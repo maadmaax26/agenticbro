@@ -1,22 +1,19 @@
 #!/bin/bash
-# ─── AgenticBro Backend Server ────────────────────────────────────────────────
-# Run this script once on your local machine to start the Express backend.
-# The frontend (localhost:5173 or GitHub Pages) routes all /api/* calls here.
-#
-# Usage:  ./start-server.sh
-#         chmod +x start-server.sh  (first time only if permission denied)
-# ──────────────────────────────────────────────────────────────────────────────
+# Start AgenticBro server with environment loaded
 
-# Change to project root (handles running from any directory)
-cd "$(dirname "$0")"
+# Kill any existing servers
+pkill -f "tsx watch server" 2>/dev/null || true
+pkill -f "node.*tsx" 2>/dev/null || true
 
-if [ ! -f ".env.local" ]; then
-  echo "⚠️  .env.local not found — Telegram features will run in demo mode."
-  echo "   Copy .env.local.example to .env.local and fill in your credentials."
+echo "🚀 Starting AgenticBro server with Telegram integration..."
+
+# Load environment from .env.local explicitly
+if [ -f .env.local ]; then
+  export $(grep -v '^#' .env.local | xargs)
+  echo "✅ Environment loaded from .env.local"
+else
+  echo "⚠️  .env.local not found — Telegram will use mock data"
 fi
 
-echo "🚀 Starting AgenticBro backend on http://localhost:3001 ..."
-echo "   Press Ctrl+C to stop."
-echo ""
-
+# Start server
 npx tsx server/index.ts

@@ -81,6 +81,11 @@ interface ScanResult {
   winRate: number
   rugRate: number
   liquidity: number
+  volume24h: number
+  priceUsd: number
+  priceChange1h: string   // formatted e.g. "+12.4%"
+  maxGain: string         // estimated e.g. "3.2x"
+  isNew: boolean
   sourceChannel: string
   recommendation: string
   flagged: boolean
@@ -316,17 +321,27 @@ function App() {
               icon: token.rugRate > 0.3 ? '🚩' : token.confidence === 'HIGH' ? '💎' : token.confidence === 'MEDIUM' ? '📊' : '📉',
               text: `${token.ticker} — ${token.confidence} confidence · Edge ${Math.round(token.edgeScore * 100)} · ${token.sourceChannel}`,
               result: {
-                ticker: token.ticker,
-                edgeScore: token.edgeScore,
-                confidence: token.confidence,
-                winRate: token.winRate,
-                rugRate: token.rugRate,
-                liquidity: token.liquidity,
+                ticker:        token.ticker,
+                edgeScore:     token.edgeScore,
+                confidence:    token.confidence,
+                winRate:       token.winRate,
+                rugRate:       token.rugRate,
+                liquidity:     token.liquidity,
+                volume24h:     token.volume24h  ?? 0,
+                priceUsd:      token.priceUsd   ?? 0,
+                priceChange1h: token.priceChange1h || 'N/A',
+                maxGain:       token.maxGain     || 'N/A',
+                isNew:         token.isNew       ?? false,
                 sourceChannel: token.sourceChannel,
-                recommendation: `${token.priceChange1h || 'N/A'} 1h change · Max gain: ${token.maxGain}`,
-                flagged: token.rugRate > 0.3,
+                recommendation: [
+                  token.priceChange1h ? `${token.priceChange1h} 1h` : null,
+                  token.maxGain       ? `Est. max: ${token.maxGain}` : null,
+                  token.liquidity     ? `Liq: $${(token.liquidity / 1000).toFixed(0)}K` : null,
+                ].filter(Boolean).join(' · ') || 'Known channel data',
+                flagged:   token.rugRate > 0.3,
                 flagReason: token.rugRate > 0.3 ? 'High rug rate detected' : undefined,
-                contract: token.contract
+                contract:   token.contract,
+                scamAnalysis: undefined,
               },
             })
           }
@@ -338,7 +353,8 @@ function App() {
         addMsg({ type: 'success', icon: '✅', text: `Scan complete — ${results.length} tokens evaluated, ${high} HIGH confidence` })
         for (const r of results) {
           await new Promise(res2 => setTimeout(res2, 180))
-          // Build a complete ScanResult from the ScoredCall (API doesn't return recommendation/flagged)
+          // Build a complete ScanResult from the ScoredCall fields
+          const ra = r as any  // ScoredCall has extra fields not in ScanResult type
           const scamVerdict = r.scamAnalysis?.verdict
           const isScamFlagged = scamVerdict === 'SCAM' || scamVerdict === 'RISKY'
           const scanResult: ScanResult = {
@@ -348,11 +364,16 @@ function App() {
             winRate:       r.winRate,
             rugRate:       r.rugRate,
             liquidity:     r.liquidity,
+            volume24h:     ra.volume24h    ?? 0,
+            priceUsd:      ra.priceUsd     ?? 0,
+            priceChange1h: ra.priceChange1h ?? 'N/A',
+            maxGain:       ra.maxGain       ?? 'N/A',
+            isNew:         ra.isNew         ?? false,
             sourceChannel: r.sourceChannel,
             recommendation: [
-              (r as any).priceChange1h ? `${(r as any).priceChange1h} 1h` : null,
-              (r as any).maxGain      ? `Max gain: ${(r as any).maxGain}` : null,
-              (r as any).volume24h    ? `Vol: $${((r as any).volume24h / 1000).toFixed(0)}K` : null,
+              ra.priceChange1h && ra.priceChange1h !== 'N/A' ? `${ra.priceChange1h} 1h` : null,
+              ra.maxGain       && ra.maxGain !== 'N/A'       ? `Est. max gain: ${ra.maxGain}` : null,
+              r.liquidity > 0  ? `Liq: $${(r.liquidity / 1000).toFixed(0)}K` : null,
             ].filter(Boolean).join(' · ') || 'Live scan result',
             flagged:     isScamFlagged || r.rugRate > 0.35,
             flagReason:  scamVerdict === 'SCAM'  ? '🚨 Identified as potential scam token'
@@ -927,114 +948,124 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
   const edgePct = Math.round(result.edgeScore * 100)
 
   const cs = result.confidence === 'HIGH'
-    ? { color: '#4ade80', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  }
+    ? { color: '#4ade80', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' }
     : result.confidence === 'MEDIUM'
-    ? { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)'  }
-    : { color: '#f87171', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)'   }
+    ? { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' }
+    : { color: '#f87171', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)'  }
+
+  const scamVerdict  = result.scamAnalysis?.verdict
+  const changePos    = result.priceChange1h?.startsWith('+')
+  const shortAddr    = result.contract
+    ? result.contract.length > 20
+      ? `${result.contract.slice(0, 6)}…${result.contract.slice(-4)}`
+      : result.contract
+    : null
 
   return (
     <div
       className="rounded-xl border overflow-hidden cursor-pointer transition-all hover:brightness-110"
       style={result.flagged
-        ? { background: 'rgba(239,68,68,0.06)',   borderColor: 'rgba(239,68,68,0.3)'   }
-        : { background: 'rgba(139,92,246,0.06)',   borderColor: 'rgba(139,92,246,0.2)'  }}
+        ? { background: 'rgba(239,68,68,0.06)',  borderColor: 'rgba(239,68,68,0.3)'  }
+        : { background: 'rgba(139,92,246,0.06)', borderColor: 'rgba(139,92,246,0.2)' }}
       onClick={() => setExpanded(e => !e)}
     >
-      {/* Row */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <span className="text-base flex-shrink-0">{icon}</span>
-        <span className="font-bold text-white text-sm flex-shrink-0">{result.ticker}</span>
-        <span className="text-xs text-gray-500 flex-1 truncate">{result.sourceChannel}</span>
-        {result.flagged && <span className="text-xs text-red-400 font-semibold flex-shrink-0">FLAGGED</span>}
-        {result.scamAnalysis?.verdict === 'SCAM'  && <span className="text-xs text-red-400 font-bold flex-shrink-0">🚨 SCAM</span>}
-        {result.scamAnalysis?.verdict === 'RISKY' && <span className="text-xs text-yellow-400 font-bold flex-shrink-0">⚠ RISKY</span>}
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
-          style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
-        >
-          {result.confidence}
-        </span>
-        {/* Mini edge bar */}
-        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-          <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <div className="h-full rounded-full" style={{ width: `${edgePct}%`, background: 'linear-gradient(90deg,#7c3aed,#00d4ff)' }} />
+      {/* ── Collapsed header row ── */}
+      <div className="px-4 py-3 flex flex-col gap-1.5">
+        {/* Top line: icon + ticker + badges + edge */}
+        <div className="flex items-center gap-2">
+          <span className="text-base flex-shrink-0">{icon}</span>
+          <span className="font-bold text-white text-sm flex-shrink-0">{result.ticker}</span>
+          {result.isNew && (
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{ background: 'rgba(0,212,255,0.15)', border: '1px solid rgba(0,212,255,0.3)', color: '#00d4ff' }}>
+              NEW
+            </span>
+          )}
+          {scamVerdict === 'SCAM'  && <span className="text-xs text-red-400 font-bold flex-shrink-0">🚨 SCAM</span>}
+          {scamVerdict === 'RISKY' && <span className="text-xs text-yellow-400 font-bold flex-shrink-0">⚠ RISKY</span>}
+          {result.flagged && !scamVerdict && <span className="text-xs text-red-400 font-semibold flex-shrink-0">FLAGGED</span>}
+          <span className="flex-1" />
+          {/* 1h change */}
+          {result.priceChange1h && result.priceChange1h !== 'N/A' && (
+            <span className={`text-xs font-bold flex-shrink-0 ${changePos ? 'text-green-400' : 'text-red-400'}`}>
+              {result.priceChange1h}
+            </span>
+          )}
+          {/* Confidence badge */}
+          <span className="text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
+            style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}>
+            {result.confidence}
+          </span>
+          {/* Edge score */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <div className="h-full rounded-full" style={{ width: `${edgePct}%`, background: 'linear-gradient(90deg,#7c3aed,#00d4ff)' }} />
+            </div>
+            <span className="text-xs font-bold text-purple-300 w-5 text-right">{edgePct}</span>
           </div>
-          <span className="text-xs font-bold text-purple-300">{edgePct}</span>
+          <span className="text-gray-600 text-xs flex-shrink-0 ml-1">{expanded ? '▲' : '▼'}</span>
         </div>
-        <span className="text-gray-600 text-xs flex-shrink-0">{expanded ? '▲' : '▼'}</span>
+
+        {/* Bottom line: channel + contract snippet + max gain */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="truncate flex-1">📡 {result.sourceChannel}</span>
+          {shortAddr && (
+            <span className="font-mono text-purple-400 flex-shrink-0 bg-purple-500/10 px-1.5 py-0.5 rounded">
+              {shortAddr}
+              {result.chainId && <span className="text-gray-600 ml-1">{result.chainId.toUpperCase()}</span>}
+            </span>
+          )}
+          {result.maxGain && result.maxGain !== 'N/A' && (
+            <span className="text-cyan-400 font-bold flex-shrink-0">🎯 {result.maxGain}</span>
+          )}
+        </div>
       </div>
 
-      {/* Expanded detail */}
+      {/* ── Expanded detail ── */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1" style={{ borderTop: '1px solid rgba(139,92,246,0.12)' }}>
+        <div className="px-4 pb-4 pt-2 flex flex-col gap-3" style={{ borderTop: '1px solid rgba(139,92,246,0.12)' }}>
+
+          {/* Flag / recommendation */}
           {result.flagged && result.flagReason && (
-            <p className="text-xs text-red-400 mb-2">⚠ {result.flagReason}</p>
+            <p className="text-xs text-red-400">⚠ {result.flagReason}</p>
           )}
-          <p className="text-xs text-gray-400 leading-relaxed mb-3">{result.recommendation}</p>
-
-          {/* Scam verdict */}
-          {result.scamAnalysis && result.scamAnalysis.verdict !== 'UNKNOWN' && (() => {
-            const { verdict, isHoneypot, highSellTax, hiddenOwner, isMintable, isBlacklist, sellTaxPct, buyTaxPct, holderCount, source } = result.scamAnalysis
-            const vColor = verdict === 'SCAM' ? '#f87171' : verdict === 'RISKY' ? '#fbbf24' : '#4ade80'
-            const vBg    = verdict === 'SCAM' ? 'rgba(239,68,68,0.12)' : verdict === 'RISKY' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)'
-            const flags  = [
-              isHoneypot  && '🍯 Honeypot',
-              highSellTax && `⚠ High sell tax (${sellTaxPct.toFixed(0)}%)`,
-              hiddenOwner && '👻 Hidden owner',
-              isMintable  && '🖨 Mintable',
-              isBlacklist && '🚫 Blacklist',
-            ].filter(Boolean) as string[]
-            return (
-              <div className="rounded-lg p-2 border mb-3" style={{ background: vBg, borderColor: vColor + '55' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold" style={{ color: vColor }}>
-                    {verdict === 'SCAM' ? '🚨' : verdict === 'RISKY' ? '⚠️' : '✅'} {verdict}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-auto">via {source} · {holderCount > 0 ? `${holderCount.toLocaleString()} holders` : ''}</span>
-                </div>
-                {flags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {flags.map(f => (
-                      <span key={f} className="text-xs bg-black/30 rounded px-1.5 py-0.5" style={{ color: vColor }}>{f}</span>
-                    ))}
-                  </div>
-                )}
-                {buyTaxPct > 0 && (
-                  <p className="text-xs text-gray-400 mt-1">Tax: buy {buyTaxPct.toFixed(0)}% / sell {sellTaxPct.toFixed(0)}%</p>
-                )}
-              </div>
-            )
-          })()}
-
-          {/* Contract Address + chain label + DexScreener link */}
-          {result.contract && (
-            <div className="bg-black/30 rounded-lg p-2 border border-purple-500/10 mb-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-gray-500">
-                  Contract{result.chainId ? ` · ${result.chainId.toUpperCase()}` : ''}
-                </p>
-                {result.dexUrl && (
-                  <a
-                    href={result.dexUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-purple-400 hover:text-purple-300 underline"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    DexScreener ↗
-                  </a>
-                )}
-              </div>
-              <p className="text-xs text-purple-300 font-mono break-all">{result.contract}</p>
-            </div>
+          {result.recommendation && (
+            <p className="text-xs text-gray-400 leading-relaxed">{result.recommendation}</p>
           )}
 
+          {/* Price stats row */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: 'Win Rate',   value: `${Math.round(result.winRate  * 100)}%`,                  color: 'text-green-400'  },
-              { label: 'Rug Rate',   value: `${Math.round(result.rugRate  * 100)}%`,                  color: result.rugRate > 0.3 ? 'text-red-400' : 'text-gray-300' },
-              { label: 'Liquidity', value: `$${(result.liquidity / 1000).toFixed(0)}K`,               color: 'text-white'      },
-              { label: 'Edge',      value: String(edgePct),                                            color: 'text-purple-300' },
+              {
+                label: 'Price',
+                value: result.priceUsd > 0
+                  ? result.priceUsd < 0.0001
+                    ? `$${result.priceUsd.toExponential(2)}`
+                    : result.priceUsd < 1
+                      ? `$${result.priceUsd.toFixed(6)}`
+                      : `$${result.priceUsd.toFixed(4)}`
+                  : '—',
+                color: 'text-white',
+              },
+              {
+                label: '1h Change',
+                value: result.priceChange1h !== 'N/A' ? result.priceChange1h : '—',
+                color: result.priceChange1h?.startsWith('+') ? 'text-green-400' : result.priceChange1h?.startsWith('-') ? 'text-red-400' : 'text-gray-400',
+              },
+              {
+                label: 'Volume 24h',
+                value: result.volume24h > 0
+                  ? result.volume24h >= 1_000_000
+                    ? `$${(result.volume24h / 1_000_000).toFixed(1)}M`
+                    : `$${(result.volume24h / 1000).toFixed(0)}K`
+                  : '—',
+                color: 'text-white',
+              },
+              {
+                label: 'Max Gain',
+                value: result.maxGain !== 'N/A' ? result.maxGain : '—',
+                color: 'text-cyan-400',
+              },
             ].map(s => (
               <div key={s.label} className="bg-black/30 rounded-lg p-2 border border-purple-500/10">
                 <p className="text-xs text-gray-500">{s.label}</p>
@@ -1042,6 +1073,89 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
               </div>
             ))}
           </div>
+
+          {/* Channel stats row */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Win Rate',  value: `${Math.round(result.winRate * 100)}%`,            color: 'text-green-400' },
+              { label: 'Rug Rate',  value: `${Math.round(result.rugRate * 100)}%`,            color: result.rugRate > 0.3 ? 'text-red-400' : 'text-gray-300' },
+              { label: 'Liquidity', value: result.liquidity > 0 ? `$${(result.liquidity / 1000).toFixed(0)}K` : '—', color: 'text-white' },
+              { label: 'Edge Score', value: `${edgePct}`,                                     color: 'text-purple-300' },
+            ].map(s => (
+              <div key={s.label} className="bg-black/30 rounded-lg p-2 border border-purple-500/10">
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Scam verdict panel */}
+          {result.scamAnalysis && scamVerdict !== 'UNKNOWN' && (() => {
+            const { verdict, isHoneypot, highSellTax, hiddenOwner, isMintable, isBlacklist, sellTaxPct, buyTaxPct, holderCount, source } = result.scamAnalysis
+            const vColor = verdict === 'SCAM' ? '#f87171' : verdict === 'RISKY' ? '#fbbf24' : '#4ade80'
+            const vBg    = verdict === 'SCAM' ? 'rgba(239,68,68,0.12)' : verdict === 'RISKY' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)'
+            const flags  = [
+              isHoneypot  && '🍯 Honeypot',
+              highSellTax && `⚠ Sell tax ${sellTaxPct.toFixed(0)}%`,
+              hiddenOwner && '👻 Hidden owner',
+              isMintable  && '🖨 Mintable',
+              isBlacklist && '🚫 Blacklist',
+            ].filter(Boolean) as string[]
+            return (
+              <div className="rounded-lg p-2 border" style={{ background: vBg, borderColor: vColor + '55' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold" style={{ color: vColor }}>
+                    {verdict === 'SCAM' ? '🚨' : verdict === 'RISKY' ? '⚠️' : '✅'} Security: {verdict}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {source} {holderCount > 0 ? `· ${holderCount.toLocaleString()} holders` : ''}
+                  </span>
+                </div>
+                {flags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {flags.map(f => (
+                      <span key={f} className="text-xs bg-black/30 rounded px-1.5 py-0.5" style={{ color: vColor }}>{f}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs" style={{ color: vColor }}>No security flags detected</p>
+                )}
+                {(buyTaxPct > 0 || sellTaxPct > 0) && (
+                  <p className="text-xs text-gray-400 mt-1">Tax: buy {buyTaxPct.toFixed(0)}% / sell {sellTaxPct.toFixed(0)}%</p>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Full contract address */}
+          {result.contract && (
+            <div className="bg-black/30 rounded-lg p-2.5 border border-purple-500/15">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs text-gray-500 font-semibold">
+                  Contract Address{result.chainId ? ` · ${result.chainId.toUpperCase()}` : ''}
+                </p>
+                <div className="flex items-center gap-2">
+                  {result.dexUrl && (
+                    <a href={result.dexUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-purple-400 hover:text-purple-200 font-semibold"
+                      onClick={e => e.stopPropagation()}>
+                      View on DexScreener ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+              <p
+                className="text-xs text-purple-300 font-mono break-all leading-relaxed"
+                onClick={e => { e.stopPropagation(); navigator.clipboard?.writeText(result.contract!) }}
+                title="Click to copy"
+                style={{ cursor: 'copy' }}
+              >
+                {result.contract}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Click address to copy</p>
+            </div>
+          )}
+
         </div>
       )}
     </div>

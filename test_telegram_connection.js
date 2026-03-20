@@ -1,16 +1,20 @@
 /**
  * Test Telegram client connection
  */
-import { getTelegramClient, getTrackedChannels } from './server/telegram/client.js';
+import { isTelegramConfigured, getTrackedChannels } from './server/telegram/client.js';
 
 async function testTelegramConnection() {
   try {
     console.log('Checking Telegram configuration...');
-    const configured = require('./server/telegram/client.js').isTelegramConfigured();
+    const configured = isTelegramConfigured();
     console.log('Configured:', configured);
 
     if (!configured) {
       console.error('❌ Telegram not configured!');
+      console.log('\nRequired env vars:');
+      console.log('  - TELEGRAM_API_ID');
+      console.log('  - TELEGRAM_API_HASH');
+      console.log('  - TELEGRAM_SESSION_STRING');
       return;
     }
 
