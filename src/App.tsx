@@ -236,6 +236,100 @@ function App() {
             "isNew": true
           }
         ]
+      },
+      'cryptorush_global_call': {
+        success_tier: 'GOOD',
+        winRate: 45,
+        rugRate: 25,
+        avgWinGain: 3.2,
+        avgLoss: 38,
+        avgLiquidity: 142000,
+        totalCalls: 72,
+        wins: 32,
+        losses: 22,
+        rugs: 18,
+        recentWinRate: 48,
+        riskAdjustedReturn: 0.92,
+        tradeable: true,
+        risk_level: 'MODERATE',
+        confidence: 'MEDIUM',
+        tokens: [
+          {
+            "ticker": "$RUSH",
+            "name": "RushProtocol",
+            "contract": "8cT9i9j0lK6m3NqO5r6v7T9wX2yZ3dD4eF5bG",
+            "edgeScore": 0.81,
+            "confidence": "HIGH",
+            "winRate": 0.58,
+            "rugRate": 0.18,
+            "liquidity": 168000,
+            "volume24h": 590000,
+            "sourceChannel": "Crypto_Rush_Global_Call",
+            "priceChange1h": "+35.6%",
+            "maxGain": "5.8x",
+            "isNew": false
+          },
+          {
+            "ticker": "$GLOBAL",
+            "name": "GlobalToken",
+            "contract": "2dS8h8i0lL7m3NqO5r6v7T9wX2yZ3eE4fG6cH",
+            "edgeScore": 0.74,
+            "confidence": "HIGH",
+            "winRate": 0.52,
+            "rugRate": 0.20,
+            "liquidity": 155000,
+            "volume24h": 520000,
+            "sourceChannel": "Crypto_Rush_Global_Call",
+            "priceChange1h": "+28.4%",
+            "maxGain": "5.2x",
+            "isNew": true
+          },
+          {
+            "ticker": "$ALPHA",
+            "name": "AlphaRush",
+            "contract": "1eR7g7g8i0lL6m3NqO5r6v7T9wX2yZ3cD3eF4bG",
+            "edgeScore": 0.68,
+            "confidence": "MEDIUM",
+            "winRate": 0.48,
+            "rugRate": 0.22,
+            "liquidity": 134000,
+            "volume24h": 410000,
+            "sourceChannel": "Crypto_Rush_Global_Call",
+            "priceChange1h": "+21.2%",
+            "maxGain": "4.5x",
+            "isNew": false
+          },
+          {
+            "ticker": "$SPEED",
+            "name": "SpeedToken",
+            "contract": "3fU9i9k0lL6m3NqO5r6v7T9wX2yZ3eE3fF5cG",
+            "edgeScore": 0.62,
+            "confidence": "MEDIUM",
+            "winRate": 0.42,
+            "rugRate": 0.25,
+            "liquidity": 118000,
+            "volume24h": 350000,
+            "sourceChannel": "Crypto_Rush_Global_Call",
+            "priceChange1h": "+15.8%",
+            "maxGain": "3.6x",
+            "isNew": false
+          },
+          {
+            "ticker": "$MOMENTUM",
+            "name": "MomentumX",
+            "contract": "4gV9i0l0mL6m3NqO5r6v7T9wX2yZ4fF5cG",
+            "edgeScore": 0.55,
+            "confidence": "MEDIUM",
+            "winRate": 0.38,
+            "rugRate": 0.28,
+            "liquidity": 98000,
+            "volume24h": 280000,
+            "sourceChannel": "Crypto_Rush_Global_Call",
+            "priceChange1h": "+11.4%",
+            "maxGain": "2.9x",
+            "isNew": true
+          }
+        ]
       }
     }
     
