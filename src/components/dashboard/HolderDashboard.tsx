@@ -7,9 +7,12 @@ import HolderAIInsights from './HolderAIInsights';
 import HolderMarketAnalysis from './HolderMarketAnalysis';
 import HolderUsageHistory from './HolderUsageHistory';
 import HolderSettings from './HolderSettings';
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft } from 'lucide-react';
+import GemAdvise from './GemAdvise';
+import AlphaFeed from './AlphaFeed';
+import PriorityScan from './PriorityScan';
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine } from 'lucide-react';
 
-type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings';
+type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan';
 
 export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
@@ -44,6 +47,9 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
               <li>• 10 market analysis requests</li>
               <li>• Portfolio health & risk assessment</li>
               <li>• Daily market reports</li>
+              <li>• 💎 Gem Advise — AI-ranked token recommendations</li>
+              <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
+              <li>• 🔍 Priority Scan — on-demand deep scan</li>
             </ul>
           </div>
         </div>
@@ -115,6 +121,25 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
             label="Usage History"
           />
           <TabButton
+            active={activeTab === 'gems'}
+            onClick={() => setActiveTab('gems')}
+            icon={<Gem />}
+            label="Gem Advise"
+            isNew
+          />
+          <TabButton
+            active={activeTab === 'alpha'}
+            onClick={() => setActiveTab('alpha')}
+            icon={<Radio />}
+            label="Alpha Feed"
+          />
+          <TabButton
+            active={activeTab === 'scan'}
+            onClick={() => setActiveTab('scan')}
+            icon={<ScanLine />}
+            label="Priority Scan"
+          />
+          <TabButton
             active={activeTab === 'settings'}
             onClick={() => setActiveTab('settings')}
             icon={<Settings />}
@@ -130,11 +155,22 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       {activeTab === 'analysis' && <HolderMarketAnalysis />}
       {activeTab === 'history' && <HolderUsageHistory />}
       {activeTab === 'settings' && <HolderSettings />}
+      {activeTab === 'gems' && <GemAdvise />}
+      {activeTab === 'alpha' && <AlphaFeed />}
+      {activeTab === 'scan' && <PriorityScan />}
     </div>
   );
 }
 
-function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function TabButton({
+  active, onClick, icon, label, isNew,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  isNew?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
@@ -146,11 +182,50 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
     >
       {icon}
       {label}
+      {isNew && (
+        <span
+          className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+          style={{
+            background: 'rgba(139,92,246,0.35)',
+            border: '1px solid rgba(139,92,246,0.7)',
+            color: '#c4b5fd',
+          }}
+        >
+          NEW
+        </span>
+      )}
     </button>
   );
 }
 
 const HOLDER_FEATURES = [
+  {
+    icon: '💎',
+    title: 'Gem Advise',
+    desc: 'AI-ranked token recommendations sourced from audited Telegram alpha channels — filtered by edge score, liquidity, and rug rate.',
+    badge: 'New',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '📡',
+    title: 'Alpha Feed',
+    desc: 'Real-time calls from audited Telegram alpha channels — no delay. Unlock full call detail with a token burn.',
+    badge: 'Live',
+    badgeColor: 'rgba(16,185,129,0.15)',
+    badgeBorder: 'rgba(16,185,129,0.5)',
+    badgeText: '#4ade80',
+  },
+  {
+    icon: '🔍',
+    title: 'Priority Scan',
+    desc: 'On-demand deep scan that jumps the queue — returns ranked token results with AI recommendations in seconds.',
+    badge: 'On-demand',
+    badgeColor: 'rgba(6,182,212,0.2)',
+    badgeBorder: 'rgba(6,182,212,0.5)',
+    badgeText: '#67e8f9',
+  },
   {
     icon: '⚡',
     title: 'Early Signal Access',

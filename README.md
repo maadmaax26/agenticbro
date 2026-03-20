@@ -267,7 +267,6 @@ See `LAUNCH_GUIDE.md` for full details:
 - **Full Deployment:** `DEPLOY.md`
 - **Launch Guide:** `LAUNCH_GUIDE.md`
 - **AI Setup:** `AI_INTEGRATION.md`
-- **AutonomousAlpha:** https://autonomousalpha.io
 
 ---
 
@@ -284,4 +283,3 @@ Built for degens, by degens. 🤖💸
 **Platform:** Solana / pump.fun
 **Domain:** agenticbro.io
 **Social:** @AgenticBro
-**Partner:** https://autonomousalpha.io
