@@ -51,6 +51,7 @@ app.use(cors({
     'http://localhost:4173',
     'https://agenticbro.app',
     'https://www.agenticbro.app',
+    'https://maadmaax26.github.io',
   ],
   credentials: true,
 }))
