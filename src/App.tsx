@@ -139,6 +139,40 @@ function App() {
         tradeable: true,
         risk_level: 'MODERATE',
         confidence: 'MEDIUM'
+      },
+      'elitebullsignals': {
+        success_tier: 'GOOD',
+        winRate: 48,
+        rugRate: 22,
+        avgWinGain: 3.4,
+        avgLoss: 28,
+        avgLiquidity: 168000,
+        totalCalls: 58,
+        wins: 28,
+        losses: 13,
+        rugs: 17,
+        recentWinRate: 52,
+        riskAdjustedReturn: 1.45,
+        tradeable: true,
+        risk_level: 'MODERATE',
+        confidence: 'MEDIUM'
+      },
+      'dailypumpgems': {
+        success_tier: 'MODERATE',
+        winRate: 38,
+        rugRate: 32,
+        avgWinGain: 2.9,
+        avgLoss: 52,
+        avgLiquidity: 95000,
+        totalCalls: 98,
+        wins: 37,
+        losses: 30,
+        rugs: 31,
+        recentWinRate: 40,
+        riskAdjustedReturn: 0.45,
+        tradeable: true,
+        risk_level: 'HIGH',
+        confidence: 'LOW'
       }
     }
     
@@ -168,19 +202,19 @@ function App() {
     
     return {
       success_tier,
-      winRate: win_rate,
-      rugRate: rug_rate,
+      winRate,
+      rugRate,
       avgWinGain: Number(avg_win_gain.toFixed(2)),
       avgLoss: avg_loss,
       avgLiquidity: 50000 + (hash % 150000), // $50K-$200K
-      totalCalls: total_calls,
+      totalCalls,
       wins,
       losses,
       rugs,
-      recentWinRate: Math.max(0, win_rate - 5 + (hash % 10)), // Varied recent performance
+      recentWinRate: Math.max(0, winRate - 5 + (hash % 10)), // Varied recent performance
       riskAdjustedReturn: Number(risk_adjusted_return.toFixed(2)),
       tradeable: success_tier !== 'POOR',
-      risk_level: rug_rate > 30 ? 'HIGH' : rug_rate > 20 ? 'MODERATE' : 'LOW',
+      risk_level: rugRate > 30 ? 'HIGH' : rugRate > 20 ? 'MODERATE' : 'LOW',
       confidence: success_tier === 'EXCELLENT' ? 'HIGH' : success_tier === 'GOOD' ? 'MEDIUM' : 'LOW'
     }
   }
@@ -256,7 +290,7 @@ function App() {
     }
 
     try {
-      const res  = await fetch(`${API_BASE}/api/telegram/priority-scan`, {
+      const res  = await fetch(`${API_BASE}/telegram/priority-scan`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
