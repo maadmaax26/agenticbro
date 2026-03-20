@@ -13,6 +13,48 @@ import ValueProposition from './components/ValueProposition'
 // Use Vite proxy path (configured in vite.config.ts) - /api routes to http://localhost:3001
 const API_BASE = '/api'
 
+// ─── Known channel data (module-level so both generateChannelSuccessRate and runScan can access it) ──
+const knownChannels: Record<string, any> = {
+  'cryptolordgem': {
+    success_tier: 'POOR', winRate: 36, rugRate: 38, avgWinGain: 2.8, avgLoss: 72,
+    avgLiquidity: 85000, totalCalls: 47, wins: 17, losses: 12, rugs: 18,
+    recentWinRate: 30, riskAdjustedReturn: -0.18, tradeable: false, risk_level: 'HIGH', confidence: 'LOW',
+  },
+  'cryptospacex04': {
+    success_tier: 'GOOD', winRate: 42, rugRate: 28, avgWinGain: 2.5, avgLoss: 35,
+    avgLiquidity: 125000, totalCalls: 62, wins: 26, losses: 19, rugs: 17,
+    recentWinRate: 50, riskAdjustedReturn: 0.85, tradeable: true, risk_level: 'MODERATE', confidence: 'MEDIUM',
+  },
+  'elitebullsignals': {
+    success_tier: 'GOOD', winRate: 48, rugRate: 22, avgWinGain: 3.4, avgLoss: 28,
+    avgLiquidity: 168000, totalCalls: 58, wins: 28, losses: 13, rugs: 17,
+    recentWinRate: 52, riskAdjustedReturn: 1.45, tradeable: true, risk_level: 'MODERATE', confidence: 'MEDIUM',
+  },
+  'dailypumpgems': {
+    success_tier: 'MODERATE', winRate: 38, rugRate: 32, avgWinGain: 2.9, avgLoss: 52,
+    avgLiquidity: 95000, totalCalls: 98, wins: 37, losses: 30, rugs: 31,
+    recentWinRate: 40, riskAdjustedReturn: 0.45, tradeable: true, risk_level: 'HIGH', confidence: 'LOW',
+    tokens: [
+      { ticker: '$PUMP',  name: 'PumpToken',    contract: 'DezXAZfZcL7fG1P8j2Tb3v5E7d9hK8mLqQn3fG', edgeScore: 0.74, confidence: 'HIGH',   winRate: 0.52, rugRate: 0.20, liquidity: 145000, volume24h: 520000, sourceChannel: 'DailyPumpGems', priceChange1h: '+28.6%', maxGain: '4.8x', isNew: false },
+      { ticker: '$GEM',   name: 'GemHunterPro', contract: '9mF8d8h9gK7k2LpN4r5v6T8wX1yZ2cB3nD4eA',  edgeScore: 0.66, confidence: 'MEDIUM',  winRate: 0.48, rugRate: 0.25, liquidity: 118000, volume24h: 410000, sourceChannel: 'DailyPumpGems', priceChange1h: '+22.4%', maxGain: '4.1x', isNew: true  },
+      { ticker: '$MOON',  name: 'MoonShot',     contract: '5aR7e7f8d9gK8k3MqN5r6v7T9wX2yZ3dD4eF5bG',edgeScore: 0.58, confidence: 'MEDIUM',  winRate: 0.42, rugRate: 0.28, liquidity:  92000, volume24h: 340000, sourceChannel: 'DailyPumpGems', priceChange1h: '+16.8%', maxGain: '3.4x', isNew: false },
+      { ticker: '$DAILY', name: 'DailyGains',   contract: '8bS8g8h9hL9l4NqO6r7v8T0wX3yZ4eE5fF6cH',  edgeScore: 0.50, confidence: 'MEDIUM',  winRate: 0.38, rugRate: 0.30, liquidity:  78000, volume24h: 280000, sourceChannel: 'DailyPumpGems', priceChange1h: '+12.4%', maxGain: '2.8x', isNew: true  },
+    ],
+  },
+  'cryptorush_global_call': {
+    success_tier: 'GOOD', winRate: 45, rugRate: 25, avgWinGain: 3.2, avgLoss: 38,
+    avgLiquidity: 142000, totalCalls: 72, wins: 32, losses: 22, rugs: 18,
+    recentWinRate: 48, riskAdjustedReturn: 0.92, tradeable: true, risk_level: 'MODERATE', confidence: 'MEDIUM',
+    tokens: [
+      { ticker: '$RUSH',     name: 'RushProtocol', contract: '8cT9i9j0lK6m3NqO5r6v7T9wX2yZ3dD4eF5bG', edgeScore: 0.81, confidence: 'HIGH',  winRate: 0.58, rugRate: 0.18, liquidity: 168000, volume24h: 590000, sourceChannel: 'Crypto_Rush_Global_Call', priceChange1h: '+35.6%', maxGain: '5.8x', isNew: false },
+      { ticker: '$GLOBAL',   name: 'GlobalToken',  contract: '2dS8h8i0lL7m3NqO5r6v7T9wX2yZ3eE4fG6cH', edgeScore: 0.74, confidence: 'HIGH',  winRate: 0.52, rugRate: 0.20, liquidity: 155000, volume24h: 520000, sourceChannel: 'Crypto_Rush_Global_Call', priceChange1h: '+28.4%', maxGain: '5.2x', isNew: true  },
+      { ticker: '$ALPHA',    name: 'AlphaRush',    contract: '1eR7g7g8i0lL6m3NqO5r6v7T9wX2yZ3cD3eF4bG',edgeScore: 0.68, confidence: 'MEDIUM', winRate: 0.48, rugRate: 0.22, liquidity: 134000, volume24h: 410000, sourceChannel: 'Crypto_Rush_Global_Call', priceChange1h: '+21.2%', maxGain: '4.5x', isNew: false },
+      { ticker: '$SPEED',    name: 'SpeedToken',   contract: '3fU9i9k0lL6m3NqO5r6v7T9wX2yZ3eE3fF5cG', edgeScore: 0.62, confidence: 'MEDIUM', winRate: 0.42, rugRate: 0.25, liquidity: 118000, volume24h: 350000, sourceChannel: 'Crypto_Rush_Global_Call', priceChange1h: '+15.8%', maxGain: '3.6x', isNew: false },
+      { ticker: '$MOMENTUM', name: 'MomentumX',    contract: '4gV9i0l0mL6m3NqO5r6v7T9wX2yZ4fF5cG',    edgeScore: 0.55, confidence: 'MEDIUM', winRate: 0.38, rugRate: 0.28, liquidity:  98000, volume24h: 280000, sourceChannel: 'Crypto_Rush_Global_Call', priceChange1h: '+11.4%', maxGain: '2.9x', isNew: true  },
+    ],
+  },
+}
+
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
 type ScanMode = 'wallet' | 'channels' | 'token'
@@ -105,233 +147,6 @@ function App() {
     // Use channel name hash to generate consistent but varied data
     const hash = channelName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     
-    // Known channels with specific data
-    const knownChannels: Record<string, any> = {
-      'cryptolordgem': {
-        success_tier: 'POOR',
-        winRate: 36,
-        rugRate: 38,
-        avgWinGain: 2.8,
-        avgLoss: 72,
-        avgLiquidity: 85000,
-        totalCalls: 47,
-        wins: 17,
-        losses: 12,
-        rugs: 18,
-        recentWinRate: 30,
-        riskAdjustedReturn: -0.18,
-        tradeable: false,
-        risk_level: 'HIGH',
-        confidence: 'LOW'
-      },
-      'cryptospacex04': {
-        success_tier: 'GOOD',
-        winRate: 42,
-        rugRate: 28,
-        avgWinGain: 2.5,
-        avgLoss: 35,
-        avgLiquidity: 125000,
-        totalCalls: 62,
-        wins: 26,
-        losses: 19,
-        rugs: 17,
-        recentWinRate: 50,
-        riskAdjustedReturn: 0.85,
-        tradeable: true,
-        risk_level: 'MODERATE',
-        confidence: 'MEDIUM'
-      },
-      'elitebullsignals': {
-        success_tier: 'GOOD',
-        winRate: 48,
-        rugRate: 22,
-        avgWinGain: 3.4,
-        avgLoss: 28,
-        avgLiquidity: 168000,
-        totalCalls: 58,
-        wins: 28,
-        losses: 13,
-        rugs: 17,
-        recentWinRate: 52,
-        riskAdjustedReturn: 1.45,
-        tradeable: true,
-        risk_level: 'MODERATE',
-        confidence: 'MEDIUM'
-      },
-      'dailypumpgems': {
-        success_tier: 'MODERATE',
-        winRate: 38,
-        rugRate: 32,
-        avgWinGain: 2.9,
-        avgLoss: 52,
-        avgLiquidity: 95000,
-        totalCalls: 98,
-        wins: 37,
-        losses: 30,
-        rugs: 31,
-        recentWinRate: 40,
-        riskAdjustedReturn: 0.45,
-        tradeable: true,
-        risk_level: 'HIGH',
-        confidence: 'LOW',
-        tokens: [
-          {
-            "ticker": "$PUMP",
-            "name": "PumpToken",
-            "contract": "DezXAZfZcL7fG1P8j2Tb3v5E7d9hK8mLqQn3fG",
-            "edgeScore": 0.74,
-            "confidence": "HIGH",
-            "winRate": 0.52,
-            "rugRate": 0.20,
-            "liquidity": 145000,
-            "volume24h": 520000,
-            "sourceChannel": "DailyPumpGems",
-            "priceChange1h": "+28.6%",
-            "maxGain": "4.8x",
-            "isNew": false
-          },
-          {
-            "ticker": "$GEM",
-            "name": "GemHunterPro",
-            "contract": "9mF8d8h9gK7k2LpN4r5v6T8wX1yZ2cB3nD4eA",
-            "edgeScore": 0.66,
-            "confidence": "MEDIUM",
-            "winRate": 0.48,
-            "rugRate": 0.25,
-            "liquidity": 118000,
-            "volume24h": 410000,
-            "sourceChannel": "DailyPumpGems",
-            "priceChange1h": "+22.4%",
-            "maxGain": "4.1x",
-            "isNew": true
-          },
-          {
-            "ticker": "$MOON",
-            "name": "MoonShot",
-            "contract": "5aR7e7f8d9gK8k3MqN5r6v7T9wX2yZ3dD4eF5bG",
-            "edgeScore": 0.58,
-            "confidence": "MEDIUM",
-            "winRate": 0.42,
-            "rugRate": 0.28,
-            "liquidity": 92000,
-            "volume24h": 340000,
-            "sourceChannel": "DailyPumpGems",
-            "priceChange1h": "+16.8%",
-            "maxGain": "3.4x",
-            "isNew": false
-          },
-          {
-            "ticker": "$DAILY",
-            "name": "DailyGains",
-            "contract": "8bS8g8h9hL9l4NqO6r7v8T0wX3yZ4eE5fF6cH",
-            "edgeScore": 0.50,
-            "confidence": "MEDIUM",
-            "winRate": 0.38,
-            "rugRate": 0.30,
-            "liquidity": 78000,
-            "volume24h": 280000,
-            "sourceChannel": "DailyPumpGems",
-            "priceChange1h": "+12.4%",
-            "maxGain": "2.8x",
-            "isNew": true
-          }
-        ]
-      },
-      'cryptorush_global_call': {
-        success_tier: 'GOOD',
-        winRate: 45,
-        rugRate: 25,
-        avgWinGain: 3.2,
-        avgLoss: 38,
-        avgLiquidity: 142000,
-        totalCalls: 72,
-        wins: 32,
-        losses: 22,
-        rugs: 18,
-        recentWinRate: 48,
-        riskAdjustedReturn: 0.92,
-        tradeable: true,
-        risk_level: 'MODERATE',
-        confidence: 'MEDIUM',
-        tokens: [
-          {
-            "ticker": "$RUSH",
-            "name": "RushProtocol",
-            "contract": "8cT9i9j0lK6m3NqO5r6v7T9wX2yZ3dD4eF5bG",
-            "edgeScore": 0.81,
-            "confidence": "HIGH",
-            "winRate": 0.58,
-            "rugRate": 0.18,
-            "liquidity": 168000,
-            "volume24h": 590000,
-            "sourceChannel": "Crypto_Rush_Global_Call",
-            "priceChange1h": "+35.6%",
-            "maxGain": "5.8x",
-            "isNew": false
-          },
-          {
-            "ticker": "$GLOBAL",
-            "name": "GlobalToken",
-            "contract": "2dS8h8i0lL7m3NqO5r6v7T9wX2yZ3eE4fG6cH",
-            "edgeScore": 0.74,
-            "confidence": "HIGH",
-            "winRate": 0.52,
-            "rugRate": 0.20,
-            "liquidity": 155000,
-            "volume24h": 520000,
-            "sourceChannel": "Crypto_Rush_Global_Call",
-            "priceChange1h": "+28.4%",
-            "maxGain": "5.2x",
-            "isNew": true
-          },
-          {
-            "ticker": "$ALPHA",
-            "name": "AlphaRush",
-            "contract": "1eR7g7g8i0lL6m3NqO5r6v7T9wX2yZ3cD3eF4bG",
-            "edgeScore": 0.68,
-            "confidence": "MEDIUM",
-            "winRate": 0.48,
-            "rugRate": 0.22,
-            "liquidity": 134000,
-            "volume24h": 410000,
-            "sourceChannel": "Crypto_Rush_Global_Call",
-            "priceChange1h": "+21.2%",
-            "maxGain": "4.5x",
-            "isNew": false
-          },
-          {
-            "ticker": "$SPEED",
-            "name": "SpeedToken",
-            "contract": "3fU9i9k0lL6m3NqO5r6v7T9wX2yZ3eE3fF5cG",
-            "edgeScore": 0.62,
-            "confidence": "MEDIUM",
-            "winRate": 0.42,
-            "rugRate": 0.25,
-            "liquidity": 118000,
-            "volume24h": 350000,
-            "sourceChannel": "Crypto_Rush_Global_Call",
-            "priceChange1h": "+15.8%",
-            "maxGain": "3.6x",
-            "isNew": false
-          },
-          {
-            "ticker": "$MOMENTUM",
-            "name": "MomentumX",
-            "contract": "4gV9i0l0mL6m3NqO5r6v7T9wX2yZ4fF5cG",
-            "edgeScore": 0.55,
-            "confidence": "MEDIUM",
-            "winRate": 0.38,
-            "rugRate": 0.28,
-            "liquidity": 98000,
-            "volume24h": 280000,
-            "sourceChannel": "Crypto_Rush_Global_Call",
-            "priceChange1h": "+11.4%",
-            "maxGain": "2.9x",
-            "isNew": true
-          }
-        ]
-      }
-    }
     
     // Return known data if available
     if (knownChannels[channelName.toLowerCase()]) {
