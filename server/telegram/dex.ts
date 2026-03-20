@@ -14,6 +14,8 @@
 export interface DexTokenData {
   ticker:          string
   contract:        string | null
+  chainId:         string | null   // e.g. 'solana', 'eth', 'bsc', 'base'
+  dexUrl:          string | null   // DexScreener link
   priceUsd:        number
   liquidity:       number   // USD
   volume24h:       number   // USD
@@ -21,6 +23,117 @@ export interface DexTokenData {
   priceChange24h:  number   // percentage
   source:          'dexscreener' | 'geckoterminal' | 'unavailable'
   fetchedAt:       number
+}
+
+// ─── GoPlus token security ────────────────────────────────────────────────────
+
+export interface SecurityData {
+  // Resolved
+  contract:           string
+  chainId:            string
+
+  // GoPlus flags (string "0"/"1" or missing = not checked)
+  isHoneypot:         boolean
+  cannotSellAll:      boolean
+  hasHiddenOwner:     boolean
+  canTakeBackOwnership: boolean
+  isProxy:            boolean
+  isBlacklist:        boolean    // contract can blacklist addresses
+  isMintable:         boolean    // new tokens can be minted (dilution risk)
+
+  // Tax
+  buyTaxPct:          number     // 0–100
+  sellTaxPct:         number     // 0–100
+
+  // Concentration
+  ownerPercent:       number     // % supply held by owner
+  creatorPercent:     number     // % supply held by creator
+  holderCount:        number
+
+  // Meta
+  source:             'goplus' | 'heuristic' | 'unavailable'
+  fetchedAt:          number
+}
+
+// GoPlus chain_id mapping from DexScreener chainId strings
+const GOPLUS_CHAIN: Record<string, string> = {
+  eth:       '1',
+  bsc:       '56',
+  polygon:   '137',
+  arbitrum:  '42161',
+  base:      '8453',
+  avalanche: '43114',
+  fantom:    '250',
+  cronos:    '25',
+  optimism:  '10',
+}
+
+const securityCache = new Map<string, { data: SecurityData; ts: number }>()
+const SEC_CACHE_TTL = 5 * 60_000   // 5 minutes
+
+export async function getTokenSecurity(
+  contract: string,
+  chainId:  string,
+): Promise<SecurityData> {
+  const cacheKey = `${chainId}:${contract}`
+  const cached = securityCache.get(cacheKey)
+  if (cached && Date.now() - cached.ts < SEC_CACHE_TTL) return cached.data
+
+  // Solana uses a different GoPlus endpoint
+  const isSolana = chainId === 'solana'
+  const goplusChain = isSolana ? null : GOPLUS_CHAIN[chainId]
+
+  const fallback: SecurityData = {
+    contract, chainId,
+    isHoneypot: false, cannotSellAll: false, hasHiddenOwner: false,
+    canTakeBackOwnership: false, isProxy: false, isBlacklist: false, isMintable: false,
+    buyTaxPct: 0, sellTaxPct: 0, ownerPercent: 0, creatorPercent: 0, holderCount: 0,
+    source: 'unavailable', fetchedAt: Date.now(),
+  }
+
+  // Only Solana or known EVM chains
+  if (!isSolana && !goplusChain) return fallback
+
+  try {
+    const url = isSolana
+      ? `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${contract}`
+      : `https://api.gopluslabs.io/api/v1/token_security/${goplusChain}?contract_addresses=${contract}`
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return fallback
+
+    const json = await res.json() as { result?: Record<string, any> }
+    const d = json.result?.[contract.toLowerCase()] ?? json.result?.[contract]
+    if (!d) return fallback
+
+    const b = (v: any) => v === '1' || v === 1 || v === true
+    const n = (v: any) => parseFloat(String(v ?? '0')) || 0
+
+    const data: SecurityData = {
+      contract, chainId,
+      isHoneypot:             b(d.is_honeypot),
+      cannotSellAll:          b(d.cannot_sell_all),
+      hasHiddenOwner:         b(d.hidden_owner),
+      canTakeBackOwnership:   b(d.can_take_back_ownership),
+      isProxy:                b(d.is_proxy),
+      isBlacklist:            b(d.is_blacklist),
+      isMintable:             b(d.is_mintable),
+      buyTaxPct:              n(d.buy_tax)  * 100,
+      sellTaxPct:             n(d.sell_tax) * 100,
+      ownerPercent:           n(d.owner_percent)   * 100,
+      creatorPercent:         n(d.creator_percent) * 100,
+      holderCount:            parseInt(String(d.holder_count ?? '0'), 10),
+      source:                 'goplus',
+      fetchedAt:              Date.now(),
+    }
+
+    securityCache.set(cacheKey, { data, ts: Date.now() })
+    return data
+
+  } catch (err) {
+    console.warn(`[dex/security] GoPlus failed for ${chainId}:${contract}:`, err instanceof Error ? err.message : err)
+    return fallback
+  }
 }
 
 // ─── Simple cache ─────────────────────────────────────────────────────────────
@@ -37,6 +150,8 @@ function fromDexCache(key: string): DexTokenData | null {
 // ─── DexScreener ─────────────────────────────────────────────────────────────
 
 interface DSPair {
+  chainId:    string
+  url:        string
   baseToken:  { symbol: string; address: string }
   liquidity?: { usd: number }
   volume?:    { h24: number }
@@ -68,6 +183,8 @@ async function fetchDexScreener(query: string): Promise<DexTokenData | null> {
     const result: DexTokenData = {
       ticker:         `$${best.baseToken.symbol.toUpperCase()}`,
       contract:       best.baseToken.address,
+      chainId:        best.chainId  ?? null,
+      dexUrl:         best.url      ?? null,
       priceUsd:       parseFloat(best.priceUsd ?? '0'),
       liquidity:      best.liquidity?.usd ?? 0,
       volume24h:      best.volume?.h24 ?? 0,
@@ -119,6 +236,8 @@ async function fetchGeckoTerminal(contract: string): Promise<DexTokenData | null
     const result: DexTokenData = {
       ticker:         `$${attrs.symbol.toUpperCase()}`,
       contract,
+      chainId:        'eth',
+      dexUrl:         null,
       priceUsd:       parseFloat(attrs.price_usd ?? '0'),
       liquidity:      parseFloat(attrs.total_reserve_in_usd ?? '0'),
       volume24h:      parseFloat(attrs.volume_usd?.h24 ?? '0'),
@@ -155,6 +274,8 @@ export async function getTokenData(
   return data ?? {
     ticker,
     contract,
+    chainId:         null,
+    dexUrl:          null,
     priceUsd:        0,
     liquidity:       0,
     volume24h:       0,

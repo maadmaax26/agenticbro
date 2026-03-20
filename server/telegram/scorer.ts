@@ -16,7 +16,7 @@
  */
 
 import type { ParsedCall } from './parser.js'
-import type { DexTokenData } from './dex.js'
+import type { DexTokenData, SecurityData } from './dex.js'
 import type { TrackedChannel } from './client.js'
 import { scoreShillProbability, scoreUrgency } from './parser.js'
 
@@ -24,10 +24,62 @@ import { scoreShillProbability, scoreUrgency } from './parser.js'
 
 export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
 
+export type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
+
+export interface ScamAnalysis {
+  verdict:       ScamVerdict
+  isHoneypot:    boolean
+  highSellTax:   boolean     // sellTaxPct > 10
+  hiddenOwner:   boolean
+  isMintable:    boolean
+  isBlacklist:   boolean
+  holderCount:   number
+  sellTaxPct:    number
+  buyTaxPct:     number
+  source:        'goplus' | 'heuristic' | 'unavailable'
+}
+
+export function buildScamAnalysis(sec: SecurityData): ScamAnalysis {
+  const highSellTax = sec.sellTaxPct > 10
+  const flagCount   = [
+    sec.isHoneypot,
+    sec.cannotSellAll,
+    sec.hasHiddenOwner,
+    sec.canTakeBackOwnership,
+    highSellTax,
+    sec.isMintable && sec.ownerPercent > 5,
+    sec.isBlacklist,
+  ].filter(Boolean).length
+
+  const verdict: ScamVerdict =
+    sec.isHoneypot || sec.cannotSellAll || sec.sellTaxPct > 20
+      ? 'SCAM'
+    : flagCount >= 2
+      ? 'RISKY'
+    : sec.source === 'unavailable'
+      ? 'UNKNOWN'
+      : 'CLEAN'
+
+  return {
+    verdict,
+    isHoneypot:   sec.isHoneypot,
+    highSellTax,
+    hiddenOwner:  sec.hasHiddenOwner,
+    isMintable:   sec.isMintable,
+    isBlacklist:  sec.isBlacklist,
+    holderCount:  sec.holderCount,
+    sellTaxPct:   sec.sellTaxPct,
+    buyTaxPct:    sec.buyTaxPct,
+    source:       sec.source,
+  }
+}
+
 export interface ScoredCall {
   // Identity
   ticker:         string
   contract:       string | null
+  chainId:        string | null
+  dexUrl:         string | null
   callType:       ParsedCall['callType']
   rawText:        string
   timestamp:      string
@@ -53,6 +105,9 @@ export interface ScoredCall {
   priceChange1h:  string   // formatted e.g. "+12.4%"
   maxGain:        string   // estimated e.g. "3.2x"
   isNew:          boolean
+
+  // Security
+  scamAnalysis:   ScamAnalysis
 }
 
 export interface GemAdviseItem extends ScoredCall {
@@ -123,9 +178,17 @@ export function scoreCall(
 
   const isNew = ageMs < 30 * 60 * 1000   // < 30 minutes old
 
+  const defaultScam: ScamAnalysis = {
+    verdict: 'UNKNOWN', isHoneypot: false, highSellTax: false,
+    hiddenOwner: false, isMintable: false, isBlacklist: false,
+    holderCount: 0, sellTaxPct: 0, buyTaxPct: 0, source: 'unavailable',
+  }
+
   return {
     ticker:        call.ticker,
     contract:      call.contract,
+    chainId:       dex.chainId,
+    dexUrl:        dex.dexUrl,
     callType:      call.callType,
     rawText:       call.rawText,
     timestamp:     call.timestamp,
@@ -148,6 +211,8 @@ export function scoreCall(
     priceChange1h: formatPriceChange(dex.priceChange1h),
     maxGain:       estimateMaxGain(edgeScore, dex.liquidity),
     isNew,
+
+    scamAnalysis:  defaultScam,
   }
 }
 
