@@ -16,6 +16,49 @@ import { getTokenData, getTokenSecurity } from './dex.js'
 import { scoreCall, filterGems, computeSummary, buildScamAnalysis, type ScoredCall, type GemAdviseOptions } from './scorer.js'
 import { Api } from 'telegram'
 
+// ─── Channel resolver ─────────────────────────────────────────────────────────
+// Tries the exact username first; on failure, searches Telegram for a match.
+
+async function resolveChannelUsername(input: string): Promise<string> {
+  const client = await getTelegramClient()
+
+  // 1. Try direct entity resolve (fast — works if the username is correct)
+  try {
+    const entity = await client.getEntity(input)
+    // Return the canonical username (or the original input if entity has no username)
+    const resolved = (entity as any).username ?? input
+    console.log(`[telegram/resolve] "${input}" → resolved as @${resolved}`)
+    return resolved
+  } catch {
+    // Username not found — fall through to search
+  }
+
+  // 2. Search Telegram by name/query (slower but handles fuzzy input)
+  try {
+    // Strip underscores / hyphens and search the "human-readable" name
+    const searchQuery = input.replace(/[_\-]/g, ' ').trim()
+    console.log(`[telegram/resolve] "${input}" not found, searching for "${searchQuery}"…`)
+
+    const result = await client.invoke(
+      new Api.contacts.Search({ q: searchQuery, limit: 5 }),
+    )
+
+    // Look for a channel/supergroup match (ignore users)
+    const chats = (result.chats ?? []) as any[]
+    for (const chat of chats) {
+      if (chat.username) {
+        console.log(`[telegram/resolve] search found @${chat.username} (${chat.title})`)
+        return chat.username
+      }
+    }
+  } catch (err) {
+    console.warn(`[telegram/resolve] search failed:`, err instanceof Error ? err.message : err)
+  }
+
+  // 3. Nothing found — return original input so the caller can show a clear error
+  return input
+}
+
 // ─── Rolling feed cache ───────────────────────────────────────────────────────
 
 interface FeedCache {
@@ -268,17 +311,24 @@ export async function runPriorityScan(
   // ── Channel scan: deep-scan a specific channel (6 months of history) ────────
   if (target === 'channels' && opts.channel) {
     const rawInput = opts.channel.replace(/^@/, '').replace(/^t\.me\//, '').trim()
-    // Try to match against tracked channels by username or display name
+
+    // Resolve the username — tries direct entity lookup first, then Telegram search
+    const resolvedUsername = await resolveChannelUsername(rawInput)
+
+    // Try to match against tracked channels by resolved username
     const tracked = channels.find(
-      c => c.username.toLowerCase() === rawInput.toLowerCase() ||
+      c => c.username.toLowerCase() === resolvedUsername.toLowerCase() ||
+           c.username.toLowerCase() === rawInput.toLowerCase() ||
            c.displayName.toLowerCase().includes(rawInput.toLowerCase())
     )
-    const channelEntry = tracked ?? {
-      username:       rawInput,
-      displayName:    rawInput,
-      score:          0.60,
-      classification: 'alpha' as const,
-    }
+    const channelEntry = tracked
+      ? { ...tracked, username: resolvedUsername }    // use resolved username but keep tracked metadata
+      : {
+          username:       resolvedUsername,
+          displayName:    resolvedUsername,
+          score:          0.60,
+          classification: 'alpha' as const,
+        }
     try {
       // 6 months back in Unix seconds
       const sixMonthsAgo = Math.floor((Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) / 1000)
