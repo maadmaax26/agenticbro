@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { useTokenGating } from './hooks/useTokenGating'
+import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
 import PortfolioCard from './components/PortfolioCard'
 import RoastDisplay from './components/RoastDisplay'
 import SignalFeed from './components/dashboard/SignalFeed'
@@ -9,6 +9,33 @@ import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
+
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
+
+// ─── Priority Scan types ──────────────────────────────────────────────────────
+
+type ScanMode = 'wallet' | 'channels' | 'token'
+
+interface ScanResult {
+  ticker: string
+  edgeScore: number
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  winRate: number
+  rugRate: number
+  liquidity: number
+  sourceChannel: string
+  recommendation: string
+  flagged: boolean
+  flagReason?: string
+}
+
+interface ChatMessage {
+  id: number
+  type: 'system' | 'success' | 'warning' | 'error' | 'result'
+  icon: string
+  text: string
+  result?: ScanResult
+}
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
@@ -37,9 +64,14 @@ function App() {
     localStorage.setItem(getWalletScanKey(), String(newCount));
   }, []);
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResults, setScanResults] = useState<string[]>([]);
-  const [showScanResults, setShowScanResults] = useState(false);
+  const [isScanning, setIsScanning]     = useState(false)
+  const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
+  const [showScanChat, setShowScanChat] = useState(false)
+  const [scanMode, setScanMode]         = useState<ScanMode>('wallet')
+  const [walletInput, setWalletInput]   = useState('')
+  const [channelInput, setChannelInput] = useState('')
+  const [tokenInput, setTokenInput]     = useState('')
+  const chatBottomRef = useRef<HTMLDivElement>(null)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
@@ -54,6 +86,83 @@ function App() {
       setTimeout(() => setDenied(null), 3500)
     }
   }, [holderTierUnlocked, whaleTierUnlocked])
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [scanMessages])
+
+  const isTest = isTestWallet(publicKey?.toBase58() ?? '')
+
+  const addMsg = useCallback((msg: Omit<ChatMessage, 'id'>) => {
+    setScanMessages(prev => [...prev, { ...msg, id: Date.now() + Math.random() }])
+  }, [])
+
+  const runScan = useCallback(async () => {
+    const inputValue = scanMode === 'wallet' ? walletInput.trim()
+                     : scanMode === 'channels' ? channelInput.trim()
+                     : tokenInput.trim()
+
+    if (!inputValue) return
+    if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
+      alert('Scan limit reached. Unlock Holder Tier for unlimited priority scans.')
+      return
+    }
+
+    if (!isTest && priorityScansRemaining > 0) updateScanCount(priorityScansRemaining - 1)
+
+    setIsScanning(true)
+    setShowScanChat(true)
+    setScanMessages([])
+
+    const modeLabel = scanMode === 'wallet' ? `wallet ${inputValue.slice(0,6)}…${inputValue.slice(-4)}`
+                    : scanMode === 'channels' ? `channel ${inputValue}`
+                    : `token ${inputValue}`
+
+    addMsg({ type: 'system', icon: '🔍', text: `Initiating Priority Scan for ${modeLabel}…` })
+    addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/telegram/priority-scan`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target:  scanMode,
+          wallet:  scanMode === 'wallet'   ? inputValue : undefined,
+          channel: scanMode === 'channels' ? inputValue : undefined,
+          token:   scanMode === 'token'    ? inputValue : undefined,
+        }),
+      })
+      const data = await res.json() as { results: ScanResult[]; mock?: boolean; ts?: number }
+      const results: ScanResult[] = data.results ?? []
+
+      if (data.mock) addMsg({ type: 'warning', icon: '⚠️', text: 'Running in demo mode — add Telegram credentials for live data' })
+
+      addMsg({ type: 'system', icon: '⚙️', text: `Scoring ${results.length} token calls…` })
+      await new Promise(r => setTimeout(r, 400))
+
+      if (results.length === 0) {
+        addMsg({ type: 'warning', icon: '🔎', text: 'No token calls found for this target. Try a different input.' })
+      } else {
+        const high = results.filter(r => r.confidence === 'HIGH').length
+        addMsg({ type: 'success', icon: '✅', text: `Scan complete — ${results.length} tokens evaluated, ${high} HIGH confidence` })
+        for (const r of results) {
+          await new Promise(res2 => setTimeout(res2, 180))
+          addMsg({
+            type: r.flagged ? 'warning' : r.confidence === 'HIGH' ? 'success' : 'result',
+            icon: r.flagged ? '🚩' : r.confidence === 'HIGH' ? '💎' : r.confidence === 'MEDIUM' ? '📊' : '📉',
+            text: `${r.ticker} — ${r.confidence} confidence · Edge ${Math.round(r.edgeScore * 100)} · ${r.sourceChannel}`,
+            result: r,
+          })
+        }
+      }
+    } catch {
+      addMsg({ type: 'error', icon: '❌', text: 'Scan failed — could not reach API. Check your server is running.' })
+    } finally {
+      setIsScanning(false)
+    }
+  }, [scanMode, walletInput, channelInput, tokenInput, isTest, priorityScansRemaining,
+      holderTierUnlocked, updateScanCount, addMsg])
 
   return (
     <div className="min-h-screen" style={{
@@ -276,161 +385,161 @@ function App() {
               </div>
             </div>
 
-            {/* Priority Scan Section */}
+            {/* ── Priority Scan Section ── */}
             <div className="max-w-6xl mx-auto mb-6">
               <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-                <div className="flex items-center justify-between mb-4">
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
                     <div className="text-3xl">🔍</div>
                     <div>
                       <h2 className="text-xl font-bold text-white">Priority Scan</h2>
-                      <p className="text-sm text-gray-400">Deep scan your wallet, channels, or tokens</p>
+                      <p className="text-sm text-gray-400">Deep scan your wallet, a Telegram channel, or a specific token</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  {!isTest && (
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
                          style={{
-                           background: priorityScansRemaining > 0
-                             ? 'rgba(16,185,129,0.15)'
-                             : 'rgba(245,158,11,0.15)',
-                           border: priorityScansRemaining > 0
-                             ? '1px solid rgba(16,185,129,0.4)'
-                             : '1px solid rgba(245,158,11,0.4)',
-                           color: priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
+                           background: priorityScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                           border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
+                           color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
                          }}>
-                      {priorityScansRemaining > 0 ? (
-                        <>
-                          <span>🎁</span>
-                          <span>{priorityScansRemaining} Free Scans</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>💎</span>
-                          <span>10K AGNTCBRO/Scan</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-black/30 rounded-xl p-6 border border-purple-500/20">
-                  <div className="text-center">
-                    <div className="text-5xl mb-3">⚡</div>
-                    <h3 className="text-lg font-bold text-white mb-2">Run Deep Analysis</h3>
-                    <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
-                      Priority Scan analyzes your wallet, favorite channels, or specific tokens to uncover opportunities and risks.
-                    </p>
-                    <div className="grid md:grid-cols-3 gap-3 mb-4">
-                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
-                        <p className="text-xs text-gray-400 mb-1">Wallet Scan</p>
-                        <p className="text-sm font-bold text-purple-300">Full portfolio analysis</p>
-                      </div>
-                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
-                        <p className="text-xs text-gray-400 mb-1">Channel Scan</p>
-                        <p className="text-sm font-bold text-purple-300">Alpha quality assessment</p>
-                      </div>
-                      <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30">
-                        <p className="text-xs text-gray-400 mb-1">Token Scan</p>
-                        <p className="text-sm font-bold text-purple-300">Deep token research</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (priorityScansRemaining > 0) {
-                          updateScanCount(priorityScansRemaining - 1);
-                          setIsScanning(true);
-                          setShowScanResults(true);
-                          setScanResults([]);
-
-                          // Simulate scan results with chat-like messages
-                          const mockResults = [
-                            "🔍 Initiating Priority Scan...",
-                            "📊 Analyzing wallet holdings...",
-                            "✅ Found 5 tokens in portfolio",
-                            "📈 SOL position: +12.4% this week (strong momentum)",
-                            "⚠️ Token #3 showing signs of waning volume - monitor closely",
-                            "💎 Top opportunity: Consider rebalancing into BTC for stability",
-                            "🎯 Channel analysis: CryptoEdge Pro trending positive (edge score: 0.81)",
-                            "📊 Overall portfolio health: 7.2/10",
-                            "✅ Scan complete. 3 actionable insights generated."
-                          ];
-
-                          for (let i = 0; i < mockResults.length; i++) {
-                            await new Promise(resolve => setTimeout(resolve, 800));
-                            setScanResults(prev => [...prev, mockResults[i]]);
-                          }
-                          setIsScanning(false);
-                        } else {
-                          if (holderTierUnlocked) {
-                            setShowTierPage('holder');
-                          } else {
-                            alert('Scan limit reached. Unlock Holder Tier (10K AGNTCBRO) for unlimited priority scans.');
-                          }
-                        }
-                      }}
-                      disabled={isScanning}
-                      className="px-6 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50"
-                      style={holderTierUnlocked || priorityScansRemaining > 0
-                        ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
-                        : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
-                      }
-                    >
-                      {isScanning ? 'Scanning...' : (priorityScansRemaining > 0 ? `Run Priority Scan (${priorityScansRemaining} remaining)` : 'Run Priority Scan (10K AGNTCBRO)')}
-                    </button>
-                  </div>
-
-                  {/* Scan Results Chat Window */}
-                  {showScanResults && (
-                    <div className="mt-6 rounded-xl border border-purple-500/30 overflow-hidden">
-                      <div className="bg-black/40 px-4 py-3 border-b border-purple-500/30 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                          <span className="text-sm font-semibold text-white">Priority Scan Results</span>
-                        </div>
-                        <button
-                          onClick={() => setShowScanResults(false)}
-                          className="text-gray-400 hover:text-white text-sm transition-colors"
-                        >
-                          Close ✕
-                        </button>
-                      </div>
-                      <div className="bg-black/60 p-4 max-h-96 overflow-y-auto">
-                        {scanResults.length === 0 ? (
-                          <p className="text-gray-500 text-sm text-center py-8">
-                            {isScanning ? 'Starting scan...' : 'Click "Run Priority Scan" to begin'}
-                          </p>
-                        ) : (
-                          <div className="space-y-3">
-                            {scanResults.map((result, index) => (
-                              <div
-                                key={index}
-                                className={`flex items-start gap-3 p-3 rounded-lg ${
-                                  result.startsWith('🔍') || result.startsWith('✅')
-                                    ? 'bg-purple-900/20 border border-purple-500/20'
-                                    : result.startsWith('⚠️')
-                                    ? 'bg-red-900/20 border border-red-500/20'
-                                    : 'bg-black/40'
-                                }`}
-                              >
-                                <div className="flex-shrink-0 text-lg">
-                                  {result.startsWith('🔍') ? '🔍' :
-                                   result.startsWith('📊') ? '📊' :
-                                   result.startsWith('✅') ? '✅' :
-                                   result.startsWith('📈') ? '📈' :
-                                   result.startsWith('⚠️') ? '⚠️' :
-                                   result.startsWith('💎') ? '💎' :
-                                   result.startsWith('🎯') ? '🎯' :
-                                   '•'}
-                                </div>
-                                <p className="text-sm text-gray-200 leading-relaxed">{result.slice(2).trim() || result}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans</span></>
+                                                  : <><span>💎</span><span>10K AGNTCBRO/scan</span></>}
                     </div>
                   )}
+                  {isTest && (
+                    <span className="text-xs px-2 py-1 rounded-full font-semibold"
+                          style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#4ade80' }}>
+                      ✓ Test Wallet — Unlimited
+                    </span>
+                  )}
                 </div>
+
+                {/* ── Scan mode tabs ── */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {([
+                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
+                    { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
+                    { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                  ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setScanMode(m.id)}
+                      className="rounded-xl p-3 text-left transition-all border"
+                      style={scanMode === m.id
+                        ? { background: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.6)' }
+                        : { background: 'rgba(0,0,0,0.3)',       borderColor: 'rgba(139,92,246,0.2)' }}
+                    >
+                      <p className={`text-sm font-semibold ${scanMode === m.id ? 'text-white' : 'text-gray-400'}`}>
+                        {m.icon} {m.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{m.hint}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Input field (changes per mode) ── */}
+                <div className="mb-4">
+                  {scanMode === 'wallet' && (
+                    <input
+                      type="text"
+                      value={walletInput}
+                      onChange={e => setWalletInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="Solana: 7xKX…Bm3a  ·  EVM: 0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                  {scanMode === 'channels' && (
+                    <input
+                      type="text"
+                      value={channelInput}
+                      onChange={e => setChannelInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. CryptoEdgePro  ·  @alphawhalecalls  ·  t.me/defi_gems"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors"
+                    />
+                  )}
+                  {scanMode === 'token' && (
+                    <input
+                      type="text"
+                      value={tokenInput}
+                      onChange={e => setTokenInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. $NOVA  ·  SOL  ·  0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                </div>
+
+                {/* ── Launch button ── */}
+                <button
+                  onClick={runScan}
+                  disabled={isScanning ||
+                    (scanMode === 'wallet'   && !walletInput.trim())  ||
+                    (scanMode === 'channels' && !channelInput.trim()) ||
+                    (scanMode === 'token'    && !tokenInput.trim())}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
+                >
+                  {isScanning
+                    ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free)` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
+                  }
+                </button>
+
+                {/* ── Chat-style results window ── */}
+                {showScanChat && (
+                  <div className="mt-5 rounded-xl border border-purple-500/30 overflow-hidden">
+                    {/* Chat header */}
+                    <div className="bg-black/50 px-4 py-3 border-b border-purple-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-purple-400 animate-pulse' : 'bg-green-400'}`} />
+                        <span className="text-sm font-semibold text-white">Scan Results</span>
+                        {scanMessages.length > 0 && !isScanning && (
+                          <span className="text-xs text-gray-500">
+                            · {scanMessages.filter(m => m.type === 'result' || m.type === 'success' || m.type === 'warning').length - 1} tokens
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => setShowScanChat(false)} className="text-gray-500 hover:text-white text-xs transition-colors">
+                        Close ✕
+                      </button>
+                    </div>
+
+                    {/* Message list */}
+                    <div className="bg-black/70 p-4 max-h-[28rem] overflow-y-auto space-y-2">
+                      {scanMessages.map(msg => (
+                        <div key={msg.id}>
+                          {/* Result card — richer rendering for token results */}
+                          {msg.result ? (
+                            <ScanResultCard result={msg.result} icon={msg.icon} />
+                          ) : (
+                            <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-sm ${
+                              msg.type === 'success' ? 'bg-green-900/20 border border-green-500/20 text-green-300'
+                            : msg.type === 'warning' ? 'bg-yellow-900/20 border border-yellow-500/20 text-yellow-300'
+                            : msg.type === 'error'   ? 'bg-red-900/20 border border-red-500/20 text-red-300'
+                            : 'bg-purple-900/10 border border-purple-500/10 text-gray-400'
+                            }`}>
+                              <span className="flex-shrink-0">{msg.icon}</span>
+                              <span className="leading-relaxed">{msg.text}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {isScanning && (
+                        <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
+                          <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
+                          Processing…
+                        </div>
+                      )}
+                      <div ref={chatBottomRef} />
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
 
@@ -559,6 +668,74 @@ function App() {
             <a href="/AgenticBro_WhitePaper.pdf" target="_blank" className="hover:text-white transition-colors" style={{color: '#39ff14'}}>White Paper</a>
           </p>
         </footer>
+      )}
+    </div>
+  )
+}
+
+// ─── Scan Result Card ─────────────────────────────────────────────────────────
+
+function ScanResultCard({ result, icon }: { result: ScanResult; icon: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const edgePct = Math.round(result.edgeScore * 100)
+
+  const cs = result.confidence === 'HIGH'
+    ? { color: '#4ade80', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  }
+    : result.confidence === 'MEDIUM'
+    ? { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)'  }
+    : { color: '#f87171', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)'   }
+
+  return (
+    <div
+      className="rounded-xl border overflow-hidden cursor-pointer transition-all hover:brightness-110"
+      style={result.flagged
+        ? { background: 'rgba(239,68,68,0.06)',   borderColor: 'rgba(239,68,68,0.3)'   }
+        : { background: 'rgba(139,92,246,0.06)',   borderColor: 'rgba(139,92,246,0.2)'  }}
+      onClick={() => setExpanded(e => !e)}
+    >
+      {/* Row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="text-base flex-shrink-0">{icon}</span>
+        <span className="font-bold text-white text-sm flex-shrink-0">{result.ticker}</span>
+        <span className="text-xs text-gray-500 flex-1 truncate">{result.sourceChannel}</span>
+        {result.flagged && <span className="text-xs text-red-400 font-semibold flex-shrink-0">FLAGGED</span>}
+        <span
+          className="text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
+          style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
+        >
+          {result.confidence}
+        </span>
+        {/* Mini edge bar */}
+        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+          <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="h-full rounded-full" style={{ width: `${edgePct}%`, background: 'linear-gradient(90deg,#7c3aed,#00d4ff)' }} />
+          </div>
+          <span className="text-xs font-bold text-purple-300">{edgePct}</span>
+        </div>
+        <span className="text-gray-600 text-xs flex-shrink-0">{expanded ? '▲' : '▼'}</span>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="px-4 pb-4 pt-1" style={{ borderTop: '1px solid rgba(139,92,246,0.12)' }}>
+          {result.flagged && result.flagReason && (
+            <p className="text-xs text-red-400 mb-2">⚠ {result.flagReason}</p>
+          )}
+          <p className="text-xs text-gray-400 leading-relaxed mb-3">{result.recommendation}</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Win Rate',   value: `${Math.round(result.winRate  * 100)}%`,                  color: 'text-green-400'  },
+              { label: 'Rug Rate',   value: `${Math.round(result.rugRate  * 100)}%`,                  color: result.rugRate > 0.3 ? 'text-red-400' : 'text-gray-300' },
+              { label: 'Liquidity', value: `$${(result.liquidity / 1000).toFixed(0)}K`,               color: 'text-white'      },
+              { label: 'Edge',      value: String(edgePct),                                            color: 'text-purple-300' },
+            ].map(s => (
+              <div key={s.label} className="bg-black/30 rounded-lg p-2 border border-purple-500/10">
+                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
