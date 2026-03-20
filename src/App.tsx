@@ -59,6 +59,21 @@ const knownChannels: Record<string, any> = {
 
 type ScanMode = 'wallet' | 'channels' | 'token'
 
+type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
+
+interface ScamAnalysis {
+  verdict:     ScamVerdict
+  isHoneypot:  boolean
+  highSellTax: boolean
+  hiddenOwner: boolean
+  isMintable:  boolean
+  isBlacklist: boolean
+  holderCount: number
+  sellTaxPct:  number
+  buyTaxPct:   number
+  source:      'goplus' | 'heuristic' | 'unavailable'
+}
+
 interface ScanResult {
   ticker: string
   edgeScore: number
@@ -71,6 +86,9 @@ interface ScanResult {
   flagged: boolean
   flagReason?: string
   contract?: string
+  chainId?: string | null
+  dexUrl?: string | null
+  scamAnalysis?: ScamAnalysis
 }
 
 interface ChatMessage {
@@ -902,6 +920,8 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
         <span className="font-bold text-white text-sm flex-shrink-0">{result.ticker}</span>
         <span className="text-xs text-gray-500 flex-1 truncate">{result.sourceChannel}</span>
         {result.flagged && <span className="text-xs text-red-400 font-semibold flex-shrink-0">FLAGGED</span>}
+        {result.scamAnalysis?.verdict === 'SCAM'  && <span className="text-xs text-red-400 font-bold flex-shrink-0">🚨 SCAM</span>}
+        {result.scamAnalysis?.verdict === 'RISKY' && <span className="text-xs text-yellow-400 font-bold flex-shrink-0">⚠ RISKY</span>}
         <span
           className="text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
           style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
@@ -925,15 +945,64 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
             <p className="text-xs text-red-400 mb-2">⚠ {result.flagReason}</p>
           )}
           <p className="text-xs text-gray-400 leading-relaxed mb-3">{result.recommendation}</p>
-          
-          {/* Contract Address */}
+
+          {/* Scam verdict */}
+          {result.scamAnalysis && result.scamAnalysis.verdict !== 'UNKNOWN' && (() => {
+            const { verdict, isHoneypot, highSellTax, hiddenOwner, isMintable, isBlacklist, sellTaxPct, buyTaxPct, holderCount, source } = result.scamAnalysis
+            const vColor = verdict === 'SCAM' ? '#f87171' : verdict === 'RISKY' ? '#fbbf24' : '#4ade80'
+            const vBg    = verdict === 'SCAM' ? 'rgba(239,68,68,0.12)' : verdict === 'RISKY' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)'
+            const flags  = [
+              isHoneypot  && '🍯 Honeypot',
+              highSellTax && `⚠ High sell tax (${sellTaxPct.toFixed(0)}%)`,
+              hiddenOwner && '👻 Hidden owner',
+              isMintable  && '🖨 Mintable',
+              isBlacklist && '🚫 Blacklist',
+            ].filter(Boolean) as string[]
+            return (
+              <div className="rounded-lg p-2 border mb-3" style={{ background: vBg, borderColor: vColor + '55' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold" style={{ color: vColor }}>
+                    {verdict === 'SCAM' ? '🚨' : verdict === 'RISKY' ? '⚠️' : '✅'} {verdict}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-auto">via {source} · {holderCount > 0 ? `${holderCount.toLocaleString()} holders` : ''}</span>
+                </div>
+                {flags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {flags.map(f => (
+                      <span key={f} className="text-xs bg-black/30 rounded px-1.5 py-0.5" style={{ color: vColor }}>{f}</span>
+                    ))}
+                  </div>
+                )}
+                {buyTaxPct > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Tax: buy {buyTaxPct.toFixed(0)}% / sell {sellTaxPct.toFixed(0)}%</p>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Contract Address + chain label + DexScreener link */}
           {result.contract && (
             <div className="bg-black/30 rounded-lg p-2 border border-purple-500/10 mb-3">
-              <p className="text-xs text-gray-500 mb-1">Contract Address</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500">
+                  Contract{result.chainId ? ` · ${result.chainId.toUpperCase()}` : ''}
+                </p>
+                {result.dexUrl && (
+                  <a
+                    href={result.dexUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-400 hover:text-purple-300 underline"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    DexScreener ↗
+                  </a>
+                )}
+              </div>
               <p className="text-xs text-purple-300 font-mono break-all">{result.contract}</p>
             </div>
           )}
-          
+
           <div className="grid grid-cols-4 gap-2">
             {[
               { label: 'Win Rate',   value: `${Math.round(result.winRate  * 100)}%`,                  color: 'text-green-400'  },

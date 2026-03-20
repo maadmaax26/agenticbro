@@ -12,8 +12,8 @@
 
 import { getTelegramClient, getTrackedChannels, type TrackedChannel } from './client.js'
 import { parseMessages, type RawMessage } from './parser.js'
-import { getTokenData } from './dex.js'
-import { scoreCall, filterGems, computeSummary, type ScoredCall, type GemAdviseOptions } from './scorer.js'
+import { getTokenData, getTokenSecurity } from './dex.js'
+import { scoreCall, filterGems, computeSummary, buildScamAnalysis, type ScoredCall, type GemAdviseOptions } from './scorer.js'
 import { Api } from 'telegram'
 
 // ─── Rolling feed cache ───────────────────────────────────────────────────────
@@ -145,6 +145,30 @@ async function enrichAndScore(
   return scored
 }
 
+// ─── GoPlus security enrichment ───────────────────────────────────────────────
+
+/**
+ * Enrich the top N scored calls with GoPlus on-chain security data.
+ * Runs sequentially to avoid rate-limiting GoPlus (free tier).
+ */
+async function enrichWithSecurity(calls: ScoredCall[], topN = 10): Promise<ScoredCall[]> {
+  const enriched = [...calls]
+  const toCheck  = enriched.slice(0, topN)
+
+  for (let i = 0; i < toCheck.length; i++) {
+    const call = toCheck[i]
+    if (!call.contract || !call.chainId) continue
+    try {
+      const sec  = await getTokenSecurity(call.contract, call.chainId)
+      enriched[i] = { ...call, scamAnalysis: buildScamAnalysis(sec) }
+    } catch {
+      // leave default UNKNOWN scamAnalysis
+    }
+  }
+
+  return enriched
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /** Fetch and score alpha calls. Uses cache if fresh enough. */
@@ -210,7 +234,7 @@ export async function runPriorityScan(
         console.warn(`[telegram/scan] ${channel.username} token search failed:`, err instanceof Error ? err.message : err)
       }
     }
-    return allCalls.sort((a, b) => b.edgeScore - a.edgeScore)
+    return enrichWithSecurity(allCalls.sort((a, b) => b.edgeScore - a.edgeScore))
   }
 
   // ── Wallet scan: search channels for wallet mentions + cross-ref feed ──────
@@ -238,7 +262,7 @@ export async function runPriorityScan(
       const feed = await fetchAlphaFeed(20)
       return feed.slice(0, 10)
     }
-    return allCalls.sort((a, b) => b.edgeScore - a.edgeScore)
+    return enrichWithSecurity(allCalls.sort((a, b) => b.edgeScore - a.edgeScore))
   }
 
   // ── Channel scan: deep-scan a specific channel (6 months of history) ────────
@@ -262,7 +286,7 @@ export async function runPriorityScan(
       const parsed   = parseMessages(messages)
       const scored   = await enrichAndScore(parsed, channelEntry, now)
       console.log(`[telegram/scan] channel scan ${channelEntry.username}: ${messages.length} raw msgs → ${parsed.length} calls → ${scored.length} scored`)
-      return scored.sort((a, b) => b.edgeScore - a.edgeScore)
+      return enrichWithSecurity(scored.sort((a, b) => b.edgeScore - a.edgeScore))
     } catch (err) {
       console.warn(`[telegram/scan] channel scan failed for ${channelEntry.username}:`, err instanceof Error ? err.message : err)
       return []
@@ -276,7 +300,7 @@ export async function runPriorityScan(
     const scored = await enrichAndScore(parsed, channel, now)
     allCalls.push(...scored)
   }
-  return allCalls.sort((a, b) => b.edgeScore - a.edgeScore)
+  return enrichWithSecurity(allCalls.sort((a, b) => b.edgeScore - a.edgeScore))
 }
 
 /** Get gem recommendations from the current feed cache or a fresh fetch. */
