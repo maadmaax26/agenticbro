@@ -34,6 +34,7 @@ import { resolve } from 'path'
 
 import express, { Request, Response } from 'express'
 import cors from 'cors'
+import debugRouter from './debug.js'
 import chatRouter from './routes/chat.js'
 import searchRouter from './routes/search.js'
 import marketRouter from './routes/market.js'
