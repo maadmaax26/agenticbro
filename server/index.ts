@@ -46,13 +46,21 @@ const PORT = parseInt(process.env.SERVER_PORT ?? '3001', 10)
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:4173',
-    'https://agenticbro.app',
-    'https://www.agenticbro.app',
-    'https://maadmaax26.github.io',
-  ],
+  origin: (origin, callback) => {
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://agenticbro.app',
+      'https://www.agenticbro.app',
+      'https://maadmaax26.github.io',
+    ]
+    // Also allow any Vercel preview / production deployment
+    if (!origin || allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`))
+    }
+  },
   credentials: true,
 }))
 

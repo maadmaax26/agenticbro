@@ -10,8 +10,8 @@ import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 
-// Use Vite proxy path (configured in vite.config.ts) - /api routes to http://localhost:3001
-const API_BASE = '/api'
+// Direct to local backend — works from both localhost:5173 and the deployed Vercel site
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
 
 // ─── Known channel data (module-level so both generateChannelSuccessRate and runScan can access it) ──
 const knownChannels: Record<string, any> = {
