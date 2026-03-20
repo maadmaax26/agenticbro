@@ -285,8 +285,24 @@ export async function runPriorityScan(
       const messages = await fetchChannelMessagesSince(channelEntry.username, sixMonthsAgo)
       const parsed   = parseMessages(messages)
       const scored   = await enrichAndScore(parsed, channelEntry, now)
-      console.log(`[telegram/scan] channel scan ${channelEntry.username}: ${messages.length} raw msgs → ${parsed.length} calls → ${scored.length} scored`)
-      return enrichWithSecurity(scored.sort((a, b) => b.edgeScore - a.edgeScore))
+
+      // Deduplicate: keep only the highest-scored call per ticker
+      const bestByTicker = new Map<string, typeof scored[number]>()
+      for (const s of scored) {
+        const key = s.ticker.toLowerCase()
+        if (!bestByTicker.has(key) || s.edgeScore > bestByTicker.get(key)!.edgeScore) {
+          bestByTicker.set(key, s)
+        }
+      }
+      const deduped = [...bestByTicker.values()]
+
+      console.log(
+        `[telegram/scan] ${channelEntry.username}: ` +
+        `${messages.length} msgs fetched → ${parsed.length} parsed → ` +
+        `${scored.length} scored → ${deduped.length} unique tickers`,
+      )
+
+      return enrichWithSecurity(deduped.sort((a, b) => b.edgeScore - a.edgeScore))
     } catch (err) {
       console.warn(`[telegram/scan] channel scan failed for ${channelEntry.username}:`, err instanceof Error ? err.message : err)
       return []
