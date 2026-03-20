@@ -25,6 +25,9 @@ function App() {
     const saved = localStorage.getItem('priorityFreeScans');
     return saved ? Math.max(0, parseInt(saved, 10)) : 3;
   });
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<string[]>([]);
+  const [showScanResults, setShowScanResults] = useState(false);
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
@@ -320,12 +323,32 @@ function App() {
                       </div>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (priorityScansRemaining > 0) {
                           setPriorityScansRemaining(priorityScansRemaining - 1);
                           localStorage.setItem('priorityFreeScans', String(priorityScansRemaining - 1));
-                          // Would trigger scan here
-                          alert('Priority scan initiated! (Demo mode)');
+                          setIsScanning(true);
+                          setShowScanResults(true);
+                          setScanResults([]);
+
+                          // Simulate scan results with chat-like messages
+                          const mockResults = [
+                            "🔍 Initiating Priority Scan...",
+                            "📊 Analyzing wallet holdings...",
+                            "✅ Found 5 tokens in portfolio",
+                            "📈 SOL position: +12.4% this week (strong momentum)",
+                            "⚠️ Token #3 showing signs of waning volume - monitor closely",
+                            "💎 Top opportunity: Consider rebalancing into BTC for stability",
+                            "🎯 Channel analysis: CryptoEdge Pro trending positive (edge score: 0.81)",
+                            "📊 Overall portfolio health: 7.2/10",
+                            "✅ Scan complete. 3 actionable insights generated."
+                          ];
+
+                          for (let i = 0; i < mockResults.length; i++) {
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                            setScanResults(prev => [...prev, mockResults[i]]);
+                          }
+                          setIsScanning(false);
                         } else {
                           if (holderTierUnlocked) {
                             setShowTierPage('holder');
@@ -334,15 +357,68 @@ function App() {
                           }
                         }
                       }}
-                      className="px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+                      disabled={isScanning}
+                      className="px-6 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50"
                       style={holderTierUnlocked || priorityScansRemaining > 0
                         ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
                         : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
                       }
                     >
-                      {priorityScansRemaining > 0 ? `Run Priority Scan (${priorityScansRemaining} remaining)` : 'Run Priority Scan (10K AGNTCBRO)'}
+                      {isScanning ? 'Scanning...' : (priorityScansRemaining > 0 ? `Run Priority Scan (${priorityScansRemaining} remaining)` : 'Run Priority Scan (10K AGNTCBRO)')}
                     </button>
                   </div>
+
+                  {/* Scan Results Chat Window */}
+                  {showScanResults && (
+                    <div className="mt-6 rounded-xl border border-purple-500/30 overflow-hidden">
+                      <div className="bg-black/40 px-4 py-3 border-b border-purple-500/30 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                          <span className="text-sm font-semibold text-white">Priority Scan Results</span>
+                        </div>
+                        <button
+                          onClick={() => setShowScanResults(false)}
+                          className="text-gray-400 hover:text-white text-sm transition-colors"
+                        >
+                          Close ✕
+                        </button>
+                      </div>
+                      <div className="bg-black/60 p-4 max-h-96 overflow-y-auto">
+                        {scanResults.length === 0 ? (
+                          <p className="text-gray-500 text-sm text-center py-8">
+                            {isScanning ? 'Starting scan...' : 'Click "Run Priority Scan" to begin'}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {scanResults.map((result, index) => (
+                              <div
+                                key={index}
+                                className={`flex items-start gap-3 p-3 rounded-lg ${
+                                  result.startsWith('🔍') || result.startsWith('✅')
+                                    ? 'bg-purple-900/20 border border-purple-500/20'
+                                    : result.startsWith('⚠️')
+                                    ? 'bg-red-900/20 border border-red-500/20'
+                                    : 'bg-black/40'
+                                }`}
+                              >
+                                <div className="flex-shrink-0 text-lg">
+                                  {result.startsWith('🔍') ? '🔍' :
+                                   result.startsWith('📊') ? '📊' :
+                                   result.startsWith('✅') ? '✅' :
+                                   result.startsWith('📈') ? '📈' :
+                                   result.startsWith('⚠️') ? '⚠️' :
+                                   result.startsWith('💎') ? '💎' :
+                                   result.startsWith('🎯') ? '🎯' :
+                                   '•'}
+                                </div>
+                                <p className="text-sm text-gray-200 leading-relaxed">{result.slice(2).trim() || result}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
