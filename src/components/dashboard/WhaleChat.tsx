@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { API_BASE } from '../../lib/apiBase';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating } from '../../hooks/useTokenGating';
 import { Send, Search, Sparkles, Trash2, Zap, BarChart2, FlaskConical } from 'lucide-react';
@@ -115,7 +116,7 @@ async function streamChat(
   }, CLIENT_TIMEOUT_MS);
 
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch(`${API_BASE}/api/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       signal:  abort.signal,
@@ -187,7 +188,7 @@ async function callSearch(
   assets: string[],
   agent:  AgentMode,
 ): Promise<{ content: string; sources: string[] }> {
-  const res = await fetch('/api/search', {
+  const res = await fetch(`${API_BASE}/api/search`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, assets, agent }),
@@ -200,7 +201,7 @@ async function callSearch(
 }
 
 async function clearServerSession(walletAddress: string): Promise<void> {
-  await fetch('/api/chat/session', {
+  await fetch(`${API_BASE}/api/chat/session`, {
     method:  'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ walletAddress }),

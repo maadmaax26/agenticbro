@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_BASE } from '../../lib/apiBase';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { ArrowLeft, TrendingUp, MessageSquare, Sliders, BarChart2, DollarSign, Vote, Star, Eye, Clock, RefreshCw } from 'lucide-react';
 import WhaleChat from './WhaleChat';
@@ -565,8 +566,8 @@ function WhaleRisk() {
     setError(null);
     try {
       const [fundRes, liqRes] = await Promise.all([
-        fetch('/api/market/funding',      { signal: AbortSignal.timeout(10_000) }),
-        fetch('/api/market/liquidations', { signal: AbortSignal.timeout(10_000) }),
+        fetch(`${API_BASE}/api/market/funding`,      { signal: AbortSignal.timeout(10_000) }),
+        fetch(`${API_BASE}/api/market/liquidations`, { signal: AbortSignal.timeout(10_000) }),
       ]);
 
       if (fundRes.ok) {
@@ -590,7 +591,7 @@ function WhaleRisk() {
   const loadLiqClusters = useCallback(async () => {
     setLiqLoading(true);
     try {
-      const res = await fetch('/api/market/liq-clusters', { signal: AbortSignal.timeout(15_000) });
+      const res = await fetch(`${API_BASE}/api/market/liq-clusters`, { signal: AbortSignal.timeout(15_000) });
       if (res.ok) {
         const d = await res.json() as BTCLiqData;
         setBtcLiq(d);
@@ -834,7 +835,7 @@ function WhaleStrategy() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/market/orderbook/${sym}`, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(`${API_BASE}/api/market/orderbook/${sym}`, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as Orderbook;
       setOrderbook(data);

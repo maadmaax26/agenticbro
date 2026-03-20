@@ -3,8 +3,8 @@ import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, Chevro
 import { useWallet } from '@solana/wallet-adapter-react';
 import { isTestWallet } from '../../hooks/useTokenGating';
 
-// Use Vite proxy path (configured in vite.config.ts) - /api routes to http://localhost:3001
-const API_BASE = '/api';
+// Direct to local backend — works from both localhost:5173 and the deployed Vercel site
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
