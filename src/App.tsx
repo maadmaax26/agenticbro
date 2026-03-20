@@ -8,6 +8,7 @@ import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
+import GemAdvise from './components/dashboard/GemAdvise'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
@@ -209,6 +210,7 @@ function App() {
                   { icon: '✅', text: 'Real-time BTC, ETH, SOL, BNB, XRP signals' },
                   { icon: '✅', text: 'Liquidation level tracking' },
                   { icon: '✅', text: 'Daily AI-synthesized market reports' },
+                  { icon: '💎', text: 'Gem Advise preview (Holder Tier: unlimited)' },
                 ].map((item) => (
                   <div key={item.text} className="flex items-start gap-3 mb-4">
                     <span className="text-green-400 text-lg mt-0.5">{item.icon}</span>
@@ -275,6 +277,93 @@ function App() {
             <div className="max-w-7xl mx-auto mb-6">
               <DailyReport />
             </div>
+
+            {/* Gem Advise Preview */}
+            <div className="max-w-7xl mx-auto mb-6">
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">💎</div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Gem Advise</h2>
+                      <p className="text-sm text-gray-400">AI-ranked token recommendations (Preview)</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowTierPage('holder')}
+                    disabled={!holderTierUnlocked}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition-all disabled:opacity-50"
+                    style={holderTierUnlocked
+                      ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
+                      : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
+                    }
+                  >
+                    {holderTierUnlocked ? 'Open Full Version' : 'Unlock (10K AGNTCBRO)'}
+                  </button>
+                </div>
+
+                {!holderTierUnlocked ? (
+                  <div className="text-center py-8">
+                    <div className="text-6xl mb-4 opacity-50">🔒</div>
+                    <h3 className="text-xl font-bold text-white mb-2">Holder Tier Feature</h3>
+                    <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
+                      Get unlimited AI-ranked gem recommendations with confidence tiers, edge scoring, and quality guards.
+                    </p>
+                    <div className="bg-purple-900/40 rounded-xl p-4 max-w-md mx-auto border border-purple-500/30">
+                      <p className="text-sm text-gray-400 mb-2">Holder Tier includes:</p>
+                      <ul className="text-left text-sm space-y-1">
+                        <li>• 3 free gem advise scans</li>
+                        <li>• AI-ranked token recommendations</li>
+                        <li>• Confidence tiers (HIGH/MEDIUM/LOW)</li>
+                        <li>• Rug rate & liquidity guards</li>
+                        <li>• Real-time Telegram alpha analysis</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <GemPreviewCard
+                        ticker="$NOVA"
+                        name="NovaProtocol"
+                        edgeScore={0.81}
+                        confidence="HIGH"
+                        winRate={44}
+                        rugRate={8}
+                        liquidity="182K"
+                        change="+12.4%"
+                        maxGain="3.2x"
+                      />
+                      <GemPreviewCard
+                        ticker="$FLUX"
+                        name="FluxLayer"
+                        edgeScore={0.76}
+                        confidence="HIGH"
+                        winRate={39}
+                        rugRate={12}
+                        liquidity="94K"
+                        change="+8.1%"
+                        maxGain="2.7x"
+                      />
+                      <GemPreviewCard
+                        ticker="$KRYPT"
+                        name="KryptVault"
+                        edgeScore={0.71}
+                        confidence="HIGH"
+                        winRate={36}
+                        rugRate={14}
+                        liquidity="126K"
+                        change="+6.7%"
+                        maxGain="2.4x"
+                      />
+                    </div>
+                    <p className="text-center text-xs text-gray-500 mt-4">
+                      * Preview mode — Open full version for unlimited scans and advanced filters
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         )}
       </main>
@@ -295,6 +384,87 @@ function App() {
       )}
     </div>
   )
+}
+
+// ─── Gem Preview Card Component (for free page preview) ────────────────────────────────────────────────────────────
+
+function GemPreviewCard({
+  ticker, name, edgeScore, confidence, winRate, rugRate, liquidity, change, maxGain,
+}: {
+  ticker: string;
+  name: string;
+  edgeScore: number;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  winRate: number;
+  rugRate: number;
+  liquidity: string;
+  change: string;
+  maxGain: string;
+}) {
+  const edgePct = Math.round(edgeScore * 100);
+  const isPositive = change.startsWith('+');
+
+  const confidenceStyle: Record<'HIGH' | 'MEDIUM' | 'LOW', { bg: string; border: string; color: string }> = {
+    HIGH:   { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)',  color: '#4ade80' },
+    MEDIUM: { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.35)',  color: '#fbbf24' },
+    LOW:    { bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.35)',   color: '#f87171' },
+  };
+  const cs = confidenceStyle[confidence];
+
+  return (
+    <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/20 p-4 hover:border-purple-500/40 transition-all">
+      {/* Top row */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="font-bold text-white text-sm">{name}</div>
+          <p className="text-xs text-gray-500">{ticker}</p>
+        </div>
+        <span
+          className="text-xs font-bold px-2 py-1 rounded-lg"
+          style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
+        >
+          {confidence}
+        </span>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
+          <p className="text-xs text-gray-500">Win Rate</p>
+          <p className="text-sm font-bold text-green-400">{winRate}%</p>
+        </div>
+        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
+          <p className="text-xs text-gray-500">1h Change</p>
+          <p className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>{change}</p>
+        </div>
+        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
+          <p className="text-xs text-gray-500">Liquidity</p>
+          <p className="text-sm font-bold text-white">${liquidity}</p>
+        </div>
+        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
+          <p className="text-xs text-gray-500">Max Gain</p>
+          <p className="text-sm font-bold text-purple-300">{maxGain}</p>
+        </div>
+      </div>
+
+      {/* Edge score bar */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">Edge</span>
+        <div className="flex items-center gap-2">
+          <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${edgePct}%`,
+                background: 'linear-gradient(90deg, #7c3aed, #00d4ff)',
+              }}
+            />
+          </div>
+          <span className="text-xs font-bold text-purple-300">{edgePct}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default App
