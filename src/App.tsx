@@ -262,7 +262,7 @@ function App() {
     }
 
     try {
-      const res  = await fetch(`${API_BASE}/telegram/priority-scan`, {
+      const res  = await fetch(`${API_BASE}/api/telegram/priority-scan`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
