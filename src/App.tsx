@@ -17,14 +17,28 @@ import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 
 function App() {
-  const { connected } = useWallet()
+  const { connected, publicKey } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
+
+  // Get wallet-specific scan count
+  const getWalletScanKey = () => {
+    if (!publicKey) return 'priorityFreeScans';
+    return `priorityFreeScans_${publicKey.toString()}`;
+  };
+
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
-    const saved = localStorage.getItem('priorityFreeScans');
+    const saved = localStorage.getItem(getWalletScanKey());
     return saved ? Math.max(0, parseInt(saved, 10)) : 3;
   });
+
+  // Update scan count when wallet changes
+  const updateScanCount = useCallback((newCount: number) => {
+    setPriorityScansRemaining(newCount);
+    localStorage.setItem(getWalletScanKey(), String(newCount));
+  }, []);
+
   const [isScanning, setIsScanning] = useState(false);
   const [scanResults, setScanResults] = useState<string[]>([]);
   const [showScanResults, setShowScanResults] = useState(false);
@@ -325,8 +339,7 @@ function App() {
                     <button
                       onClick={async () => {
                         if (priorityScansRemaining > 0) {
-                          setPriorityScansRemaining(priorityScansRemaining - 1);
-                          localStorage.setItem('priorityFreeScans', String(priorityScansRemaining - 1));
+                          updateScanCount(priorityScansRemaining - 1);
                           setIsScanning(true);
                           setShowScanResults(true);
                           setScanResults([]);
