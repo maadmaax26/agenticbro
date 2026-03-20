@@ -39,7 +39,12 @@ export const TRACKED_CHANNELS: TrackedChannel[] = [
   { username: 'alphawhaleio',    displayName: 'AlphaWhale',     score: 0.76, classification: 'HIGH_ALPHA' },
   { username: 'defigems_io',     displayName: 'DeFi Gems',      score: 0.63, classification: 'TRADEABLE'  },
   { username: 'moonsignalshq',   displayName: 'MoonSignals',    score: 0.58, classification: 'TRADEABLE'  },
-  { username: 'gemhuntersdao',   displayName: 'GemHunters',     score: 0.42, classification: 'LOW_QUALITY'},
+  { username: 'gemhuntersdao',   displayName: 'GemHunters',     score: 0.42, classification: 'LOW_QUALITY' },
+  { username: 'cryptolordgem',    displayName: 'CryptoLordGem',  score: 0.42, classification: 'LOW_QUALITY' },
+  { username: 'cryptospacex04',  displayName: 'CryptoSpaceX04', score: 0.52, classification: 'TRADEABLE' },
+  { username: 'elitebullsignals', displayName: 'EliteBullSignals', score: 0.65, classification: 'TRADEABLE' },
+  { username: 'dailypumpgems',    displayName: 'DailyPumpGems',  score: 0.48, classification: 'MODERATE'   },
+  { username: 'cryptorush_global_call', displayName: 'Crypto_Rush_Global_Call', score: 0.60, classification: 'TRADEABLE' },
 ]
 
 // Override with env if provided
