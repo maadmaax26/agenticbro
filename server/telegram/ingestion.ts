@@ -304,7 +304,20 @@ export async function runPriorityScan(
 
       return enrichWithSecurity(deduped.sort((a, b) => b.edgeScore - a.edgeScore))
     } catch (err) {
-      console.warn(`[telegram/scan] channel scan failed for ${channelEntry.username}:`, err instanceof Error ? err.message : err)
+      const msg = err instanceof Error ? err.message : String(err)
+      // Re-throw "not found" errors so the route can return a useful message to the user
+      if (
+        msg.includes('No user has') ||
+        msg.includes('USERNAME_INVALID') ||
+        msg.includes('CHANNEL_INVALID') ||
+        msg.includes('cannot find')
+      ) {
+        throw new Error(
+          `Channel "@${channelEntry.username}" was not found on Telegram. ` +
+          `Check that the username is spelled correctly — it must match exactly (e.g. use the channel link: t.me/username).`,
+        )
+      }
+      console.warn(`[telegram/scan] channel scan failed for ${channelEntry.username}:`, msg)
       return []
     }
   }
