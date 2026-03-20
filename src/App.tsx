@@ -4,12 +4,10 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating } from './hooks/useTokenGating'
 import PortfolioCard from './components/PortfolioCard'
 import RoastDisplay from './components/RoastDisplay'
-import PriorityScan from './components/dashboard/PriorityScan'
 import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
-import GemAdvise from './components/dashboard/GemAdvise'
 import ValueProposition from './components/ValueProposition'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
@@ -569,7 +567,7 @@ function App() {
 // ─── Gem Preview Card Component (for free page preview) ────────────────────────────────────────────────────────────
 
 function GemPreviewCard({
-  ticker, name, edgeScore, confidence, winRate, rugRate, liquidity, change, maxGain,
+  ticker, name, edgeScore, confidence, winRate, rugRate: _rugRate, liquidity, change, maxGain,
 }: {
   ticker: string;
   name: string;

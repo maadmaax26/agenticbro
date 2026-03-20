@@ -1,0 +1,60 @@
+/**
+ * AgenticBro Whale Tier — Express Proxy Server
+ *
+ * Routes:
+ *   POST /api/chat          → local Ollama (qwen3.5:27b on Mac Studio)
+ *   POST /api/search        → Ollama Pro cloud (glm-4.7:cloud)
+ *   GET  /api/market/*      → CoinGecko + Binance + Bybit
+ *   GET  /api/onchain/*     → Helius API (Solana on-chain)
+ *   GET  /api/telegram/*    → Telegram MTProto alpha intelligence
+ *
+ * Start:  npx tsx watch server/index.ts
+ * Port:   3001
+ */
+
+import express, { Request, Response } from 'express'
+import cors from 'cors'
+import chatRouter from './routes/chat.js'
+import searchRouter from './routes/search.js'
+import marketRouter from './routes/market.js'
+import onchainRouter from './routes/onchain.js'
+import telegramRouter from './routes/telegram.js'
+
+const app = express()
+const PORT = parseInt(process.env.SERVER_PORT ?? '3001', 10)
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:4173',
+    'https://agenticbro.app',
+    'https://www.agenticbro.app',
+  ],
+  credentials: true,
+}))
+
+app.use(express.json({ limit: '2mb' }))
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
+app.use('/api/chat',     chatRouter)
+app.use('/api/search',   searchRouter)
+app.use('/api/market',   marketRouter)
+app.use('/api/onchain',  onchainRouter)
+app.use('/api/telegram', telegramRouter)
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', ts: new Date().toISOString() })
+})
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+
+app.listen(PORT, () => {
+  console.log(`[server] AgenticBro proxy running on http://localhost:${PORT}`)
+  console.log(`[server] Ollama host:     ${process.env.OLLAMA_HOST ?? 'http://localhost:11434'}`)
+  console.log(`[server] Ollama Pro host: ${process.env.OLLAMA_PRO_HOST ?? '(not set)'}`)
+  console.log(`[server] Helius key:      ${process.env.HELIUS_API_KEY ? '✓ set' : '✗ missing'}`)
+  console.log(`[server] Telegram:        ${process.env.TELEGRAM_SESSION_STRING ? '✓ configured' : '✗ not set (mock data mode)'}`)
+})

@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Gem, RefreshCw, TrendingUp, Droplets, Flame } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { isTestWallet } from '../../hooks/useTokenGating';
+
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,45 +103,77 @@ function getGemAdvise(
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function GemAdvise() {
-  const [filter, setFilter] = useState<FilterMode>('all');
+  const { publicKey } = useWallet();
+  const isTest = isTestWallet(publicKey?.toBase58() ?? '');
+
+  const [filter, setFilter]             = useState<FilterMode>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState('just now');
+  const [lastUpdated, setLastUpdated]   = useState('just now');
+  const [isMock, setIsMock]             = useState(false);
+  const [apiGems, setApiGems]           = useState<GemAdviseItem[] | null>(null);
+  const [summary, setSummary]           = useState<{ avgEdgeScore: number; highConfidence: number; channelsSourced: number } | null>(null);
   const [freeScansRemaining, setFreeScansRemaining] = useState(() => {
-    const saved = localStorage.getItem('gemAdviseFreeScans');
-    return saved ? Math.max(0, parseInt(saved, 10)) : 3;
+    try { const s = localStorage.getItem('gemAdviseFreeScans'); return s ? Math.max(0, parseInt(s, 10)) : 3; } catch { return 3; }
   });
 
-  const gems = getGemAdvise(filter);
-  const avgEdge = gems.length
-    ? (gems.reduce((s, g) => s + g.edgeScore, 0) / gems.length).toFixed(2)
-    : '—';
-  const highCount = gems.filter(g => g.confidence === 'HIGH').length;
-  const channelCount = new Set(gems.map(g => g.sourceChannel)).size;
+  // Map API response shape → component shape (adds avatar / name fields for display)
+  const mapApiGem = (g: Record<string, unknown>): GemAdviseItem => ({
+    id:            (g.messageId as number) ?? Math.random(),
+    ticker:        g.ticker as string,
+    name:          (g.ticker as string).replace('$', ''),
+    avatar:        '💎',
+    edgeScore:     g.edgeScore as number,
+    confidence:    g.confidence as ConfidenceLevel,
+    winRate:       g.winRate as number,
+    rugRate:       g.rugRate as number,
+    liquidity:     g.liquidity as number,
+    volume24h:     g.volume24h as number ?? 0,
+    sourceChannel: g.sourceChannel as string,
+    isNew:         g.isNew as boolean,
+    priceChange1h: (g.priceChange1h as string) ?? '—',
+    maxGain:       (g.maxGain as string) ?? '—',
+  });
+
+  const fetchGems = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const params = new URLSearchParams({ filter, rugRateMax: '0.30', liquidityMin: '20000', topN: '10' });
+      const res    = await fetch(`${API_BASE}/api/telegram/gem-advise?${params}`);
+      const data   = await res.json() as { gems: Record<string, unknown>[]; summary: { avgEdgeScore: number; highConfidence: number; channelsSourced: number }; mock: boolean };
+      setApiGems(data.gems.map(mapApiGem));
+      setSummary(data.summary);
+      setIsMock(data.mock ?? false);
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    } catch {
+      // Keep showing local data on error
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [filter]);
+
+  useEffect(() => { fetchGems(); }, [fetchGems]);
+
+  // Display either API gems (live) or local filtered gems (fallback while loading)
+  const gems = apiGems ?? getGemAdvise(filter);
+  const avgEdge    = summary ? summary.avgEdgeScore.toFixed(2) : (gems.length ? (gems.reduce((s, g) => s + g.edgeScore, 0) / gems.length).toFixed(2) : '—');
+  const highCount  = summary ? summary.highConfidence  : gems.filter(g => g.confidence === 'HIGH').length;
+  const channelCount = summary ? summary.channelsSourced : new Set(gems.map(g => g.sourceChannel)).size;
 
   const handleRefresh = () => {
+    // Test wallet: unlimited scans, never burn
+    if (isTest) { fetchGems(); return; }
     if (freeScansRemaining > 0) {
-      // Free scan available
-      setFreeScansRemaining(freeScansRemaining - 1);
-      localStorage.setItem('gemAdviseFreeScans', String(freeScansRemaining - 1));
-      performScan();
+      setFreeScansRemaining(prev => { try { localStorage.setItem('gemAdviseFreeScans', String(prev - 1)); } catch {} return prev - 1; });
+      fetchGems();
     } else {
-      // Need to burn tokens
       setShowBurnModal(true);
     }
   };
 
   const confirmRefresh = () => {
     setShowBurnModal(false);
-    performScan();
-  };
-
-  const performScan = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setIsRefreshing(false);
-    }, 1400);
+    fetchGems();
   };
 
   return (
@@ -164,6 +200,7 @@ export default function GemAdvise() {
               </h2>
               <p className="text-sm text-gray-400 mt-0.5">
                 AI-ranked token recommendations from audited alpha channels
+                {isMock && <span className="ml-2 text-yellow-400">(demo data — add Telegram credentials to go live)</span>}
               </p>
             </div>
           </div>
