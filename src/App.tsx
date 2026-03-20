@@ -3,7 +3,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
 import PortfolioCard from './components/PortfolioCard'
-import RoastDisplay from './components/RoastDisplay'
+
 import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
@@ -490,62 +490,93 @@ function App() {
                   }
                 </button>
 
-                {/* ── Chat-style results window ── */}
-                {showScanChat && (
-                  <div className="mt-5 rounded-xl border border-purple-500/30 overflow-hidden">
-                    {/* Chat header */}
-                    <div className="bg-black/50 px-4 py-3 border-b border-purple-500/20 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-purple-400 animate-pulse' : 'bg-green-400'}`} />
-                        <span className="text-sm font-semibold text-white">Scan Results</span>
-                        {scanMessages.length > 0 && !isScanning && (
-                          <span className="text-xs text-gray-500">
-                            · {scanMessages.filter(m => m.type === 'result' || m.type === 'success' || m.type === 'warning').length - 1} tokens
-                          </span>
-                        )}
-                      </div>
-                      <button onClick={() => setShowScanChat(false)} className="text-gray-500 hover:text-white text-xs transition-colors">
-                        Close ✕
-                      </button>
-                    </div>
-
-                    {/* Message list */}
-                    <div className="bg-black/70 p-4 max-h-[28rem] overflow-y-auto space-y-2">
-                      {scanMessages.map(msg => (
-                        <div key={msg.id}>
-                          {/* Result card — richer rendering for token results */}
-                          {msg.result ? (
-                            <ScanResultCard result={msg.result} icon={msg.icon} />
-                          ) : (
-                            <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-sm ${
-                              msg.type === 'success' ? 'bg-green-900/20 border border-green-500/20 text-green-300'
-                            : msg.type === 'warning' ? 'bg-yellow-900/20 border border-yellow-500/20 text-yellow-300'
-                            : msg.type === 'error'   ? 'bg-red-900/20 border border-red-500/20 text-red-300'
-                            : 'bg-purple-900/10 border border-purple-500/10 text-gray-400'
-                            }`}>
-                              <span className="flex-shrink-0">{msg.icon}</span>
-                              <span className="leading-relaxed">{msg.text}</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {isScanning && (
-                        <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
-                          <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
-                          Processing…
-                        </div>
-                      )}
-                      <div ref={chatBottomRef} />
-                    </div>
-                  </div>
-                )}
-
               </div>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
               <PortfolioCard />
-              <RoastDisplay />
+
+              {/* ── Priority Scan Results Panel ── */}
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 flex flex-col overflow-hidden" style={{ minHeight: '420px' }}>
+                {/* Panel header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-purple-500/20 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isScanning ? 'bg-purple-400 animate-pulse' : showScanChat ? 'bg-green-400' : 'bg-gray-600'}`} />
+                    <h3 className="text-base font-bold text-white">Scan Results</h3>
+                    {showScanChat && !isScanning && (() => {
+                      const tokenCount = scanMessages.filter(m => m.result).length
+                      const highCount  = scanMessages.filter(m => m.result?.confidence === 'HIGH').length
+                      return tokenCount > 0 ? (
+                        <span className="text-xs text-gray-500 font-mono">
+                          {tokenCount} token{tokenCount !== 1 ? 's' : ''} · <span className="text-green-400">{highCount} HIGH</span>
+                        </span>
+                      ) : null
+                    })()}
+                  </div>
+                  {showScanChat && (
+                    <button
+                      onClick={() => { setShowScanChat(false); setScanMessages([]) }}
+                      className="text-gray-500 hover:text-white text-xs transition-colors"
+                    >
+                      Clear ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Content */}
+                {!showScanChat ? (
+                  /* Empty state — prompt to run a scan */
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
+                    <div className="text-5xl opacity-30">🔍</div>
+                    <div>
+                      <p className="text-gray-400 text-sm font-semibold mb-1">No scan results yet</p>
+                      <p className="text-gray-600 text-xs leading-relaxed">
+                        Select a scan mode above, enter your target, and run<br />a Priority Scan to see full token details here.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 w-full max-w-xs mt-2">
+                      {[
+                        { icon: '👛', label: 'Wallet', desc: 'Track alpha for a wallet' },
+                        { icon: '📡', label: 'Channel', desc: 'Deep-scan a Telegram channel' },
+                        { icon: '🔍', label: 'Token', desc: 'Find all calls for a token' },
+                      ].map(m => (
+                        <div key={m.label} className="rounded-xl p-2 text-center" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                          <div className="text-xl mb-1">{m.icon}</div>
+                          <p className="text-xs font-semibold text-gray-400">{m.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Results */
+                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {scanMessages.map(msg => (
+                      <div key={msg.id}>
+                        {msg.result ? (
+                          <ScanResultCard result={msg.result} icon={msg.icon} defaultExpanded={msg.result.confidence === 'HIGH'} />
+                        ) : (
+                          <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs ${
+                            msg.type === 'success' ? 'bg-green-900/20 border border-green-500/20 text-green-300'
+                          : msg.type === 'warning' ? 'bg-yellow-900/20 border border-yellow-500/20 text-yellow-300'
+                          : msg.type === 'error'   ? 'bg-red-900/20 border border-red-500/20 text-red-300'
+                          : 'bg-purple-900/10 border border-purple-500/10 text-gray-500'
+                          }`}>
+                            <span className="flex-shrink-0 mt-0.5">{msg.icon}</span>
+                            <span className="leading-relaxed">{msg.text}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {isScanning && (
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
+                        <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
+                        Scanning…
+                      </div>
+                    )}
+                    <div ref={chatBottomRef} />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Market sentiment */}
@@ -675,8 +706,8 @@ function App() {
 
 // ─── Scan Result Card ─────────────────────────────────────────────────────────
 
-function ScanResultCard({ result, icon }: { result: ScanResult; icon: string }) {
-  const [expanded, setExpanded] = useState(false)
+function ScanResultCard({ result, icon, defaultExpanded = false }: { result: ScanResult; icon: string; defaultExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const edgePct = Math.round(result.edgeScore * 100)
 
   const cs = result.confidence === 'HIGH'
