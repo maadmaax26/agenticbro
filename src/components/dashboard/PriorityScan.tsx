@@ -476,10 +476,16 @@ export default function PriorityScan() {
         <button
           onClick={startScan}
           disabled={isLaunchDisabled}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-700"
+          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            scanTarget === 'scam' ? 'bg-red-600 hover:bg-red-700' : 'bg-purple-600 hover:bg-purple-700'
+          }`}
         >
-          <ScanLine className="w-4 h-4" />
-          {scanStatus === 'scanning' ? 'Scanning…' : `Run Priority Scan — ${burnCost.toLocaleString()} AGNTCBRO`}
+          {scanTarget === 'scam' ? <AlertCircle className="w-4 h-4" /> : <ScanLine className="w-4 h-4" />}
+          {scanStatus === 'scanning'
+            ? 'Scanning…'
+            : scanTarget === 'scam'
+              ? `🚨 Run Scam Detection — ${burnCost.toLocaleString()} AGNTCBRO`
+              : `Run Priority Scan — ${burnCost.toLocaleString()} AGNTCBRO`}
         </button>
       </div>
 
