@@ -140,13 +140,21 @@ router.get('/gem-advise', async (req: Request, res: Response): Promise<void> => 
 
 router.post('/scam-detect', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, platform = 'Telegram' } = req.body as {
+    const { username, platform = 'Telegram', walletAddress } = req.body as {
       username?: string
       platform?: 'X' | 'Telegram'
+      walletAddress?: string
     }
 
     if (!username?.trim()) {
       res.status(400).json({ error: 'username field is required' })
+      return
+    }
+
+    // X (Twitter) analysis works without Telegram configured — uses OpenClaw service
+    if (platform === 'X') {
+      const result = await runScamDetection(username.trim(), platform, walletAddress?.trim())
+      res.json({ results: [result], mock: false, ts: Date.now() })
       return
     }
 
@@ -160,7 +168,7 @@ router.post('/scam-detect', async (req: Request, res: Response): Promise<void> =
       return
     }
 
-    const result = await runScamDetection(username.trim(), platform)
+    const result = await runScamDetection(username.trim(), platform, walletAddress?.trim())
     res.json({ results: [result], mock: false, ts: Date.now() })
   } catch (err) {
     console.error('[telegram/scam-detect]', err)

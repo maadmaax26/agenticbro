@@ -11,10 +11,21 @@
  */
 
 import { getTelegramClient, getTrackedChannels, type TrackedChannel } from './client.js'
-import { parseMessages, type RawMessage } from './parser.js'
+import { parseMessages, scoreShillProbability, scoreUrgency, type RawMessage } from './parser.js'
 import { getTokenData, getTokenSecurity } from './dex.js'
 import { scoreCall, filterGems, computeSummary, buildScamAnalysis, type ScoredCall, type GemAdviseOptions } from './scorer.js'
 import { Api } from 'telegram'
+import {
+  runEnhancedAnalysis,
+  analyzeXProfileFlags,
+  analyzeWalletFlags,
+  computeEnhancedRiskScore,
+  type EnhancedScamData,
+  type XProfileData,
+  type WalletAnalysis,
+  type VictimAnalysis,
+  type ScammerDbEntry,
+} from './scam-service.js'
 
 // ─── Channel resolver ─────────────────────────────────────────────────────────
 // Tries the exact username first; on failure, searches Telegram for a match.
@@ -415,28 +426,195 @@ export interface ScamDetectionResult {
     rugRate:          number
     uniqueTickers:    number
   }
+  // ── Enhanced fields from OpenClaw integration ──
+  xProfile?: {
+    name?:          string
+    bio?:           string
+    followers?:     number
+    following?:     number
+    isVerified:     boolean
+    profileImage?:  string
+    profileUrl:     string
+  }
+  walletAnalysis?: {
+    address:        string
+    blockchain:     string
+    balance:        number
+    balanceUsd:     number
+    totalReceived:  number
+    totalSent:      number
+    txCount:        number
+    uniqueSenders:  number
+  }
+  victimReports?: {
+    totalReports:   number
+    reports:        { title: string; url: string; platform: string; score?: number }[]
+  }
+  knownScammer?: {
+    name:           string
+    status:         string
+    victims:        number
+    notes:          string
+  }
 }
 
 /**
- * Analyze a Telegram channel/user for scam patterns by fetching their
- * recent messages and computing aggregate shill/urgency/rug metrics.
+ * Analyze a Telegram channel/user or X account for scam patterns.
+ *
+ * For Telegram: fetches recent messages and computes aggregate shill/urgency/rug metrics.
+ * For X: scrapes public profile, analyzes bio red flags, searches victim reports.
+ * Both: enriches with OpenClaw scam-service (wallet analysis, victim reports, scammer DB).
  */
 export async function runScamDetection(
   username: string,
   platform: 'X' | 'Telegram',
+  walletAddress?: string,
 ): Promise<ScamDetectionResult> {
-  // X analysis not yet supported — return structured "unsupported" result
+
+  // ── X (Twitter) analysis — FULL PIPELINE (integrated with OpenClaw) ──
   if (platform === 'X') {
-    return {
-      username,
-      platform,
-      riskScore:         5,
-      redFlags:          ['X (Twitter) analysis requires API access — results are limited'],
-      verificationLevel: 'Unverified',
-      scamType:          undefined,
-      evidence:          ['Unable to fetch X data — manual review recommended'],
-      recommendedAction: 'INCONCLUSIVE — X analysis not yet available. Manually review the profile before trusting any calls.',
+    const handle = username.replace(/^@/, '').trim()
+
+    // Run OpenClaw enhanced analysis (profile scrape + victim reports + wallet + DB)
+    const enhanced = await runEnhancedAnalysis(handle, 'X', walletAddress)
+
+    const redFlags:  string[] = []
+    const evidence:  string[] = []
+    let baseRisk = 2  // baseline
+
+    // ── X profile red-flag analysis ──
+    if (enhanced.xProfile) {
+      const profileFlags = analyzeXProfileFlags(enhanced.xProfile)
+      redFlags.push(...profileFlags.flags)
+      evidence.push(...profileFlags.evidence)
+      baseRisk += profileFlags.riskContribution
+    } else {
+      redFlags.push('Could not scrape X profile — profile may be private or suspended')
+      evidence.push('X profile data unavailable; risk assessment is limited')
+      baseRisk += 0.5
     }
+
+    // ── Wallet red-flag analysis ──
+    let walletFlags
+    if (enhanced.walletAnalysis) {
+      walletFlags = analyzeWalletFlags(enhanced.walletAnalysis)
+      redFlags.push(...walletFlags.flags)
+      evidence.push(...walletFlags.evidence)
+    }
+
+    // ── Victim reports ──
+    if (enhanced.victimAnalysis && enhanced.victimAnalysis.totalReports > 0) {
+      redFlags.push(`${enhanced.victimAnalysis.totalReports} victim report(s) found online`)
+      evidence.push(
+        `Found ${enhanced.victimAnalysis.totalReports} public reports across Reddit and web searches — ` +
+        `cross-reference these before trusting calls from this account`,
+      )
+    }
+
+    // ── Known scammer DB match ──
+    if (enhanced.dbMatch) {
+      const db = enhanced.dbMatch
+      if (db.status === 'Verified' || db.status === 'Highly Verified') {
+        redFlags.push(`⚠️ KNOWN SCAMMER in OpenClaw database (${db.status})`)
+        evidence.push(`Previously investigated: "${db.notes}" — ${db.victims} victim(s) reported`)
+      } else {
+        redFlags.push(`Found in OpenClaw scammer database (${db.status})`)
+        evidence.push(`Database entry: "${db.notes}"`)
+      }
+    }
+
+    // ── Enhanced risk score ──
+    const riskScore = computeEnhancedRiskScore(
+      baseRisk,
+      enhanced.xProfile ? analyzeXProfileFlags(enhanced.xProfile) : undefined,
+      walletFlags,
+      enhanced.victimAnalysis,
+      enhanced.dbMatch,
+    )
+
+    // ── Verification level ──
+    const verificationLevel: ScamDetectionResult['verificationLevel'] =
+      enhanced.dbMatch?.status === 'Verified' || enhanced.dbMatch?.status === 'Highly Verified'
+        ? 'Verified'
+      : (enhanced.victimAnalysis?.totalReports ?? 0) >= 3 ? 'Partially Verified'
+      : 'Unverified'
+
+    // ── Scam type ──
+    let scamType: string | undefined = enhanced.dbMatch?.notes?.match(/scam|pump|rug|drainer|phishing/i)?.[0]
+    if (!scamType) {
+      if (redFlags.some(f => /guaranteed/i.test(f)))   scamType = 'Guaranteed Returns Scam'
+      else if (redFlags.some(f => /private.*alpha|send.*crypto/i.test(f))) scamType = 'Private Alpha Scam'
+      else if (redFlags.some(f => /urgency/i.test(f))) scamType = 'Pump-and-Dump Promotion'
+    }
+
+    // ── Recommended action ──
+    let recommendedAction: string
+    if (riskScore >= 7) {
+      recommendedAction = `DO NOT TRUST — HIGH RISK (${riskScore}/10). Multiple red flags detected across profile analysis, victim reports, and scammer databases. Avoid all calls from @${handle}.`
+    } else if (riskScore >= 4) {
+      recommendedAction = `PROCEED WITH CAUTION — MODERATE RISK (${riskScore}/10). Some concerning patterns detected. Cross-reference any calls from @${handle} with other sources before investing.`
+    } else {
+      recommendedAction = `LOW RISK (${riskScore}/10). No major red flags detected for @${handle}. Profile appears relatively clean, but always DYOR.`
+    }
+
+    // ── Build result ──
+    const result: ScamDetectionResult = {
+      username: handle,
+      platform,
+      riskScore,
+      redFlags,
+      verificationLevel,
+      scamType,
+      evidence,
+      recommendedAction,
+    }
+
+    // ── Attach enhanced data ──
+    if (enhanced.xProfile) {
+      result.xProfile = {
+        name:         enhanced.xProfile.name,
+        bio:          enhanced.xProfile.bio,
+        followers:    enhanced.xProfile.followers,
+        following:    enhanced.xProfile.following,
+        isVerified:   enhanced.xProfile.isVerified,
+        profileImage: enhanced.xProfile.profileImage,
+        profileUrl:   enhanced.xProfile.profileUrl,
+      }
+    }
+    if (enhanced.walletAnalysis) {
+      const w = enhanced.walletAnalysis
+      result.walletAnalysis = {
+        address:       w.address,
+        blockchain:    w.blockchain,
+        balance:       w.balance,
+        balanceUsd:    w.balanceUsd,
+        totalReceived: w.totalReceived,
+        totalSent:     w.totalSent,
+        txCount:       w.transactions.length,
+        uniqueSenders: new Set(w.receivedFromVictims.map(v => v.from)).size,
+      }
+    }
+    if (enhanced.victimAnalysis && enhanced.victimAnalysis.totalReports > 0) {
+      result.victimReports = {
+        totalReports: enhanced.victimAnalysis.totalReports,
+        reports:      enhanced.victimAnalysis.reports.slice(0, 10).map(r => ({
+          title:    r.title,
+          url:      r.url,
+          platform: r.platform,
+          score:    r.score,
+        })),
+      }
+    }
+    if (enhanced.dbMatch) {
+      result.knownScammer = {
+        name:    enhanced.dbMatch.name,
+        status:  enhanced.dbMatch.status,
+        victims: enhanced.dbMatch.victims,
+        notes:   enhanced.dbMatch.notes,
+      }
+    }
+
+    return result
   }
 
   // ── Telegram analysis ──
@@ -549,22 +727,70 @@ export async function runScamDetection(
     evidence.push('New or low-activity channels are harder to evaluate — proceed with caution')
   }
 
-  // ── Compute risk score ──
-  let riskScore = 2   // baseline: slightly above minimum
+  // ── Compute base risk score ──
+  let baseRisk = 2   // baseline: slightly above minimum
+  baseRisk += Math.min(shillAvg * 4, 2)       // max +2 from shill
+  baseRisk += Math.min(urgencyAvg * 3, 1.5)   // max +1.5 from urgency
+  baseRisk += callDensity > 0.7 ? 1.5 : callDensity > 0.5 ? 0.5 : 0
+  baseRisk += tickers.size > 15 ? 1 : tickers.size > 10 ? 0.5 : 0
+  baseRisk += redFlags.length >= 4 ? 1 : 0
 
-  riskScore += Math.min(shillAvg * 4, 2)       // max +2 from shill
-  riskScore += Math.min(urgencyAvg * 3, 1.5)   // max +1.5 from urgency
-  riskScore += callDensity > 0.7 ? 1.5 : callDensity > 0.5 ? 0.5 : 0
-  riskScore += tickers.size > 15 ? 1 : tickers.size > 10 ? 0.5 : 0
-  riskScore += redFlags.length >= 4 ? 1 : 0
+  // ── OpenClaw enhanced analysis (victim reports + scammer DB + optional wallet) ──
+  let enhanced: EnhancedScamData = {}
+  try {
+    enhanced = await runEnhancedAnalysis(resolvedUsername, 'Telegram', walletAddress)
+  } catch (err) {
+    console.warn('[scam-detect] enhanced analysis failed, continuing with base analysis:', err instanceof Error ? err.message : err)
+  }
 
-  riskScore = Math.min(10, Math.max(1, parseFloat(riskScore.toFixed(1))))
+  // ── Merge enhanced red flags ──
+  let walletFlags
+  if (enhanced.walletAnalysis) {
+    walletFlags = analyzeWalletFlags(enhanced.walletAnalysis)
+    redFlags.push(...walletFlags.flags)
+    evidence.push(...walletFlags.evidence)
+  }
+
+  if (enhanced.victimAnalysis && enhanced.victimAnalysis.totalReports > 0) {
+    redFlags.push(`${enhanced.victimAnalysis.totalReports} victim report(s) found online`)
+    evidence.push(
+      `Found ${enhanced.victimAnalysis.totalReports} public reports on Reddit/web — cross-reference before trusting this channel`,
+    )
+  }
+
+  if (enhanced.dbMatch) {
+    const db = enhanced.dbMatch
+    if (db.status === 'Verified' || db.status === 'Highly Verified') {
+      redFlags.push(`⚠️ KNOWN SCAMMER in OpenClaw database (${db.status})`)
+      evidence.push(`Previously investigated: "${db.notes}" — ${db.victims} victim(s)`)
+    } else if (db.status !== 'Not Scam') {
+      redFlags.push(`Found in OpenClaw scammer database (${db.status})`)
+      evidence.push(`Database entry: "${db.notes}"`)
+    }
+  }
+
+  // ── Enhanced risk score ──
+  const riskScore = computeEnhancedRiskScore(
+    baseRisk,
+    undefined,  // no X profile flags for Telegram
+    walletFlags,
+    enhanced.victimAnalysis,
+    enhanced.dbMatch,
+  )
 
   // ── Determine verification level ──
-  const verificationLevel: ScamDetectionResult['verificationLevel'] =
-    messages.length >= 50 && redFlags.length === 0 ? 'Verified'
-    : messages.length >= 30 ? 'Partially Verified'
-    : 'Unverified'
+  let verificationLevel: ScamDetectionResult['verificationLevel']
+  if (enhanced.dbMatch?.status === 'Verified' || enhanced.dbMatch?.status === 'Highly Verified') {
+    verificationLevel = 'Verified'
+  } else if (enhanced.dbMatch?.status === 'Not Scam') {
+    verificationLevel = 'Verified'
+  } else if (messages.length >= 50 && redFlags.length === 0) {
+    verificationLevel = 'Verified'
+  } else if (messages.length >= 30) {
+    verificationLevel = 'Partially Verified'
+  } else {
+    verificationLevel = 'Unverified'
+  }
 
   // ── Detect scam type ──
   let scamType: string | undefined
@@ -583,7 +809,8 @@ export async function runScamDetection(
     recommendedAction = `LOW RISK (${riskScore}/10). No major red flags detected, but always DYOR. Channel appears relatively clean.`
   }
 
-  return {
+  // ── Build result ──
+  const result: ScamDetectionResult = {
     username: resolvedUsername,
     platform,
     riskScore,
@@ -600,4 +827,40 @@ export async function runScamDetection(
       uniqueTickers: tickers.size,
     },
   }
+
+  // ── Attach enhanced data ──
+  if (enhanced.walletAnalysis) {
+    const w = enhanced.walletAnalysis
+    result.walletAnalysis = {
+      address:       w.address,
+      blockchain:    w.blockchain,
+      balance:       w.balance,
+      balanceUsd:    w.balanceUsd,
+      totalReceived: w.totalReceived,
+      totalSent:     w.totalSent,
+      txCount:       w.transactions.length,
+      uniqueSenders: new Set(w.receivedFromVictims.map(v => v.from)).size,
+    }
+  }
+  if (enhanced.victimAnalysis && enhanced.victimAnalysis.totalReports > 0) {
+    result.victimReports = {
+      totalReports: enhanced.victimAnalysis.totalReports,
+      reports:      enhanced.victimAnalysis.reports.slice(0, 10).map(r => ({
+        title:    r.title,
+        url:      r.url,
+        platform: r.platform,
+        score:    r.score,
+      })),
+    }
+  }
+  if (enhanced.dbMatch) {
+    result.knownScammer = {
+      name:    enhanced.dbMatch.name,
+      status:  enhanced.dbMatch.status,
+      victims: enhanced.dbMatch.victims,
+      notes:   enhanced.dbMatch.notes,
+    }
+  }
+
+  return result
 }
