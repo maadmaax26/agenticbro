@@ -564,6 +564,14 @@ function App() {
               >
                 Why Agentic Bro?
               </button>
+              <a
+                href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 bg-[#39ff14]/20 hover:bg-[#39ff14]/40 text-[#39ff14] border border-[#39ff14]/40 rounded-md text-xs font-bold transition-colors flex items-center gap-1"
+              >
+                💰 Buy $AGNTCBRO
+              </a>
               <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto !leading-normal !min-w-0" />
             </div>
           </header>
