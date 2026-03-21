@@ -16,6 +16,10 @@
  *     Query: filter, rugRateMax, liquidityMin, topN
  *     Returns: { gems[], summary{} }
  *
+ *   POST /api/telegram/scam-detect
+ *     Body:  { username: string, platform?: 'X' | 'Telegram' }
+ *     Returns: { results: ScamDetectionResult[] }
+ *
  *   GET  /api/telegram/meme-coins
  *     Query: filter (all|high|medium|low|new), sortBy (edge|mentions|engagement)
  *     Returns: { coins[], summary{} }
@@ -27,7 +31,7 @@
 
 import { Router, Request, Response } from 'express'
 import { isTelegramConfigured, getTrackedChannels } from '../telegram/client.js'
-import { fetchAlphaFeed, runPriorityScan, getGemAdvise } from '../telegram/ingestion.js'
+import { fetchAlphaFeed, runPriorityScan, getGemAdvise, runScamDetection } from '../telegram/ingestion.js'
 import type { ScoredCall } from '../telegram/scorer.js'
 
 const router = Router()
@@ -129,6 +133,38 @@ router.get('/gem-advise', async (req: Request, res: Response): Promise<void> => 
   } catch (err) {
     console.error('[telegram/gem-advise]', err)
     res.status(502).json({ error: 'Failed to get gem advise', detail: String(err) })
+  }
+})
+
+// ─── Scam Detection ───────────────────────────────────────────────────────────
+
+router.post('/scam-detect', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, platform = 'Telegram' } = req.body as {
+      username?: string
+      platform?: 'X' | 'Telegram'
+    }
+
+    if (!username?.trim()) {
+      res.status(400).json({ error: 'username field is required' })
+      return
+    }
+
+    if (!isTelegramConfigured() && platform === 'Telegram') {
+      // Return mock data when Telegram is not configured
+      res.json({
+        results: [MOCK_SCAM_RESULT(username.trim(), platform)],
+        mock: true,
+        ts: Date.now(),
+      })
+      return
+    }
+
+    const result = await runScamDetection(username.trim(), platform)
+    res.json({ results: [result], mock: false, ts: Date.now() })
+  } catch (err) {
+    console.error('[telegram/scam-detect]', err)
+    res.status(502).json({ error: 'Scam detection failed', detail: String(err) })
   }
 })
 
@@ -412,3 +448,35 @@ const MOCK_MEME_COINS: MemeCoin[] = [
     holders: 54,
   },
 ]
+
+// ─── Mock scam detection result ─────────────────────────────────────────────
+
+function MOCK_SCAM_RESULT(username: string, platform: 'X' | 'Telegram') {
+  return {
+    username,
+    platform,
+    riskScore:         7.2,
+    redFlags: [
+      'High shill language density (42% avg)',
+      'Excessive urgency tactics (38% avg)',
+      'Almost every message is a token call (78% call density)',
+      'Claims guaranteed returns (4 occurrences)',
+    ],
+    verificationLevel: 'Unverified' as const,
+    scamType:          'Pump-and-Dump Channel',
+    evidence: [
+      '34% of messages contain shill patterns ("guaranteed", "100x", "all in", etc.)',
+      'Frequent use of "now", "hurry", "last chance", excessive exclamation marks',
+      'Channels that only post token calls with no analysis are often pump-and-dump groups',
+      '"Guaranteed returns" is a hallmark of scam operations',
+    ],
+    recommendedAction: `DO NOT INVEST — HIGH RISK SCAM (7.2/10). Multiple red flags detected. Avoid all calls from this source.`,
+    stats: {
+      totalMessages: 87,
+      shillAvg:      0.42,
+      urgencyAvg:    0.38,
+      rugRate:       0.78,
+      uniqueTickers: 23,
+    },
+  }
+}
