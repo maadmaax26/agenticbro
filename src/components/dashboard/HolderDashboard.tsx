@@ -10,9 +10,10 @@ import HolderSettings from './HolderSettings';
 import GemAdvise from './GemAdvise';
 import AlphaFeed from './AlphaFeed';
 import PriorityScan from './PriorityScan';
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine } from 'lucide-react';
+import MemeCoinAnalyzer from './MemeCoinAnalyzer';
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine, Dices } from 'lucide-react';
 
-type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan';
+type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan' | 'meme';
 
 export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
@@ -48,6 +49,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
               <li>• Portfolio health & risk assessment</li>
               <li>• Daily market reports</li>
               <li>• 💎 Gem Advise — AI-ranked token recommendations</li>
+              <li>• 🎰 Meme Coin Analyzer — Emerging meme coin opportunities</li>
               <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
               <li>• 🔍 Priority Scan — on-demand deep scan</li>
             </ul>
@@ -140,6 +142,13 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
             label="Priority Scan"
           />
           <TabButton
+            active={activeTab === 'meme'}
+            onClick={() => setActiveTab('meme')}
+            icon={<Dices />}
+            label="Meme Coin"
+            isNew
+          />
+          <TabButton
             active={activeTab === 'settings'}
             onClick={() => setActiveTab('settings')}
             icon={<Settings />}
@@ -158,6 +167,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       {activeTab === 'gems' && <GemAdvise />}
       {activeTab === 'alpha' && <AlphaFeed />}
       {activeTab === 'scan' && <PriorityScan />}
+      {activeTab === 'meme' && <MemeCoinAnalyzer />}
     </div>
   );
 }
@@ -203,6 +213,15 @@ const HOLDER_FEATURES = [
     icon: '💎',
     title: 'Gem Advise',
     desc: 'AI-ranked token recommendations sourced from audited Telegram alpha channels — filtered by edge score, liquidity, and rug rate.',
+    badge: 'New',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '🎰',
+    title: 'Meme Coin Analyzer',
+    desc: 'AI-powered analysis of emerging meme coin opportunities — ranked by edge score with sentiment trend and risk assessment.',
     badge: 'New',
     badgeColor: 'rgba(139,92,246,0.25)',
     badgeBorder: 'rgba(139,92,246,0.6)',
