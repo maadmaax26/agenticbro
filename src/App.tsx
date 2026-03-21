@@ -455,6 +455,14 @@ function App() {
         <Roadmap onBack={() => setShowRoadmap(false)} />
       ) : (
         <>
+          {/* ── Dev Phase Banner ── */}
+          <div className="relative z-10 px-4 py-2 text-center text-xs font-semibold"
+            style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
+            <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
+            <span className="text-gray-400 mx-2">—</span>
+            <span className="text-gray-300">Holder & Whale tier access reduced to <span className="text-green-400 font-bold">$15</span> during early development. Tier thresholds will increase as we approach production launch.</span>
+          </div>
+
           <header className="relative z-10 px-6 py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
             {/* Left — icon + branding */}
             <div className="flex items-center gap-3">
@@ -487,7 +495,7 @@ function App() {
                     : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                   title={holderTierUnlocked
                     ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $100 USD of AGNTCBRO${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
+                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
                 >
                   {gatingLoading ? (
                     <span className="animate-pulse">…</span>
@@ -516,7 +524,7 @@ function App() {
                     : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                   title={whaleTierUnlocked
                     ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $1,000 USD of AGNTCBRO${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
+                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
                 >
                   {gatingLoading ? (
                     <span className="animate-pulse">…</span>
@@ -622,13 +630,13 @@ function App() {
                 <div className="mt-4 pt-4 border-t border-purple-500/20 grid grid-cols-2 gap-3">
                   <div className="bg-purple-900/40 rounded-xl p-3 text-center border border-purple-500/30">
                     <p className="text-xs text-gray-400 mb-1">Holder Tier</p>
-                    <p className="font-bold text-purple-300 text-sm">10K AGNTCBRO</p>
-                    <p className="text-xs text-gray-500">$100 one-time</p>
+                    <p className="font-bold text-purple-300 text-sm">$15 AGNTCBRO</p>
+                    <p className="text-xs text-green-400">Dev phase pricing</p>
                   </div>
                   <div className="bg-cyan-900/40 rounded-xl p-3 text-center border border-cyan-500/30">
                     <p className="text-xs text-gray-400 mb-1">Whale Tier</p>
-                    <p className="font-bold text-cyan-300 text-sm">100K AGNTCBRO</p>
-                    <p className="text-xs text-gray-500">$1,000 one-time</p>
+                    <p className="font-bold text-cyan-300 text-sm">$15 AGNTCBRO</p>
+                    <p className="text-xs text-green-400">Dev phase pricing</p>
                   </div>
                 </div>
               </div>

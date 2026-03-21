@@ -12,9 +12,9 @@
  *   Raw JSON-RPC POST via fetch() to multiple RPC endpoints.
  *   This bypasses @solana/web3.js entirely for maximum reliability.
  *
- * Tier logic:
- *   USD value >= $100   → Holder Tier
- *   USD value >= $1,000 → Whale Tier
+ * Tier logic (DEV/TESTING PHASE — reduced thresholds):
+ *   USD value >= $15   → Holder Tier
+ *   USD value >= $15   → Whale Tier
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -48,8 +48,8 @@ const DEXSCREENER_PAIR = 'bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k'
 const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${DEXSCREENER_PAIR}`
 const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
 
-const HOLDER_TIER_USD = 100
-const WHALE_TIER_USD = 150 // temporary test threshold (production: 1000)
+const HOLDER_TIER_USD = 15  // DEV PHASE: reduced from $100
+const WHALE_TIER_USD  = 15  // DEV PHASE: reduced from $1,000
 
 // Multiple RPC endpoints — tried in order, first success wins
 const RPC_ENDPOINTS = [

@@ -32,7 +32,8 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-white mb-4">Holder Tier Access Required</h2>
           <p className="text-gray-300 mb-6">
-            You need at least 10,000 AGNTCBRO tokens to access the Holder Tier dashboard.
+            Hold at least <span className="text-green-400 font-bold">$15 USD</span> worth of AGNTCBRO to access the Holder Tier dashboard.
+            <span className="block text-xs text-green-400/80 mt-1">🚀 Reduced threshold during development & testing phase</span>
           </p>
           <div className="bg-purple-900/40 rounded-xl p-6 mb-6">
             <p className="text-sm text-gray-400 mb-2">Current Balance</p>
