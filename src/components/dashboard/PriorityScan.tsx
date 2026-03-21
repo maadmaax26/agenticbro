@@ -92,30 +92,6 @@ const MOCK_SCAN_RESULTS: ScanResult[] = [
   },
 ];
 
-const MOCK_SCAM_DETECTION_RESULTS: ScamDetectionResult[] = [
-  {
-    username: 'Crypto_Rush_Global_Call',
-    platform: 'X',
-    riskScore: 8.5,
-    redFlags: [
-      'Guaranteed returns: "x5-x100 returns in 24 hours"',
-      'Private alpha access model',
-      'Urgency tactics: "limited spots, act now"',
-      'No track record or evidence',
-      'Advance fee payment pattern'
-    ],
-    verificationLevel: 'Unverified',
-    scamType: 'Private Alpha Scam',
-    evidence: [
-      'Profile shows no verifiable trading history',
-      'Claims exclusivity without evidence',
-      'Pump-and-dump pattern likely',
-      'High-pressure sales tactics detected'
-    ],
-    recommendedAction: 'DO NOT INVEST — HIGH RISK SCAM (8.5/10)'
-  },
-];
-
 const SCAN_HISTORY: ScanJob[] = [
   { id: 'scan_001', target: 'All Channels',         startedAt: '2h ago', completedAt: '2h ago', status: 'done',   resultsCount: 8, tokensBurned: 15000 },
   { id: 'scan_002', target: '👛 7xKX…Bm3a',         startedAt: '6h ago', completedAt: '6h ago', status: 'done',   resultsCount: 5, tokensBurned: 10000 },
@@ -192,12 +168,32 @@ export default function PriorityScan() {
     try {
       // Handle scam detection scan separately
       if (scanTarget === 'scam') {
-        // Simulate scam detection scan
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setScamResults(MOCK_SCAM_DETECTION_RESULTS);
-        setScanProgress(100);
-        setScanStatus('done');
+        const res = await fetch(`${API_BASE}/api/telegram/scam-detect`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            username: usernameInput.trim(),
+            platform,
+          }),
+        });
+        const data = await res.json() as { results?: ScamDetectionResult[]; mock?: boolean; error?: string };
         clearInterval(interval);
+        setScanProgress(100);
+        if (data.error) {
+          // Show error as a high-risk result
+          setScamResults([{
+            username: usernameInput.trim(),
+            platform,
+            riskScore: 0,
+            redFlags: [],
+            verificationLevel: 'Unverified',
+            evidence: [data.error],
+            recommendedAction: `Analysis failed: ${data.error}`,
+          }]);
+        } else {
+          setScamResults(data.results ?? []);
+        }
+        setScanStatus('done');
         return;
       }
 
@@ -212,11 +208,54 @@ export default function PriorityScan() {
           token:   scanTarget === 'token'    ? tokenInput.trim()   : undefined,
         }),
       });
-      const data = await res.json() as { results: ScanResult[]; mock?: boolean };
+      const data = await res.json() as { results?: Record<string, unknown>[]; mock?: boolean; error?: string };
       clearInterval(interval);
       setScanProgress(100);
+
+      if (!res.ok || data.error) {
+        setResults(MOCK_SCAN_RESULTS);
+        setScanStatus('done');
+        return;
+      }
+
+      // Map ScoredCall API response → ScanResult for display
+      const mapped: ScanResult[] = (data.results ?? []).map((r: Record<string, unknown>, idx: number) => {
+        const edgeScore  = Number(r.edgeScore ?? 0);
+        const winRate    = Number(r.winRate ?? 0);
+        const rugRate    = Number(r.rugRate ?? 0);
+        const liquidity  = Number(r.liquidity ?? 0);
+        const confidence = (r.confidence as ScanResult['confidence']) ?? 'LOW';
+
+        const isScam   = (r.scamAnalysis as { verdict?: string })?.verdict === 'SCAM';
+        const isRisky  = (r.scamAnalysis as { verdict?: string })?.verdict === 'RISKY';
+        const flagged  = isScam || isRisky || rugRate > 0.35;
+
+        const recParts: string[] = [];
+        if (r.rawText)       recParts.push(String(r.rawText).slice(0, 120));
+        if (isScam)          recParts.push('⚠️ SCAM detected — avoid.');
+        else if (isRisky)    recParts.push('⚠️ Security risks flagged.');
+        if (rugRate > 0.35)  recParts.push('⚠️ High rug probability.');
+
+        return {
+          id:             idx + 1,
+          ticker:         String(r.ticker ?? '???'),
+          edgeScore,
+          confidence,
+          winRate,
+          rugRate,
+          liquidity,
+          sourceChannel:  String(r.sourceChannel ?? 'Unknown'),
+          recommendation: recParts.join(' · ') || 'Live scan result',
+          flagged,
+          flagReason:     isScam  ? 'Contract flagged as SCAM by GoPlus'
+                        : isRisky ? 'Security risks detected'
+                        : rugRate > 0.35 ? `High rug rate: ${(rugRate * 100).toFixed(0)}%`
+                        : undefined,
+        };
+      });
+
       setTimeout(() => {
-        setResults(data.results ?? []);
+        setResults(mapped.length > 0 ? mapped : MOCK_SCAN_RESULTS);
         setScanStatus('done');
       }, 300);
     } catch {

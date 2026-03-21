@@ -396,3 +396,208 @@ export async function getGemAdvise(options: GemAdviseOptions = {}): Promise<{
 
   return { gems, summary }
 }
+
+// ─── Scam Detection ──────────────────────────────────────────────────────────
+
+export interface ScamDetectionResult {
+  username:           string
+  platform:           'X' | 'Telegram'
+  riskScore:          number   // 1–10
+  redFlags:           string[]
+  verificationLevel:  'Unverified' | 'Partially Verified' | 'Verified' | 'Highly Verified'
+  scamType?:          string
+  evidence:           string[]
+  recommendedAction:  string
+  stats?: {
+    totalMessages:    number
+    shillAvg:         number
+    urgencyAvg:       number
+    rugRate:          number
+    uniqueTickers:    number
+  }
+}
+
+/**
+ * Analyze a Telegram channel/user for scam patterns by fetching their
+ * recent messages and computing aggregate shill/urgency/rug metrics.
+ */
+export async function runScamDetection(
+  username: string,
+  platform: 'X' | 'Telegram',
+): Promise<ScamDetectionResult> {
+  // X analysis not yet supported — return structured "unsupported" result
+  if (platform === 'X') {
+    return {
+      username,
+      platform,
+      riskScore:         5,
+      redFlags:          ['X (Twitter) analysis requires API access — results are limited'],
+      verificationLevel: 'Unverified',
+      scamType:          undefined,
+      evidence:          ['Unable to fetch X data — manual review recommended'],
+      recommendedAction: 'INCONCLUSIVE — X analysis not yet available. Manually review the profile before trusting any calls.',
+    }
+  }
+
+  // ── Telegram analysis ──
+  const rawInput = username.replace(/^@/, '').replace(/^t\.me\//, '').trim()
+  let resolvedUsername: string
+
+  try {
+    resolvedUsername = await resolveChannelUsername(rawInput)
+  } catch {
+    return {
+      username: rawInput,
+      platform,
+      riskScore:         7,
+      redFlags:          ['Channel/user not found on Telegram'],
+      verificationLevel: 'Unverified',
+      evidence:          [`"${rawInput}" could not be resolved to a Telegram entity`],
+      recommendedAction: 'HIGH RISK — Channel does not exist or is private. Do not trust calls from this source.',
+    }
+  }
+
+  // Fetch last 100 messages (roughly last few days of activity)
+  let messages: RawMessage[]
+  try {
+    messages = await fetchChannelMessages(resolvedUsername, 100)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return {
+      username: resolvedUsername,
+      platform,
+      riskScore:         6,
+      redFlags:          ['Could not fetch messages from channel'],
+      verificationLevel: 'Unverified',
+      evidence:          [`Fetch error: ${msg}`],
+      recommendedAction: 'UNABLE TO ANALYZE — Channel may be private or restricted.',
+    }
+  }
+
+  if (messages.length === 0) {
+    return {
+      username: resolvedUsername,
+      platform,
+      riskScore:         6,
+      redFlags:          ['No messages found — channel may be empty or private'],
+      verificationLevel: 'Unverified',
+      evidence:          ['0 public text messages found'],
+      recommendedAction: 'UNABLE TO ANALYZE — No content to evaluate.',
+    }
+  }
+
+  // Parse + compute aggregate metrics
+  const parsed = parseMessages(messages)
+  const shillScores   = messages.map(m => scoreShillProbability(m.text))
+  const urgencyScores = messages.map(m => scoreUrgency(m.text))
+  const shillAvg      = shillScores.reduce((a, b) => a + b, 0) / shillScores.length
+  const urgencyAvg    = urgencyScores.reduce((a, b) => a + b, 0) / urgencyScores.length
+  const highShillPct  = shillScores.filter(s => s > 0.5).length / shillScores.length
+
+  // Unique tickers mentioned
+  const tickers = new Set(parsed.map(p => p.ticker.toUpperCase()))
+
+  // Check posting frequency (high volume of calls = suspicious)
+  const callDensity = parsed.length / messages.length   // ratio of calls to total messages
+
+  // ── Build red flags ──
+  const redFlags: string[] = []
+  const evidence: string[] = []
+
+  if (shillAvg > 0.4) {
+    redFlags.push(`High shill language density (${(shillAvg * 100).toFixed(0)}% avg)`)
+    evidence.push(`${(highShillPct * 100).toFixed(0)}% of messages contain shill patterns ("guaranteed", "100x", "all in", etc.)`)
+  }
+  if (urgencyAvg > 0.35) {
+    redFlags.push(`Excessive urgency tactics (${(urgencyAvg * 100).toFixed(0)}% avg)`)
+    evidence.push('Frequent use of "now", "hurry", "last chance", excessive exclamation marks')
+  }
+  if (callDensity > 0.7) {
+    redFlags.push(`Almost every message is a token call (${(callDensity * 100).toFixed(0)}% call density)`)
+    evidence.push('Channels that only post token calls with no analysis are often pump-and-dump groups')
+  }
+  if (tickers.size > 15 && messages.length <= 100) {
+    redFlags.push(`${tickers.size} different tokens promoted in ${messages.length} messages`)
+    evidence.push('Extremely high token churn — typical of "spray and pray" scam channels')
+  }
+  if (parsed.length > 0) {
+    // Check for "guaranteed returns" language
+    const guaranteedCount = messages.filter(m => /guarantee|100%|risk.?free|can't lose|no risk/i.test(m.text)).length
+    if (guaranteedCount > 2) {
+      redFlags.push(`Claims guaranteed returns (${guaranteedCount} occurrences)`)
+      evidence.push('"Guaranteed returns" is a hallmark of scam operations')
+    }
+
+    // Check for advance fee patterns
+    const feePatterns = messages.filter(m => /pay.*first|send.*fee|deposit.*to|unlock.*access|VIP.*pay|premium.*join/i.test(m.text)).length
+    if (feePatterns > 0) {
+      redFlags.push(`Advance fee payment pattern detected (${feePatterns} messages)`)
+      evidence.push('Requesting payment for "premium access" or "VIP signals" is a common scam model')
+    }
+
+    // Check for private messaging solicitation
+    const dmPatterns = messages.filter(m => /DM me|PM me|message me|private.*chat|write me|contact.*private/i.test(m.text)).length
+    if (dmPatterns > 2) {
+      redFlags.push('Frequently solicits private messages')
+      evidence.push('Directing users to private chats is a tactic to avoid public accountability')
+    }
+  }
+
+  // Low message count could mean new/unestablished channel
+  if (messages.length < 20) {
+    redFlags.push(`Very few public messages (${messages.length})`)
+    evidence.push('New or low-activity channels are harder to evaluate — proceed with caution')
+  }
+
+  // ── Compute risk score ──
+  let riskScore = 2   // baseline: slightly above minimum
+
+  riskScore += Math.min(shillAvg * 4, 2)       // max +2 from shill
+  riskScore += Math.min(urgencyAvg * 3, 1.5)   // max +1.5 from urgency
+  riskScore += callDensity > 0.7 ? 1.5 : callDensity > 0.5 ? 0.5 : 0
+  riskScore += tickers.size > 15 ? 1 : tickers.size > 10 ? 0.5 : 0
+  riskScore += redFlags.length >= 4 ? 1 : 0
+
+  riskScore = Math.min(10, Math.max(1, parseFloat(riskScore.toFixed(1))))
+
+  // ── Determine verification level ──
+  const verificationLevel: ScamDetectionResult['verificationLevel'] =
+    messages.length >= 50 && redFlags.length === 0 ? 'Verified'
+    : messages.length >= 30 ? 'Partially Verified'
+    : 'Unverified'
+
+  // ── Detect scam type ──
+  let scamType: string | undefined
+  if (redFlags.some(f => f.includes('Advance fee')))        scamType = 'Advance Fee / VIP Scam'
+  else if (redFlags.some(f => f.includes('guaranteed')))     scamType = 'Guaranteed Returns Scam'
+  else if (callDensity > 0.7 && shillAvg > 0.3)             scamType = 'Pump-and-Dump Channel'
+  else if (redFlags.some(f => f.includes('private messages'))) scamType = 'Social Engineering'
+
+  // ── Recommended action ──
+  let recommendedAction: string
+  if (riskScore >= 7) {
+    recommendedAction = `DO NOT INVEST — HIGH RISK SCAM (${riskScore}/10). Multiple red flags detected. Avoid all calls from this source.`
+  } else if (riskScore >= 4) {
+    recommendedAction = `PROCEED WITH CAUTION — MODERATE RISK (${riskScore}/10). Some concerning patterns detected. Cross-reference any calls with other sources.`
+  } else {
+    recommendedAction = `LOW RISK (${riskScore}/10). No major red flags detected, but always DYOR. Channel appears relatively clean.`
+  }
+
+  return {
+    username: resolvedUsername,
+    platform,
+    riskScore,
+    redFlags,
+    verificationLevel,
+    scamType,
+    evidence,
+    recommendedAction,
+    stats: {
+      totalMessages: messages.length,
+      shillAvg:      parseFloat(shillAvg.toFixed(3)),
+      urgencyAvg:    parseFloat(urgencyAvg.toFixed(3)),
+      rugRate:       parseFloat(callDensity.toFixed(3)),
+      uniqueTickers: tickers.size,
+    },
+  }
+}
