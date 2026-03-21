@@ -34,6 +34,36 @@ interface ScamDetectionResult {
   scamType?: string;
   evidence: string[];
   recommendedAction: string;
+  // Enhanced fields from OpenClaw integration
+  xProfile?: {
+    name?: string;
+    bio?: string;
+    followers?: number;
+    following?: number;
+    isVerified: boolean;
+    profileImage?: string;
+    profileUrl: string;
+  };
+  walletAnalysis?: {
+    address: string;
+    blockchain: string;
+    balance: number;
+    balanceUsd: number;
+    totalReceived: number;
+    totalSent: number;
+    txCount: number;
+    uniqueSenders: number;
+  };
+  victimReports?: {
+    totalReports: number;
+    reports: { title: string; url: string; platform: string; score?: number }[];
+  };
+  knownScammer?: {
+    name: string;
+    status: string;
+    victims: number;
+    notes: string;
+  };
 }
 
 interface ScanJob {
@@ -121,6 +151,7 @@ export default function PriorityScan() {
   const [channelInput,  setChannelInput]  = useState('');
   const [tokenInput,    setTokenInput]    = useState('');
   const [usernameInput, setUsernameInput] = useState('');
+  const [scamWalletInput, setScamWalletInput] = useState('');
   const [platform,      setPlatform]      = useState<'X' | 'Telegram'>('X');
   const [results,       setResults]       = useState<ScanResult[]>([]);
   const [scamResults,   setScamResults]   = useState<ScamDetectionResult[]>([]);
@@ -174,6 +205,7 @@ export default function PriorityScan() {
           body:    JSON.stringify({
             username: usernameInput.trim(),
             platform,
+            walletAddress: scamWalletInput.trim() || undefined,
           }),
         });
         const data = await res.json() as { results?: ScamDetectionResult[]; mock?: boolean; error?: string };
@@ -421,8 +453,21 @@ export default function PriorityScan() {
               </div>
             </div>
 
+            <div>
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
+                <Wallet className="w-3.5 h-3.5" /> Wallet Address <span className="text-gray-600 normal-case font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={scamWalletInput}
+                onChange={e => setScamWalletInput(e.target.value)}
+                placeholder="Solana or EVM address — enhances analysis with on-chain data"
+                className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+              />
+            </div>
+
             <p className="text-xs text-gray-600 mt-1.5">
-              Analyzes public profile, posting patterns, and red flags to assess scam risk. Only public data — no private information is accessed.
+              Powered by <span className="text-purple-400 font-semibold">OpenClaw Detection Engine</span> — analyzes profile, posting patterns, victim reports, scammer database, and on-chain data. Only public information is accessed.
             </p>
           </div>
         )}
@@ -461,12 +506,18 @@ export default function PriorityScan() {
             />
           </div>
           <div className="mt-3 space-y-1">
-            {[
-              { pct: 0, label: scanTarget === 'scam' ? 'Fetching public profile data…' : 'Connecting to channel feeds…' },
+            {(scanTarget === 'scam' ? [
+              { pct: 0, label: platform === 'X' ? 'Scraping X profile data…' : 'Fetching Telegram messages…' },
+              { pct: 20, label: 'Searching victim reports (Reddit, web)…' },
+              { pct: 40, label: 'Checking OpenClaw scammer database…' },
+              { pct: 55, label: scamWalletInput ? 'Analyzing wallet on-chain…' : 'Analyzing red flags…' },
+              { pct: 75, label: 'Running enhanced risk scoring engine…' },
+            ] : [
+              { pct: 0, label: 'Connecting to channel feeds…' },
               { pct: 25, label: 'Extracting posting patterns…' },
               { pct: 55, label: 'Analyzing red flags…' },
               { pct: 80, label: 'Running risk scoring engine…' },
-            ].map(step => (
+            ]).map(step => (
               <p
                 key={step.pct}
                 className={`text-xs transition-colors ${scanProgress >= step.pct ? 'text-gray-400' : 'text-gray-700'}`}
@@ -538,7 +589,18 @@ export default function PriorityScan() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4" style={{ borderTop: '1px solid rgba(239,68,68,0.15)' }}>
-                    {result.riskScore >= 7 && (
+                    {/* ── Known Scammer Banner ── */}
+                    {result.knownScammer && (
+                      <div
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 mt-3 mb-3 text-sm font-bold"
+                        style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+                      >
+                        🚨 KNOWN SCAMMER — {result.knownScammer.status} in OpenClaw Database
+                        {result.knownScammer.victims > 0 && ` · ${result.knownScammer.victims} victim(s)`}
+                      </div>
+                    )}
+
+                    {result.riskScore >= 7 && !result.knownScammer && (
                       <div
                         className="flex items-center gap-2 rounded-lg px-3 py-2 mt-3 mb-3 text-sm"
                         style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}
@@ -548,6 +610,73 @@ export default function PriorityScan() {
                       </div>
                     )}
 
+                    {/* ── X Profile Card ── */}
+                    {result.xProfile && (
+                      <div
+                        className="rounded-xl p-4 mt-3"
+                        style={{ background: 'rgba(29,155,240,0.07)', border: '1px solid rgba(29,155,240,0.2)' }}
+                      >
+                        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">X Profile Analysis</p>
+                        <div className="flex items-start gap-3">
+                          {result.xProfile.profileImage && (
+                            <img src={result.xProfile.profileImage} alt="" className="w-10 h-10 rounded-full flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white">{result.xProfile.name || `@${result.username}`}</span>
+                              {result.xProfile.isVerified && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(29,155,240,0.2)', color: '#1d9bf0' }}>✓ Verified</span>
+                              )}
+                              <a href={result.xProfile.profileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">View profile →</a>
+                            </div>
+                            {result.xProfile.bio && (
+                              <p className="text-xs text-gray-400 mt-1 line-clamp-2">{result.xProfile.bio}</p>
+                            )}
+                            <div className="flex gap-4 mt-2">
+                              {result.xProfile.followers !== undefined && (
+                                <span className="text-xs text-gray-500"><span className="text-white font-semibold">{result.xProfile.followers.toLocaleString()}</span> followers</span>
+                              )}
+                              {result.xProfile.following !== undefined && (
+                                <span className="text-xs text-gray-500"><span className="text-white font-semibold">{result.xProfile.following.toLocaleString()}</span> following</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Wallet Analysis Card ── */}
+                    {result.walletAnalysis && (
+                      <div
+                        className="rounded-xl p-4 mt-3"
+                        style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}
+                      >
+                        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">On-Chain Wallet Analysis</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500">Blockchain</p>
+                            <p className="text-sm font-bold text-white">{result.walletAnalysis.blockchain}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Balance</p>
+                            <p className="text-sm font-bold text-white">${result.walletAnalysis.balanceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Total Received</p>
+                            <p className="text-sm font-bold text-yellow-400">{result.walletAnalysis.totalReceived.toFixed(4)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Unique Senders</p>
+                            <p className={`text-sm font-bold ${result.walletAnalysis.uniqueSenders >= 5 ? 'text-red-400' : 'text-white'}`}>
+                              {result.walletAnalysis.uniqueSenders}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2 font-mono">{result.walletAnalysis.address.slice(0, 8)}…{result.walletAnalysis.address.slice(-6)} · {result.walletAnalysis.txCount} txns</p>
+                      </div>
+                    )}
+
+                    {/* ── Scam Analysis ── */}
                     <div
                       className="rounded-xl p-4 mt-3"
                       style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.15)' }}
@@ -584,6 +713,40 @@ export default function PriorityScan() {
                         </div>
                       </div>
                     </div>
+
+                    {/* ── Victim Reports Card ── */}
+                    {result.victimReports && result.victimReports.totalReports > 0 && (
+                      <div
+                        className="rounded-xl p-4 mt-3"
+                        style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}
+                      >
+                        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">
+                          Victim Reports Found ({result.victimReports.totalReports})
+                        </p>
+                        <ul className="space-y-2">
+                          {result.victimReports.reports.map((report, idx) => (
+                            <li key={idx} className="text-sm">
+                              <a
+                                href={report.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:underline"
+                              >
+                                {report.title || report.url}
+                              </a>
+                              <span className="text-xs text-gray-600 ml-2">
+                                {report.platform}{report.score !== undefined ? ` · Score: ${report.score}` : ''}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* ── Powered By Footer ── */}
+                    <p className="text-xs text-gray-600 mt-3 text-center">
+                      Powered by <span className="text-purple-400">OpenClaw Detection Engine</span> · Solscan · Etherscan · Reddit
+                    </p>
                   </div>
                 )}
               </div>
