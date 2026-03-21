@@ -57,7 +57,7 @@ const knownChannels: Record<string, any> = {
 
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
-type ScanMode = 'wallet' | 'channels' | 'token'
+type ScanMode = 'wallet' | 'channels' | 'token' | 'scam'
 
 type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
 
@@ -102,6 +102,16 @@ interface ChatMessage {
   icon: string
   text: string
   result?: ScanResult
+  scamResult?: {
+    username: string
+    platform: 'X' | 'Telegram'
+    riskScore: number
+    verificationLevel: string
+    redFlags: string[]
+    scamType?: string
+    evidence: string[]
+    recommendedAction: string
+  }
 }
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
@@ -138,6 +148,8 @@ function App() {
   const [walletInput, setWalletInput]   = useState('')
   const [channelInput, setChannelInput] = useState('')
   const [tokenInput, setTokenInput]     = useState('')
+  const [usernameInput, setUsernameInput] = useState('')
+  const [platform, setPlatform] = useState<'X' | 'Telegram'>('X')
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
@@ -217,7 +229,8 @@ function App() {
   const runScan = useCallback(async () => {
     const inputValue = scanMode === 'wallet' ? walletInput.trim()
                      : scanMode === 'channels' ? channelInput.trim()
-                     : tokenInput.trim()
+                     : scanMode === 'token' ? tokenInput.trim()
+                     : usernameInput.trim()
 
     if (!inputValue) return
     if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
@@ -233,10 +246,15 @@ function App() {
 
     const modeLabel = scanMode === 'wallet' ? `wallet ${inputValue.slice(0,6)}…${inputValue.slice(-4)}`
                     : scanMode === 'channels' ? `channel ${inputValue}`
-                    : `token ${inputValue}`
+                    : scanMode === 'token' ? `token ${inputValue}`
+                    : `${platform === 'X' ? 'X' : 'Telegram'} user @${inputValue}`
 
     addMsg({ type: 'system', icon: '🔍', text: `Initiating Priority Scan for ${modeLabel}…` })
-    addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
+    if (scanMode === 'scam') {
+      addMsg({ type: 'system', icon: '🚨', text: 'Analyzing public profile and posting patterns…' })
+    } else {
+      addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
+    }
 
     // For channel scans, add success rate analysis
     if (scanMode === 'channels') {
@@ -663,11 +681,12 @@ function App() {
                 </div>
 
                 {/* ── Scan mode tabs ── */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-4 gap-2 mb-4">
                   {([
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                    { id: 'scam',     icon: '🚨', label: 'Scam Detection', hint: 'Scan X or Telegram user for scam patterns' },
                   ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
                     <button
                       key={m.id}
@@ -717,6 +736,54 @@ function App() {
                       className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
                     />
                   )}
+                  {scanMode === 'scam' && (
+                    <>
+                      <div className="mb-4">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
+                          <span className="text-lg">🚨</span> User Name
+                        </label>
+                        <input
+                          type="text"
+                          value={usernameInput}
+                          onChange={e => setUsernameInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                          placeholder="e.g. @CryptoWhaleCalls  · CryptoSpaceX04  @raynft_"
+                          className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
+                          Platform
+                        </label>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setPlatform('X')}
+                            className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
+                              platform === 'X'
+                                ? 'border-purple-500/60 text-white bg-purple-600'
+                                : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                            }`}
+                          >
+                            X (Twitter)
+                          </button>
+                          <button
+                            onClick={() => setPlatform('Telegram')}
+                            className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
+                              platform === 'Telegram'
+                                ? 'border-purple-500/60 text-white bg-purple-600'
+                                : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                            }`}
+                          >
+                            Telegram
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1.5">
+                          Analyzes public profile, posting patterns, and red flags to assess scam risk. Only public data — no private information is accessed.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* ── Launch button ── */}
@@ -725,7 +792,8 @@ function App() {
                   disabled={isScanning ||
                     (scanMode === 'wallet'   && !walletInput.trim())  ||
                     (scanMode === 'channels' && !channelInput.trim()) ||
-                    (scanMode === 'token'    && !tokenInput.trim())}
+                    (scanMode === 'token'    && !tokenInput.trim()) ||
+                    (scanMode === 'scam'     && !usernameInput.trim())}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
                 >
@@ -797,7 +865,9 @@ function App() {
                   <div className="flex-1 overflow-y-auto p-4 space-y-2">
                     {scanMessages.map(msg => (
                       <div key={msg.id}>
-                        {msg.result ? (
+                        {msg.scamResult ? (
+                          <ScamResultCard result={msg.scamResult} />
+                        ) : msg.result ? (
                           <ScanResultCard result={msg.result} icon={msg.icon} defaultExpanded={msg.result.confidence === 'HIGH'} />
                         ) : (
                           <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs ${
@@ -815,7 +885,7 @@ function App() {
                     {isScanning && (
                       <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
                         <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
-                        Scanning…
+                        {scanMode === 'scam' ? `Analyzing ${platform === 'X' ? 'X' : 'Telegram'} user @${usernameInput}…` : 'Scanning…'}
                       </div>
                     )}
                     <div ref={chatBottomRef} />
@@ -1164,6 +1234,101 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
             </div>
           )}
 
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Scam Result Card Component ─────────────────────────────────────────────────────────
+
+function ScamResultCard({ result }: { result: {
+  username: string
+  platform: 'X' | 'Telegram'
+  riskScore: number
+  verificationLevel: string
+  redFlags: string[]
+  scamType?: string
+  evidence: string[]
+  recommendedAction: string
+}}) {
+  const [expanded, setExpanded] = useState(true)
+
+  const riskScoreStyle = (score: number) => {
+    if (score >= 7) return { color: '#f87171', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' }
+    if (score >= 4) return { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' }
+    return                  { color: '#4ade80', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' }
+  }
+
+  const rs = riskScoreStyle(result.riskScore)
+
+  return (
+    <div className="rounded-xl border overflow-hidden">
+      <div
+        className="px-4 py-3 flex items-center gap-3 cursor-pointer transition-all hover:brightness-110"
+        style={result.riskScore >= 7
+          ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.3)' }
+          : result.riskScore >= 4
+          ? { background: 'rgba(245,158,11,0.06)', borderColor: 'rgba(245,158,11,0.3)' }
+          : { background: 'rgba(16,185,129,0.06)', borderColor: 'rgba(16,185,129,0.2)' }}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="text-xl flex-shrink-0">🚨</span>
+        <span className="font-bold text-white text-sm flex-shrink-0">
+          {result.platform === 'X' ? 'X' : 'Telegram'}: {result.username}
+        </span>
+        <span
+          className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+          style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}
+        >
+          Risk Score: {result.riskScore}/10
+        </span>
+        {expanded ? <span className="text-gray-600 text-xs flex-shrink-0">▲</span> : <span className="text-gray-600 text-xs flex-shrink-0">▼</span>}
+      </div>
+
+      {expanded && (
+        <div className="px-4 pb-4" style={{ borderTop: '1px solid rgba(239,68,68,0.15)' }}>
+          {result.riskScore >= 7 && (
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2 mt-3 mb-3 text-sm"
+                 style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
+              <span className="text-lg">⚠️</span>
+              HIGH RISK DETECTED ({result.riskScore}/10)
+            </div>
+          )}
+
+          <div className="rounded-xl p-4 mt-3" style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.15)' }}>
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Scam Analysis</p>
+            {result.scamType && (
+              <p className="text-sm font-bold text-white mb-2">Type: {result.scamType}</p>
+            )}
+            <p className="text-sm text-gray-300 mb-4">{result.recommendedAction}</p>
+
+            <div className="space-y-2">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags ({result.redFlags.length})</p>
+                <ul className="space-y-1">
+                  {result.redFlags.map((flag, idx) => (
+                    <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      {flag}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Evidence ({result.evidence.length})</p>
+                <ul className="space-y-1">
+                  {result.evidence.map((ev, idx) => (
+                    <li key={idx} className="text-sm text-gray-400 flex items-start gap-2">
+                      <span className="text-gray-500 mt-0.5">•</span>
+                      {ev}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
