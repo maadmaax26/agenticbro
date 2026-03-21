@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash } from 'lucide-react';
+import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash, AlertCircle } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { isTestWallet } from '../../hooks/useTokenGating';
 
@@ -9,7 +9,7 @@ const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_U
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ScanStatus = 'idle' | 'scanning' | 'done';
-type ScanTarget = 'all' | 'wallet' | 'channels' | 'token';
+type ScanTarget = 'all' | 'wallet' | 'channels' | 'token' | 'scam';
 
 interface ScanResult {
   id: number;
@@ -23,6 +23,17 @@ interface ScanResult {
   recommendation: string;
   flagged: boolean;
   flagReason?: string;
+}
+
+interface ScamDetectionResult {
+  username: string;
+  platform: 'X' | 'Telegram';
+  riskScore: number; // 1-10
+  redFlags: string[];
+  verificationLevel: 'Unverified' | 'Partially Verified' | 'Verified' | 'Highly Verified';
+  scamType?: string;
+  evidence: string[];
+  recommendedAction: string;
 }
 
 interface ScanJob {
@@ -81,10 +92,34 @@ const MOCK_SCAN_RESULTS: ScanResult[] = [
   },
 ];
 
+const MOCK_SCAM_DETECTION_RESULTS: ScamDetectionResult[] = [
+  {
+    username: 'Crypto_Rush_Global_Call',
+    platform: 'X',
+    riskScore: 8.5,
+    redFlags: [
+      'Guaranteed returns: "x5-x100 returns in 24 hours"',
+      'Private alpha access model',
+      'Urgency tactics: "limited spots, act now"',
+      'No track record or evidence',
+      'Advance fee payment pattern'
+    ],
+    verificationLevel: 'Unverified',
+    scamType: 'Private Alpha Scam',
+    evidence: [
+      'Profile shows no verifiable trading history',
+      'Claims exclusivity without evidence',
+      'Pump-and-dump pattern likely',
+      'High-pressure sales tactics detected'
+    ],
+    recommendedAction: 'DO NOT INVEST — HIGH RISK SCAM (8.5/10)'
+  },
+];
+
 const SCAN_HISTORY: ScanJob[] = [
   { id: 'scan_001', target: 'All Channels',         startedAt: '2h ago', completedAt: '2h ago', status: 'done',   resultsCount: 8, tokensBurned: 15000 },
   { id: 'scan_002', target: '👛 7xKX…Bm3a',         startedAt: '6h ago', completedAt: '6h ago', status: 'done',   resultsCount: 5, tokensBurned: 10000 },
-  { id: 'scan_003', target: '📡 CryptoEdge Pro',    startedAt: '1d ago', completedAt: '1d ago', status: 'done',   resultsCount: 3, tokensBurned: 10000 },
+  { id: 'scan_003', target: '📡 CryptoEdge Pro',    startedAt: '1d ago', completedAt: '1d ago', status: 'done',   resultsBurned: 3, tokensBurned: 10000 },
   { id: 'scan_004', target: '🔍 $SOL',              startedAt: '2d ago', completedAt: '2d ago', status: 'failed', resultsCount: 0, tokensBurned: 10000 },
 ];
 
@@ -92,9 +127,10 @@ const SCAN_HISTORY: ScanJob[] = [
 
 const SCAN_TARGETS: { id: ScanTarget; label: string; icon: string; cost: number; description: string }[] = [
   { id: 'all',      label: 'All Channels', icon: '🌐', cost: 15000, description: 'Scan every tracked channel' },
-  { id: 'wallet',   label: 'Wallet Scan',  icon: '👛', cost: 10000, description: 'Track a wallet\'s alpha signals' },
+  { id: 'wallet',   label: 'Wallet Scan', icon: '👛', cost: 10000, description: 'Track a wallet\'s alpha signals' },
   { id: 'channels', label: 'Channel Scan', icon: '📡', cost: 10000, description: 'Deep-scan a specific channel' },
   { id: 'token',    label: 'Single Token', icon: '🔍', cost: 10000, description: 'Find all calls for a token' },
+  { id: 'scam',     label: 'Scam Detection', icon: '🚨', cost: 5000, description: 'Scan X or Telegram user for scam patterns' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -108,19 +144,23 @@ export default function PriorityScan() {
   const [walletInput,   setWalletInput]   = useState('');
   const [channelInput,  setChannelInput]  = useState('');
   const [tokenInput,    setTokenInput]    = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [platform,      setPlatform]      = useState<'X' | 'Telegram'>('X');
   const [results,       setResults]       = useState<ScanResult[]>([]);
+  const [scamResults,   setScamResults]   = useState<ScamDetectionResult[]>([]);
   const [showModal,     setShowModal]     = useState(false);
   const [expandedId,    setExpandedId]    = useState<number | null>(null);
   const [showHistory,   setShowHistory]   = useState(false);
   const [scanProgress,  setScanProgress]  = useState(0);
 
-  const burnCost = scanTarget === 'all' ? 15000 : 10000;
+  const burnCost = scanTarget === 'all' ? 15000 : scanTarget === 'scam' ? 5000 : 10000;
 
   // Resolve human-readable label for burn modal / history
   const scanLabel = (() => {
     if (scanTarget === 'wallet')   return walletInput   ? `👛 ${walletInput.slice(0, 6)}…${walletInput.slice(-4)}` : 'Wallet Scan';
     if (scanTarget === 'channels') return channelInput  ? `📡 ${channelInput}` : 'Channel Scan';
     if (scanTarget === 'token')    return tokenInput     ? `🔍 ${tokenInput}`  : 'Single Token';
+    if (scanTarget === 'scam')     return usernameInput ? `🚨 ${platform === 'X' ? 'X' : 'Telegram'}: ${usernameInput}` : 'Scam Detection';
     return 'All Channels';
   })();
 
@@ -129,7 +169,8 @@ export default function PriorityScan() {
     scanStatus === 'scanning' ||
     (scanTarget === 'wallet'   && !walletInput.trim())  ||
     (scanTarget === 'channels' && !channelInput.trim()) ||
-    (scanTarget === 'token'    && !tokenInput.trim());
+    (scanTarget === 'token'    && !tokenInput.trim()) ||
+    (scanTarget === 'scam'     && !usernameInput.trim());
 
   // Test wallet: skip burn confirmation and run immediately
   const startScan = () => { if (isTest) { void confirmScan(); } else { setShowModal(true); } };
@@ -139,6 +180,7 @@ export default function PriorityScan() {
     setScanStatus('scanning');
     setScanProgress(0);
     setResults([]);
+    setScamResults([]);
 
     // Animate progress while waiting for real API
     let progress = 0;
@@ -148,6 +190,18 @@ export default function PriorityScan() {
     }, 280);
 
     try {
+      // Handle scam detection scan separately
+      if (scanTarget === 'scam') {
+        // Simulate scam detection scan
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setScamResults(MOCK_SCAM_DETECTION_RESULTS);
+        setScanProgress(100);
+        setScanStatus('done');
+        clearInterval(interval);
+        return;
+      }
+
+      // Regular priority scan
       const res  = await fetch(`${API_BASE}/api/telegram/priority-scan`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,6 +231,21 @@ export default function PriorityScan() {
     if (c === 'HIGH')   return { color: '#4ade80', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  };
     if (c === 'MEDIUM') return { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' };
     return                     { color: '#f87171', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)'  };
+  };
+
+  const riskScoreStyle = (score: number) => {
+    if (score >= 7) return { color: '#f87171', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)'  };
+    if (score >= 4) return { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' };
+    return                  { color: '#4ade80', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)'  };
+  };
+
+  const verificationStyle = (level: ScamDetectionResult['verificationLevel']) => {
+    switch (level) {
+      case 'Verified':         return { color: '#4ade80', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' };
+      case 'Partially Verified': return { color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' };
+      case 'Unverified':       return { color: '#f87171', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' };
+      default: return { color: '#9ca3af', bg: 'rgba(156,163,175,0.12)', border: 'rgba(156,163,175,0.3)' };
+    }
   };
 
   return (
@@ -270,6 +339,55 @@ export default function PriorityScan() {
           </div>
         )}
 
+        {scanTarget === 'scam' && (
+          <div className="space-y-4">
+            <div className="mb-4">
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
+                <AlertCircle className="w-3.5 h-3.5" /> User Name
+              </label>
+              <input
+                type="text"
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                placeholder="e.g. @CryptoWhaleCalls  · CryptoSpaceX04  @raynft_"
+                className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
+                Platform
+              </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPlatform('X')}
+                  className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
+                    platform === 'X'
+                      ? 'border-purple-500/60 text-white bg-purple-600'
+                      : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                  }`}
+                >
+                  X (Twitter)
+                </button>
+                <button
+                  onClick={() => setPlatform('Telegram')}
+                  className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
+                    platform === 'Telegram'
+                      ? 'border-purple-500/60 text-white bg-purple-600'
+                      : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                  }`}
+                >
+                  Telegram
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 mt-1.5">
+              Analyzes public profile, posting patterns, and red flags to assess scam risk. Only public data — no private information is accessed.
+            </p>
+          </div>
+        )}
+
         {/* ── Launch button ── */}
         <button
           onClick={startScan}
@@ -287,10 +405,13 @@ export default function PriorityScan() {
           <div className="flex items-center gap-3 mb-4">
             <div className="animate-spin w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full" />
             <p className="text-white font-semibold">
-              {scanTarget === 'wallet'   ? `Scanning wallet ${walletInput.slice(0,6)}…`   :
-               scanTarget === 'channels' ? `Deep-scanning ${channelInput}…`                :
-               scanTarget === 'token'    ? `Searching channels for ${tokenInput}…`          :
-               'Scanning all channels…'}
+              {scanTarget === 'scam'
+                ? `Analyzing ${platform === 'X' ? 'X' : 'Telegram'} user @${usernameInput}…`
+                : scanTarget === 'wallet' ? `Scanning wallet ${walletInput.slice(0,6)}…`
+                : scanTarget === 'channels' ? `Deep-scanning ${channelInput}…`
+                : scanTarget === 'token' ? `Searching channels for ${tokenInput}…`
+                : 'Scanning all channels…'
+              }
             </p>
             <p className="ml-auto text-sm text-purple-300 font-bold">{Math.round(scanProgress)}%</p>
           </div>
@@ -302,10 +423,10 @@ export default function PriorityScan() {
           </div>
           <div className="mt-3 space-y-1">
             {[
-              { pct: 0,  label: scanTarget === 'wallet' ? 'Resolving wallet on-chain activity…' : 'Connecting to channel feeds…' },
-              { pct: 25, label: 'Extracting token calls…' },
-              { pct: 55, label: 'Pulling DEX market data…' },
-              { pct: 80, label: 'Running scoring engine…' },
+              { pct: 0, label: scanTarget === 'scam' ? 'Fetching public profile data…' : 'Connecting to channel feeds…' },
+              { pct: 25, label: 'Extracting posting patterns…' },
+              { pct: 55, label: 'Analyzing red flags…' },
+              { pct: 80, label: 'Running risk scoring engine…' },
             ].map(step => (
               <p
                 key={step.pct}
@@ -318,8 +439,122 @@ export default function PriorityScan() {
         </div>
       )}
 
-      {/* ── Results ── */}
-      {scanStatus === 'done' && results.length > 0 && (
+      {/* ── Scam detection results ── */}
+      {scanStatus === 'done' && scamResults.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            <h3 className="font-bold text-white">Scam Detection Results — {scamResults.length} user(s) analyzed</h3>
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded-full ml-auto"
+              style={{ background: scamResults.some(r => r.riskScore >= 7) ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', border: `1px solid ${scamResults.some(r => r.riskScore >= 7) ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, color: scamResults.some(r => r.riskScore >= 7) ? '#f87171' : '#4ade80' }}
+            >
+              {scamResults.filter(r => r.riskScore >= 7).length} HIGH RISK
+            </span>
+          </div>
+
+          {scamResults.map(result => {
+            const rs = riskScoreStyle(result.riskScore);
+            const vs = verificationStyle(result.verificationLevel);
+            const isExpanded = expandedId === result.username;
+
+            return (
+              <div
+                key={result.username}
+                className={`bg-black/40 backdrop-blur-md rounded-2xl border overflow-hidden transition-all ${
+                  result.riskScore >= 7 ? 'border-red-500/40' : result.riskScore >= 4 ? 'border-yellow-500/40' : 'border-purple-500/20'
+                }`}
+              >
+                <div
+                  className="flex items-center gap-4 p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : result.username)}
+                >
+                  <AlertTriangle className={`w-5 h-5 ${result.riskScore >= 7 ? 'text-red-400' : result.riskScore >= 4 ? 'text-yellow-400' : 'text-gray-400'} flex-shrink-0`} />
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white">{result.platform === 'X' ? 'X' : 'Telegram'}: {result.username}</span>
+                    </div>
+                  </div>
+
+                  <span
+                    className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+                    style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}
+                  >
+                    Risk Score: {result.riskScore}/10
+                  </span>
+
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0"
+                    style={{ background: vs.bg, border: `1px solid ${vs.border}`, color: vs.color }}
+                  >
+                    {result.verificationLevel}
+                  </span>
+
+                  {isExpanded
+                    ? <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    : <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  }
+                </div>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4" style={{ borderTop: '1px solid rgba(239,68,68,0.15)' }}>
+                    {result.riskScore >= 7 && (
+                      <div
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 mt-3 mb-3 text-sm"
+                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}
+                      >
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        HIGH RISK DETECTED ({result.riskScore}/10)
+                      </div>
+                    )}
+
+                    <div
+                      className="rounded-xl p-4 mt-3"
+                      style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.15)' }}
+                    >
+                      <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Scam Analysis</p>
+                      {result.scamType && (
+                        <p className="text-sm font-bold text-white mb-2">Type: {result.scamType}</p>
+                      )}
+                      <p className="text-sm text-gray-300 mb-4">{result.recommendedAction}</p>
+
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags ({result.redFlags.length})</p>
+                          <ul className="space-y-1">
+                            {result.redFlags.map((flag, idx) => (
+                              <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
+                                <span className="text-red-500 mt-0.5">•</span>
+                                {flag}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Evidence ({result.evidence.length})</p>
+                          <ul className="space-y-1">
+                            {result.evidence.map((ev, idx) => (
+                              <li key={idx} className="text-sm text-gray-400 flex items-start gap-2">
+                                <span className="text-gray-500 mt-0.5">•</span>
+                                {ev}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Regular scan results ── */}
+      {scanStatus === 'done' && results.length > 0 && scanTarget !== 'scam' && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-green-400" />
@@ -505,7 +740,7 @@ function PriorityScanBurnModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const icon = target === 'wallet' ? '👛' : target === 'channels' ? '📡' : target === 'token' ? '🔍' : '🌐';
+  const icon = target === 'wallet' ? '👛' : target === 'channels' ? '📡' : target === 'token' ? '🔍' : target === 'scam' ? '🚨' : '🌐';
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-black/90 rounded-2xl border border-purple-500/40 p-8 max-w-md w-full">
