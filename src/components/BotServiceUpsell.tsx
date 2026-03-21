@@ -28,18 +28,16 @@ export default function BotServiceUpsell() {
       </div>
 
       <a
-        href="#"
-        onClick={(e) => {
-          e.preventDefault();
-          // TODO: Implement token purchase link
-        }}
+        href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
+        target="_blank"
+        rel="noopener noreferrer"
         className="block w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors text-center"
       >
         Get AGNTCBRO Tokens
       </a>
 
       <p className="text-xs text-gray-500 mt-3 text-center">
-        Purchase tokens on Pump.fun or Raydium
+        Purchase tokens on <a href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump" target="_blank" rel="noopener noreferrer" className="text-[#39ff14] hover:underline">Pump.fun</a>
       </p>
     </div>
   )
