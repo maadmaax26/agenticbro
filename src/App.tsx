@@ -132,7 +132,7 @@ function App() {
 
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    return saved ? Math.max(0, parseInt(saved, 10)) : 3;
+    return saved ? Math.max(0, parseInt(saved, 10)) : 10;
   });
 
   // Update scan count when wallet changes
