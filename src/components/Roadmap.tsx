@@ -14,8 +14,10 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       metrics: [
         { value: '500', label: 'Active Users' },
         { value: '50+', label: 'Daily Signals' },
-        { value: '60%+', label: 'Bot Accuracy' },
+        { value: '65%+', label: 'Bot Accuracy' },
         { value: '100', label: 'Token Holders' },
+        { value: '4', label: 'Scan Modes' },
+        { value: '3', label: 'Security Systems' },
       ],
       sections: [
         {
@@ -168,6 +170,10 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       { milestone: 'Deploy mobile app (iOS / Android)', target: 'Q3 2026' },
       { milestone: 'Integrate with 2 major wallets', target: 'Q3 2026' },
       { milestone: 'Reach 1,000 active users', target: 'Q3 2026' },
+      { milestone: 'Deploy scammer database integration', target: 'Q2 2026' },
+      { milestone: 'Launch automated scam alerts for followed users', target: 'Q2 2026' },
+      { milestone: 'Add email notifications for new scam reports', target: 'Q3 2026' },
+      { milestone: 'Implement known scammer database integration', target: 'Q3 2026' },
     ],
     midTerm: [
       'Multi-exchange integration',
@@ -175,6 +181,11 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       'On-chain analytics',
       'Institutional dashboard beta',
       'Reach 10,000 active users',
+      'Multi-chain scam detection (Ethereum, BSC, Base)',
+      'NFT scam detection and analysis',
+      'DeFi rug pull detection algorithms',
+      'Machine learning model for scam detection',
+      'Community reputation system launch',
     ],
     longTerm: [
       'ML-powered signal generation',
@@ -212,21 +223,22 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           </button>
           <div className="text-center py-12">
             <div className="text-sm font-mono text-purple-400 mb-2 tracking-widest uppercase">
-              Version 1.0 · March 14, 2026 · Active Development
+              Version 2.0 · March 21, 2026 · Active Development
             </div>
-            <h1 className="text-5xl font-bold text-white mb-4">Product Roadmap</h1>
+            <h1 className="text-5xl font-bold text-white mb-4">Product Roadmap v2.0</h1>
             <p className="text-xl text-purple-300 max-w-3xl mx-auto mb-8">
-              2026 – 2027 · Four strategic phases targeting 100,000+ active users, 50,000+ daily signals, and 75%+ bot accuracy
+              Scam Detection · Gem Advisor · Enhanced Priority Scan · Four strategic phases targeting 100,000+ active users, 50,000+ daily signals, and 75%+ bot accuracy
             </p>
             <p className="text-lg text-gray-300 italic max-w-2xl mx-auto">
               "Agentic Bro tells you where your trading sucks — and how to fix it."
             </p>
             {/* Summary stats */}
-            <div className="grid grid-cols-4 gap-4 mt-10 max-w-2xl mx-auto">
+            <div className="grid grid-cols-5 gap-4 mt-10 max-w-3xl mx-auto">
               {[
                 { value: '4', label: 'Dev Phases' },
                 { value: '1B', label: 'AGNTCBRO Supply' },
                 { value: '3', label: 'Token Tiers' },
+                { value: '4', label: 'Scan Modes' },
                 { value: '75%+', label: 'Target Accuracy' },
               ].map((stat, idx) => (
                 <div key={idx} className="bg-black/30 rounded-xl p-4 border border-purple-500/30">
@@ -393,7 +405,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       </main>
 
       <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
-        <p>Built for degens, by degens · <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
+        <p>Version 2.0 · March 21, 2026 · Built for degens, by degens · <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
       </footer>
     </div>
   );
