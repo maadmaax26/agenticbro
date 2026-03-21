@@ -26,7 +26,8 @@ export default function WhaleDashboard({ onBack, whaleTierUnlocked, balance, usd
           <div className="text-6xl mb-4">🐋</div>
           <h2 className="text-2xl font-bold text-white mb-4">Whale Tier Access Required</h2>
           <p className="text-gray-300 mb-6">
-            Your AGNTCBRO holdings need to reach the $1,000 USD threshold to unlock Whale Tier.
+            Hold at least <span className="text-green-400 font-bold">$15 USD</span> worth of AGNTCBRO to unlock Whale Tier.
+            <span className="block text-xs text-green-400/80 mt-1">🚀 Reduced threshold during development & testing phase</span>
           </p>
           <div className="bg-cyan-900/30 rounded-xl p-6 mb-6 border border-cyan-500/20">
             <p className="text-sm text-gray-400 mb-2">Current Balance</p>
