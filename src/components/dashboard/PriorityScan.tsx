@@ -119,7 +119,7 @@ const MOCK_SCAM_DETECTION_RESULTS: ScamDetectionResult[] = [
 const SCAN_HISTORY: ScanJob[] = [
   { id: 'scan_001', target: 'All Channels',         startedAt: '2h ago', completedAt: '2h ago', status: 'done',   resultsCount: 8, tokensBurned: 15000 },
   { id: 'scan_002', target: '👛 7xKX…Bm3a',         startedAt: '6h ago', completedAt: '6h ago', status: 'done',   resultsCount: 5, tokensBurned: 10000 },
-  { id: 'scan_003', target: '📡 CryptoEdge Pro',    startedAt: '1d ago', completedAt: '1d ago', status: 'done',   resultsBurned: 3, tokensBurned: 10000 },
+  { id: 'scan_003', target: '📡 CryptoEdge Pro',    startedAt: '1d ago', completedAt: '1d ago', status: 'done',   resultsCount: 3, tokensBurned: 10000 },
   { id: 'scan_004', target: '🔍 $SOL',              startedAt: '2d ago', completedAt: '2d ago', status: 'failed', resultsCount: 0, tokensBurned: 10000 },
 ];
 
@@ -149,7 +149,7 @@ export default function PriorityScan() {
   const [results,       setResults]       = useState<ScanResult[]>([]);
   const [scamResults,   setScamResults]   = useState<ScamDetectionResult[]>([]);
   const [showModal,     setShowModal]     = useState(false);
-  const [expandedId,    setExpandedId]    = useState<number | null>(null);
+  const [expandedId,    setExpandedId]    = useState<number | string | null>(null);
   const [showHistory,   setShowHistory]   = useState(false);
   const [scanProgress,  setScanProgress]  = useState(0);
 

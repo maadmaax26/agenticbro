@@ -16,6 +16,10 @@
  *     Query: filter, rugRateMax, liquidityMin, topN
  *     Returns: { gems[], summary{} }
  *
+ *   GET  /api/telegram/meme-coins
+ *     Query: filter (all|high|medium|low|new), sortBy (edge|mentions|engagement)
+ *     Returns: { coins[], summary{} }
+ *
  *   GET  /api/telegram/status
  *     Returns: whether Telegram credentials are configured
  * ─────────────────────────────────────────────────────────────────────────────
@@ -128,6 +132,47 @@ router.get('/gem-advise', async (req: Request, res: Response): Promise<void> => 
   }
 })
 
+// ─── Meme Coin Analyzer ─────────────────────────────────────────────────────────
+
+router.get('/meme-coins', async (req: Request, res: Response): Promise<void> => {
+  // For now, always return mock data (live connection requires Discord API)
+  // This endpoint is ready for live Discord integration
+
+  try {
+    const filter = String(req.query.filter ?? 'all') as 'all' | 'high' | 'medium' | 'low' | 'new'
+    const sortBy = String(req.query.sortBy ?? 'edge') as 'edge' | 'mentions' | 'engagement'
+
+    let coins = [...MOCK_MEME_COINS]
+
+    // Apply filters
+    if (filter === 'high') coins = coins.filter(c => c.confidence === 'HIGH')
+    if (filter === 'medium') coins = coins.filter(c => c.confidence === 'MEDIUM')
+    if (filter === 'low') coins = coins.filter(c => c.confidence === 'LOW')
+    if (filter === 'new') coins = coins.filter(c => c.is_new)
+
+    // Sort by specified field
+    if (sortBy === 'edge') coins.sort((a, b) => b.edge - a.edge)
+    if (sortBy === 'mentions') coins.sort((a, b) => b.mentions - a.mentions)
+    if (sortBy === 'engagement') coins.sort((a, b) => b.engagement - a.engagement)
+
+    const summary = {
+      totalCoins: MOCK_MEME_COINS.length,
+      filteredCount: coins.length,
+      highConfidence: MOCK_MEME_COINS.filter(c => c.confidence === 'HIGH').length,
+      mediumConfidence: MOCK_MEME_COINS.filter(c => c.confidence === 'MEDIUM').length,
+      lowConfidence: MOCK_MEME_COINS.filter(c => c.confidence === 'LOW').length,
+      newCoins: MOCK_MEME_COINS.filter(c => c.is_new).length,
+      avgEdgeScore: MOCK_MEME_COINS.reduce((sum, c) => sum + c.edge, 0) / MOCK_MEME_COINS.length,
+      generatedAt: new Date().toISOString(),
+    }
+
+    res.json({ coins, summary, mock: true, ts: Date.now() })
+  } catch (err) {
+    console.error('[telegram/meme-coins]', err)
+    res.status(502).json({ error: 'Failed to get meme coins', detail: String(err) })
+  }
+})
+
 export default router
 
 // ─── Mock fallback data (served when TELEGRAM_SESSION_STRING is not set) ──────
@@ -220,3 +265,150 @@ const MOCK_GEM_SUMMARY = {
   channelsSourced: 2,
   generatedAt:     new Date().toISOString(),
 }
+
+// ─── Meme Coin Analyzer Mock Data ────────────────────────────────────────────────
+
+interface MemeCoin {
+  ticker: string
+  edge: number
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  mentions: number
+  engagement: number
+  sentiment_trend: 'improving' | 'degrading' | 'stable'
+  risk: 'HIGH_RISK' | 'MODERATE_RISK' | 'LOW_RISK'
+  red_flags: string[]
+  is_new: boolean
+  market_cap: string
+  volume: string
+  age: string
+  holders: number
+  contract?: string
+}
+
+const MOCK_MEME_COINS: MemeCoin[] = [
+  {
+    ticker: 'PEPE',
+    edge: 0.85,
+    confidence: 'HIGH',
+    mentions: 124,
+    engagement: 42.3,
+    sentiment_trend: 'improving',
+    risk: 'LOW_RISK',
+    red_flags: [],
+    is_new: false,
+    market_cap: '$85K',
+    volume: '$420K',
+    age: '4 hours',
+    holders: 156,
+    contract: '0x1234...5678',
+  },
+  {
+    ticker: 'DOGE',
+    edge: 0.78,
+    confidence: 'HIGH',
+    mentions: 98,
+    engagement: 38.7,
+    sentiment_trend: 'improving',
+    risk: 'LOW_RISK',
+    red_flags: [],
+    is_new: false,
+    market_cap: '$72K',
+    volume: '$380K',
+    age: '5 hours',
+    holders: 134,
+    contract: '0xabcd...efgh',
+  },
+  {
+    ticker: 'WIF',
+    edge: 0.71,
+    confidence: 'HIGH',
+    mentions: 72,
+    engagement: 31.2,
+    sentiment_trend: 'stable',
+    risk: 'LOW_RISK',
+    red_flags: [],
+    is_new: false,
+    market_cap: '$65K',
+    volume: '$310K',
+    age: '6 hours',
+    holders: 112,
+    contract: '0x9876...5432',
+  },
+  {
+    ticker: 'GEM',
+    edge: 0.68,
+    confidence: 'HIGH',
+    mentions: 65,
+    engagement: 28.9,
+    sentiment_trend: 'improving',
+    risk: 'LOW_RISK',
+    red_flags: [],
+    is_new: true,
+    market_cap: '$52K',
+    volume: '$280K',
+    age: '3 hours',
+    holders: 98,
+    contract: '0xfedc...ba98',
+  },
+  {
+    ticker: 'MOON',
+    edge: 0.61,
+    confidence: 'MEDIUM',
+    mentions: 58,
+    engagement: 24.3,
+    sentiment_trend: 'stable',
+    risk: 'LOW_RISK',
+    red_flags: [],
+    is_new: true,
+    market_cap: '$48K',
+    volume: '$240K',
+    age: '4 hours',
+    holders: 87,
+    contract: '0x1357...2468',
+  },
+  {
+    ticker: 'RUSH',
+    edge: 0.58,
+    confidence: 'MEDIUM',
+    mentions: 52,
+    engagement: 21.8,
+    sentiment_trend: 'degrading',
+    risk: 'MODERATE_RISK',
+    red_flags: ['Declining sentiment trend'],
+    is_new: false,
+    market_cap: '$41K',
+    volume: '$200K',
+    age: '8 hours',
+    holders: 76,
+  },
+  {
+    ticker: 'BONK',
+    edge: 0.49,
+    confidence: 'MEDIUM',
+    mentions: 45,
+    engagement: 19.4,
+    sentiment_trend: 'degrading',
+    risk: 'MODERATE_RISK',
+    red_flags: ['Declining trend', 'Lower than average engagement'],
+    is_new: false,
+    market_cap: '$38K',
+    volume: '$180K',
+    age: '10 hours',
+    holders: 65,
+  },
+  {
+    ticker: 'PUMP',
+    edge: 0.42,
+    confidence: 'LOW',
+    mentions: 38,
+    engagement: 16.2,
+    sentiment_trend: 'stable',
+    risk: 'MODERATE_RISK',
+    red_flags: ['Normal engagement', 'Not fresh launch'],
+    is_new: false,
+    market_cap: '$32K',
+    volume: '$150K',
+    age: '12 hours',
+    holders: 54,
+  },
+]
