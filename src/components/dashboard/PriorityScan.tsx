@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash, AlertCircle } from 'lucide-react';
+import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash, AlertCircle, Info } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { isTestWallet } from '../../hooks/useTokenGating';
 
@@ -159,6 +159,8 @@ export default function PriorityScan() {
   const [expandedId,    setExpandedId]    = useState<number | string | null>(null);
   const [showHistory,   setShowHistory]   = useState(false);
   const [scanProgress,  setScanProgress]  = useState(0);
+  const [isMockData,    setIsMockData]    = useState(false);
+  const [scanError,     setScanError]     = useState<string | null>(null);
 
   const burnCost = scanTarget === 'all' ? 15000 : scanTarget === 'scam' ? 5000 : 10000;
 
@@ -188,6 +190,8 @@ export default function PriorityScan() {
     setScanProgress(0);
     setResults([]);
     setScamResults([]);
+    setIsMockData(false);
+    setScanError(null);
 
     // Animate progress while waiting for real API
     let progress = 0;
@@ -211,8 +215,10 @@ export default function PriorityScan() {
         const data = await res.json() as { results?: ScamDetectionResult[]; mock?: boolean; error?: string };
         clearInterval(interval);
         setScanProgress(100);
+        if (data.mock) setIsMockData(true);
         if (data.error) {
-          // Show error as a high-risk result
+          setScanError(data.error);
+          // Show error as an informational result
           setScamResults([{
             username: usernameInput.trim(),
             platform,
@@ -243,8 +249,11 @@ export default function PriorityScan() {
       const data = await res.json() as { results?: Record<string, unknown>[]; mock?: boolean; error?: string };
       clearInterval(interval);
       setScanProgress(100);
+      if (data.mock) setIsMockData(true);
 
       if (!res.ok || data.error) {
+        setScanError(data.error ?? `Server returned ${res.status}`);
+        setIsMockData(true);
         setResults(MOCK_SCAN_RESULTS);
         setScanStatus('done');
         return;
@@ -287,13 +296,49 @@ export default function PriorityScan() {
       });
 
       setTimeout(() => {
-        setResults(mapped.length > 0 ? mapped : MOCK_SCAN_RESULTS);
+        if (mapped.length > 0) {
+          setResults(mapped);
+        } else {
+          setIsMockData(true);
+          setResults(MOCK_SCAN_RESULTS);
+        }
         setScanStatus('done');
       }, 300);
-    } catch {
+    } catch (err) {
       clearInterval(interval);
       setScanProgress(100);
-      setResults(MOCK_SCAN_RESULTS);
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNetworkError = msg.includes('fetch') || msg.includes('NetworkError') || msg.includes('Failed') || msg.includes('ECONNREFUSED');
+      const errorMsg = isNetworkError
+        ? 'Backend server is offline — showing demo data. Start the server on port 3001 for live scans.'
+        : `Scan failed: ${msg}`;
+      setScanError(errorMsg);
+      setIsMockData(true);
+
+      if (scanTarget === 'scam') {
+        // Show a mock scam detection result
+        setScamResults([{
+          username: usernameInput.trim(),
+          platform,
+          riskScore: 7.2,
+          redFlags: [
+            'High shill language density (42% avg)',
+            'Excessive urgency tactics (38% avg)',
+            'Almost every message is a token call (78% call density)',
+            'Claims guaranteed returns (4 occurrences)',
+          ],
+          verificationLevel: 'Unverified',
+          scamType: 'Pump-and-Dump Channel',
+          evidence: [
+            '34% of messages contain shill patterns',
+            'Frequent use of urgency language',
+            'Channels that only post token calls are often pump-and-dump groups',
+          ],
+          recommendedAction: `DO NOT INVEST — HIGH RISK SCAM (7.2/10). Demo result — connect backend for live analysis.`,
+        }]);
+      } else {
+        setResults(MOCK_SCAN_RESULTS);
+      }
       setScanStatus('done');
     }
   };
@@ -336,7 +381,7 @@ export default function PriorityScan() {
 
         {/* ── Scan target selector ── */}
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">Scan Target</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {SCAN_TARGETS.map(opt => (
             <button
               key={opt.id}
@@ -532,6 +577,37 @@ export default function PriorityScan() {
               </p>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Error / Mock data banner ── */}
+      {scanStatus === 'done' && (scanError || isMockData) && (
+        <div
+          className="flex items-center gap-3 rounded-2xl p-4"
+          style={{
+            background: scanError ? 'rgba(245,158,11,0.08)' : 'rgba(59,130,246,0.08)',
+            border: `1px solid ${scanError ? 'rgba(245,158,11,0.25)' : 'rgba(59,130,246,0.25)'}`,
+          }}
+        >
+          <Info className={`w-5 h-5 flex-shrink-0 ${scanError ? 'text-yellow-400' : 'text-blue-400'}`} />
+          <div className="flex-1 min-w-0">
+            {scanError && (
+              <p className="text-sm text-yellow-300">{scanError}</p>
+            )}
+            {isMockData && !scanError && (
+              <p className="text-sm text-blue-300">
+                Showing demo data — connect the backend server for live scan results.
+              </p>
+            )}
+          </div>
+          {isMockData && (
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa' }}
+            >
+              DEMO
+            </span>
+          )}
         </div>
       )}
 
