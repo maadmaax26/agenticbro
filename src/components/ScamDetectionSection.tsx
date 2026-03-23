@@ -1,7 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction } from '@solana/web3.js';
 
 // Use relative URL — works on both Vercel (serverless) and local dev
 const API_BASE = '';
+
+// ─── Token burn constants ───────────────────────────────────────────────────────
+const AGNTCBRO_MINT = new PublicKey('52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump');
+const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
+const FREE_SCAN_LIMIT = 3;
+const SCAN_COST_USD = 2.00;
+const TOKEN_DECIMALS = 6; // AGNTCBRO has 6 decimals
+
+// ─── Scan count persistence (localStorage per wallet) ───────────────────────────
+
+function getScanCount(walletAddress: string): number {
+  try {
+    const raw = localStorage.getItem(`scam_scans_${walletAddress}`);
+    return raw ? parseInt(raw, 10) || 0 : 0;
+  } catch { return 0; }
+}
+
+function incrementScanCount(walletAddress: string): number {
+  const count = getScanCount(walletAddress) + 1;
+  try { localStorage.setItem(`scam_scans_${walletAddress}`, String(count)); } catch {}
+  return count;
+}
+
+// ─── SPL Token helpers ──────────────────────────────────────────────────────────
+
+function getAssociatedTokenAddress(owner: PublicKey, mint: PublicKey): PublicKey {
+  const [address] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  );
+  return address;
+}
+
+/** Build a raw SPL Token burn instruction (no @solana/spl-token dependency) */
+function createBurnInstruction(
+  tokenAccount: PublicKey,
+  mint: PublicKey,
+  owner: PublicKey,
+  amount: bigint,
+): { keys: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]; programId: PublicKey; data: Buffer } {
+  // Burn = instruction index 8 in SPL Token program
+  const data = Buffer.alloc(9);
+  data.writeUInt8(8, 0); // instruction index
+  data.writeBigUInt64LE(amount, 1);
+
+  return {
+    programId: TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: tokenAccount, isSigner: false, isWritable: true },
+      { pubkey: mint,         isSigner: false, isWritable: true },
+      { pubkey: owner,        isSigner: true,  isWritable: false },
+    ],
+    data,
+  };
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -92,9 +151,17 @@ interface InvestigationReport {
 
 type ScanStatus = 'idle' | 'scanning' | 'done';
 
+interface ScamDetectionProps {
+  walletAddress: string;
+  tokenPriceUsd: number;
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export default function ScamDetectionSection() {
+export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: ScamDetectionProps) {
+  const { publicKey, signTransaction } = useWallet();
+  const { connection } = useConnection();
+
   const [usernameInput, setUsernameInput] = useState('');
   const [walletInput, setWalletInput]     = useState('');
   const [platform, setPlatform]           = useState<'X' | 'Telegram'>('X');
@@ -102,14 +169,74 @@ export default function ScamDetectionSection() {
   const [scanProgress, setScanProgress]   = useState(0);
   const [report, setReport]               = useState<InvestigationReport | null>(null);
   const [scanError, setScanError]         = useState<string | null>(null);
+  const [scanCount, setScanCount]         = useState(0);
+  const [burnStatus, setBurnStatus]       = useState<'idle' | 'burning' | 'confirmed'>('idle');
 
-  const isDisabled = scanStatus === 'scanning' || !usernameInput.trim();
+  // Load scan count on mount / wallet change
+  useEffect(() => {
+    setScanCount(getScanCount(walletAddress));
+  }, [walletAddress]);
+
+  const freeScansLeft = Math.max(0, FREE_SCAN_LIMIT - scanCount);
+  const requiresPayment = freeScansLeft <= 0;
+
+  // Calculate token cost for $2.00 USD
+  const tokenCostForScan = tokenPriceUsd > 0 ? Math.ceil(SCAN_COST_USD / tokenPriceUsd) : 0;
+
+  const isDisabled = scanStatus === 'scanning' || burnStatus === 'burning' || !usernameInput.trim();
+
+  // Burn AGNTCBRO tokens for paid scan
+  const burnTokensForScan = useCallback(async (): Promise<boolean> => {
+    if (!publicKey || !signTransaction || !connection) {
+      setScanError('Wallet not connected or does not support signing.');
+      return false;
+    }
+    if (tokenCostForScan <= 0) {
+      setScanError('Cannot determine AGNTCBRO price. Please try again later.');
+      return false;
+    }
+
+    setBurnStatus('burning');
+    try {
+      const ownerAta = getAssociatedTokenAddress(publicKey, AGNTCBRO_MINT);
+      const burnAmount = BigInt(tokenCostForScan) * BigInt(10 ** TOKEN_DECIMALS);
+
+      const burnIx = createBurnInstruction(ownerAta, AGNTCBRO_MINT, publicKey, burnAmount);
+
+      const tx = new Transaction().add(burnIx);
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const signed = await signTransaction(tx);
+      const sig = await connection.sendRawTransaction(signed.serialize());
+      await connection.confirmTransaction(sig, 'confirmed');
+
+      setBurnStatus('confirmed');
+      return true;
+    } catch (err) {
+      setBurnStatus('idle');
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('User rejected') || msg.includes('rejected')) {
+        setScanError('Transaction cancelled.');
+      } else {
+        setScanError(`Token burn failed: ${msg}`);
+      }
+      return false;
+    }
+  }, [publicKey, signTransaction, connection, tokenCostForScan]);
 
   const runScan = async () => {
+    // If payment required, burn tokens first
+    if (requiresPayment) {
+      const paid = await burnTokensForScan();
+      if (!paid) return;
+    }
+
     setScanStatus('scanning');
     setScanProgress(0);
     setReport(null);
     setScanError(null);
+    setBurnStatus('idle');
 
     // Animate progress
     let progress = 0;
@@ -137,6 +264,9 @@ export default function ScamDetectionSection() {
         setScanError(data.detail ?? data.error ?? `Server error (${res.status})`);
       } else if (data.investigation) {
         setReport(data.investigation);
+        // Increment scan count only on successful scan
+        const newCount = incrementScanCount(walletAddress);
+        setScanCount(newCount);
       }
       setScanStatus('done');
     } catch (err) {
@@ -164,9 +294,19 @@ export default function ScamDetectionSection() {
               Powered by <span className="text-red-400 font-semibold">OpenClaw Detection Engine</span> — full investigation with profile analysis, victim reports, wallet forensics & scammer database
             </p>
           </div>
-          <div className="px-3 py-1.5 rounded-lg text-xs font-bold"
-            style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}>
-            FREE ACCESS
+          <div className="flex flex-col items-end gap-1">
+            {freeScansLeft > 0 ? (
+              <div className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#4ade80' }}>
+                {freeScansLeft} FREE SCAN{freeScansLeft !== 1 ? 'S' : ''} LEFT
+              </div>
+            ) : (
+              <div className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24' }}>
+                $2.00 / SCAN
+              </div>
+            )}
+            <p className="text-xs text-gray-600">{scanCount} scan{scanCount !== 1 ? 's' : ''} used</p>
           </div>
         </div>
 
@@ -232,15 +372,38 @@ export default function ScamDetectionSection() {
           <button
             onClick={runScan}
             disabled={isDisabled}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700"
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              requiresPayment ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'
+            }`}
           >
-            {scanStatus === 'scanning' ? (
+            {burnStatus === 'burning' ? (
+              <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Confirming burn…</>
+            ) : scanStatus === 'scanning' ? (
               <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Investigating…</>
+            ) : requiresPayment ? (
+              <>🔥 Burn {tokenCostForScan > 0 ? `${tokenCostForScan.toLocaleString()} AGNTCBRO` : '$2.00 AGNTCBRO'} & Scan</>
             ) : (
               <>🔍 Run Full Investigation</>
             )}
           </button>
         </div>
+
+        {/* ── Payment / free scan info banner ── */}
+        {requiresPayment ? (
+          <div
+            className="flex items-center gap-3 rounded-xl p-3 mt-3"
+            style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}
+          >
+            <span className="text-amber-400 text-lg">🔥</span>
+            <p className="text-xs text-amber-300 flex-1">
+              You've used all {FREE_SCAN_LIMIT} free scans. Each additional scan burns <span className="font-bold">{tokenCostForScan > 0 ? `${tokenCostForScan.toLocaleString()} AGNTCBRO` : '$2.00 in AGNTCBRO'}</span> (≈ $2.00 USD) from your wallet — tokens are permanently burned.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-600 mt-2">
+            🎁 {freeScansLeft} of {FREE_SCAN_LIMIT} free scans remaining. After that, each scan costs $2.00 in AGNTCBRO (burned).
+          </p>
+        )}
       </div>
 
       {/* ── Progress bar ── */}
