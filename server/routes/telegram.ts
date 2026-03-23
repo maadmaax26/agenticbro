@@ -30,6 +30,9 @@
  */
 
 import { Router, Request, Response } from 'express'
+import { spawn } from 'child_process'
+import path from 'path'
+import os from 'os'
 import { isTelegramConfigured, getTrackedChannels } from '../telegram/client.js'
 import { fetchAlphaFeed, runPriorityScan, getGemAdvise, runScamDetection } from '../telegram/ingestion.js'
 import type { ScoredCall } from '../telegram/scorer.js'
@@ -173,6 +176,108 @@ router.post('/scam-detect', async (req: Request, res: Response): Promise<void> =
   } catch (err) {
     console.error('[telegram/scam-detect]', err)
     res.status(502).json({ error: 'Scam detection failed', detail: String(err) })
+  }
+})
+
+// ─── Full Scam Investigation (Python engine) ─────────────────────────────────
+
+router.post('/scam-investigate', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, platform = 'X', walletAddress } = req.body as {
+      username?: string
+      platform?: 'X' | 'Telegram'
+      walletAddress?: string
+    }
+
+    if (!username?.trim()) {
+      res.status(400).json({ error: 'username field is required' })
+      return
+    }
+
+    // Build the scammer_data JSON for the Python service
+    const scammerData: Record<string, string> = {}
+    if (platform === 'X') {
+      scammerData.x_handle = username.trim().replace(/^@/, '')
+    } else {
+      scammerData.telegram_channel = username.trim().replace(/^@/, '')
+    }
+    if (walletAddress?.trim()) {
+      scammerData.wallet_address = walletAddress.trim()
+      // Auto-detect blockchain from address format
+      if (walletAddress.trim().length >= 32 && walletAddress.trim().length <= 44 && !walletAddress.trim().startsWith('0x')) {
+        scammerData.blockchain = 'solana'
+      } else if (walletAddress.trim().startsWith('0x')) {
+        scammerData.blockchain = 'ethereum'
+      }
+    }
+
+    // Path to the OpenClaw scammer detection service
+    const serviceDir = path.join(os.homedir(), '.openclaw', 'workspace', 'scammer-detection-service')
+
+    // Build a small Python runner script that invokes investigate() and prints JSON
+    const pythonScript = `
+import sys, json, os
+sys.path.insert(0, ${JSON.stringify(serviceDir)})
+os.chdir(${JSON.stringify(serviceDir)})
+
+from scammer_detection_service import ScammerDetectionService
+
+service = ScammerDetectionService()
+scammer_data = json.loads(${JSON.stringify(JSON.stringify(scammerData))})
+report = service.investigate(scammer_data)
+print(json.dumps(report, default=str))
+`
+
+    const result = await new Promise<string>((resolve, reject) => {
+      const proc = spawn('python3', ['-c', pythonScript], {
+        cwd: serviceDir,
+        env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+        timeout: 120_000,  // 2 minute timeout
+      })
+
+      let stdout = ''
+      let stderr = ''
+
+      proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+      proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+
+      proc.on('close', (code: number | null) => {
+        if (code !== 0) {
+          reject(new Error(`Python exited with code ${code}: ${stderr.slice(0, 500)}`))
+        } else {
+          resolve(stdout)
+        }
+      })
+
+      proc.on('error', (err: Error) => reject(err))
+    })
+
+    // Parse the Python output as JSON
+    const investigation = JSON.parse(result)
+
+    // Also run the enhanced scam-service analysis if available (for risk score + red flags)
+    try {
+      const enhanced = await runScamDetection(
+        username.trim(),
+        platform,
+        walletAddress?.trim(),
+      )
+      investigation.enhanced = {
+        riskScore:         enhanced.riskScore ?? 0,
+        redFlags:          enhanced.redFlags ?? [],
+        verificationLevel: enhanced.verificationLevel ?? 'Unknown',
+        scamType:          enhanced.scamType,
+        recommendedAction: enhanced.recommendedAction ?? '',
+      }
+    } catch {
+      // Enhanced analysis is optional — continue without it
+    }
+
+    res.json({ investigation, mock: false, ts: Date.now() })
+  } catch (err) {
+    console.error('[telegram/scam-investigate]', err)
+    const detail = err instanceof Error ? err.message : String(err)
+    res.status(502).json({ error: 'Investigation failed', detail })
   }
 })
 
