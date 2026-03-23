@@ -10,6 +10,8 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { IncomingMessage, ServerResponse } from 'http'
+import { TelegramClient, Api } from 'telegram'
+import { StringSession } from 'telegram/sessions/index.js'
 
 // Vercel request/response extend Node's http types
 type VercelRequest = IncomingMessage & { body?: any; method?: string }
@@ -29,6 +31,104 @@ try {
 } catch {
   // fallback: empty database
   scammerDb = []
+}
+
+// ─── Telegram group intelligence ────────────────────────────────────────────
+// Search the AgenticBro scam intel Telegram group for mentions of the target
+const SCAM_INTEL_GROUP_ID = BigInt('-100' + '5183433558') // Telegram supergroup prefix
+
+interface TelegramIntelMessage {
+  date: string
+  sender: string
+  text: string
+}
+
+interface TelegramIntelResult {
+  groupId: string
+  messagesSearched: number
+  matchingMessages: TelegramIntelMessage[]
+  error?: string
+}
+
+async function searchTelegramGroup(targetUsername: string): Promise<TelegramIntelResult> {
+  const result: TelegramIntelResult = {
+    groupId: '5183433558',
+    messagesSearched: 0,
+    matchingMessages: [],
+  }
+
+  const apiId = process.env.TELEGRAM_API_ID
+  const apiHash = process.env.TELEGRAM_API_HASH
+  const sessionStr = process.env.TELEGRAM_SESSION_STRING
+
+  if (!apiId || !apiHash || !sessionStr) {
+    result.error = 'Telegram credentials not configured'
+    return result
+  }
+
+  let client: TelegramClient | null = null
+  try {
+    const session = new StringSession(sessionStr)
+    client = new TelegramClient(session, parseInt(apiId, 10), apiHash, {
+      connectionRetries: 2,
+      retryDelay: 1000,
+      autoReconnect: false,
+    })
+
+    await client.connect()
+
+    const handle = targetUsername.replace(/^@/, '').toLowerCase()
+
+    // Search for messages mentioning the target in the scam intel group
+    const searchResult = await client.invoke(
+      new Api.messages.Search({
+        peer: SCAM_INTEL_GROUP_ID,
+        q: handle,
+        filter: new Api.InputMessagesFilterEmpty(),
+        minDate: 0,
+        maxDate: 0,
+        offsetId: 0,
+        addOffset: 0,
+        limit: 50,
+        maxId: 0,
+        minId: 0,
+        hash: BigInt(0),
+      }),
+    )
+
+    if ('messages' in searchResult) {
+      result.messagesSearched = searchResult.messages.length
+
+      for (const msg of searchResult.messages) {
+        if ('message' in msg && msg.message) {
+          const text = msg.message
+          // Only include messages that actually reference the target
+          if (text.toLowerCase().includes(handle)) {
+            let sender = 'Unknown'
+            if ('fromId' in msg && msg.fromId) {
+              if ('userId' in msg.fromId) {
+                sender = `User ${msg.fromId.userId}`
+              }
+            }
+
+            result.matchingMessages.push({
+              date: msg.date ? new Date(msg.date * 1000).toISOString() : 'Unknown',
+              sender,
+              text: text.length > 500 ? text.slice(0, 500) + '…' : text,
+            })
+          }
+        }
+      }
+    }
+  } catch (err) {
+    result.error = err instanceof Error ? err.message : String(err)
+  } finally {
+    if (client) {
+      try { await client.disconnect() } catch {}
+    }
+  }
+
+  return result
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -510,6 +610,7 @@ function generateFullReport(
   dbMatch: ScammerDbRow | undefined,
   riskScore: number,
   allFlags: string[],
+  telegramIntel?: TelegramIntelResult,
 ): string {
   const lines: string[] = [
     '=' .repeat(60),
@@ -580,6 +681,26 @@ function generateFullReport(
   })
   lines.push('')
 
+  // Telegram group intelligence
+  if (telegramIntel) {
+    lines.push('-'.repeat(40))
+    lines.push(`TELEGRAM GROUP INTELLIGENCE (Group ID: ${telegramIntel.groupId}):`)
+    if (telegramIntel.error) {
+      lines.push(`  Status: ${telegramIntel.error}`)
+    } else if (telegramIntel.matchingMessages.length > 0) {
+      lines.push(`  Messages Found: ${telegramIntel.matchingMessages.length} mention(s) of @${username}`)
+      lines.push('')
+      telegramIntel.matchingMessages.slice(0, 10).forEach((msg, i) => {
+        lines.push(`  [${i + 1}] ${msg.date} — ${msg.sender}`)
+        lines.push(`      ${msg.text}`)
+        lines.push('')
+      })
+    } else {
+      lines.push(`  No mentions of @${username} found in scam intel group (${telegramIntel.messagesSearched} messages searched)`)
+    }
+    lines.push('')
+  }
+
   // Recommendation
   lines.push('-'.repeat(40))
   lines.push(`RECOMMENDATION: ${getRecommendation(riskScore)}`)
@@ -613,11 +734,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const plat = platform as 'X' | 'Telegram'
 
   try {
-    // Run all analyses in parallel
-    const [xProfile, walletResult, victimData] = await Promise.all([
+    // Run all analyses in parallel (including Telegram group intel)
+    const [xProfile, walletResult, victimData, telegramIntel] = await Promise.all([
       plat === 'X' ? fetchXProfile(handle) : Promise.resolve(null),
       walletAddress ? analyzeWallet(String(walletAddress)) : Promise.resolve(null),
       searchVictimReports(handle),
+      searchTelegramGroup(handle),
     ])
 
     // Database lookup (sync)
@@ -640,6 +762,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const scamType = getScamType(xFlags.flags, walletFlags.flags, dbMatch)
 
+    // Add Telegram intel to red flags if matches found
+    if (telegramIntel.matchingMessages.length > 0) {
+      allFlags.push(`${telegramIntel.matchingMessages.length} mention(s) found in Telegram scam intel group`)
+    }
+
     // Generate full text report
     const fullReport = generateFullReport(
       handle,
@@ -650,6 +777,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       dbMatch,
       riskScore,
       allFlags,
+      telegramIntel,
     )
 
     // Build response in the shape the frontend expects
@@ -692,6 +820,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         recommendedAction: getRecommendation(riskScore),
       },
       full_report: fullReport,
+      telegram_intel: telegramIntel.matchingMessages.length > 0 || telegramIntel.error
+        ? {
+            group_id: telegramIntel.groupId,
+            messages_found: telegramIntel.matchingMessages.length,
+            messages: telegramIntel.matchingMessages,
+            error: telegramIntel.error,
+          }
+        : undefined,
     }
 
     return res.status(200).json({ investigation })
