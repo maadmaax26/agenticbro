@@ -146,6 +146,13 @@ interface InvestigationReport {
     scamType?: string;
     recommendedAction: string;
   };
+  // Telegram group intelligence
+  telegram_intel?: {
+    group_id: string;
+    messages_found: number;
+    messages: { date: string; sender: string; text: string }[];
+    error?: string;
+  };
   error?: string;
 }
 
@@ -744,6 +751,51 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ── Telegram Group Intelligence ── */}
+            {report.telegram_intel && (
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'rgba(0,136,204,0.07)', border: '1px solid rgba(0,136,204,0.2)' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">✈️</span>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    Telegram Group Intelligence
+                  </p>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-lg ml-auto"
+                    style={{
+                      background: report.telegram_intel.messages_found > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(100,100,100,0.15)',
+                      border: `1px solid ${report.telegram_intel.messages_found > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(100,100,100,0.3)'}`,
+                      color: report.telegram_intel.messages_found > 0 ? '#f87171' : '#9ca3af',
+                    }}
+                  >
+                    {report.telegram_intel.messages_found} match{report.telegram_intel.messages_found !== 1 ? 'es' : ''}
+                  </span>
+                </div>
+
+                {report.telegram_intel.error ? (
+                  <p className="text-xs text-gray-500">{report.telegram_intel.error}</p>
+                ) : report.telegram_intel.messages_found > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {report.telegram_intel.messages.slice(0, 10).map((msg, idx) => (
+                      <div key={idx} className="bg-black/30 rounded-lg p-3 border border-cyan-500/10">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-500">{msg.sender}</span>
+                          <span className="text-xs text-gray-600">{new Date(msg.date).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm text-gray-300 whitespace-pre-wrap">{msg.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">No mentions found in scam intel group.</p>
+                )}
+
+                <p className="text-xs text-gray-600 mt-2">Source: AgenticBro Scam Intel Group (ID: {report.telegram_intel.group_id})</p>
               </div>
             )}
 
