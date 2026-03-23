@@ -120,10 +120,11 @@ import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 
 function App() {
-  const { connected, publicKey } = useWallet()
+  const { connected, publicKey, connecting } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
 
   // Get wallet-specific scan count
   const getWalletScanKey = () => {
@@ -171,6 +172,16 @@ function App() {
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [scanMessages])
+
+  // Show welcome banner when wallet connects
+  useEffect(() => {
+    if (connected && publicKey && !showWelcomeBanner) {
+      const hasSeenWelcome = localStorage.getItem('walletWelcomeSeen')
+      if (!hasSeenWelcome) {
+        setShowWelcomeBanner(true)
+      }
+    }
+  }, [connected, publicKey])
 
   const isTest = isTestWallet(publicKey?.toBase58() ?? '')
 
@@ -584,6 +595,46 @@ function App() {
               <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto !leading-normal !min-w-0" />
             </div>
           </header>
+
+          {/* ── Wallet Connected Welcome Banner ── */}
+          {showWelcomeBanner && (
+            <div className="relative z-10 mx-auto mt-4 max-w-4xl">
+              <div className="bg-gradient-to-r from-purple-900/40 to-cyan-900/40 backdrop-blur-md rounded-2xl border border-purple-500/30 p-6 relative">
+                <button
+                  onClick={() => { setShowWelcomeBanner(false); localStorage.setItem('walletWelcomeSeen', 'true'); }}
+                  className="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">👋</div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-white mb-2">Welcome to Agentic Bro, {publicKey.toBase58().slice(0, 6)}…</h2>
+                    <p className="text-sm text-gray-300 mb-4">
+                      Your wallet is connected. You now have access to:
+                    </p>
+                    <div className="grid md:grid-cols-3 gap-3 mb-4">
+                      {[
+                        { icon: '🔍', title: 'Priority Scans', desc: '10 free wallet/channel/token scans' },
+                        { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
+                        { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
+                      ].map((item) => (
+                        <div key={item.title} className="bg-black/30 rounded-xl p-3 border border-purple-500/20">
+                          <div className="text-2xl mb-1">{item.icon}</div>
+                          <p className="text-sm font-bold text-white">{item.title}</p>
+                          <p className="text-xs text-gray-500">{item.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <span className="text-green-400">✓</span>
+                      <span>Balance: <span className="text-white font-semibold">{balance.toLocaleString()}</span> AGNTCBRO {usdValue > 0 ? `(~$${usdValue.toFixed(2)})` : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
       <main className="relative z-10 container mx-auto px-6 pb-10">
         {/* ── Scam Detection System — requires wallet connection ── */}
