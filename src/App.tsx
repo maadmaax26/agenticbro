@@ -9,6 +9,7 @@ import TradeAnalysis from './components/dashboard/TradeAnalysis'
 import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
+import ScamDetectionSection from './components/ScamDetectionSection'
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
@@ -585,6 +586,9 @@ function App() {
           </header>
 
       <main className="relative z-10 container mx-auto px-6 pb-10">
+        {/* ── Scam Detection System — visible to ALL users ── */}
+        <ScamDetectionSection />
+
         {!connected ? (
           <div className="max-w-6xl mx-auto">
             {/* Feature action grid */}
