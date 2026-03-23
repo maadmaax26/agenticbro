@@ -102,7 +102,7 @@ const KNOWN_SCAMMERS: KnownScammerEntry[] = [
     totalLostUsd: '?',
     verificationLevel: 'Unverified',
     scamType: 'Unknown',
-    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+    notes: 'X search executed - no public victim reports found. User reports this as a scammer. Investigation pending.',
   },
   {
     name: 'oudalserf',
@@ -112,7 +112,7 @@ const KNOWN_SCAMMERS: KnownScammerEntry[] = [
     totalLostUsd: '?',
     verificationLevel: 'Unverified',
     scamType: 'Unknown',
-    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+    notes: 'X search executed - no public victim reports found. User reports this as a scammer. Investigation pending.',
   },
   {
     name: '22J27',
@@ -122,7 +122,7 @@ const KNOWN_SCAMMERS: KnownScammerEntry[] = [
     totalLostUsd: '?',
     verificationLevel: 'Unverified',
     scamType: 'Unknown',
-    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+    notes: 'X search executed - no public victim reports found. User reports this as a scammer. Investigation pending.',
   },
 ]
 
