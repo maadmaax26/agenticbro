@@ -369,7 +369,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-white">Scam Detection System</h2>
             <p className="text-sm text-gray-400 mt-0.5">
-              Powered by <span className="text-red-400 font-semibold">OpenClaw Detection Engine</span> — full investigation with profile analysis, victim reports, wallet forensics & scammer database
+              Powered by <span className="text-red-400 font-semibold">Agentic Bro Detection Engine</span> — full investigation with profile analysis, victim reports, wallet forensics & scammer database
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -896,7 +896,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
 
             {/* ── Powered by footer ── */}
             <p className="text-xs text-gray-600 text-center pb-2">
-              Powered by <span className="text-red-400 font-semibold">OpenClaw Scammer Detection Service</span> · Solscan · Etherscan · Reddit · Google
+              Powered by <span className="text-red-400 font-semibold">Agentic Bro Scammer Detection Service</span> · Solscan · Etherscan · Reddit · Google
             </p>
           </div>
         </div>
