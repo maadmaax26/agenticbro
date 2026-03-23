@@ -214,9 +214,21 @@ router.post('/scam-investigate', async (req: Request, res: Response): Promise<vo
     // Path to the OpenClaw scammer detection service
     const serviceDir = path.join(os.homedir(), '.openclaw', 'workspace', 'scammer-detection-service')
 
-    // Build a small Python runner script that invokes investigate() and prints JSON
+    // Build a Python runner script that redirects all progress output to stderr
+    // and only outputs JSON to stdout for clean parsing
     const pythonScript = `
 import sys, json, os
+
+# Redirect all print() output to stderr so only final JSON goes to stdout
+class StderrPrinter:
+    def write(self, text):
+        sys.stderr.write(text)
+    def flush(self):
+        sys.stderr.flush()
+
+original_stdout = sys.stdout
+sys.stdout = StderrPrinter()
+
 sys.path.insert(0, ${JSON.stringify(serviceDir)})
 os.chdir(${JSON.stringify(serviceDir)})
 
@@ -225,6 +237,9 @@ from scammer_detection_service import ScammerDetectionService
 service = ScammerDetectionService()
 scammer_data = json.loads(${JSON.stringify(JSON.stringify(scammerData))})
 report = service.investigate(scammer_data)
+
+# Restore stdout and write ONLY the JSON
+sys.stdout = original_stdout
 print(json.dumps(report, default=str))
 `
 
@@ -244,6 +259,8 @@ print(json.dumps(report, default=str))
       proc.on('close', (code: number | null) => {
         if (code !== 0) {
           reject(new Error(`Python exited with code ${code}: ${stderr.slice(0, 500)}`))
+        } else if (!stdout.trim()) {
+          reject(new Error(`Python produced no output. stderr: ${stderr.slice(0, 500)}`))
         } else {
           resolve(stdout)
         }
@@ -252,8 +269,20 @@ print(json.dumps(report, default=str))
       proc.on('error', (err: Error) => reject(err))
     })
 
-    // Parse the Python output as JSON
-    const investigation = JSON.parse(result)
+    // Parse the Python output as JSON — extract last JSON line in case of stray output
+    let investigation: Record<string, unknown>
+    try {
+      investigation = JSON.parse(result.trim())
+    } catch {
+      // Try to find JSON in the output (last line that starts with {)
+      const lines = result.trim().split('\n')
+      const jsonLine = lines.reverse().find(l => l.trim().startsWith('{'))
+      if (jsonLine) {
+        investigation = JSON.parse(jsonLine.trim())
+      } else {
+        throw new Error('Failed to parse Python output as JSON')
+      }
+    }
 
     // Also run the enhanced scam-service analysis if available (for risk score + red flags)
     try {

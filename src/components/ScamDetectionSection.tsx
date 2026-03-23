@@ -64,6 +64,21 @@ interface InvestigationReport {
   };
   evidence?: Record<string, unknown>;
   full_report?: string;
+  // Database match from scammer-database.csv
+  database_match?: {
+    'Scammer Name': string;
+    'Platform': string;
+    'X Handle': string;
+    'Telegram Channel': string;
+    'Victims Count': string;
+    'Total Lost USD': string;
+    'Verification Level': string;
+    'Scam Type': string;
+    'Last Updated': string;
+    'Notes': string;
+    'Wallet Address': string;
+    'Evidence Links': string;
+  };
   // Enhanced scam-service fields
   enhanced?: {
     riskScore: number;
@@ -114,12 +129,29 @@ export default function ScamDetectionSection() {
         }),
       });
 
-      const data = await res.json() as { investigation?: InvestigationReport; error?: string };
+      // Check if we got HTML back (means no backend running — Vercel SPA fallback)
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html') || (!contentType.includes('json') && res.status === 200)) {
+        const text = await res.text();
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          clearInterval(interval);
+          setScanProgress(100);
+          setScanError(
+            'Backend server is not running. The scam detection service requires the local Express server on port 3001.\n\n' +
+            'To start it:\n  cd ~/.openclaw/workspace/aibro && npm run dev\n\n' +
+            'The Python scammer-detection-service at ~/.openclaw/workspace/scammer-detection-service will be invoked automatically.'
+          );
+          setScanStatus('done');
+          return;
+        }
+      }
+
+      const data = await res.json() as { investigation?: InvestigationReport; error?: string; detail?: string };
       clearInterval(interval);
       setScanProgress(100);
 
       if (!res.ok || data.error) {
-        setScanError(data.error ?? `Server error (${res.status})`);
+        setScanError(data.detail ?? data.error ?? `Server error (${res.status})`);
       } else if (data.investigation) {
         setReport(data.investigation);
       }
@@ -129,8 +161,8 @@ export default function ScamDetectionSection() {
       setScanProgress(100);
       const msg = err instanceof Error ? err.message : String(err);
       setScanError(
-        msg.includes('fetch') || msg.includes('Failed') || msg.includes('NetworkError')
-          ? 'Backend server is offline. Start the server on port 3001 for live scans.'
+        msg.includes('fetch') || msg.includes('Failed') || msg.includes('NetworkError') || msg.includes('DOCTYPE')
+          ? 'Backend server is offline. Start the local server for live scans:\n  cd ~/.openclaw/workspace/aibro && npm run dev'
           : `Scan failed: ${msg}`,
       );
       setScanStatus('done');
@@ -276,11 +308,11 @@ export default function ScamDetectionSection() {
       {/* ── Error banner ── */}
       {scanStatus === 'done' && scanError && (
         <div
-          className="flex items-center gap-3 rounded-2xl p-4 mt-4"
+          className="flex items-start gap-3 rounded-2xl p-4 mt-4"
           style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}
         >
-          <span className="text-yellow-400 text-xl">⚠️</span>
-          <p className="text-sm text-yellow-300 flex-1">{scanError}</p>
+          <span className="text-yellow-400 text-xl flex-shrink-0 mt-0.5">⚠️</span>
+          <pre className="text-sm text-yellow-300 flex-1 whitespace-pre-wrap font-sans leading-relaxed">{scanError}</pre>
         </div>
       )}
 
@@ -318,6 +350,62 @@ export default function ScamDetectionSection() {
 
           {/* Scrollable report body */}
           <div className="overflow-y-auto px-6 py-4 space-y-4" style={{ maxHeight: '70vh' }}>
+
+            {/* ── Database Match Alert ── */}
+            {report.database_match && (
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: report.database_match['Verification Level'] === 'Verified'
+                    ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.08)',
+                  border: `1px solid ${report.database_match['Verification Level'] === 'Verified'
+                    ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.25)'}`,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🗃️</span>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                    Known Scammer Database Match
+                  </p>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-lg ml-auto"
+                    style={{
+                      background: report.database_match['Verification Level'] === 'Verified'
+                        ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                      border: `1px solid ${report.database_match['Verification Level'] === 'Verified'
+                        ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}`,
+                      color: report.database_match['Verification Level'] === 'Verified'
+                        ? '#f87171' : '#fbbf24',
+                    }}
+                  >
+                    {report.database_match['Verification Level']}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Scam Type</p>
+                    <p className="text-sm font-bold text-white">{report.database_match['Scam Type'] || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Victims</p>
+                    <p className="text-sm font-bold text-red-400">{report.database_match['Victims Count'] || '?'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Total Lost</p>
+                    <p className="text-sm font-bold text-red-400">${report.database_match['Total Lost USD'] || '?'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Last Updated</p>
+                    <p className="text-sm font-bold text-white">{report.database_match['Last Updated'] || 'N/A'}</p>
+                  </div>
+                </div>
+                {report.database_match['Notes'] && (
+                  <p className="text-xs text-gray-400 leading-relaxed bg-black/30 rounded-lg p-3 border border-red-500/10">
+                    📝 {report.database_match['Notes']}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ── Enhanced Risk Summary ── */}
             {report.enhanced && (
