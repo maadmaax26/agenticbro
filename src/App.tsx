@@ -120,7 +120,7 @@ import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 
 function App() {
-  const { connected, publicKey, connecting } = useWallet()
+  const { connected, publicKey } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
@@ -609,7 +609,7 @@ function App() {
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">👋</div>
                   <div className="flex-1">
-                    <h2 className="text-xl font-bold text-white mb-2">Welcome to Agentic Bro, {publicKey.toBase58().slice(0, 6)}…</h2>
+                    <h2 className="text-xl font-bold text-white mb-2">Welcome to Agentic Bro, {publicKey ? publicKey.toBase58().slice(0, 6) : 'User'}…</h2>
                     <p className="text-sm text-gray-300 mb-4">
                       Your wallet is connected. You now have access to:
                     </p>

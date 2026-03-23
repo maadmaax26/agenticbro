@@ -322,15 +322,15 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
           database_match: newResult.knownScammer ? {
             'Scammer Name': newResult.knownScammer.name,
             'Platform': newResult.xProfile ? 'X' : 'Telegram',
-            'X Handle': newResult.xProfile ? `@${newResult.username}` : undefined,
-            'Telegram Channel': !newResult.xProfile ? `@${newResult.username}` : undefined,
+            'X Handle': newResult.xProfile ? `@${newResult.username}` : '',
+            'Telegram Channel': !newResult.xProfile ? `@${newResult.username}` : '',
             'Victims Count': newResult.knownScammer.victims.toString(),
             'Total Lost USD': '?',
             'Verification Level': newResult.knownScammer.status,
             'Scam Type': newResult.scamType || 'Unknown',
             'Last Updated': '2026-03-23',
             'Notes': newResult.knownScammer.notes,
-            'Wallet Address': newResult.walletAnalysis?.address,
+            'Wallet Address': newResult.walletAnalysis?.address || '',
             'Evidence Links': '',
           } : undefined,
           enhanced: {
