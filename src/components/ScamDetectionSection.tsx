@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey, Transaction } from '@solana/web3.js';
 
-// Use relative URL — works on both Vercel (serverless) and local dev
-const API_BASE = '';
+// Direct to local backend — works from both localhost:5173 and the deployed Vercel site
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
 
 // ─── Token burn constants ───────────────────────────────────────────────────────
 const AGNTCBRO_MINT = new PublicKey('52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump');
@@ -253,7 +253,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
     }, 400);
 
     try {
-      const res = await fetch(`${API_BASE}/api/scam-investigate`, {
+      const res = await fetch(`${API_BASE}/api/scam-detect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,14 +263,85 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
         }),
       });
 
-      const data = await res.json() as { investigation?: InvestigationReport; error?: string; detail?: string };
+      const data = await res.json() as { results?: any[]; mock?: boolean; error?: string; detail?: string };
       clearInterval(interval);
       setScanProgress(100);
 
       if (!res.ok || data.error) {
         setScanError(data.detail ?? data.error ?? `Server error (${res.status})`);
-      } else if (data.investigation) {
-        setReport(data.investigation);
+      } else if (data.results && data.results.length > 0) {
+        // Transform the new backend response to match the old InvestigationReport format
+        const newResult = data.results[0] as any;
+        const investigationReport: InvestigationReport = {
+          scammer_data: {
+            x_handle: platform === 'X' ? newResult.username : undefined,
+            telegram_channel: platform === 'Telegram' ? newResult.username : undefined,
+            wallet_address: walletInput.trim() || newResult.walletAnalysis?.address,
+          },
+          investigation_date: new Date().toISOString(),
+          twitter_profile: newResult.xProfile ? {
+            username: newResult.username,
+            profile_url: newResult.xProfile.profileUrl,
+            collected_at: new Date().toISOString(),
+            bio: newResult.xProfile.bio,
+            followers: newResult.xProfile.followers,
+            following: newResult.xProfile.following,
+            created_at: newResult.xProfile.createdDate,
+            is_verified: newResult.xProfile.isVerified,
+            profile_image: newResult.xProfile.profileImage,
+            name: newResult.xProfile.name,
+          } : undefined,
+          wallet_analysis: newResult.walletAnalysis ? {
+            address: newResult.walletAnalysis.address,
+            blockchain: newResult.walletAnalysis.blockchain,
+            balance_usd: newResult.walletAnalysis.balanceUsd,
+            total_received: newResult.walletAnalysis.totalReceived,
+            total_sent: newResult.walletAnalysis.totalSent,
+            transactions: [], // Not provided by new backend yet
+            received_from_victims: [], // Not provided by new backend yet
+            analyzed_at: new Date().toISOString(),
+          } : undefined,
+          victim_reports: newResult.victimReports ? Object.fromEntries(
+            newResult.victimReports.reports.map((r: any, idx: number) => [
+              `${idx}`,
+              {
+                title: r.title,
+                url: r.url,
+                platform: r.platform,
+                score: r.score,
+              },
+            ])
+          ) : undefined,
+          victim_analysis: newResult.victimReports ? {
+            total_reports: newResult.victimReports.totalReports,
+            unique_sources: ['Reddit'],
+            common_platforms: { Reddit: newResult.victimReports.totalReports },
+          } : undefined,
+          evidence: undefined,
+          full_report: newResult.fullReport,
+          database_match: newResult.knownScammer ? {
+            'Scammer Name': newResult.knownScammer.name,
+            'Platform': newResult.xProfile ? 'X' : 'Telegram',
+            'X Handle': newResult.xProfile ? `@${newResult.username}` : undefined,
+            'Telegram Channel': !newResult.xProfile ? `@${newResult.username}` : undefined,
+            'Victims Count': newResult.knownScammer.victims.toString(),
+            'Total Lost USD': '?',
+            'Verification Level': newResult.knownScammer.status,
+            'Scam Type': newResult.scamType || 'Unknown',
+            'Last Updated': '2026-03-23',
+            'Notes': newResult.knownScammer.notes,
+            'Wallet Address': newResult.walletAnalysis?.address,
+            'Evidence Links': '',
+          } : undefined,
+          enhanced: {
+            riskScore: newResult.riskScore,
+            redFlags: newResult.redFlags,
+            verificationLevel: newResult.verificationLevel,
+            scamType: newResult.scamType,
+            recommendedAction: newResult.recommendedAction,
+          },
+        };
+        setReport(investigationReport);
         // Increment scan count only on successful scan
         const newCount = incrementScanCount(walletAddress);
         setScanCount(newCount);
