@@ -53,7 +53,7 @@ interface ScamDetectionResult {
 
 function calculateRiskScore(
   redFlags: string[],
-  verificationLevel: string,
+  _verificationLevel: string,
   victimReportCount: number,
   isKnownScammer: boolean
 ): number {
@@ -89,7 +89,7 @@ function getVerificationLevel(riskScore: number, victimReportCount: number): str
   return 'Unverified';
 }
 
-function getRecommendedAction(riskScore: number, verificationLevel: string): string {
+function getRecommendedAction(riskScore: number, _verificationLevel: string): string {
   if (riskScore < 3) return 'LOW RISK — Safe to interact. Still exercise normal caution.';
   if (riskScore < 5) return 'PROCEED WITH CAUTION — Medium risk detected. Verify track record before engaging.';
   if (riskScore < 7) return 'HIGH RISK DETECTED — Avoid interaction. Multiple red flags present.';
@@ -192,7 +192,7 @@ async function fetchWalletAnalysis(walletAddress: string): Promise<ScamDetection
 }
 
 async function searchVictimReports(username: string): Promise<ScamDetectionResult['victimReports']> {
-  const reports: ScamDetectionResult['victimReports']['reports'] = [];
+  const reports: { title: string; url: string; platform: string; score?: number }[] = [];
 
   try {
     // Search Reddit for victim reports
@@ -224,7 +224,7 @@ async function searchVictimReports(username: string): Promise<ScamDetectionResul
   };
 }
 
-async function checkScammerDatabase(username: string, platform: string): Promise<ScamDetectionResult['knownScammer']> {
+async function checkScammerDatabase(username: string, _platform: string): Promise<ScamDetectionResult['knownScammer']> {
   try {
     // Check local scammer database CSV if available
     const response = await fetch('/scammer-database.csv');
@@ -256,7 +256,7 @@ async function checkScammerDatabase(username: string, platform: string): Promise
 // ─── Red Flag Detection ───────────────────────────────────────────────────────
 
 function detectRedFlags(
-  username: string,
+  _username: string,
   profile: ScamDetectionResult['xProfile'],
   victimReports: ScamDetectionResult['victimReports']
 ): string[] {
@@ -299,7 +299,7 @@ function detectRedFlags(
     }
   }
 
-  if (victimReports.totalReports > 0) {
+  if (victimReports && victimReports.totalReports > 0) {
     flags.push(`${victimReports.totalReports} victim report(s) found on Reddit`);
   }
 
@@ -354,12 +354,12 @@ ${result.xProfile.isVerified ? '✓ Verified' : '✗ Unverified'}`;
 
   if (result.victimReports && result.victimReports.totalReports > 0) {
     report += `\n\nVICTIM REPORTS FOUND: ${result.victimReports.totalReports}`;
-    result.victimReports.reports.forEach((report, idx) => {
-      report += `\n${idx + 1}. "${report.title}" - ${report.platform}`;
-      if (report.score !== undefined) {
-        report += ` (${report.score} ${report.score === 1 ? 'upvote' : 'upvotes'})`;
+    result.victimReports.reports.forEach((victimReport, idx) => {
+      report += `\n${idx + 1}. "${victimReport.title}" - ${victimReport.platform}`;
+      if (victimReport.score !== undefined) {
+        report += ` (${victimReport.score} ${victimReport.score === 1 ? 'upvote' : 'upvotes'})`;
       }
-      report += `\n   ${report.url}`;
+      report += `\n   ${victimReport.url}`;
     });
   }
 
@@ -418,12 +418,12 @@ export async function POST(request: Request) {
     const riskScore = calculateRiskScore(
       redFlags,
       'unknown',
-      victimReports.totalReports,
+      victimReports?.totalReports || 0,
       !!knownScammer
     );
 
     // Determine verification level
-    const verificationLevel = getVerificationLevel(riskScore, victimReports.totalReports);
+    const verificationLevel = getVerificationLevel(riskScore, victimReports?.totalReports || 0);
 
     // Get recommended action
     const recommendedAction = getRecommendedAction(riskScore, verificationLevel);
@@ -444,7 +444,7 @@ export async function POST(request: Request) {
     const evidence = [
       redFlags.length > 0 ? `${redFlags.length} red flag(s) detected` : 'No red flags detected',
       xProfile ? `Profile data analyzed: ${xProfile.isVerified ? 'Verified' : 'Unverified'}, ${xProfile.followers?.toLocaleString() || 'N/A'} followers` : 'Profile data unavailable',
-      victimReports.totalReports > 0 ? `${victimReports.totalReports} victim report(s) found on Reddit` : 'No victim reports found',
+      victimReports && victimReports.totalReports > 0 ? `${victimReports.totalReports} victim report(s) found on Reddit` : 'No victim reports found',
       walletAnalysis ? `Wallet analyzed on ${walletAnalysis.blockchain}` : 'No wallet analysis performed',
       `Investigation timestamp: ${new Date().toISOString()}`,
     ];
