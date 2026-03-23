@@ -30,10 +30,11 @@ interface ScamDetectionResult {
   platform: 'X' | 'Telegram';
   riskScore: number; // 1-10
   redFlags: string[];
-  verificationLevel: 'Unverified' | 'Partially Verified' | 'Verified' | 'Highly Verified';
+  verificationLevel: 'Unverified' | 'Partially Verified' | 'Verified' | 'Highly Verified' | 'Legitimate';
   scamType?: string;
   evidence: string[];
   recommendedAction: string;
+  fullReport?: string;
   // Enhanced fields from OpenClaw integration
   xProfile?: {
     name?: string;
@@ -203,7 +204,7 @@ export default function PriorityScan() {
     try {
       // Handle scam detection scan separately
       if (scanTarget === 'scam') {
-        const res = await fetch(`${API_BASE}/api/telegram/scam-detect`, {
+        const res = await fetch(`${API_BASE}/api/scam-detect`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
@@ -829,6 +830,32 @@ export default function PriorityScan() {
                     <p className="text-xs text-gray-600 mt-3 text-center">
                       Powered by <span className="text-purple-400">OpenClaw Detection Engine</span> · Solscan · Etherscan · Reddit
                     </p>
+
+                    {/* ── Full Text Report (if available) ── */}
+                    {(result as any).fullReport && (
+                      <div
+                        className="rounded-xl p-4 mt-4"
+                        style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.15)' }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Full Investigation Report</p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const reportText = (result as any).fullReport;
+                              navigator.clipboard.writeText(reportText);
+                              alert('Report copied to clipboard!');
+                            }}
+                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          >
+                            Copy to clipboard
+                          </button>
+                        </div>
+                        <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto bg-black/40 rounded-lg p-4 border border-purple-500/10">
+                          {(result as any).fullReport}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
