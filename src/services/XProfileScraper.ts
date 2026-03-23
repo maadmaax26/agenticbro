@@ -1,14 +1,14 @@
-# Agentic Bro — X Profile Browser Scraper
+// Agentic Bro — X Profile Browser Scraper
 
-## Purpose
+// Purpose
 
 Browser-based X profile scraper that allows Agentic Bro to directly access and scan X/Twitter profiles for scam detection. Uses browser control automation to navigate to profiles, extract data, and analyze patterns.
 
 **Created:** March 22, 2026
 
----
+// ---
 
-## 🏗️ Architecture
+// 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -44,9 +44,9 @@ Browser-based X profile scraper that allows Agentic Bro to directly access and s
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+// ---
 
-## 📋 Component: X Profile Scraper Service
+// 📋 Component: X Profile Scraper Service
 
 ### File: `aibro/src/services/XProfileScraper.ts`
 
