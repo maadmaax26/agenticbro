@@ -40,6 +40,7 @@ import searchRouter from './routes/search.js'
 import marketRouter from './routes/market.js'
 import onchainRouter from './routes/onchain.js'
 import telegramRouter from './routes/telegram.js'
+import scamDetectRouter from './routes/scam-detect.js'
 
 const app = express()
 const PORT = parseInt(process.env.SERVER_PORT ?? '3001', 10)
@@ -74,6 +75,7 @@ app.use('/api/search',   searchRouter)
 app.use('/api/market',   marketRouter)
 app.use('/api/onchain',  onchainRouter)
 app.use('/api/telegram', telegramRouter)
+app.use('/api/scam-detect', scamDetectRouter)
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ts: new Date().toISOString() })
