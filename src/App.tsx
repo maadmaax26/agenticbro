@@ -58,7 +58,7 @@ const knownChannels: Record<string, any> = {
 
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
-type ScanMode = 'wallet' | 'channels' | 'token' | 'scam'
+type ScanMode = 'wallet' | 'channels' | 'token'
 
 type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
 
@@ -150,8 +150,6 @@ function App() {
   const [walletInput, setWalletInput]   = useState('')
   const [channelInput, setChannelInput] = useState('')
   const [tokenInput, setTokenInput]     = useState('')
-  const [usernameInput, setUsernameInput] = useState('')
-  const [platform, setPlatform] = useState<'X' | 'Telegram'>('X')
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
@@ -759,7 +757,6 @@ function App() {
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
-                    { id: 'scam',     icon: '🚨', label: 'Scam Detection', hint: 'Scan X or Telegram user for scam patterns' },
                   ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
                     <button
                       key={m.id}
