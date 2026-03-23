@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-// Direct to local backend
-const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
+// Use relative URL — works on both Vercel (serverless) and local dev
+const API_BASE = '';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -119,7 +119,7 @@ export default function ScamDetectionSection() {
     }, 400);
 
     try {
-      const res = await fetch(`${API_BASE}/api/telegram/scam-investigate`, {
+      const res = await fetch(`${API_BASE}/api/scam-investigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,23 +128,6 @@ export default function ScamDetectionSection() {
           walletAddress: walletInput.trim() || undefined,
         }),
       });
-
-      // Check if we got HTML back (means no backend running — Vercel SPA fallback)
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('text/html') || (!contentType.includes('json') && res.status === 200)) {
-        const text = await res.text();
-        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-          clearInterval(interval);
-          setScanProgress(100);
-          setScanError(
-            'Backend server is not running. The scam detection service requires the local Express server on port 3001.\n\n' +
-            'To start it:\n  cd ~/.openclaw/workspace/aibro && npm run dev\n\n' +
-            'The Python scammer-detection-service at ~/.openclaw/workspace/scammer-detection-service will be invoked automatically.'
-          );
-          setScanStatus('done');
-          return;
-        }
-      }
 
       const data = await res.json() as { investigation?: InvestigationReport; error?: string; detail?: string };
       clearInterval(interval);
@@ -160,11 +143,7 @@ export default function ScamDetectionSection() {
       clearInterval(interval);
       setScanProgress(100);
       const msg = err instanceof Error ? err.message : String(err);
-      setScanError(
-        msg.includes('fetch') || msg.includes('Failed') || msg.includes('NetworkError') || msg.includes('DOCTYPE')
-          ? 'Backend server is offline. Start the local server for live scans:\n  cd ~/.openclaw/workspace/aibro && npm run dev'
-          : `Scan failed: ${msg}`,
-      );
+      setScanError(`Scan failed: ${msg}`);
       setScanStatus('done');
     }
   };
