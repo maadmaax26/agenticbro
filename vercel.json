@@ -4,7 +4,8 @@
   "framework": "vite",
   "functions": {
     "api/scam-investigate.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/scammer-database.json"
     }
   },
   "rewrites": [
