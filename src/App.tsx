@@ -902,7 +902,7 @@ function App() {
                     {isScanning && (
                       <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
                         <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
-                        {scanMode === 'scam' ? `Analyzing ${platform === 'X' ? 'X' : 'Telegram'} user @${usernameInput}…` : 'Scanning…'}
+                        Scanning…
                       </div>
                     )}
                     <div ref={chatBottomRef} />
