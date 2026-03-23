@@ -224,30 +224,79 @@ async function searchVictimReports(username: string): Promise<ScamDetectionResul
   };
 }
 
+// ─── Known Scammers Database ─────────────────────────────────────────────────────
+
+interface KnownScammerEntry {
+  name: string;
+  platform: string;
+  xHandle?: string;
+  telegramChannel?: string;
+  victims: number;
+  totalLostUsd: string;
+  verificationLevel: string;
+  scamType: string;
+  notes: string;
+}
+
+const KNOWN_SCAMMERS: KnownScammerEntry[] = [
+  {
+    name: 'raynft_',
+    platform: 'X',
+    xHandle: '@raynft_',
+    victims: 5,
+    totalLostUsd: '$871.70',
+    verificationLevel: 'Verified',
+    scamType: 'Wallet Drainer / Fake Token Locker',
+    notes: 'CONFIRMED SCAM (Solana): Stole $871.70 USD (9.33 SOL + 220M AGNTCBRO tokens). Promoted wallet drainer site https://app.solstreamflow.finance/ claiming to be a "developer token locker". Account is Verified (13+ years, 325K followers) but likely hacked or paid promotion. Thief hub wallet: 7vZKk8j4Jr2XctmhMTeUwNuUfqCbgSmEmSAogQVE7Msn (actively trading). KuCoin funding connection identified.',
+  },
+  {
+    name: 'Bolo_WaQar1',
+    platform: 'X',
+    xHandle: '@Bolo_WaQar1',
+    victims: 1,
+    totalLostUsd: '?',
+    verificationLevel: 'Unverified',
+    scamType: 'Unknown',
+    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+  },
+  {
+    name: 'oudalserf',
+    platform: 'X',
+    xHandle: '@oudalserf',
+    victims: 1,
+    totalLostUsd: '?',
+    verificationLevel: 'Unverified',
+    scamType: 'Unknown',
+    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+  },
+  {
+    name: '22J27',
+    platform: 'X',
+    xHandle: '@22J27',
+    victims: 1,
+    totalLostUsd: '?',
+    verificationLevel: 'Unverified',
+    scamType: 'Unknown',
+    notes: 'X search executed - no public victim reports found. Earl reports this as a scammer. Investigation pending.',
+  },
+];
+
 async function checkScammerDatabase(username: string, _platform: string): Promise<ScamDetectionResult['knownScammer']> {
-  try {
-    // Check local scammer database CSV if available
-    const response = await fetch('/scammer-database.csv');
+  // Check known scammers database (hardcoded for Vite static build)
+  const cleanUsername = username.replace('@', '').toLowerCase();
 
-    if (response.ok) {
-      const csvText = await response.text();
-      const lines = csvText.split('\n').slice(1); // Skip header
+  const found = KNOWN_SCAMMERS.find(scammer => {
+    const scammerHandle = scammer.xHandle?.replace('@', '').toLowerCase();
+    return scammerHandle === cleanUsername;
+  });
 
-      for (const line of lines) {
-        const columns = line.split(',');
-        if (columns[2]?.toLowerCase() === username.toLowerCase() ||
-            columns[0]?.toLowerCase().includes(username.toLowerCase())) {
-          return {
-            name: columns[0] || username,
-            status: columns[7] || 'Verified',
-            victims: parseInt(columns[4] || '0'),
-            notes: columns[9] || 'Known scammer in database',
-          };
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error checking scammer database:', error);
+  if (found) {
+    return {
+      name: found.name,
+      status: found.verificationLevel,
+      victims: found.victims,
+      notes: found.notes,
+    };
   }
 
   return undefined;
