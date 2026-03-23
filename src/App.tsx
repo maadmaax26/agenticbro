@@ -586,8 +586,10 @@ function App() {
           </header>
 
       <main className="relative z-10 container mx-auto px-6 pb-10">
-        {/* ── Scam Detection System — visible to ALL users ── */}
-        <ScamDetectionSection />
+        {/* ── Scam Detection System — requires wallet connection ── */}
+        {connected && publicKey && (
+          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
+        )}
 
         {!connected ? (
           <div className="max-w-6xl mx-auto">
