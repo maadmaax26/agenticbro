@@ -262,12 +262,6 @@ export default function ScamDetectionSection() {
             )}
           </button>
         </div>
-
-        <p className="text-xs text-gray-600">
-          Uses <span className="text-red-400">~/.openclaw/workspace/scammer-detection-service</span> Python engine.
-          {platform === 'X' && ' X users are analyzed via browser-based profile scraping.'}
-          {' '}Only public information is accessed — no private data.
-        </p>
       </div>
 
       {/* ── Progress bar ── */}
