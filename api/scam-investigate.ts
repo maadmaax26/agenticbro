@@ -7,10 +7,29 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import type { IncomingMessage, ServerResponse } from 'http'
+
+// Vercel request/response extend Node's http types
+type VercelRequest = IncomingMessage & { body?: any; method?: string }
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse
+  json: (data: any) => void
+  setHeader: (name: string, value: string) => VercelResponse
+  end: () => void
+}
 
 // ─── Inline scammer database ────────────────────────────────────────────────
-import scammerDb from './scammer-database.json'
+// Use readFileSync + __dirname which is reliable in Vercel serverless
+let scammerDb: any[] = []
+try {
+  const raw = readFileSync(join(__dirname, 'scammer-database.json'), 'utf-8')
+  scammerDb = JSON.parse(raw)
+} catch {
+  // fallback: empty database
+  scammerDb = []
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
