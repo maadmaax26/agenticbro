@@ -240,7 +240,7 @@ function App() {
     const inputValue = scanMode === 'wallet' ? walletInput.trim()
                      : scanMode === 'channels' ? channelInput.trim()
                      : scanMode === 'token' ? tokenInput.trim()
-                     : usernameInput.trim()
+                     : ''
 
     if (!inputValue) return
     if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
@@ -257,14 +257,10 @@ function App() {
     const modeLabel = scanMode === 'wallet' ? `wallet ${inputValue.slice(0,6)}…${inputValue.slice(-4)}`
                     : scanMode === 'channels' ? `channel ${inputValue}`
                     : scanMode === 'token' ? `token ${inputValue}`
-                    : `${platform === 'X' ? 'X' : 'Telegram'} user @${inputValue}`
+                    : 'unknown'
 
     addMsg({ type: 'system', icon: '🔍', text: `Initiating Priority Scan for ${modeLabel}…` })
-    if (scanMode === 'scam') {
-      addMsg({ type: 'system', icon: '🚨', text: 'Analyzing public profile and posting patterns…' })
-    } else {
-      addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
-    }
+    addMsg({ type: 'system', icon: '📡', text: 'Connecting to Telegram alpha feeds…' })
 
     // For channel scans, add success rate analysis
     if (scanMode === 'channels') {
@@ -806,54 +802,6 @@ function App() {
                       className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
                     />
                   )}
-                  {scanMode === 'scam' && (
-                    <>
-                      <div className="mb-4">
-                        <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
-                          <span className="text-lg">🚨</span> User Name
-                        </label>
-                        <input
-                          type="text"
-                          value={usernameInput}
-                          onChange={e => setUsernameInput(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
-                          placeholder="e.g. @CryptoWhaleCalls  · CryptoSpaceX04  @raynft_"
-                          className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
-                          Platform
-                        </label>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => setPlatform('X')}
-                            className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
-                              platform === 'X'
-                                ? 'border-purple-500/60 text-white bg-purple-600'
-                                : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
-                            }`}
-                          >
-                            X (Twitter)
-                          </button>
-                          <button
-                            onClick={() => setPlatform('Telegram')}
-                            className={`flex-1 rounded-xl py-3 px-4 transition-all border ${
-                              platform === 'Telegram'
-                                ? 'border-purple-500/60 text-white bg-purple-600'
-                                : 'border-purple-500/20 text-gray-400 hover:border-purple-500/40'
-                            }`}
-                          >
-                            Telegram
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1.5">
-                          Analyzes public profile, posting patterns, and red flags to assess scam risk. Only public data — no private information is accessed.
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* ── Launch button ── */}
@@ -862,8 +810,7 @@ function App() {
                   disabled={isScanning ||
                     (scanMode === 'wallet'   && !walletInput.trim())  ||
                     (scanMode === 'channels' && !channelInput.trim()) ||
-                    (scanMode === 'token'    && !tokenInput.trim()) ||
-                    (scanMode === 'scam'     && !usernameInput.trim())}
+                    (scanMode === 'token'    && !tokenInput.trim())}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
                 >
