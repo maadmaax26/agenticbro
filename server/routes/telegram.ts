@@ -139,7 +139,7 @@ router.get('/gem-advise', async (req: Request, res: Response): Promise<void> => 
   }
 })
 
-// ─── Scam Detection ───────────────────────────────────────────────────────────
+// ─── Scam Detection (delegates to new dynamic backend) ─────────────────────────
 
 router.post('/scam-detect', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -154,25 +154,38 @@ router.post('/scam-detect', async (req: Request, res: Response): Promise<void> =
       return
     }
 
-    // X (Twitter) analysis works without Telegram configured — uses OpenClaw service
-    if (platform === 'X') {
-      const result = await runScamDetection(username.trim(), platform, walletAddress?.trim())
-      res.json({ results: [result], mock: false, ts: Date.now() })
+    // Delegate to new dynamic scam detection backend
+    const scamDetectBaseUrl = process.env.SCAM_DETECT_URL || 'http://localhost:3001/api/scam-detect'
+
+    const response = await fetch(`${scamDetectBaseUrl}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username.trim(),
+        platform,
+        walletAddress: walletAddress?.trim(),
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[telegram/scam-detect] backend error:', errorText)
+      res.status(response.status).json({ error: 'Scam detection failed', detail: errorText })
       return
     }
 
-    if (!isTelegramConfigured() && platform === 'Telegram') {
-      // Return mock data when Telegram is not configured
-      res.json({
-        results: [MOCK_SCAM_RESULT(username.trim(), platform)],
-        mock: true,
-        ts: Date.now(),
-      })
+    const data = await response.json() as { results?: any[]; mock?: boolean; error?: string }
+
+    if (data.error) {
+      res.status(500).json({ error: data.error })
       return
     }
 
-    const result = await runScamDetection(username.trim(), platform, walletAddress?.trim())
-    res.json({ results: [result], mock: false, ts: Date.now() })
+    res.json({
+      ...data,
+      ts: Date.now(),
+    })
   } catch (err) {
     console.error('[telegram/scam-detect]', err)
     res.status(502).json({ error: 'Scam detection failed', detail: String(err) })
