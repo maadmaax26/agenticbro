@@ -97,6 +97,19 @@ function parseModeCommand(input: string): AgentMode | null {
 
 const CLIENT_TIMEOUT_MS = 42_000  // 42s — slightly longer than server's 30s deadline
 
+// Health check to verify backend is available
+async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function streamChat(
   walletAddress: string,
   message:       string,
@@ -125,7 +138,15 @@ async function streamChat(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-      onError(err.error ?? `Server error ${res.status}`);
+      const errorMsg = err.error ?? `Server error ${res.status}`;
+      // Add helpful context for common errors
+      if (res.status === 0 || res.status === 503) {
+        onError('Backend server not responding. Run `npm run dev` to start the backend server.');
+      } else if (res.status === 404) {
+        onError('API endpoint not found. The backend server may be out of date.');
+      } else {
+        onError(errorMsg);
+      }
       return;
     }
 
@@ -177,7 +198,13 @@ async function streamChat(
     onDone();
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return; // timeout handler already called onError
-    onError(`Network error: ${err instanceof Error ? err.message : String(err)}`);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    // Add helpful context for network errors
+    if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+      onError('Cannot connect to backend server. Please run `npm run dev` to start both frontend and backend.');
+    } else {
+      onError(`Network error: ${errorMsg}`);
+    }
   } finally {
     clearTimeout(deadline);
   }
@@ -218,6 +245,7 @@ export default function WhaleChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
 
@@ -227,6 +255,18 @@ export default function WhaleChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Check backend health status
+  useEffect(() => {
+    const checkBackend = async () => {
+      const isOnline = await checkBackendHealth();
+      setBackendStatus(isOnline ? 'online' : 'offline');
+    };
+
+    checkBackend();
+    const interval = setInterval(checkBackend, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   // Listen for "Ask Whale Chat" CTA from Strategy tab
   useEffect(() => {
@@ -458,7 +498,40 @@ export default function WhaleChat() {
               </p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
+            {/* Backend status indicator */}
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border"
+              style={{
+                background: backendStatus === 'online'
+                  ? 'rgba(34,197,94,0.1)'
+                  : backendStatus === 'offline'
+                    ? 'rgba(239,68,68,0.1)'
+                    : 'rgba(251,146,60,0.1)',
+                borderColor: backendStatus === 'online'
+                  ? 'rgba(34,197,94,0.3)'
+                  : backendStatus === 'offline'
+                    ? 'rgba(239,68,68,0.3)'
+                    : 'rgba(251,146,60,0.3)',
+              }}>
+              <div className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-green-500 animate-pulse' : backendStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+              <span className="text-xs font-mono"
+                style={{
+                  color: backendStatus === 'online'
+                    ? '#4ade80'
+                    : backendStatus === 'offline'
+                      ? '#f87171'
+                      : '#fb923c'
+                }}>
+                {backendStatus === 'online' ? 'ONLINE' : backendStatus === 'offline' ? 'OFFLINE' : 'CHECKING'}
+              </span>
+            </div>
+            {backendStatus === 'offline' && (
+              <span className="text-xs text-red-400" title="Backend server not running">
+                Backend offline — run `npm run dev`
+              </span>
+            )}
+
             {/* Switch agent */}
             <button
               onClick={() => selectAgent(agent === 'cipher' ? 'alpha' : 'cipher')}
@@ -483,6 +556,19 @@ export default function WhaleChat() {
             )}
           </div>
         </div>
+
+        {/* Backend offline warning */}
+        {backendStatus === 'offline' && (
+          <div className="rounded-xl border border-red-500/30 bg-red-900/20 p-3 mb-4 flex items-start gap-3">
+            <div className="text-red-400 text-sm">⚠️</div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-300 mb-1">Backend Server Offline</p>
+              <p className="text-xs text-red-200/80">
+                Whale Chat requires the backend server. Run <code className="bg-black/40 px-1.5 py-0.5 rounded text-red-300">npm run dev</code> to start both frontend and backend servers.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Quick actions */}
         <div className="flex flex-wrap gap-2 mt-4">
