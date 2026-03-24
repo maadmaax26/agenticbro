@@ -144,9 +144,6 @@ function App() {
     localStorage.setItem(getWalletScanKey(), String(newCount));
   }, []);
 
-  // Update default scans when holder tier status changes
-  useEffect(() => {
-    const saved = localStorage.getItem(getWalletScanKey());
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
   const [showScanChat, setShowScanChat] = useState(false)
