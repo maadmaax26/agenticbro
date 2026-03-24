@@ -53,8 +53,8 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
               <li>• 💎 Gem Advise — AI-ranked token recommendations</li>
               <li>• 🎰 Meme Coin Analyzer — Emerging meme coin opportunities</li>
               <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
-              <li>• 🔍 Priority Scan — on-demand deep scan</li>
-              <li>• 🚨 Scam Detection — 10 free scam checks, $2.00 AGNTCBRO each additional</li>
+              <li>• 🔍 Priority Scan — 15 free scans (vs 10 regular)</li>
+              <li>• 🚨 Scam Detection — 15 free scam checks, $2.00 AGNTCBRO each additional</li>
             </ul>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       {activeTab === 'meme' && <MemeCoinAnalyzer />}
       {activeTab === 'scam' && (
         connected && publicKey ? (
-          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={10} />
+          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={15} />
         ) : (
           <div className="text-center py-8">
             <div className="text-4xl mb-4">🔒</div>
@@ -267,8 +267,8 @@ const HOLDER_FEATURES = [
   {
     icon: '🚨',
     title: 'Scam Detection',
-    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 10 free checks included.',
-    badge: '10 Free',
+    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 15 free checks included.',
+    badge: '15 Free',
     badgeColor: 'rgba(239,68,68,0.15)',
     badgeBorder: 'rgba(239,68,68,0.5)',
     badgeText: '#f87171',
