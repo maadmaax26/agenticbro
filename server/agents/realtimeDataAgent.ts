@@ -353,6 +353,8 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
   try {
     const now24h = Date.now() - 24 * 3600_000   // only last 24 hours of liq data
 
+    console.log('[liqClusters] Starting BTC liquidation cluster data fetch...')
+
     const [markRes, forceRes, lsRatioRes, oiRes] = await Promise.allSettled([
       fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT',
         { signal: AbortSignal.timeout(5000) }),
@@ -366,13 +368,34 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
         { signal: AbortSignal.timeout(5000) }),
     ])
 
+    console.log('[liqClusters] Binance API calls completed:', {
+      mark: markRes.status,
+      force: forceRes.status,
+      lsRatio: lsRatioRes.status,
+      oi: oiRes.status
+    })
+
     // Current price
     let currentPrice = 0
     if (markRes.status === 'fulfilled' && markRes.value.ok) {
-      const d = await markRes.value.json() as { markPrice: string }
-      currentPrice = parseFloat(d.markPrice)
+      try {
+        const d = await markRes.value.json() as { markPrice: string }
+        currentPrice = parseFloat(d.markPrice)
+        console.log('[liqClusters] Current BTC price fetched:', currentPrice)
+      } catch (e) {
+        console.warn('[liqClusters] Failed to parse markPrice:', e)
+      }
+    } else {
+      const err = markRes.status === 'rejected'
+        ? String(markRes.reason)
+        : `HTTP ${(markRes.value as { status?: number }).status ?? 'unknown'}`
+      console.warn('[liqClusters] Failed to fetch current price:', err)
     }
-    if (!currentPrice) return null
+
+    if (!currentPrice) {
+      console.warn('[liqClusters] No valid current price available, returning null')
+      return null
+    }
 
     // Historical clusters from forceOrders — only keep prices within ±30% of current
     // to guard against stale orders that slipped through or an asset in a different era
@@ -429,15 +452,38 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
       ...c, intensity: c.totalUsd / maxTotal,
     }))
 
+    console.log('[liqClusters] Historical clusters:', clusters.length, 'found')
+
     // Estimated forward zones
     let longRatio = 0.5, oiUsd = 0
     if (lsRatioRes.status === 'fulfilled' && lsRatioRes.value.ok) {
-      const d = await lsRatioRes.value.json() as Array<{ longAccount: string }>
-      longRatio = parseFloat(d[0]?.longAccount ?? '0.5')
+      try {
+        const d = await lsRatioRes.value.json() as Array<{ longAccount: string }>
+        longRatio = parseFloat(d[0]?.longAccount ?? '0.5')
+        console.log('[liqClusters] Long/short ratio fetched:', longRatio)
+      } catch (e) {
+        console.warn('[liqClusters] Failed to parse lsRatio:', e)
+      }
+    } else {
+      const err = lsRatioRes.status === 'rejected'
+        ? String(lsRatioRes.reason)
+        : `HTTP ${(lsRatioRes.value as { status?: number }).status ?? 'unknown'}`
+      console.warn('[liqClusters] Failed to fetch long/short ratio:', err)
     }
+
     if (oiRes.status === 'fulfilled' && oiRes.value.ok) {
-      const d = await oiRes.value.json() as { openInterest: string }
-      oiUsd = parseFloat(d.openInterest) * currentPrice
+      try {
+        const d = await oiRes.value.json() as { openInterest: string }
+        oiUsd = parseFloat(d.openInterest) * currentPrice
+        console.log('[liqClusters] Open interest fetched:', oiUsd)
+      } catch (e) {
+        console.warn('[liqClusters] Failed to parse open interest:', e)
+      }
+    } else {
+      const err = oiRes.status === 'rejected'
+        ? String(oiRes.reason)
+        : `HTTP ${(oiRes.value as { status?: number }).status ?? 'unknown'}`
+      console.warn('[liqClusters] Failed to fetch open interest:', err)
     }
 
     const LEVERAGE_TIERS = [
@@ -479,13 +525,23 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
       })
     }
 
-    return {
+    const result = {
       currentPrice,
       clusters,
       estimated: estimated.sort((a, b) => a.priceMid - b.priceMid),
       fetchedAt: new Date(),
     }
-  } catch {
+
+    console.log('[liqClusters] Successfully fetched BTC liquidation data:', {
+      currentPrice,
+      historicalClusters: clusters.length,
+      estimatedZones: estimated.length,
+      timestamp: result.fetchedAt.toISOString()
+    })
+
+    return result
+  } catch (error) {
+    console.error('[liqClusters] Unexpected error fetching BTC liquidation data:', error)
     return null
   }
 }
@@ -502,6 +558,12 @@ export async function fetchRealtimePayload(
   const needsBTCLiq       = assets.includes('BTC') &&
                             ['funding', 'analysis', 'general', 'price'].includes(intent)
 
+  console.log('[fetchRealtimePayload] Starting data fetch:', {
+    assets,
+    intent,
+    needs: { onchain: needsOnchain, orderbook: needsOrderbook, liquidations: needsLiquidations, btcLiq: needsBTCLiq }
+  })
+
   const [prices, funding, liquidations, orderbooks, onchain, btcLiq] = await Promise.all([
     fetchPrices(assets),
     fetchFunding(assets),
@@ -511,7 +573,27 @@ export async function fetchRealtimePayload(
     needsBTCLiq       ? fetchBTCLiqClusterData()     : Promise.resolve(null),
   ])
 
-  return { fetchedAt: new Date(), prices, funding, liquidations, orderbooks, onchain, btcLiq }
+  const result = {
+    fetchedAt: new Date(),
+    prices,
+    funding,
+    liquidations,
+    orderbooks,
+    onchain,
+    btcLiq
+  }
+
+  console.log('[fetchRealtimePayload] Data fetch completed:', {
+    prices: prices.length,
+    funding: funding.length,
+    liquidations: liquidations.length,
+    orderbooks: orderbooks.length,
+    onchain: onchain.length,
+    btcLiq: btcLiq ? 'available' : 'unavailable',
+    timestamp: result.fetchedAt.toISOString()
+  })
+
+  return result
 }
 
 // ─── Context block builder ────────────────────────────────────────────────────
