@@ -10,7 +10,7 @@ const AGNTCBRO_MINT = new PublicKey('52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopum
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
-const FREE_SCAN_LIMIT = 3;
+const DEFAULT_FREE_SCAN_LIMIT = 3;
 const SCAN_COST_USD = 2.00;
 const TOKEN_DECIMALS = 6; // AGNTCBRO has 6 decimals
 
@@ -161,11 +161,12 @@ type ScanStatus = 'idle' | 'scanning' | 'done';
 interface ScamDetectionProps {
   walletAddress: string;
   tokenPriceUsd: number;
+  freeScanLimit?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: ScamDetectionProps) {
+export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, freeScanLimit = DEFAULT_FREE_SCAN_LIMIT }: ScamDetectionProps) {
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
 
@@ -184,7 +185,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
     setScanCount(getScanCount(walletAddress));
   }, [walletAddress]);
 
-  const freeScansLeft = Math.max(0, FREE_SCAN_LIMIT - scanCount);
+  const freeScansLeft = Math.max(0, freeScanLimit - scanCount);
   const requiresPayment = freeScansLeft <= 0;
 
   // Calculate token cost for $2.00 USD
@@ -474,12 +475,12 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd }: S
           >
             <span className="text-amber-400 text-lg">🔥</span>
             <p className="text-xs text-amber-300 flex-1">
-              You've used all {FREE_SCAN_LIMIT} free scans. Each additional scan burns <span className="font-bold">{tokenCostForScan > 0 ? `${tokenCostForScan.toLocaleString()} AGNTCBRO` : '$2.00 in AGNTCBRO'}</span> (≈ $2.00 USD) from your wallet — tokens are permanently burned.
+              You've used all {freeScanLimit} free scans. Each additional scan burns <span className="font-bold">{tokenCostForScan > 0 ? `${tokenCostForScan.toLocaleString()} AGNTCBRO` : '$2.00 in AGNTCBRO'}</span> (≈ $2.00 USD) from your wallet — tokens are permanently burned.
             </p>
           </div>
         ) : (
           <p className="text-xs text-gray-600 mt-2">
-            🎁 {freeScansLeft} of {FREE_SCAN_LIMIT} free scans remaining. After that, each scan costs $2.00 in AGNTCBRO (burned).
+            🎁 {freeScansLeft} of {freeScanLimit} free scans remaining. After that, each scan costs $2.00 in AGNTCBRO (burned).
           </p>
         )}
       </div>
