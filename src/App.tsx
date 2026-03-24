@@ -147,12 +147,6 @@ function App() {
   // Update default scans when holder tier status changes
   useEffect(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    if (!saved) {
-      const defaultScans = holderTierUnlocked ? 15 : 10;
-      setPriorityScansRemaining(defaultScans);
-    }
-  }, [holderTierUnlocked]);
-
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
   const [showScanChat, setShowScanChat] = useState(false)
@@ -162,6 +156,15 @@ function App() {
   const [tokenInput, setTokenInput]     = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
+
+  // Update default scans when holder tier status changes
+  useEffect(() => {
+    const saved = localStorage.getItem(getWalletScanKey());
+    if (!saved) {
+      const defaultScans = holderTierUnlocked ? 15 : 10;
+      setPriorityScansRemaining(defaultScans);
+    }
+  }, [holderTierUnlocked]);
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
   const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
