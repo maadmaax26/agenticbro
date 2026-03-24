@@ -134,14 +134,24 @@ function App() {
 
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    return saved ? Math.max(0, parseInt(saved, 10)) : 10;
+    const defaultScans = holderTierUnlocked ? 15 : 10; // 15 for holders, 10 for regular users
+    return saved ? Math.max(0, parseInt(saved, 10)) : defaultScans;
   });
 
-  // Update scan count when wallet changes
+  // Update scan count when wallet changes or holder tier status changes
   const updateScanCount = useCallback((newCount: number) => {
     setPriorityScansRemaining(newCount);
     localStorage.setItem(getWalletScanKey(), String(newCount));
   }, []);
+
+  // Update default scans when holder tier status changes
+  useEffect(() => {
+    const saved = localStorage.getItem(getWalletScanKey());
+    if (!saved) {
+      const defaultScans = holderTierUnlocked ? 15 : 10;
+      setPriorityScansRemaining(defaultScans);
+    }
+  }, [holderTierUnlocked]);
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -735,7 +745,7 @@ function App() {
                            border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
                            color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
                          }}>
-                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans</span></>
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans{holderTierUnlocked ? ' (Holder)' : ''}</span></>
                                                   : <><span>💎</span><span>10K AGNTCBRO/scan</span></>}
                     </div>
                   )}
@@ -816,7 +826,7 @@ function App() {
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
-                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free)` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free${holderTierUnlocked ? ' - Holder' : ''})` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
                   }
                 </button>
 
