@@ -11,9 +11,10 @@ import GemAdvise from './GemAdvise';
 import AlphaFeed from './AlphaFeed';
 import PriorityScan from './PriorityScan';
 import MemeCoinAnalyzer from './MemeCoinAnalyzer';
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine, Dices } from 'lucide-react';
+import ScamDetectionSection from '../ScamDetectionSection';
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine, Dices, ShieldAlert } from 'lucide-react';
 
-type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan' | 'meme';
+type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan' | 'meme' | 'scam';
 
 export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
@@ -53,6 +54,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
               <li>• 🎰 Meme Coin Analyzer — Emerging meme coin opportunities</li>
               <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
               <li>• 🔍 Priority Scan — on-demand deep scan</li>
+              <li>• 🚨 Scam Detection — 10 free scam checks, $2.00 AGNTCBRO each additional</li>
             </ul>
           </div>
         </div>
@@ -150,6 +152,12 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
             isNew
           />
           <TabButton
+            active={activeTab === 'scam'}
+            onClick={() => setActiveTab('scam')}
+            icon={<ShieldAlert />}
+            label="Scam Detect"
+          />
+          <TabButton
             active={activeTab === 'settings'}
             onClick={() => setActiveTab('settings')}
             icon={<Settings />}
@@ -169,6 +177,16 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       {activeTab === 'alpha' && <AlphaFeed />}
       {activeTab === 'scan' && <PriorityScan />}
       {activeTab === 'meme' && <MemeCoinAnalyzer />}
+      {activeTab === 'scam' && (
+        connected && publicKey ? (
+          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={10} />
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">🔒</div>
+            <p className="text-gray-400">Connect your wallet to access scam detection</p>
+          </div>
+        )
+      )}
     </div>
   );
 }
@@ -245,6 +263,15 @@ const HOLDER_FEATURES = [
     badgeColor: 'rgba(6,182,212,0.2)',
     badgeBorder: 'rgba(6,182,212,0.5)',
     badgeText: '#67e8f9',
+  },
+  {
+    icon: '🚨',
+    title: 'Scam Detection',
+    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 10 free checks included.',
+    badge: '10 Free',
+    badgeColor: 'rgba(239,68,68,0.15)',
+    badgeBorder: 'rgba(239,68,68,0.5)',
+    badgeText: '#f87171',
   },
   {
     icon: '⚡',
