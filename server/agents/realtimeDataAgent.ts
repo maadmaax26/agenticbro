@@ -17,12 +17,21 @@
 import type { Response } from 'express'
 import type { Intent, SubAgent } from '../router.js'
 import type { AgentMode } from '../sessions.js'
+import {
+  fetchKrakenTickers,
+  fetchKrakenBTCPrice,
+  getKrakenMarketData,
+  checkKrakenHealth,
+  type KrakenTicker,
+} from './krakenApi.js'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const PRO_HOST        = process.env.OLLAMA_PRO_HOST        ?? 'http://localhost:11434'
 const REALTIME_MODEL  = process.env.OLLAMA_REALTIME_MODEL  ?? 'kimi-k2.5:cloud'
 const HELIUS_API_KEY  = process.env.HELIUS_API_KEY         ?? ''
+// Use Kraken API if Binance fails or if explicitly configured
+const USE_KRAKEN_AS_FALLBACK = process.env.USE_KRAKEN_AS_FALLBACK !== 'false'
 // Timeout for the Ollama model call only — starts AFTER data fetches complete.
 // Separate from OLLAMA_TIMEOUT_MS (which governs the base local/cloud path).
 // Must be < OLLAMA_REALTIME_TIMEOUT_MS in chat.ts (default 90s).
@@ -37,6 +46,66 @@ interface LivePrice {
   change24h: number
   marketCap: number
   volume24h: number
+}
+
+// ─── Kraken API Functions ──────────────────────────────────────────────────────
+
+/**
+ * Fetch prices from Kraken API as fallback when Binance fails
+ */
+async function fetchPricesFromKraken(assets: string[]): Promise<LivePrice[]> {
+  try {
+    console.log('[realtime] Attempting to fetch prices from Kraken API...');
+    
+    // Check Kraken health first
+    const krakenHealthy = await checkKrakenHealth();
+    if (!krakenHealthy) {
+      console.warn('[realtime] Kraken API health check failed, skipping...');
+      return [];
+    }
+
+    const krakenData = await getKrakenMarketData(assets);
+    
+    // Convert Kraken data to LivePrice format
+    const prices: LivePrice[] = krakenData.prices
+      .filter(kp => assets.includes(kp.pair))
+      .map(kp => ({
+        asset: kp.pair,
+        price: kp.price,
+        change1h: 0, // Kraken doesn't provide 1h change in ticker
+        change24h: kp.change24h,
+        marketCap: 0, // Kraken doesn't provide market cap
+        volume24h: kp.volume24h,
+      }));
+
+    console.log(`[realtime] Successfully fetched ${prices.length} prices from Kraken API`);
+    return prices;
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[realtime] Error fetching prices from Kraken: ${errMsg}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch BTC price specifically from Kraken as fallback
+ */
+async function fetchBTCPriceFromKraken(): Promise<number | null> {
+  try {
+    console.log('[realtime] Attempting to fetch BTC price from Kraken API...');
+    const price = await fetchKrakenBTCPrice();
+    
+    if (price && price > 0) {
+      console.log(`[realtime] Successfully fetched BTC price from Kraken: ${price}`);
+      return price;
+    }
+    
+    return null;
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[realtime] Error fetching BTC price from Kraken: ${errMsg}`);
+    return null;
+  }
 }
 
 interface FundingRate {
@@ -109,12 +178,17 @@ async function fetchPrices(assets: string[]): Promise<LivePrice[]> {
   if (!ids) return []
 
   try {
+    console.log('[realtime] Attempting to fetch prices from CoinGecko API...');
     const res = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd` +
       `&include_24hr_change=true&include_1hr_change=true&include_market_cap=true&include_24hr_vol=true`,
       { signal: AbortSignal.timeout(7000) }
     )
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[realtime] CoinGecko API returned ${res.status}, trying Kraken fallback...`);
+      throw new Error(`CoinGecko ${res.status}`);
+    }
+    
     const data = await res.json() as Record<string, {
       usd: number
       usd_1h_change?: number
@@ -122,10 +196,12 @@ async function fetchPrices(assets: string[]): Promise<LivePrice[]> {
       usd_market_cap?: number
       usd_24h_vol?: number
     }>
+    
     const reverseMap: Record<string, string> = Object.fromEntries(
       Object.entries(idMap).map(([sym, id]) => [id, sym])
     )
-    return Object.entries(data).map(([id, v]) => ({
+    
+    const prices = Object.entries(data).map(([id, v]) => ({
       asset:     reverseMap[id] ?? id.toUpperCase(),
       price:     v.usd,
       change1h:  v.usd_1h_change  ?? 0,
@@ -133,7 +209,23 @@ async function fetchPrices(assets: string[]): Promise<LivePrice[]> {
       marketCap: v.usd_market_cap ?? 0,
       volume24h: v.usd_24h_vol    ?? 0,
     }))
-  } catch {
+    
+    console.log(`[realtime] Successfully fetched ${prices.length} prices from CoinGecko`);
+    return prices;
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[realtime] CoinGecko API failed: ${errMsg}`);
+    
+    // Fallback to Kraken API
+    if (USE_KRAKEN_AS_FALLBACK) {
+      console.log('[realtime] Falling back to Kraken API...');
+      const krakenPrices = await fetchPricesFromKraken(assets);
+      if (krakenPrices.length > 0) {
+        return krakenPrices;
+      }
+    }
+    
+    console.error('[realtime] All price APIs failed, returning empty array');
     return []
   }
 }
@@ -355,6 +447,10 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
 
     console.log('[liqClusters] Starting BTC liquidation cluster data fetch...')
 
+    let currentPrice = 0;
+    let binanceAvailable = false;
+
+    // Try Binance first
     const [markRes, forceRes, lsRatioRes, oiRes] = await Promise.allSettled([
       fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT',
         { signal: AbortSignal.timeout(5000) }),
@@ -375,25 +471,30 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
       oi: oiRes.status
     })
 
-    // Current price
-    let currentPrice = 0
+    // Check if Binance data is available
     if (markRes.status === 'fulfilled' && markRes.value.ok) {
       try {
         const d = await markRes.value.json() as { markPrice: string }
         currentPrice = parseFloat(d.markPrice)
-        console.log('[liqClusters] Current BTC price fetched:', currentPrice)
+        console.log('[liqClusters] Current BTC price fetched from Binance:', currentPrice)
+        binanceAvailable = currentPrice > 0;
       } catch (e) {
-        console.warn('[liqClusters] Failed to parse markPrice:', e)
+        console.warn('[liqClusters] Failed to parse Binance markPrice:', e)
       }
-    } else {
-      const err = markRes.status === 'rejected'
-        ? String(markRes.reason)
-        : `HTTP ${(markRes.value as { status?: number }).status ?? 'unknown'}`
-      console.warn('[liqClusters] Failed to fetch current price:', err)
+    }
+
+    // Fallback to Kraken if Binance price fetch failed
+    if (!currentPrice && USE_KRAKEN_AS_FALLBACK) {
+      console.log('[liqClusters] Binance price unavailable, trying Kraken fallback...');
+      const krakenPrice = await fetchBTCPriceFromKraken();
+      if (krakenPrice) {
+        currentPrice = krakenPrice;
+        console.log('[liqClusters] Current BTC price fetched from Kraken:', currentPrice);
+      }
     }
 
     if (!currentPrice) {
-      console.warn('[liqClusters] No valid current price available, returning null')
+      console.warn('[liqClusters] No valid current price available from any source, returning null')
       return null
     }
 
@@ -765,12 +866,16 @@ CURRENT YEAR: ${year} — it is ${month} ${year}, NOT 2023 or 2024.
 Your training data cutoff is in the past and ALL training-data prices are WRONG.
 The LIVE DATA block injected below was fetched seconds ago — it is the ONLY source of truth.
 
+DATA SOURCES: Price data comes from multiple APIs (CoinGecko, Kraken) with automatic fallback.
+Liquidation cluster data comes from exchange APIs (Binance, Kraken) with estimation where direct data unavailable.
+
 ABSOLUTE RULES:
 1. NEVER quote a price, funding rate, OI, or liquidation number from training data
 2. ALWAYS use the exact numbers from the LIVE DATA block
 3. If the live data block is missing a number, say "data unavailable" — do NOT invent a figure
 4. Begin every price response with the number from the live block, e.g. "BTC is currently $X"
 5. Cite the fetch timestamp when giving price data so the user knows how fresh it is
+6. When data is unavailable, mention it may be due to API rate limits or temporary outages
 
 Response format:
 - Lead with data (price / rate / cluster level from live block)
