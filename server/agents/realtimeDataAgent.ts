@@ -152,9 +152,27 @@ export interface LiqClusterEntry {
 
 export interface BTCLiqData {
   currentPrice: number
+  openInterest: number              // total open interest in USD
+  oiLongRatio: number               // long vs short ratio (0-1)
   clusters:     LiqClusterEntry[]   // historical actual liquidations by price bucket
   estimated:    LiqClusterEntry[]   // forward model zones
+  heatmap:      LiqHeatmapEntry[]   // liquidation concentration heatmap
   fetchedAt:    Date
+}
+
+export interface LiqHeatmapEntry {
+  priceRange: string              // e.g., "$90,000-$92,000"
+  priceLow: number
+  priceHigh: number
+  longLiq: number                 // long liquidations in this range (USD)
+  shortLiq: number                // short liquidations in this range (USD)
+  totalLiq: number                // total liquidations (USD)
+  intensity: number               // concentration intensity (0-1)
+  leverageBands: {
+    highLeverage: number          // >20x leverage liquidations
+    mediumLeverage: number        // 5x-20x leverage liquidations
+    lowLeverage: number           // <5x leverage liquidations
+  }
 }
 
 export interface RealtimePayload {
@@ -628,15 +646,21 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
 
     const result = {
       currentPrice,
+      openInterest: oiUsd,
+      oiLongRatio: longRatio,
       clusters,
       estimated: estimated.sort((a, b) => a.priceMid - b.priceMid),
+      heatmap: generateLiquidationHeatmap(currentPrice, oiUsd, longRatio, clusters, estimated),
       fetchedAt: new Date(),
     }
 
     console.log('[liqClusters] Successfully fetched BTC liquidation data:', {
       currentPrice,
+      openInterest: oiUsd,
+      oiLongRatio: longRatio,
       historicalClusters: clusters.length,
       estimatedZones: estimated.length,
+      heatmapZones: result.heatmap.length,
       timestamp: result.fetchedAt.toISOString()
     })
 
@@ -648,6 +672,111 @@ async function fetchBTCLiqClusterData(): Promise<BTCLiqData | null> {
 }
 
 // ─── Payload orchestrator ─────────────────────────────────────────────────────
+
+/**
+ * Generate liquidation concentration heatmap based on OI distribution
+ */
+function generateLiquidationHeatmap(
+  currentPrice: number,
+  oiUsd: number,
+  longRatio: number,
+  historical: LiqClusterEntry[],
+  estimated: LiqClusterEntry[]
+): LiqHeatmapEntry[] {
+  const heatmap: LiqHeatmapEntry[] = []
+  const rangeSize = currentPrice * 0.02  // 2% price ranges
+  const numRanges = 20  // Cover ±20% of current price
+
+  // Combine historical and estimated liquidations for heatmap
+  const allLiqs = [...historical, ...estimated]
+
+  for (let i = 0; i < numRanges; i++) {
+    const offset = (i - Math.floor(numRanges / 2)) * rangeSize
+    const priceLow = currentPrice + offset
+    const priceHigh = priceLow + rangeSize
+    const priceMid = (priceLow + priceHigh) / 2
+
+    // Calculate leverage band distribution for this price range
+    let longLiq = 0
+    let shortLiq = 0
+    let highLeverage = 0   // >20x
+    let mediumLeverage = 0 // 5x-20x
+    let lowLeverage = 0    // <5x
+
+    for (const tier of LEVERAGE_TIERS) {
+      const mmRate = 0.005
+      const longLiqPrice = Math.round(currentPrice * (1 - (1 / tier.leverage) + mmRate))
+      const shortLiqPrice = Math.round(currentPrice * (1 + (1 / tier.leverage) - mmRate))
+
+      // Check if this tier's liquidation falls in this range
+      if (longLiqPrice >= priceLow && longLiqPrice <= priceHigh) {
+        const longNotional = oiUsd * longRatio * tier.share
+        longLiq += longNotional
+
+        if (tier.leverage >= 20) {
+          highLeverage += longNotional
+        } else if (tier.leverage >= 5) {
+          mediumLeverage += longNotional
+        } else {
+          lowLeverage += longNotional
+        }
+      }
+
+      if (shortLiqPrice >= priceLow && shortLiqPrice <= priceHigh) {
+        const shortNotional = oiUsd * (1 - longRatio) * tier.share
+        shortLiq += shortNotional
+
+        if (tier.leverage >= 20) {
+          highLeverage += shortNotional
+        } else if (tier.leverage >= 5) {
+          mediumLeverage += shortNotional
+        } else {
+          lowLeverage += shortNotional
+        }
+      }
+    }
+
+    // Add boost from historical liquidations (actual data)
+    for (const liq of historical) {
+      if (liq.priceMid >= priceLow && liq.priceMid <= priceHigh) {
+        longLiq += liq.longUsd
+        shortLiq += liq.shortUsd
+
+        // Estimate leverage bands from historical data based on intensity
+        if (liq.intensity > 0.7) {
+          highLeverage += (liq.longUsd + liq.shortUsd) * 0.5
+        } else if (liq.intensity > 0.4) {
+          mediumLeverage += (liq.longUsd + liq.shortUsd) * 0.6
+        } else {
+          lowLeverage += (liq.longUsd + liq.shortUsd) * 0.7
+        }
+      }
+    }
+
+    const totalLiq = longLiq + shortLiq
+    const maxLiqInAllRanges = Math.max(1, ...heatmap.map(h => h.totalLiq))
+    const intensity = Math.min(totalLiq / (maxLiqInAllRanges || oiUsd * 0.3), 1)
+
+    if (totalLiq > 0) {
+      heatmap.push({
+        priceRange: `$${Math.round(priceLow).toLocaleString()}-$${Math.round(priceHigh).toLocaleString()}`,
+        priceLow: Math.round(priceLow),
+        priceHigh: Math.round(priceHigh),
+        longLiq: Math.round(longLiq),
+        shortLiq: Math.round(shortLiq),
+        totalLiq: Math.round(totalLiq),
+        intensity: Math.round(intensity * 100) / 100,
+        leverageBands: {
+          highLeverage: Math.round(highLeverage),
+          mediumLeverage: Math.round(mediumLeverage),
+          lowLeverage: Math.round(lowLeverage),
+        }
+      })
+    }
+  }
+
+  return heatmap.sort((a, b) => b.totalLiq - a.totalLiq)
+}
 
 export async function fetchRealtimePayload(
   assets: string[],
@@ -800,6 +929,18 @@ export function buildRealtimeContextBlock(payload: RealtimePayload): string {
 
     lines.push(`── BTC LIQUIDATION CLUSTERS (current price: ${fmtPrice(cp)}) ──`)
 
+    // Open Interest Overview
+    if (liq.openInterest > 0) {
+      const longPct = (liq.oiLongRatio * 100).toFixed(1)
+      const shortPct = ((1 - liq.oiLongRatio) * 100).toFixed(1)
+      lines.push(
+        `  Total OI: ${fmt(liq.openInterest)}  ` +
+        `Longs: ${longPct}%  Shorts: ${shortPct}%  ` +
+        `Ratio: ${liq.oiLongRatio.toFixed(2)}`
+      )
+      lines.push('')
+    }
+
     // Historical — top 10 busiest buckets within ±20% of current price
     const nearby = liq.clusters
       .filter(c => Math.abs(c.priceMid - cp) / cp <= 0.20)
@@ -840,6 +981,23 @@ export function buildRealtimeContextBlock(payload: RealtimePayload): string {
         lines.push(
           `  ${dir} ${sign}${pct}%  ${fmtPrice(e.priceMid).padEnd(12)} ${(e.label ?? '').padEnd(12)}  Notional:${fmt(e.totalUsd)}`
         )
+      }
+    }
+
+    // Liquidation Heatmap - Top 5 concentration zones
+    if (liq.heatmap && liq.heatmap.length > 0) {
+      lines.push('  LIQUIDATION HEATMAP (top 5 concentration zones):')
+      const top5 = liq.heatmap.slice(0, 5)
+      for (const h of top5) {
+        const dir = h.priceHigh > cp ? '▲' : '▼'
+        const pct = (((h.priceHigh - cp) / cp) * 100).toFixed(1)
+        const bar = '█'.repeat(Math.round(h.intensity * 10)).padEnd(10, '░')
+        const leverageDist = `>20x:${fmt(h.leverageBands.highLeverage)} 5-20x:${fmt(h.leverageBands.mediumLeverage)} <5x:${fmt(h.leverageBands.lowLeverage)}`
+        lines.push(
+          `  ${dir}${Math.abs(parseFloat(pct)).toFixed(1).padStart(5)}%  ${h.priceRange.padEnd(20)} ${bar}  ` +
+          `Total:${fmt(h.totalLiq)}  Longs:${fmt(h.longLiq)}  Shorts:${fmt(h.shortLiq)}`
+        )
+        lines.push(`    ${leverageDist}`)
       }
     }
 
