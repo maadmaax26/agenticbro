@@ -10,6 +10,7 @@ import AlertFeed from './components/dashboard/AlertFeed'
 import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
+import ScamDatabaseModal from './components/ScamDatabaseModal'
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
@@ -125,6 +126,7 @@ function App() {
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
+  const [showScamDatabase, setShowScamDatabase] = useState(false)
 
   // Get wallet-specific scan count
   const getWalletScanKey = () => {
@@ -469,6 +471,8 @@ function App() {
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
         <Roadmap onBack={() => setShowRoadmap(false)} />
+      ) : showScamDatabase ? (
+        <ScamDatabaseModal onClose={() => setShowScamDatabase(false)} />
       ) : (
         <>
           {/* ── Dev Phase Banner ── */}
@@ -587,6 +591,12 @@ function App() {
                 className="px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 Why Agentic Bro?
+              </button>
+              <button
+                onClick={() => setShowScamDatabase(true)}
+                className="px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
+              >
+                🔍 Scam Database
               </button>
               <a
                 href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
@@ -1030,7 +1040,7 @@ function App() {
       </>
     )}
 
-      {!showValueProp && !showRoadmap && !showTierPage && (
+      {!showValueProp && !showRoadmap && !showTierPage && !showScamDatabase && (
         <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
           <p className="text-gray-500">
             Built for degens, by degens •{' '}
