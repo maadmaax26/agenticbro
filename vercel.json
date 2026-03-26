@@ -6,6 +6,9 @@
     "api/scam-investigate.ts": {
       "maxDuration": 30,
       "includeFiles": "api/scammer-database.json"
+    },
+    "api/telegram/priority-scan.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
