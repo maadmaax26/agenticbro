@@ -254,7 +254,8 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, fre
     }, 400);
 
     try {
-      const res = await fetch(`${API_BASE}/api/scam-detect`, {
+      // Use the full OpenClaw scam-investigate pipeline (Vercel serverless function)
+      const res = await fetch(`${API_BASE}/api/scam-investigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -264,84 +265,103 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, fre
         }),
       });
 
-      const data = await res.json() as { results?: any[]; mock?: boolean; error?: string; detail?: string };
+      const data = await res.json() as { investigation?: any; error?: string; detail?: string };
       clearInterval(interval);
       setScanProgress(100);
 
       if (!res.ok || data.error) {
         setScanError(data.detail ?? data.error ?? `Server error (${res.status})`);
-      } else if (data.results && data.results.length > 0) {
-        // Transform the new backend response to match the old InvestigationReport format
-        const newResult = data.results[0] as any;
+      } else if (data.investigation) {
+        // Map OpenClaw investigation response → InvestigationReport shape
+        const inv = data.investigation as any;
+        const tp = inv.twitter_profile;
+        const wa = inv.wallet_analysis;
+        const vr = inv.victim_reports;
+        const va = inv.victim_analysis;
+        const db = inv.database_match;
+        const en = inv.enhanced;
+        const ti = inv.telegram_intel;
+
         const investigationReport: InvestigationReport = {
-          scammer_data: {
-            x_handle: platform === 'X' ? newResult.username : undefined,
-            telegram_channel: platform === 'Telegram' ? newResult.username : undefined,
-            wallet_address: walletInput.trim() || newResult.walletAnalysis?.address,
+          scammer_data: inv.scammer_data ?? {
+            x_handle: platform === 'X' ? `@${usernameInput.trim().replace(/^@/, '')}` : undefined,
+            telegram_channel: platform === 'Telegram' ? `@${usernameInput.trim().replace(/^@/, '')}` : undefined,
+            wallet_address: walletInput.trim() || undefined,
           },
-          investigation_date: new Date().toISOString(),
-          twitter_profile: newResult.xProfile ? {
-            username: newResult.username,
-            profile_url: newResult.xProfile.profileUrl,
-            collected_at: new Date().toISOString(),
-            bio: newResult.xProfile.bio,
-            followers: newResult.xProfile.followers,
-            following: newResult.xProfile.following,
-            created_at: newResult.xProfile.createdDate,
-            is_verified: newResult.xProfile.isVerified,
-            profile_image: newResult.xProfile.profileImage,
-            name: newResult.xProfile.name,
+          investigation_date: inv.investigation_date ?? new Date().toISOString(),
+
+          twitter_profile: tp ? {
+            username: tp.username ?? usernameInput.trim().replace(/^@/, ''),
+            profile_url: tp.profile_url ?? `https://x.com/${usernameInput.trim().replace(/^@/, '')}`,
+            collected_at: tp.collected_at ?? new Date().toISOString(),
+            bio: tp.bio,
+            followers: tp.followers,
+            following: tp.following,
+            created_at: tp.created_at,
+            is_verified: tp.is_verified ?? false,
+            profile_image: tp.profile_image,
+            banner_image: tp.banner_image,
+            location: tp.location,
+            website: tp.website,
+            name: tp.name,
           } : undefined,
-          wallet_analysis: newResult.walletAnalysis ? {
-            address: newResult.walletAnalysis.address,
-            blockchain: newResult.walletAnalysis.blockchain,
-            balance_usd: newResult.walletAnalysis.balanceUsd,
-            total_received: newResult.walletAnalysis.totalReceived,
-            total_sent: newResult.walletAnalysis.totalSent,
-            transactions: [], // Not provided by new backend yet
-            received_from_victims: [], // Not provided by new backend yet
-            analyzed_at: new Date().toISOString(),
+
+          wallet_analysis: wa ? {
+            address: wa.address,
+            blockchain: wa.blockchain,
+            balance_sol: wa.balance_sol,
+            balance_eth: wa.balance_eth,
+            balance_usd: wa.balance_usd ?? 0,
+            transactions: wa.transactions ?? [],
+            received_from_victims: wa.received_from_victims ?? [],
+            total_received: wa.total_received ?? 0,
+            total_sent: wa.total_sent ?? 0,
+            analyzed_at: wa.analyzed_at ?? new Date().toISOString(),
           } : undefined,
-          victim_reports: newResult.victimReports ? Object.fromEntries(
-            newResult.victimReports.reports.map((r: any, idx: number) => [
-              `${idx}`,
-              {
-                title: r.title,
-                url: r.url,
-                platform: r.platform,
-                score: r.score,
-              },
-            ])
-          ) : undefined,
-          victim_analysis: newResult.victimReports ? {
-            total_reports: newResult.victimReports.totalReports,
-            unique_sources: ['Reddit'],
-            common_platforms: { Reddit: newResult.victimReports.totalReports },
+
+          victim_reports: vr ?? undefined,
+
+          victim_analysis: va ? {
+            total_reports: va.total_reports ?? 0,
+            unique_sources: va.unique_sources ?? [],
+            common_platforms: va.common_platforms ?? {},
           } : undefined,
-          evidence: undefined,
-          full_report: newResult.fullReport,
-          database_match: newResult.knownScammer ? {
-            'Scammer Name': newResult.knownScammer.name,
-            'Platform': newResult.xProfile ? 'X' : 'Telegram',
-            'X Handle': newResult.xProfile ? `@${newResult.username}` : '',
-            'Telegram Channel': !newResult.xProfile ? `@${newResult.username}` : '',
-            'Victims Count': newResult.knownScammer.victims.toString(),
-            'Total Lost USD': '?',
-            'Verification Level': newResult.knownScammer.status,
-            'Scam Type': newResult.scamType || 'Unknown',
-            'Last Updated': '2026-03-23',
-            'Notes': newResult.knownScammer.notes,
-            'Wallet Address': newResult.walletAnalysis?.address || '',
-            'Evidence Links': '',
+
+          evidence: inv.evidence,
+
+          full_report: inv.full_report,
+
+          database_match: db ? {
+            'Scammer Name': db['Scammer Name'] ?? db.name ?? '',
+            'Platform': db['Platform'] ?? platform,
+            'X Handle': db['X Handle'] ?? (platform === 'X' ? `@${usernameInput.trim().replace(/^@/, '')}` : ''),
+            'Telegram Channel': db['Telegram Channel'] ?? (platform === 'Telegram' ? `@${usernameInput.trim().replace(/^@/, '')}` : ''),
+            'Victims Count': db['Victims Count'] ?? db.victims ?? '?',
+            'Total Lost USD': db['Total Lost USD'] ?? '?',
+            'Verification Level': db['Verification Level'] ?? en?.verificationLevel ?? 'Unverified',
+            'Scam Type': db['Scam Type'] ?? en?.scamType ?? 'Unknown',
+            'Last Updated': db['Last Updated'] ?? new Date().toISOString().slice(0, 10),
+            'Notes': db['Notes'] ?? db.notes ?? '',
+            'Wallet Address': db['Wallet Address'] ?? wa?.address ?? '',
+            'Evidence Links': db['Evidence Links'] ?? '',
           } : undefined,
-          enhanced: {
-            riskScore: newResult.riskScore,
-            redFlags: newResult.redFlags,
-            verificationLevel: newResult.verificationLevel,
-            scamType: newResult.scamType,
-            recommendedAction: newResult.recommendedAction,
-          },
+
+          enhanced: en ? {
+            riskScore: en.riskScore,
+            redFlags: en.redFlags ?? [],
+            verificationLevel: en.verificationLevel ?? 'Unverified',
+            scamType: en.scamType,
+            recommendedAction: en.recommendedAction,
+          } : undefined,
+
+          telegram_intel: ti ? {
+            group_id: ti.group_id,
+            messages_found: ti.messages_found ?? 0,
+            messages: ti.messages ?? [],
+            error: ti.error,
+          } : undefined,
         };
+
         setReport(investigationReport);
         // Increment scan count only on successful scan
         const newCount = incrementScanCount(walletAddress);
