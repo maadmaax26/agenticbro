@@ -6,8 +6,6 @@
 
 import { useState } from 'react';
 
-// Direct to local backend
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +84,7 @@ export default function TokenImpersonationScanner() {
     setResult(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/token-impersonation-scan`, {
+      const response = await fetch(`/api/token-impersonation-scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
