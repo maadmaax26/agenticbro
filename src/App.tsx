@@ -1,133 +1,3 @@
-        {!connected ? (
-          <div className="max-w-6xl mx-auto">
-
-            {/* Hero Message */}
-            <div className="text-center mb-10 pt-6">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/40 bg-red-950/30 text-red-300 text-xs font-semibold mb-4">
-                <span>🛡️</span> AI-Powered Crypto Protection
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
-                Stop Gambling.<br />
-                <span style={{background: 'linear-gradient(90deg, #a855f7, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
-                  Start Investigating.
-                </span>
-              </h2>
-              <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
-                The crypto space is full of scammers, rug pulls, and fake alpha. Agentic Bro arms you with AI-powered investigation tools to protect your capital and make every trade count.
-              </p>
-            </div>
-
-            {/* Stats bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-              {[
-                { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
-                { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '3 Free', label: 'Priority Scans',       color: '#a78bfa' },
-                { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
-                  <p className="text-2xl font-black mb-1" style={{color: stat.color}}>{stat.value}</p>
-                  <p className="text-xs text-gray-400">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Two core strengths */}
-            <div className="grid md:grid-cols-2 gap-6 mb-10">
-
-              {/* Scam Detection System */}
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-red-500/30 p-6 hover:border-red-500/60 transition-all">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)'}}>🔍</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Scam Detection System</h3>
-                    <p className="text-xs text-red-400 font-semibold">Your on-chain lie detector</p>
-                  </div>
-                </div>
-                <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  Cross-reference any wallet, Telegram channel, or token against our live scammer database. Get a full risk report with red flags, on-chain behaviour patterns, and a plain-English verdict before you ape in.
-                </p>
-                <div className="space-y-2">
-                  {[
-                    '🚨 Cross-reference 5,000+ known scammer wallets',
-                    '📊 On-chain behaviour pattern analysis',
-                    '💬 Telegram channel credibility scoring',
-                    '🪙 Token rug-pull risk assessment',
-                    '📝 Plain-English investigation report',
-                  ].map((item) => (
-                    <div key={item} className="flex items-start gap-2 text-sm text-gray-300">
-                      <span>{item.slice(0, 2)}</span>
-                      <span>{item.slice(3)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Priority Scan */}
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/30 p-6 hover:border-purple-500/60 transition-all">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)'}}>⚡</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Priority Scan</h3>
-                    <p className="text-xs text-purple-400 font-semibold">Deep intel. Fast.</p>
-                  </div>
-                </div>
-                <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  Run a deep-dive investigation on any wallet, Telegram channel, or token in under 30 seconds. Get alpha signals, risk scores, and actionable insights so you trade with conviction — not hope.
-                </p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[
-                    { icon: '👛', label: 'Wallet Scan', desc: 'Track alpha signals and risk profile' },
-                    { icon: '📡', label: 'Channel Scan', desc: 'Verify Telegram channel credibility' },
-                    { icon: '🪙', label: 'Token Scan', desc: 'Find all calls and rug-pull risk' },
-                  ].map((mode) => (
-                    <div key={mode.label} className="bg-purple-900/20 rounded-xl p-3 text-center border border-purple-500/20">
-                      <div className="text-xl mb-1">{mode.icon}</div>
-                      <p className="text-xs font-bold text-white">{mode.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{mode.desc}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
-                  <span>🎁</span>
-                  <span>3 free scans when you connect your wallet — no token required</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Informed Trading section */}
-            <div className="bg-gradient-to-r from-purple-900/20 to-cyan-900/20 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 mb-10">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl">📈</span>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Informed Trading and Investing Intelligence</h3>
-                  <p className="text-xs text-cyan-400 font-semibold">Because degen without data is just gambling</p>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                {[
-                  { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
-                  { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
-                  { icon: '🏆', title: 'Holder Tier Intelligence', desc: 'Unlock unlimited scans, gem advisory, and whale-level insights by holding $AGNTCBRO.' },
-                ].map((item) => (
-                  <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
-                    <div className="text-2xl mb-2">{item.icon}</div>
-                    <p className="font-bold text-white text-sm mb-1">{item.title}</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Connect CTA */}
-            <div className="text-center py-8 bg-black/20 rounded-2xl border border-purple-500/20">
-              <p className="text-white font-bold text-xl mb-2">Ready to protect your capital?</p>
-              <p className="text-gray-400 text-sm mb-6">Connect your Solana wallet to run your first free scan — no token required to start.</p>
-              <div className="flex justify-center">
-                <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-bold !text-base !px-8 !py-3 !rounded-xl" />
-              </div>
-            </div>
-          </div>
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
@@ -786,6 +656,136 @@ function App() {
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
         )}
 
+        {!connected ? (
+          <div className="max-w-6xl mx-auto">
+
+            {/* Hero Message */}
+            <div className="text-center mb-10 pt-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/40 bg-red-950/30 text-red-300 text-xs font-semibold mb-4">
+                <span>🛡️</span> AI-Powered Crypto Protection
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+                Stop Gambling.<br />
+                <span style={{background: 'linear-gradient(90deg, #a855f7, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  Start Investigating.
+                </span>
+              </h2>
+              <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
+                The crypto space is full of scammers, rug pulls, and fake alpha. Agentic Bro arms you with AI-powered investigation tools to protect your capital and make every trade count.
+              </p>
+            </div>
+
+            {/* Stats bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+              {[
+                { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
+                { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
+                { value: '3 Free', label: 'Priority Scans',       color: '#a78bfa' },
+                { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
+                  <p className="text-2xl font-black mb-1" style={{color: stat.color}}>{stat.value}</p>
+                  <p className="text-xs text-gray-400">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Two core strengths */}
+            <div className="grid md:grid-cols-2 gap-6 mb-10">
+
+              {/* Scam Detection System */}
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-red-500/30 p-6 hover:border-red-500/60 transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)'}}>🔍</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Scam Detection System</h3>
+                    <p className="text-xs text-red-400 font-semibold">Your on-chain lie detector</p>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                  Cross-reference any wallet, Telegram channel, or token against our live scammer database. Get a full risk report with red flags, on-chain behaviour patterns, and a plain-English verdict before you ape in.
+                </p>
+                <div className="space-y-2">
+                  {[
+                    '🚨 Cross-reference 5,000+ known scammer wallets',
+                    '📊 On-chain behaviour pattern analysis',
+                    '💬 Telegram channel credibility scoring',
+                    '🪙 Token rug-pull risk assessment',
+                    '📝 Plain-English investigation report',
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-2 text-sm text-gray-300">
+                      <span>{item.slice(0, 2)}</span>
+                      <span>{item.slice(3)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Priority Scan */}
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/30 p-6 hover:border-purple-500/60 transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)'}}>⚡</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Priority Scan</h3>
+                    <p className="text-xs text-purple-400 font-semibold">Deep intel. Fast.</p>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                  Run a deep-dive investigation on any wallet, Telegram channel, or token in under 30 seconds. Get alpha signals, risk scores, and actionable insights so you trade with conviction — not hope.
+                </p>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {[
+                    { icon: '👛', label: 'Wallet Scan', desc: 'Track alpha signals and risk profile' },
+                    { icon: '📡', label: 'Channel Scan', desc: 'Verify Telegram channel credibility' },
+                    { icon: '🪙', label: 'Token Scan', desc: 'Find all calls and rug-pull risk' },
+                  ].map((mode) => (
+                    <div key={mode.label} className="bg-purple-900/20 rounded-xl p-3 text-center border border-purple-500/20">
+                      <div className="text-xl mb-1">{mode.icon}</div>
+                      <p className="text-xs font-bold text-white">{mode.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{mode.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
+                  <span>🎁</span>
+                  <span>3 free scans when you connect your wallet — no token required</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Informed Trading section */}
+            <div className="bg-gradient-to-r from-purple-900/20 to-cyan-900/20 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">📈</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Informed Trading and Investing Intelligence</h3>
+                  <p className="text-xs text-cyan-400 font-semibold">Because degen without data is just gambling</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
+                  { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
+                  { icon: '🏆', title: 'Holder Tier Intelligence', desc: 'Unlock unlimited scans, gem advisory, and whale-level insights by holding $AGNTCBRO.' },
+                ].map((item) => (
+                  <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
+                    <div className="text-2xl mb-2">{item.icon}</div>
+                    <p className="font-bold text-white text-sm mb-1">{item.title}</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Connect CTA */}
+            <div className="text-center py-8 bg-black/20 rounded-2xl border border-purple-500/20">
+              <p className="text-white font-bold text-xl mb-2">Ready to protect your capital?</p>
+              <p className="text-gray-400 text-sm mb-6">Connect your Solana wallet to run your first free scan — no token required to start.</p>
+              <div className="flex justify-center">
+                <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-bold !text-base !px-8 !py-3 !rounded-xl" />
+              </div>
+            </div>
+          </div>
         ) : (
           <>
             {/* Wallet bar — quick access to wallet functions */}
