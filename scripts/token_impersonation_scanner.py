@@ -14,7 +14,7 @@ def get_token_info(contract_address):
     try:
         # Try DexScreener first
         url = f"https://api.dexscreener.com/latest/dex/tokens/{contract_address}"
-        response = requests.get(url, timeout=10)  # Added timeout
+        response = requests.get(url, timeout=10)
         data = response.json()
 
         if data.get('pairs') and len(data['pairs']) > 0:
@@ -51,27 +51,27 @@ def search_similar_tokens(symbol, name, legitimate_address):
         name,
         symbol.split(' ')[0] if ' ' in symbol else symbol,
         name.split(' ')[0] if ' ' in name else symbol,
-        f"{symbol} bro",  # Search for symbol + "bro"
+        f"{symbol} bro",
         f"{symbol.lower()}bro",
-        name.lower().replace(" ", ""),  # Concatenated name
+        name.lower().replace(" ", ""),
         "agentic bro",
         "agentic"
     ]
 
     all_pairs = []
-    seen_addresses = set(legitimate_address)  # Exclude legitimate token
+    seen_addresses = set(legitimate_address)
 
     for term in search_terms:
         try:
             url = f"https://api.dexscreener.com/latest/dex/search?q={term}"
-            response = requests.get(url, timeout=10)  # Added timeout
+            response = requests.get(url, timeout=10)
             data = response.json()
 
             if data.get('pairs'):
                 for pair in data['pairs']:
                     address = pair.get('baseToken', {}).get('address', '')
                     if address and address != legitimate_address and address not in seen_addresses:
-                        pair['search_term'] = term  # Track which term found this token
+                        pair['search_term'] = term
                         all_pairs.append(pair)
                         seen_addresses.add(address)
         except Exception as e:
@@ -83,7 +83,7 @@ def search_similar_tokens(symbol, name, legitimate_address):
 def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, legitimate_address):
     """Analyze tokens for impersonation attempts with enhanced detection"""
     impersonators = {
-        'exact_symbol_fakes': [],  # Same symbol, different address - MOST DANGEROUS
+        'exact_symbol_fakes': [],
         'high_risk': [],
         'medium_risk': [],
         'low_risk': [],
@@ -96,13 +96,12 @@ def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, le
         name = t.get('name', '')
         address = t.get('address', '')
 
-        # Calculate risk score
         risk_score = 0
         risk_factors = []
 
-        # CRITICAL: Check for exact symbol match with different address
+        # CRITICAL: Exact symbol match with different address
         if symbol.upper() == legitimate_symbol.upper() and address != legitimate_address:
-            risk_score += 10  # Maximum risk - this is a direct fake
+            risk_score += 10
             risk_factors.insert(0, "🚨 FAKE TOKEN - Same symbol, different contract address!")
         elif symbol.upper() == legitimate_symbol.upper():
             risk_score += 5
@@ -122,15 +121,15 @@ def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, le
             risk_score += 2
             risk_factors.append("⚠️ Name contains related keywords")
 
-        # Token age analysis (if available)
+        # Token age analysis
         pair_created_at = token.get('pairCreatedAt')
         token_age_hours = None
         if pair_created_at:
             token_age_hours = (datetime.now().timestamp() - pair_created_at) / 3600
-            if token_age_hours < 24:  # Less than 1 day old
+            if token_age_hours < 24:
                 risk_score += 2
                 risk_factors.append("⚠️ Very recent token (high scam probability)")
-            elif token_age_hours < 168:  # Less than 1 week old
+            elif token_age_hours < 168:
                 risk_score += 1
                 risk_factors.append("⚠️ Recent token (scam risk)")
 
@@ -158,13 +157,12 @@ def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, le
             risk_score += 1
             risk_factors.append("⚠️ Unknown/exotic DEX")
 
-        # Search term analysis (how we found it)
+        # Search term analysis
         search_term = token.get('search_term', 'unknown')
         if search_term == legitimate_symbol:
             risk_score += 2
             risk_factors.append(f"⚠️ Found by exact symbol search (confusion attempt)")
 
-        # Categorize by risk
         impersonator_info = {
             'symbol': symbol,
             'name': name,
@@ -182,70 +180,8 @@ def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, le
             'token_age_hours': token_age_hours
         }
 
-        # Categorization logic
         if symbol.upper() == legitimate_symbol.upper() and address != legitimate_address:
-            # Exact symbol fakes go to their own category
             impersonators['exact_symbol_fakes'].append(impersonator_info)
-            # Also add to high risk
-            impersonators['high_risk'].append(impersonator_info)
-        elif risk_score >= 5:
-            impersonators['high_risk'].append(impersonator_info)
-        elif risk_score >= 3:
-            impersonators['medium_risk'].append(impersonator_info)
-        elif risk_score >= 1:
-            impersonators['low_risk'].append(impersonator_info)
-        else:
-            impersonators['unrelated'].append(impersonator_info)
-
-    return impersonators
-
-        # Name matching
-        if legitimate_name.upper() in name.upper():
-            risk_score += 3
-            risk_factors.append("⚠️ Name contains legitimate token name")
-
-        # Liquidity risk
-        liquidity = token.get('liquidity', {}).get('usd', 0)
-        if liquidity == 0:
-            risk_score += 2
-            risk_factors.append("⚠️ Zero liquidity - rug pull setup")
-        elif liquidity < 100:
-            risk_score += 1
-            risk_factors.append("⚠️ Very low liquidity")
-
-        # Volume risk
-        volume = token.get('volume', {}).get('h24', 0)
-        if volume < 10:
-            risk_score += 1
-            risk_factors.append("⚠️ Very low volume")
-
-        # Platform risk
-        dex = token.get('dexId', '').lower()
-        if 'pump' in dex:
-            risk_score += 1
-            risk_factors.append("⚠️ Pump.fun token - known for scams")
-
-        # Categorize by risk
-        impersonator_info = {
-            'symbol': symbol,
-            'name': name,
-            'address': address,
-            'price': token.get('priceUsd', 'N/A'),
-            'liquidity': liquidity,
-            'volume': volume,
-            'chain': token.get('chainId', 'Unknown'),
-            'dex': token.get('dexId', 'Unknown'),
-            'url': token.get('url', ''),
-            'risk_score': risk_score,
-            'risk_factors': risk_factors,
-            'is_exact_symbol_fake': symbol.upper() == legitimate_symbol.upper() and address != legitimate_address
-        }
-
-        # Categorization logic
-        if symbol.upper() == legitimate_symbol.upper() and address != legitimate_address:
-            # Exact symbol fakes go to their own category
-            impersonators['exact_symbol_fakes'].append(impersonator_info)
-            # Also add to high risk
             impersonators['high_risk'].append(impersonator_info)
         elif risk_score >= 5:
             impersonators['high_risk'].append(impersonator_info)
@@ -278,7 +214,6 @@ Price: ${legitimate_token['price']} | Volume: ${legitimate_token['volume']:,.2f}
 ⚠️ {total_suspicious} SUSPICIOUS TOKENS IDENTIFIED
 """
 
-    # MOST DANGEROUS: Exact symbol fakes (same symbol, different address)
     if total_exact_fakes > 0:
         alert += f"""
 🚨 CRITICAL - FAKE TOKENS WITH SAME SYMBOL ({total_exact_fakes} found):
@@ -293,6 +228,7 @@ These tokens use the EXACT same symbol '{legitimate_token['symbol'].upper()}' bu
             alert += f"   Chain: {imp['chain']}\n"
             alert += f"   DEX: {imp['dex']}\n"
             alert += f"   Liquidity: ${imp['liquidity']:,.2f}\n"
+            alert += f"   Age: {imp.get('token_age_hours', 0):.1f} hours\n"
             if i < total_exact_fakes:
                 alert += "\n"
 
@@ -307,7 +243,7 @@ These tokens use the EXACT same symbol '{legitimate_token['symbol'].upper()}' bu
             alert += f"• {imp['symbol']} ({imp['name']}) - {factors}\n"
             alert += f"  Contract: {imp['address']}\n"
             if i < len(impersonators['high_risk'][:5]):
-                alert += '\n'
+                alert += "\n"
 
     if impersonators['medium_risk'] and len(impersonators['high_risk']) < 5:
         alert += "\n⚠️ MEDIUM RISK:\n"
@@ -418,7 +354,6 @@ if __name__ == "__main__":
     results = scan_for_impersonators(contract_address)
 
     if results:
-        # Print alert
         print("\n" + "="*70)
         print("📢 SCAM ALERT - READY TO POST")
         print("="*70 + "\n")
@@ -432,4 +367,3 @@ if __name__ == "__main__":
         print(f"\n📄 Detailed report saved to: {filename}")
     else:
         print("❌ Scan failed")
-        sys.exit(1)
