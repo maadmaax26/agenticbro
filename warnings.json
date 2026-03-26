@@ -1,0 +1,101 @@
+{
+  "warned_users": {
+    "5522008351": {
+      "username": "GorrilaCallCEO",
+      "name": "Gorrila Calls CEO",
+      "warnings": 2,
+      "first_warning": "2026-03-23T10:00:00EDT",
+      "second_warning": "2026-03-25T10:06:00EDT",
+      "reason": "Marketing promotion services",
+      "message_ids": ["7982", "8709"]
+    },
+    "6653622817": {
+      "username": "Isjzb11_nicolettasol",
+      "name": "Nicoletta",
+      "warnings": 1,
+      "first_warning": "2026-03-23T11:00:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8022"
+    },
+    "6496825108": {
+      "username": "LUC1F3R_CALLS",
+      "name": "LUC1F3R | @LucifersCalls",
+      "warnings": 1,
+      "first_warning": "2026-03-23T14:57:00EDT",
+      "reason": "Call/marketing promotion services",
+      "message_id": "8103"
+    },
+    "5553062450": {
+      "username": "Jax_Kols_Maneger",
+      "name": "𝐣𝐚𝐱 | 𝐂𝐫𝐲𝐩𝐭𝐨 𝐊𝐨𝐋𝐬 𝐌𝐚𝐧𝐚𝐠𝐞𝐫",
+      "warnings": 1,
+      "first_warning": "2026-03-23T17:32:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8174"
+    },
+    "6093751053": {
+      "username": "Adamlucas0",
+      "name": "Adam Lucas(kols influencer)",
+      "warnings": 1,
+      "first_warning": "2026-03-23T18:22:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8193"
+    },
+    "5822436223": {
+      "username": "KaifKols",
+      "name": "Kaif | KOLs influencers",
+      "warnings": 1,
+      "first_warning": "2026-03-23T18:55:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8198"
+    },
+    "5771563757": {
+      "username": "NovaCryptoAds",
+      "name": "Nova | • 𝖨𝗇𝖿𝗅𝗎𝖾𝗇𝖼𝖾𝗋 𝖬𝖺𝗋𝗄𝖾𝗍𝗂𝗇𝗀 • | 𝖪𝗈𝗅𝗌",
+      "warnings": 1,
+      "first_warning": "2026-03-24T06:31:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8258"
+    },
+    "5923337339": {
+      "username": "ArisKols",
+      "name": "𝖠𝗋𝗂𝗌 | 𝖪𝗈𝗅𝗌 𝖨𝗇𝖿𝗅𝗎𝖾𝗇𝖼𝖾𝗋𝗌 |",
+      "warnings": 1,
+      "first_warning": "2026-03-24T06:33:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8263"
+    },
+    "1160223229": {
+      "username": "Kexin_Ceo",
+      "name": "𝗞𝗲𝘅𝗶𝗻 𝗖𝗲𝗼",
+      "warnings": 1,
+      "first_warning": "2026-03-25T12:53:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8737"
+    },
+    "6974712051": {
+      "username": "Horshg",
+      "name": "Hacolm",
+      "warnings": 1,
+      "first_warning": "2026-03-25T14:40:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8743"
+    },
+    "7353929981": {
+      "username": "Albertmarketer",
+      "name": "Albert | Kols Marketer |",
+      "warnings": 1,
+      "first_warning": "2026-03-25T17:40:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8768"
+    },
+    "6859375120": {
+      "username": "Felex5",
+      "name": "Felex | Crypto Caller |",
+      "warnings": 1,
+      "first_warning": "2026-03-25T17:55:00EDT",
+      "reason": "Marketing promotion services",
+      "message_id": "8773"
+    }
+  }
+}
