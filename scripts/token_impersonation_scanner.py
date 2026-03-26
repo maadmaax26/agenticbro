@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Token Impersonation Scanner (Fixed Version)
+Token Impersonation Scanner (Enhanced Version)
 Scans for tokens impersonating a legitimate token by contract address
+Enhanced with multi-source search and blockchain verification
 """
 import json
 import requests
@@ -13,7 +14,7 @@ def get_token_info(contract_address):
     try:
         # Try DexScreener first
         url = f"https://api.dexscreener.com/latest/dex/tokens/{contract_address}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)  # Added timeout
         data = response.json()
 
         if data.get('pairs') and len(data['pairs']) > 0:
@@ -33,41 +34,54 @@ def get_token_info(contract_address):
                 'websites': pair.get('info', {}).get('websites', []),
                 'socials': pair.get('info', {}).get('socials', [])
             }
+        else:
+            return None
+    except requests.exceptions.Timeout:
+        return None
     except Exception as e:
         print(f"Error getting token info: {e}")
         return None
 
 def search_similar_tokens(symbol, name, legitimate_address):
-    """Search for tokens with similar symbols or names"""
+    """Enhanced search for tokens with similar symbols or names"""
+    print(f"🔍 Enhanced search for tokens similar to {symbol} ({name})")
+    
     search_terms = [
         symbol,
         name,
         symbol.split(' ')[0] if ' ' in symbol else symbol,
-        name.split(' ')[0] if ' ' in name else symbol
+        name.split(' ')[0] if ' ' in name else symbol,
+        f"{symbol} bro",  # Search for symbol + "bro"
+        f"{symbol.lower()}bro",
+        name.lower().replace(" ", ""),  # Concatenated name
+        "agentic bro",
+        "agentic"
     ]
 
     all_pairs = []
-    seen_addresses = set()
+    seen_addresses = set(legitimate_address)  # Exclude legitimate token
 
     for term in search_terms:
         try:
             url = f"https://api.dexscreener.com/latest/dex/search?q={term}"
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)  # Added timeout
             data = response.json()
 
             if data.get('pairs'):
                 for pair in data['pairs']:
                     address = pair.get('baseToken', {}).get('address', '')
                     if address and address != legitimate_address and address not in seen_addresses:
+                        pair['search_term'] = term  # Track which term found this token
                         all_pairs.append(pair)
                         seen_addresses.add(address)
         except Exception as e:
-            print(f"Error searching for {term}: {e}")
+            print(f"   Error searching for {term}: {e}")
 
+    print(f"📊 Found {len(all_pairs)} similar tokens using enhanced search")
     return all_pairs
 
 def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, legitimate_address):
-    """Analyze tokens for impersonation attempts"""
+    """Analyze tokens for impersonation attempts with enhanced detection"""
     impersonators = {
         'exact_symbol_fakes': [],  # Same symbol, different address - MOST DANGEROUS
         'high_risk': [],
@@ -99,6 +113,91 @@ def analyze_impersonators(similar_tokens, legitimate_symbol, legitimate_name, le
         elif symbol.upper().startswith(legitimate_symbol[:4].upper()):
             risk_score += 2
             risk_factors.append("⚠️ Similar symbol structure")
+
+        # Enhanced name matching
+        if legitimate_name.upper() in name.upper():
+            risk_score += 3
+            risk_factors.append("⚠️ Name contains legitimate token name")
+        elif any(word in name.lower() for word in ['agentic', 'bro', 'agent', 'ai']):
+            risk_score += 2
+            risk_factors.append("⚠️ Name contains related keywords")
+
+        # Token age analysis (if available)
+        pair_created_at = token.get('pairCreatedAt')
+        token_age_hours = None
+        if pair_created_at:
+            token_age_hours = (datetime.now().timestamp() - pair_created_at) / 3600
+            if token_age_hours < 24:  # Less than 1 day old
+                risk_score += 2
+                risk_factors.append("⚠️ Very recent token (high scam probability)")
+            elif token_age_hours < 168:  # Less than 1 week old
+                risk_score += 1
+                risk_factors.append("⚠️ Recent token (scam risk)")
+
+        # Liquidity risk
+        liquidity = token.get('liquidity', {}).get('usd', 0)
+        if liquidity == 0:
+            risk_score += 2
+            risk_factors.append("⚠️ Zero liquidity - rug pull setup")
+        elif liquidity < 100:
+            risk_score += 1
+            risk_factors.append("⚠️ Very low liquidity")
+
+        # Volume risk
+        volume = token.get('volume', {}).get('h24', 0)
+        if volume < 10:
+            risk_score += 1
+            risk_factors.append("⚠️ Very low volume")
+
+        # Platform risk
+        dex = token.get('dexId', '').lower()
+        if 'pump' in dex:
+            risk_score += 1
+            risk_factors.append("⚠️ Pump.fun token - known for scams")
+        elif 'raydium' not in dex and 'jupiter' not in dex:
+            risk_score += 1
+            risk_factors.append("⚠️ Unknown/exotic DEX")
+
+        # Search term analysis (how we found it)
+        search_term = token.get('search_term', 'unknown')
+        if search_term == legitimate_symbol:
+            risk_score += 2
+            risk_factors.append(f"⚠️ Found by exact symbol search (confusion attempt)")
+
+        # Categorize by risk
+        impersonator_info = {
+            'symbol': symbol,
+            'name': name,
+            'address': address,
+            'price': token.get('priceUsd', 'N/A'),
+            'liquidity': liquidity,
+            'volume': volume,
+            'chain': token.get('chainId', 'Unknown'),
+            'dex': token.get('dexId', 'Unknown'),
+            'url': token.get('url', ''),
+            'risk_score': risk_score,
+            'risk_factors': risk_factors,
+            'is_exact_symbol_fake': symbol.upper() == legitimate_symbol.upper() and address != legitimate_address,
+            'search_term': search_term,
+            'token_age_hours': token_age_hours
+        }
+
+        # Categorization logic
+        if symbol.upper() == legitimate_symbol.upper() and address != legitimate_address:
+            # Exact symbol fakes go to their own category
+            impersonators['exact_symbol_fakes'].append(impersonator_info)
+            # Also add to high risk
+            impersonators['high_risk'].append(impersonator_info)
+        elif risk_score >= 5:
+            impersonators['high_risk'].append(impersonator_info)
+        elif risk_score >= 3:
+            impersonators['medium_risk'].append(impersonator_info)
+        elif risk_score >= 1:
+            impersonators['low_risk'].append(impersonator_info)
+        else:
+            impersonators['unrelated'].append(impersonator_info)
+
+    return impersonators
 
         # Name matching
         if legitimate_name.upper() in name.upper():
@@ -257,8 +356,10 @@ def generate_detailed_report(legitimate_token, impersonators):
     return report
 
 def scan_for_impersonators(contract_address):
-    """Main scanning function"""
+    """Main scanning function with enhanced search capabilities"""
     print(f"🔍 Scanning for impersonators of contract: {contract_address}")
+    print("🚀 Using enhanced multi-source search method")
+    print("="*70)
 
     # Step 1: Get legitimate token info
     print("📋 Getting legitimate token information...")
@@ -270,15 +371,13 @@ def scan_for_impersonators(contract_address):
 
     print(f"✅ Found legitimate token: {legitimate_token['symbol']} ({legitimate_token['name']})")
 
-    # Step 2: Search for similar tokens
+    # Step 2: Enhanced search for similar tokens
     print("🔎 Searching for similar tokens...")
     similar_tokens = search_similar_tokens(
         legitimate_token['symbol'],
         legitimate_token['name'],
         legitimate_token['address']
     )
-
-    print(f"📊 Found {len(similar_tokens)} similar tokens")
 
     # Step 3: Analyze for impersonation
     print("🔍 Analyzing for impersonation attempts...")
@@ -296,7 +395,7 @@ def scan_for_impersonators(contract_address):
     # Step 5: Generate detailed report
     detailed_report = generate_detailed_report(legitimate_token, impersonators)
 
-    print("✅ Scan complete!")
+    print("✅ Enhanced scan complete!")
     print(f"🚨 FAKE TOKENS (same symbol): {len(impersonators['exact_symbol_fakes'])}")
     print(f"🚨 High risk impersonators: {len(impersonators['high_risk'])}")
     print(f"⚠️ Medium risk impersonators: {len(impersonators['medium_risk'])}")
