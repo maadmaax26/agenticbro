@@ -1,19 +1,23 @@
 #!/bin/bash
-# Start AgenticBro server with environment loaded
+# Start backend server with Telegram MTProto credentials
 
-# Kill any existing servers
-pkill -f "tsx watch server" 2>/dev/null || true
-pkill -f "node.*tsx" 2>/dev/null || true
+echo "🚀 Starting backend server with Telegram credentials..."
 
-echo "🚀 Starting AgenticBro server with Telegram integration..."
-
-# Load environment from .env.local explicitly
+# Load environment variables from .env.local
 if [ -f .env.local ]; then
-  export $(grep -v '^#' .env.local | xargs)
-  echo "✅ Environment loaded from .env.local"
+    export $(cat .env.local | grep -v '^#' | xargs)
+    echo "✅ Loaded environment variables from .env.local"
 else
-  echo "⚠️  .env.local not found — Telegram will use mock data"
+    echo "⚠️ .env.local not found, using defaults"
 fi
 
-# Start server
-npx tsx server/index.ts
+# Show loaded credentials (sanitized)
+echo "📋 Telegram Configuration:"
+echo "   API_ID: ${TELEGRAM_API_ID:0:-6}***"
+echo "   API_HASH: ${TELEGRAM_API_HASH:0:-6}***"
+echo "   SESSION: ${TELEGRAM_SESSION_STRING:0:20}***"
+
+# Start the server
+echo ""
+echo "🔧 Starting Node.js backend server..."
+npm run dev:server
