@@ -11,6 +11,7 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
+import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
@@ -655,6 +656,9 @@ function App() {
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
         )}
+
+        {/* ── Token Impersonation Scanner ── */}
+        <TokenImpersonationScanner />
 
         {!connected ? (
           <div className="max-w-6xl mx-auto">
