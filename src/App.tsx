@@ -11,6 +11,10 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
+import Roadmap from './components/Roadmap'
+import HolderDashboard from './components/dashboard/HolderDashboard'
+import WhaleDashboard from './components/dashboard/WhaleDashboard'
+import MarketSentiment from './components/MarketSentiment'
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
@@ -115,10 +119,6 @@ interface ChatMessage {
     recommendedAction: string
   }
 }
-import Roadmap from './components/Roadmap'
-import HolderDashboard from './components/dashboard/HolderDashboard'
-import WhaleDashboard from './components/dashboard/WhaleDashboard'
-import MarketSentiment from './components/MarketSentiment'
 
 function App() {
   const { connected, publicKey } = useWallet()
