@@ -92,12 +92,14 @@ export default function TokenImpersonationScanner() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ contractAddress: contractAddress.trim() }),
+        // Increase timeout to 60 seconds for large scans
+        signal: AbortSignal.timeout(60000)
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Scan failed');
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       if (data.success) {
@@ -106,7 +108,16 @@ export default function TokenImpersonationScanner() {
         throw new Error(data.error || 'Scan failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to perform scan');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+        setError('Scan timed out - please try again with a shorter timeout');
+      } else if (errorMessage.includes('Failed to fetch')) {
+        setError('Backend connection failed - please check if the server is running');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setScanning(false);
     }
