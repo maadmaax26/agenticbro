@@ -49,6 +49,7 @@ interface ImpersonatorToken {
 }
 
 interface ScanResults {
+  exact_symbol_fakes: ImpersonatorToken[];
   high_risk: ImpersonatorToken[];
   medium_risk: ImpersonatorToken[];
   low_risk: ImpersonatorToken[];
@@ -76,6 +77,7 @@ interface TokenImpersonationResult {
   impersonators: ScanResults;
   summary: {
     totalAnalyzed: number;
+    exactSymbolFakes: number;
     highRisk: number;
     mediumRisk: number;
     lowRisk: number;
@@ -240,17 +242,19 @@ router.post('/', async (req: Request, res: Response) => {
       impersonators: reportData.impersonators,
       summary: {
         totalAnalyzed: reportData.summary.total_analyzed,
+        exactSymbolFakes: reportData.summary.exact_symbol_fakes || 0,
         highRisk: reportData.summary.high_risk,
         mediumRisk: reportData.summary.medium_risk,
         lowRisk: reportData.summary.low_risk,
         unrelated: reportData.summary.unrelated,
-        suspicious: reportData.summary.high_risk + reportData.summary.medium_risk + reportData.summary.low_risk
+        suspicious: (reportData.summary.exact_symbol_fakes || 0) + reportData.summary.high_risk + reportData.summary.medium_risk + reportData.summary.low_risk
       },
       alert,
       scanDate: reportData.scan_date
     };
 
-    console.log(`✅ Scan complete: ${result.summary.suspicious} suspicious tokens found`);
+    const exactFakeCount = result.summary.exactSymbolFakes;
+    console.log(`✅ Scan complete: ${result.summary.suspicious} suspicious tokens found, ${exactFakeCount} exact symbol fakes`);
     res.json(result);
 
   } catch (error) {
