@@ -18,9 +18,15 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 const execAsync = promisify(exec);
 const router = express.Router();
+
+// ─── ES Module __dirname workaround ─────────────────────────────────────────────
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -159,7 +165,7 @@ function generateAlert(legitimateToken: TokenInfo, impersonators: ScanResults): 
  *   "scanDate": "2026-03-26T10:00:00.000Z"
  * }
  */
-router.post('/token-impersonation-scan', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { contractAddress } = req.body as TokenImpersonationRequest;
 
@@ -262,7 +268,7 @@ router.post('/token-impersonation-scan', async (req: Request, res: Response) => 
  *
  * List recent scan reports
  */
-router.get('/token-impersonation-scan/reports', (req: Request, res: Response) => {
+router.get('/reports', (req: Request, res: Response) => {
   try {
     const reportsDir = path.join(__dirname, '../..');
     const files = fs.readdirSync(reportsDir)
@@ -301,7 +307,7 @@ router.get('/token-impersonation-scan/reports', (req: Request, res: Response) =>
  *
  * Get a specific scan report
  */
-router.get('/token-impersonation-scan/report/:filename', (req: Request, res: Response) => {
+router.get('/report/:filename', (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
     const reportPath = path.join(__dirname, '../..', filename);
