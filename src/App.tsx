@@ -17,8 +17,9 @@ import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 
-// Direct to local backend — works from both localhost:5173 and the deployed Vercel site
-const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001'
+// Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
+// Vercel serverless functions handle /api/* in production.
+const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? ''
 
 // ─── Known channel data (module-level so both generateChannelSuccessRate and runScan can access it) ──
 const knownChannels: Record<string, any> = {
