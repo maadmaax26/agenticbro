@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey, Transaction } from '@solana/web3.js';
+import { isTestWallet } from '../hooks/useTokenGating';
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
@@ -178,6 +179,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, fre
   const [report, setReport]               = useState<InvestigationReport | null>(null);
   const [scanError, setScanError]         = useState<string | null>(null);
   const [scanCount, setScanCount]         = useState(0);
+  const isTest = isTestWallet(walletAddress);
   const [burnStatus, setBurnStatus]       = useState<'idle' | 'burning' | 'confirmed'>('idle');
 
   // Load scan count on mount / wallet change
@@ -185,8 +187,8 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, fre
     setScanCount(getScanCount(walletAddress));
   }, [walletAddress]);
 
-  const freeScansLeft = Math.max(0, freeScanLimit - scanCount);
-  const requiresPayment = freeScansLeft <= 0;
+  const freeScansLeft = isTest ? Infinity : Math.max(0, freeScanLimit - scanCount);
+  const requiresPayment = !isTest && freeScansLeft <= 0;
 
   // Calculate token cost for $2.00 USD
   const tokenCostForScan = tokenPriceUsd > 0 ? Math.ceil(SCAN_COST_USD / tokenPriceUsd) : 0;
@@ -364,8 +366,7 @@ export default function ScamDetectionSection({ walletAddress, tokenPriceUsd, fre
 
         setReport(investigationReport);
         // Increment scan count only on successful scan
-        const newCount = incrementScanCount(walletAddress);
-        setScanCount(newCount);
+        if (!isTest) { const newCount = incrementScanCount(walletAddress); setScanCount(newCount); }
       }
       setScanStatus('done');
     } catch (err) {
