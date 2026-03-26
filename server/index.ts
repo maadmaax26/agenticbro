@@ -76,6 +76,14 @@ app.use('/api/market',   marketRouter)
 app.use('/api/onchain',  onchainRouter)
 app.use('/api/telegram', telegramRouter)
 app.use('/api/scam-detect', scamDetectRouter)
+// Alias: /api/scam-investigate → /api/telegram/scam-investigate
+// Makes the same endpoint available at the path the frontend and Vercel function use.
+app.post('/api/scam-investigate', (req: Request, res: Response) => {
+  req.url = '/scam-investigate'
+  telegramRouter(req as any, res, () => {
+    res.status(404).json({ error: 'Not found' })
+  })
+})
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ts: new Date().toISOString() })
