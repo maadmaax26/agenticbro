@@ -40,6 +40,7 @@ interface ImpersonatorToken {
 }
 
 interface ScanResults {
+  exact_symbol_fakes: ImpersonatorToken[];
   high_risk: ImpersonatorToken[];
   medium_risk: ImpersonatorToken[];
   low_risk: ImpersonatorToken[];
@@ -48,6 +49,7 @@ interface ScanResults {
 
 interface ScanSummary {
   totalAnalyzed: number;
+  exactSymbolFakes: number;
   highRisk: number;
   mediumRisk: number;
   lowRisk: number;
@@ -259,11 +261,18 @@ export default function TokenImpersonationScanner() {
           >
             <h3 className="text-lg font-bold text-blue-400 mb-4">📊 Scan Summary</h3>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">{result.summary.totalAnalyzed}</p>
                 <p className="text-xs text-gray-500 uppercase tracking-wider">
                   Analyzed
+                </p>
+              </div>
+
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-500">{result.summary.exactSymbolFakes}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                  Fake Symbols
                 </p>
               </div>
 
@@ -317,6 +326,86 @@ export default function TokenImpersonationScanner() {
               )}
             </div>
           </div>
+
+          {/* FAKE TOKENS WITH SAME SYMBOL - MOST DANGEROUS */}
+          {result.impersonators.exact_symbol_fakes.length > 0 && (
+            <div
+              className="rounded-xl p-6"
+              style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '2px solid rgba(239,68,68,0.4)',
+              }}
+            >
+              <h3 className="text-lg font-bold text-red-500 mb-4">
+                🚨 CRITICAL - FAKE TOKENS WITH SAME SYMBOL ({result.impersonators.exact_symbol_fakes.length})
+              </h3>
+
+              <p className="text-sm text-red-300 mb-4">
+                These tokens use the EXACT same symbol but have DIFFERENT contract addresses!
+                This is the MOST DANGEROUS type of impersonation.
+              </p>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {result.impersonators.exact_symbol_fakes.map((token, index) => (
+                  <div
+                    key={index}
+                    className="bg-black/40 rounded-lg p-4 border-2 border-red-500/40"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-bold text-red-400">
+                          🚨 FAKE {token.symbol} (Different Address!)
+                        </p>
+                        <p className="text-sm text-gray-300">{token.name}</p>
+                        <p
+                          className="text-xs font-mono text-gray-400 mt-1"
+                          title={token.address}
+                        >
+                          {token.address.slice(0, 20)}...{token.address.slice(-10)}
+                        </p>
+                      </div>
+                      <div
+                        className="px-3 py-1 rounded-lg text-sm font-bold"
+                        style={{
+                          background: 'rgba(239,68,68,0.3)',
+                          border: '2px solid rgba(239,68,68,0.6)',
+                          color: '#f87171',
+                        }}
+                      >
+                        {token.risk_score}/10
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 mt-2">
+                      {token.risk_factors.slice(0, 4).map((factor, idx) => (
+                        <p key={idx} className="text-xs text-red-300 font-semibold">
+                          {factor}
+                        </p>
+                      ))}
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                      <span>{token.chain} • {token.dex}</span>
+                      <span>Liq: ${token.liquidity.toLocaleString()}</span>
+                    </div>
+
+                    <a
+                      href={token.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 block text-center py-1 rounded text-xs font-semibold text-white transition-all hover:scale-[1.02]"
+                      style={{
+                        background: 'rgba(239,68,68,0.2)',
+                        border: '1px solid rgba(239,68,68,0.4)',
+                      }}
+                    >
+                      View on DexScreener
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* High Risk Tokens */}
           {result.impersonators.high_risk.length > 0 && (
