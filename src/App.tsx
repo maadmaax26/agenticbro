@@ -134,6 +134,7 @@ function App() {
     return `priorityFreeScans_${publicKey.toString()}`;
   };
 
+  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
     const defaultScans = holderTierUnlocked ? 15 : 10; // 15 for holders, 10 for regular users
@@ -154,7 +155,6 @@ function App() {
   const [channelInput, setChannelInput] = useState('')
   const [tokenInput, setTokenInput]     = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
-  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
 
   // Update default scans when holder tier status changes
   useEffect(() => {
