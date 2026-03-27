@@ -1,10 +1,14 @@
 /**
  * Token Impersonation Scanner Component
  *
- * Allows users to scan for tokens impersonating a legitimate token by contract address
+ * Allows users to scan for tokens impersonating a legitimate token by contract address.
+ * Rate-limited per day:
+ *   • Anonymous  (no wallet): 2 free scans / day
+ *   • Connected wallet:       3 free scans / day
  */
 
 import { useState } from 'react';
+import { useImpersonationScanLimit } from '../hooks/useImpersonationScanLimit';
 
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -67,17 +71,27 @@ interface ScanResult {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function TokenImpersonationScanner() {
+interface TokenImpersonationScannerProps {
+  walletAddress?: string;
+}
+
+export default function TokenImpersonationScanner({ walletAddress }: TokenImpersonationScannerProps) {
   const [contractAddress, setContractAddress] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { scansRemaining, scansLimit, canScan, isAnon, recordScan } =
+    useImpersonationScanLimit(walletAddress);
 
   const handleScan = async () => {
     if (!contractAddress.trim()) {
       setError('Please enter a contract address');
       return;
     }
+
+    // Enforce daily limit before firing the request
+    if (!canScan) return;
 
     setScanning(true);
     setError(null);
@@ -101,13 +115,15 @@ export default function TokenImpersonationScanner() {
       }
 
       if (data.success) {
+        // Only consume a scan credit on success
+        recordScan();
         setResult(data);
       } else {
         throw new Error(data.error || 'Scan failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
-      
+
       // Provide more helpful error messages
       if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
         setError('Scan timed out - please try again with a shorter timeout');
@@ -133,6 +149,12 @@ export default function TokenImpersonationScanner() {
     }
   };
 
+  // Scan counter colour
+  const counterColour =
+    scansRemaining === 0   ? '#f87171'  // red — exhausted
+    : scansRemaining === 1 ? '#fbbf24'  // amber — last scan
+    : '#4ade80';                         // green — plenty left
+
   return (
     <div className="space-y-6">
       {/* ── Input Section ── */}
@@ -143,43 +165,114 @@ export default function TokenImpersonationScanner() {
           border: '1px solid rgba(139,92,246,0.15)',
         }}
       >
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">🔍</span>
-          <div>
-            <h2 className="text-xl font-bold text-white">Token Impersonation Scanner</h2>
-            <p className="text-sm text-gray-400">Scan for tokens impersonating a legitimate token</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">
-              Contract Address
-            </label>
-            <input
-              type="text"
-              value={contractAddress}
-              onChange={(e) => setContractAddress(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
-              disabled={scanning}
-              className="w-full px-4 py-3 rounded-lg bg-black/40 border border-purple-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'monospace' }}
-            />
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔍</span>
+            <div>
+              <h2 className="text-xl font-bold text-white">Token Impersonation Scanner</h2>
+              <p className="text-sm text-gray-400">Scan for tokens impersonating a legitimate token</p>
+            </div>
           </div>
 
-          <button
-            onClick={handleScan}
-            disabled={scanning || !contractAddress.trim()}
-            className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+          {/* ── Daily scan counter badge ── */}
+          <div
+            className="flex flex-col items-center px-4 py-2 rounded-xl text-center"
             style={{
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-              boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+              background: 'rgba(0,0,0,0.35)',
+              border: `1px solid ${counterColour}40`,
+              minWidth: '90px',
             }}
           >
-            {scanning ? '🔄 Scanning...' : '🚀 Start Scan'}
-          </button>
+            <span className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+              {isAnon ? 'Free Scans' : 'Daily Scans'}
+            </span>
+            <span className="text-xl font-black" style={{ color: counterColour }}>
+              {scansRemaining}
+              <span className="text-sm font-normal text-gray-500"> / {scansLimit}</span>
+            </span>
+            <span className="text-xs" style={{ color: counterColour }}>
+              {scansRemaining === 0 ? 'Resets midnight' : 'remaining'}
+            </span>
+          </div>
         </div>
+
+        {/* ── Locked state — daily limit reached ── */}
+        {!canScan ? (
+          <div
+            className="rounded-xl p-5 text-center"
+            style={{
+              background: 'rgba(239,68,68,0.06)',
+              border: '1px solid rgba(239,68,68,0.25)',
+            }}
+          >
+            <span className="text-3xl mb-3 block">🔒</span>
+            {isAnon ? (
+              <>
+                <p className="text-white font-bold mb-1">Daily limit reached (2 / 2)</p>
+                <p className="text-sm text-gray-400 mb-4">
+                  Connect your wallet to unlock <span className="text-purple-400 font-semibold">3 free scans per day</span>.
+                </p>
+                <p className="text-xs text-gray-500">Limit resets at midnight · No token required</p>
+              </>
+            ) : (
+              <>
+                <p className="text-white font-bold mb-1">Daily limit reached (3 / 3)</p>
+                <p className="text-sm text-gray-400">
+                  Your {scansLimit} free scans for today have been used.
+                </p>
+                <p className="text-xs text-gray-500 mt-2">Resets at midnight UTC</p>
+              </>
+            )}
+          </div>
+        ) : (
+          /* ── Normal scan form ── */
+          <div className="space-y-3">
+            {/* Anon upsell hint — visible only when not connected and scans are low */}
+            {isAnon && scansRemaining <= 1 && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                style={{
+                  background: 'rgba(139,92,246,0.08)',
+                  border: '1px solid rgba(139,92,246,0.2)',
+                }}
+              >
+                <span>💡</span>
+                <span className="text-purple-300">
+                  Connect wallet for <strong>3 scans/day</strong> instead of 2
+                </span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">
+                Contract Address
+              </label>
+              <input
+                type="text"
+                value={contractAddress}
+                onChange={(e) => setContractAddress(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
+                disabled={scanning}
+                className="w-full px-4 py-3 rounded-lg bg-black/40 border border-purple-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <button
+              onClick={handleScan}
+              disabled={scanning || !contractAddress.trim()}
+              className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+              }}
+            >
+              {scanning ? '🔄 Scanning...' : '🚀 Start Scan'}
+            </button>
+          </div>
+        )}
 
         {error && (
           <div
