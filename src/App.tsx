@@ -16,6 +16,8 @@ import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
+import PreConnectScanWidget from './components/PreConnectScanWidget'
+import LanguageSelector, { type Locale } from './components/LanguageSelector'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -129,6 +131,7 @@ function App() {
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
   const [showScamDatabase, setShowScamDatabase] = useState(false)
+  const [locale, setLocale] = useState<Locale>('en')
 
   // Get wallet-specific scan count
   const getWalletScanKey = () => {
@@ -608,6 +611,7 @@ function App() {
               >
                 💰 Buy $AGNTCBRO
               </a>
+              <LanguageSelector current={locale} onChange={setLocale} />
               <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto !leading-normal !min-w-0" />
             </div>
           </header>
@@ -783,6 +787,8 @@ function App() {
               </div>
             </div>
 
+            
+            <PreConnectScanWidget lang={locale} />
             {/* Connect CTA */}
             <div className="text-center py-8 bg-black/20 rounded-2xl border border-purple-500/20">
               <p className="text-white font-bold text-xl mb-2">Ready to protect your capital?</p>
