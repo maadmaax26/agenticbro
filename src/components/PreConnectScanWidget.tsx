@@ -23,7 +23,7 @@ interface ScanResult {
 
 type Locale = 'en' | 'zh' | 'ja' | 'de' | 'fr' | 'es'
 
-const T: Record<Locale, Record<string, string>> = {
+const T: Record<Locale, Record<string, string | ((n: number) => string)>> = {
   en: {
     title: 'Free Scam Detection Scan',
     subtitle: 'Check any Telegram or Twitter username before you invest',
