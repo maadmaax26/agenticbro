@@ -118,7 +118,7 @@ const T: Record<Locale, Record<string, string>> = {
   },
   fr: {
     title: 'Scan Anti-Arnaque Gratuit',
-    subtitle: 'Vérifiez tout pseudo Telegram ou Twitter avant d'investir',
+    subtitle: 'Vérifiez tout pseudo Telegram ou Twitter avant d\'investir',
     placeholder: 'Entrez un pseudo (ex: @cryptoguru)',
     platform_label: 'Plateforme',
     scan_btn: 'Scanner maintenant',
@@ -127,7 +127,7 @@ const T: Record<Locale, Record<string, string>> = {
     no_scans: 'Plus de scans gratuits — connectez votre wallet',
     risk_score: 'Score de risque',
     verdict: 'Verdict',
-    red_flags: 'Signaux d'alerte',
+    red_flags: 'Signaux d\'alerte',
     known_scam: 'Arnaque connue',
     victim_reports: 'Rapports de victimes',
     safe: 'SÛR',
