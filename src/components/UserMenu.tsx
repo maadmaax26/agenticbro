@@ -47,14 +47,14 @@ export default function UserMenu({ onLoginClick, onBuyCreditsClick }: UserMenuPr
     return (
       <button
         onClick={onLoginClick}
-        className="px-4 py-2 rounded-lg font-semibold text-white transition-all hover:scale-[1.02] flex items-center gap-2"
+        className="px-3 py-1 rounded-md font-semibold text-white transition-all hover:scale-[1.02] flex items-center gap-1"
         style={{
           background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
           boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
         }}
       >
-        <span>🔐</span>
-        <span>Sign In</span>
+        <span className="text-sm">🔐</span>
+        <span className="text-xs">Sign In</span>
       </button>
     );
   }
@@ -145,13 +145,13 @@ export default function UserMenu({ onLoginClick, onBuyCreditsClick }: UserMenuPr
                   setShowDropdown(false);
                   onBuyCreditsClick();
                 }}
-                className="w-full py-2 px-4 rounded-lg font-semibold text-white transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                className="w-full py-1.5 px-3 rounded-md font-semibold text-white transition-all hover:scale-[1.02] flex items-center justify-center gap-1"
                 style={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 }}
               >
-                <span>💎</span>
-                <span>Buy Credits</span>
+                <span className="text-sm">💎</span>
+                <span className="text-xs">Buy Credits</span>
               </button>
             </div>
 
