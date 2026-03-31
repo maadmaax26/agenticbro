@@ -42,6 +42,7 @@ import onchainRouter from './routes/onchain.js'
 import telegramRouter from './routes/telegram.js'
 import scamDetectRouter from './routes/scam-detect.js'
 import tokenImpersonationRouter from './routes/token-impersonation-scan.js'
+import profileVerifyRouter from './routes/profile-verify.js'
 
 const app = express()
 const PORT = parseInt(process.env.SERVER_PORT ?? '3001', 10)
@@ -78,6 +79,7 @@ app.use('/api/onchain',  onchainRouter)
 app.use('/api/telegram', telegramRouter)
 app.use('/api/scam-detect', scamDetectRouter)
 app.use('/api/token-impersonation-scan', tokenImpersonationRouter)
+app.use('/api/profile-verify', profileVerifyRouter)
 // Alias: /api/scam-investigate → /api/telegram/scam-investigate
 // Makes the same endpoint available at the path the frontend and Vercel function use.
 app.post('/api/scam-investigate', (req: Request, res: Response) => {
