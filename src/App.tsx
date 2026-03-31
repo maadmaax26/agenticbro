@@ -11,6 +11,7 @@ import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
+import ProfileVerifierScanner from './components/ProfileVerifierScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
@@ -657,6 +658,9 @@ function App() {
           )}
 
       <main className="relative z-10 container mx-auto px-6 pb-10">
+        {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
+        <ProfileVerifierScanner />
+
         {/* ── Scam Detection System — requires wallet connection ── */}
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
