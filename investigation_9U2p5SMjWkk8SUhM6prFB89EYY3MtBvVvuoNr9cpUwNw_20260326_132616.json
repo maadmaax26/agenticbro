@@ -1,0 +1,15 @@
+{
+  "investigation_date": "2026-03-26T13:26:16.522529",
+  "target_address": "9U2p5SMjWkk8SUhM6prFB89EYY3MtBvVvuoNr9cpUwNw",
+  "target_name": "AGNTCBRO",
+  "findings": {
+    "direct_search": {
+      "found": false,
+      "reason": "Not indexed by DexScreener"
+    },
+    "related_tokens": 71,
+    "exact_matches": 1,
+    "recent_suspicious": 34
+  },
+  "recommendations": "\u26a0\ufe0f Token not found on major exchanges\n\u26a0\ufe0f Token may be very new or not yet indexed\n\u26a0\ufe0f Token might not be legitimate or could be a scam\n\ud83d\udcca Found 71 related tokens that might be impersonators\n\u26a0\ufe0f High number of related tokens - may be confusion campaign\n\n\ud83d\udee1\ufe0f RECOMMENDED ACTIONS:\n1. Verify the contract address on Solscan\n2. Check if the token is listed on Raydium/Jupiter\n3. Look for official announcements from legitimate project\n4. Be cautious if token has zero liquidity or is very new\n5. Never send funds to unverified contract addresses"
+}

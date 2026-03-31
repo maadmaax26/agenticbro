@@ -1,0 +1,50 @@
+{
+  "total_sessions": 9,
+  "by_agent": {
+    "query-router-1": {
+      "active": 3,
+      "max": 10,
+      "utilization": 0.3
+    },
+    "query-router-2": {
+      "active": 2,
+      "max": 10,
+      "utilization": 0.2
+    },
+    "telegram-manager": {
+      "active": 0,
+      "max": 10,
+      "utilization": 0
+    },
+    "web-scraper": {
+      "active": 4,
+      "max": 10,
+      "utilization": 0.4
+    },
+    "file-manager": {
+      "active": 0,
+      "max": 10,
+      "utilization": 0
+    },
+    "complex-op-agent-1": {
+      "active": 0,
+      "max": 25,
+      "utilization": 0
+    },
+    "complex-op-agent-2": {
+      "active": 0,
+      "max": 25,
+      "utilization": 0
+    }
+  },
+  "load_balance_index": -0.22726233524302897,
+  "queue_lengths": {
+    "query-router-1": 0,
+    "query-router-2": 0,
+    "telegram-manager": 0,
+    "web-scraper": 0,
+    "file-manager": 0,
+    "complex-op-agent-1": 0,
+    "complex-op-agent-2": 0
+  }
+}

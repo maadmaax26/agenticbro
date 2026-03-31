@@ -1,0 +1,26 @@
+{
+  "total_delegations": 1,
+  "successful_delegations": 1,
+  "failed_delegations": 0,
+  "success_rate": 1,
+  "failure_rate": 0,
+  "by_agent": {
+    "query-router-1": 1,
+    "query-router-2": 0,
+    "telegram-manager": 0,
+    "web-scraper": 0,
+    "file-manager": 0,
+    "complex-op-agent-1": 0,
+    "complex-op-agent-2": 0
+  },
+  "by_operation": {
+    "simple_query": 1,
+    "x_profile_scan": 0,
+    "telegram_channel_scan": 0,
+    "web_search": 0,
+    "web_scrape": 0,
+    "telegram_management": 0,
+    "file_operation": 0,
+    "complex_reasoning": 0
+  }
+}

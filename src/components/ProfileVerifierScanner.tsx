@@ -92,25 +92,37 @@ export default function ProfileVerifierScanner() {
     setError(null);
     setResult(null);
 
+    const cleanUsername = username.trim().replace(/^@/, '');
+
     try {
-      // Try the main API first, fall back to public endpoint
-      const apiEndpoints = [
+      // Priority 1: Try local Chrome CDP backend (development)
+      const localEndpoints = [
+        'http://localhost:3001/api/v1/verify/profile',
+        'http://127.0.0.1:3001/api/v1/verify/profile',
+      ];
+      
+      // Priority 2: Try Vercel serverless (production fallback)
+      const remoteEndpoints = [
+        '/api/profile-verify',
         '/api/verify/profile',
-        '/api/profile-verify'
       ];
       
       let lastError: Error | null = null;
-      
-      for (const endpoint of apiEndpoints) {
+      let scanResult: ProfileScanResult | null = null;
+
+      // Try local endpoints first
+      for (const endpoint of localEndpoints) {
         try {
+          console.log(`Trying local endpoint: ${endpoint}`);
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              // No API key needed for local development
             },
             body: JSON.stringify({
               platform,
-              username: username.trim().replace(/^@/, ''),
+              username: cleanUsername,
               verificationContext: 'crypto',
               options: {
                 deepScan: false,
@@ -122,13 +134,11 @@ export default function ProfileVerifierScanner() {
 
           if (response.ok) {
             const data = await response.json();
+            console.log(`Local endpoint ${endpoint} succeeded:`, data);
             
             if (data.success || data.riskScore !== undefined) {
-              // Decrease scan count on success
-              updateScanCount(freeScansRemaining - 1);
-              setResult(data);
-              setScanning(false);
-              return;
+              scanResult = normalizeResult(data, platform, cleanUsername);
+              break;
             }
             
             if (data.error) {
@@ -137,20 +147,63 @@ export default function ProfileVerifierScanner() {
           }
         } catch (err) {
           lastError = err instanceof Error ? err : new Error('Unknown error');
-          console.log(`Endpoint ${endpoint} failed:`, lastError.message);
+          console.log(`Local endpoint ${endpoint} failed:`, lastError.message);
           continue;
         }
       }
-      
-      // If all endpoints failed, generate a mock result for demo purposes
-      if (lastError) {
-        console.warn('All endpoints failed, generating demo result');
-        
-        // Generate demo result based on username patterns
-        const demoResult = generateDemoResult(platform, username.trim().replace(/^@/, ''));
-        updateScanCount(freeScansRemaining - 1);
-        setResult(demoResult);
+
+      // If local failed, try remote endpoints
+      if (!scanResult) {
+        for (const endpoint of remoteEndpoints) {
+          try {
+            console.log(`Trying remote endpoint: ${endpoint}`);
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                platform,
+                username: cleanUsername,
+                verificationContext: 'crypto',
+                options: {
+                  deepScan: false,
+                  includeMedia: false,
+                }
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`Remote endpoint ${endpoint} succeeded:`, data);
+              
+              if (data.success || data.riskScore !== undefined) {
+                scanResult = normalizeResult(data, platform, cleanUsername);
+                break;
+              }
+              
+              if (data.error) {
+                throw new Error(data.error.message || data.error);
+              }
+            }
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error('Unknown error');
+            console.log(`Remote endpoint ${endpoint} failed:`, lastError.message);
+            continue;
+          }
+        }
       }
+
+      // If all endpoints failed, generate a demo result
+      if (!scanResult) {
+        console.warn('All endpoints failed, generating demo result');
+        scanResult = generateDemoResult(platform, cleanUsername);
+      }
+
+      // Decrease scan count and set result
+      updateScanCount(freeScansRemaining - 1);
+      setResult(scanResult);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
@@ -158,6 +211,42 @@ export default function ProfileVerifierScanner() {
     } finally {
       setScanning(false);
     }
+  };
+
+  // Normalize backend response to frontend format
+  const normalizeResult = (data: any, platform: string, username: string): ProfileScanResult => {
+    return {
+      success: data.success ?? true,
+      platform: data.platform || platform,
+      username: data.username || username,
+      displayName: data.displayName || data.profileData?.displayName,
+      verified: data.verified ?? data.profileData?.verified ?? false,
+      riskScore: data.riskScore ?? 0,
+      riskLevel: data.riskLevel || calculateRiskLevel(data.riskScore ?? 0),
+      scamType: data.scamType,
+      redFlags: data.redFlags || data.flags || [],
+      evidence: data.evidence || [],
+      recommendation: data.recommendation || data.recommendation || 'Profile analyzed successfully',
+      profileData: {
+        followers: data.profileData?.followers,
+        following: data.profileData?.following,
+        posts: data.profileData?.posts,
+        bio: data.profileData?.bio,
+        location: data.profileData?.location,
+        website: data.profileData?.website,
+        joinDate: data.profileData?.joinDate || data.profileData?.created_at,
+        profileImage: data.profileData?.profileImage || data.profileData?.avatar,
+      },
+      confidence: data.confidence || 'MEDIUM',
+      scanDate: data.scanDate || new Date().toISOString(),
+    };
+  };
+
+  const calculateRiskLevel = (score: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' => {
+    if (score >= 75) return 'CRITICAL';
+    if (score >= 50) return 'HIGH';
+    if (score >= 30) return 'MEDIUM';
+    return 'LOW';
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

@@ -1,0 +1,105 @@
+{
+  "average_response_time_ms": 800,
+  "total_response_time_ms": 800,
+  "response_count": 1,
+  "by_agent": {
+    "query-router-1": {
+      "count": 1,
+      "total_ms": 800,
+      "avg_ms": 800,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "query-router-2": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "telegram-manager": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "web-scraper": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "file-manager": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "complex-op-agent-1": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "complex-op-agent-2": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0,
+      "p50_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    }
+  },
+  "by_operation": {
+    "simple_query": {
+      "count": 1,
+      "total_ms": 800,
+      "avg_ms": 800
+    },
+    "x_profile_scan": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "telegram_channel_scan": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "web_search": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "web_scrape": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "telegram_management": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "file_operation": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    },
+    "complex_reasoning": {
+      "count": 0,
+      "total_ms": 0,
+      "avg_ms": 0
+    }
+  }
+}

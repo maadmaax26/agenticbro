@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-03-28T02:08:55.165Z",
+  "status": "warning",
+  "kpi": {
+    "total_delegations": 1,
+    "delegation_success_rate": 1,
+    "avg_response_time_ms": 800,
+    "total_sessions": 9,
+    "error_rate": 0,
+    "load_balance_index": -0.22726233524302897,
+    "total_ram_gb": 6.6,
+    "total_cpu_percent": 3.5714285714285716
+  },
+  "alerts": [
+    {
+      "type": "load_balance",
+      "severity": "warning",
+      "message": "Load balance index: -0.23"
+    }
+  ],
+  "performance_by_agent": {
+    "query-router-1": {
+      "delegations": 1,
+      "avg_response_time_ms": 800,
+      "utilization": 0.3,
+      "error_count": 0,
+      "ram_gb": 6.6,
+      "cpu_percent": 25
+    },
+    "query-router-2": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0.2,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    },
+    "telegram-manager": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    },
+    "web-scraper": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0.4,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    },
+    "file-manager": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    },
+    "complex-op-agent-1": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    },
+    "complex-op-agent-2": {
+      "delegations": 0,
+      "avg_response_time_ms": 0,
+      "utilization": 0,
+      "error_count": 0,
+      "ram_gb": 0,
+      "cpu_percent": 0
+    }
+  }
+}
