@@ -97,7 +97,9 @@ export default function ProfileVerifierScanner() {
     try {
       // Priority 1: Try local Chrome CDP backend (development)
       const localEndpoints = [
+        'http://localhost:3003/api/v1/verify/profile',
         'http://localhost:3002/api/v1/verify/profile',
+        'http://127.0.0.1:3003/api/v1/verify/profile',
         'http://127.0.0.1:3002/api/v1/verify/profile',
       ];
       
