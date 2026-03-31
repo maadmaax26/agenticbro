@@ -14,17 +14,17 @@ export default function MobileMenu({ onNavigate }: MobileMenuProps) {
   }
 
   return (
-    <div className="md:hidden relative">
-      {/* Hamburger button */}
+    <div className="md:hidden relative z-[120]">
+      {/* Hamburger button - always on top */}
       <button
         onClick={() => setOpen(!open)}
-        className="p-2 rounded-lg hover:bg-accent/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+        className="p-2 rounded-lg hover:bg-accent/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center relative z-[120]"
         aria-label={open ? 'Close menu' : 'Open menu'}
       >
         {open ? (
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6 text-white" />
         ) : (
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6 text-white" />
         )}
       </button>
 
@@ -38,7 +38,7 @@ export default function MobileMenu({ onNavigate }: MobileMenuProps) {
           />
 
           {/* Menu panel - high contrast background */}
-          <div className="fixed top-0 left-0 right-0 z-[110] bg-slate-900/98 border-b-2 border-purple-500/50 shadow-2xl shadow-purple-500/20">
+          <div className="fixed top-0 left-0 right-0 z-[115] bg-slate-900/98 border-b-2 border-purple-500/50 shadow-2xl shadow-purple-500/20">
             {/* Header with close button */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/30">
               <div className="flex items-center gap-2">
