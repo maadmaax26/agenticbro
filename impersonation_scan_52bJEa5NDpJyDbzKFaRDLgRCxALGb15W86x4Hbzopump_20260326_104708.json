@@ -1,0 +1,845 @@
+{
+  "scan_date": "2026-03-26T10:47:08.018457",
+  "legitimate_token": {
+    "symbol": "AGNTCBRO",
+    "name": "Agentic Bro",
+    "address": "52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump",
+    "price": "0.000003441",
+    "volume": 17.24,
+    "liquidity": 0,
+    "chain": "solana",
+    "dex": "pumpfun",
+    "url": "https://dexscreener.com/solana/bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k",
+    "pairAddress": "BwaPiaK2D43zt443X6WczJ4rDEAmdCBA5MDRzZ3rQD9K",
+    "websites": [
+      {
+        "url": "https://agenticbro.app",
+        "label": "Website"
+      },
+      {
+        "url": "https://agenticbro.app",
+        "label": "Docs"
+      },
+      {
+        "url": "https://www.reddit.comu/AgenticBro?utm_source=share&utm_medium=android_app&utm_name=androidcss&utm_term=1&utm_content=1",
+        "label": ""
+      }
+    ],
+    "socials": [
+      {
+        "url": "https://x.com/AgenticBro11",
+        "type": "twitter"
+      },
+      {
+        "url": "https://t.me/Agenticbro1",
+        "type": "telegram"
+      }
+    ]
+  },
+  "impersonators": {
+    "high_risk": [],
+    "medium_risk": [
+      {
+        "symbol": "GCB",
+        "name": "GoldenCryptoBro",
+        "address": "0x43FA849CeD9Bc4B25d9E9282e1779BF3aE663B22",
+        "price": "N/A",
+        "liquidity": 0,
+        "volume": 0,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0x8d3c98f7a67ad682fbcfc3ef989930dda33da3cc",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Very low volume"
+        ]
+      },
+      {
+        "symbol": "agentic",
+        "name": "agentic meme",
+        "address": "H4tHzG9GkXQr1gCLzcUWDHWHwyzTrgRZKUZiCTF62Dea",
+        "price": "0.000002559",
+        "liquidity": 0,
+        "volume": 1356.22,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/2yluinzy4njtx63jxbbdum5xdypphkycjf9vag7fqnad",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "Agentic",
+        "name": "Agentic AI",
+        "address": "3tfdixxzJ2wNLTWgQEVDNqhG6EUGQFuJVMBqNuraNmwG",
+        "price": "0.000002566",
+        "liquidity": 0,
+        "volume": 1.19,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/cvand5sppucluwtzgu4nhdixw6deanvgazqx5cjjjhvy",
+        "risk_score": 4,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Very low volume",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "Agentic ",
+        "name": "Trillion Dollar Agentic Economy",
+        "address": "6TJ3RBxceTrT9eEWJ6EgDVdK1nfYgLaCp6W8SZ5BFuuD",
+        "price": "0.000002557",
+        "liquidity": 0,
+        "volume": 0.07,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/d9klh141ppnbtzx8zbbg4fs9wbwrq4nh4ptbpjbpxknz",
+        "risk_score": 4,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Very low volume",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "Agentic Internet",
+        "address": "J4wyvGTSSuQWri7HXFqpffV5bUDjMRD34QZHtp1opump",
+        "price": "0.000002893",
+        "liquidity": 0,
+        "volume": 65736.47,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/9urfjtpbd9ffjlnviunzwhgdqhwc1rdqyhj36dpjg861",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AIM",
+        "name": "agentic internet markets",
+        "address": "4CYeqhn48VESV9GXwwg94Lf8VVCeDZSabfSB4bs9pump",
+        "price": "0.000002835",
+        "liquidity": 0,
+        "volume": 64554.42,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/af5xqqo77g3zycsejjupf2s6gfovft9nsydywicdtt34",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "IAM",
+        "name": "Internet Agentic Markets",
+        "address": "2oDnX6gidFF3NUP1ZatqUkjwCsLnM9e8XX2Ppgg9pump",
+        "price": "0.000003497",
+        "liquidity": 0,
+        "volume": 180.35,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/3wpw8nwh7ydsz6sym2boduvwakesgkum8y189bwn19ud",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "Agentic Internet",
+        "address": "GvzyWUuZ8wFPHSKYW3vxL8ooHxfh8Y1segM1nQoapump",
+        "price": "0.000002682",
+        "liquidity": 0,
+        "volume": 35831.26,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/8eqvtvhnlqqhkxwrvpwey8sihrcqq16aiyqwnpnryb6j",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "agentic internet",
+        "address": "8AuaQTGKwHKa9kvK31YRPdmMuB7NaJCAFP7w8sZ9Xs2e",
+        "price": "0.000002567",
+        "liquidity": 0,
+        "volume": 22413.9,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/bnasflzd2ugzmxtquywmkuy9jsxhp1studbcpsio9du3",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AIM",
+        "name": "Agentic Internet Markets",
+        "address": "7cSJZ9EBgWziLrKtvUiHUdh9X8xxvyzACqepk9sqpump",
+        "price": "0.000002597",
+        "liquidity": 0,
+        "volume": 16513.09,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/fdacy1dd8jptenb3ysvgejpn2qhqq2bucvrfd496ipgz",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "Agentic Internet",
+        "address": "BPWgjKXCrvyorgU8jfjbJAEgX2ouP9d6EqjPoJFbNPn4",
+        "price": "0.000002580",
+        "liquidity": 0,
+        "volume": 10632.58,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/55qzmrmq8vqgyqzqjmwfqtg45mhy1hc5wcnjwkzuoxan",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AIM",
+        "name": "agentic internet markets",
+        "address": "bXV4fvPwW2AAMXk46e616PZfEtCS9jNP17uRXTMhisj",
+        "price": "0.000002563",
+        "liquidity": 0,
+        "volume": 8667,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/4fymds35wfytjhgrrf5pn97feij6s8cdpw4yaxzdzmzz",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "agentic internet",
+        "address": "CA5yBy5v5LJ2e37rfM3uqU939UKe5r7CacqfRaRWpump",
+        "price": "0.000002597",
+        "liquidity": 0,
+        "volume": 8568.52,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/fxukzcv2ktsq2anl8fhqbn7gpvaakddlcenqcomjc8q9",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AIM",
+        "name": "agentic internet markets",
+        "address": "A2uvwjRMaiGeAAzpFDtt6vzCYgEq9WATms6huKCEnxU8",
+        "price": "0.000002564",
+        "liquidity": 0,
+        "volume": 7804.09,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/fpudvuvjnjxrgw7t5zpjxrbf4gxfduhfdsgtrczimv8u",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AIM",
+        "name": "Agentic Internet Markets",
+        "address": "FSzQUkrNmdQgTTVEbbCXSFTPVFrip23A7v72q1Knpump",
+        "price": "0.000002579",
+        "liquidity": 0,
+        "volume": 6442.03,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/2igpjtrmsnqdvsrkzaogihzuzc2errdgbvflmzd4spmm",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "agentic internet",
+        "address": "C35WQZuyrb6raJKgH1P5mHX4RyYPpLoe568gLQa2tec5",
+        "price": "0.000002578",
+        "liquidity": 0,
+        "volume": 6396.46,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/ef9rv1nebq4dyhuqgode4jmzzzpukvlrvqp7akalqebm",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "AI",
+        "name": "agentic internet",
+        "address": "7gv3VqPnwJn2tCouiLGARTzw9Qy623JhUGJCc4mgpump",
+        "price": "0.000002579",
+        "liquidity": 0,
+        "volume": 6321.77,
+        "chain": "solana",
+        "dex": "pumpfun",
+        "url": "https://dexscreener.com/solana/3hrki25nwb5kg7nfqjsawmq3zr8johaqxudigpkmcd3p",
+        "risk_score": 3,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      }
+    ],
+    "low_risk": [
+      {
+        "symbol": "Machi",
+        "name": "Machi Big Brother",
+        "address": "ATBR4i19gcQ31Rfr7ymA2XvkCQEAkNFGBtVKTmdqpump",
+        "price": "0.0003669",
+        "liquidity": 69251.1,
+        "volume": 54339.12,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/7cmefcyxzk6yfbcmb4j234a3eky2w13gfedb3djvnwzx",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "TBC",
+        "name": "Trencher Broadcasting Company",
+        "address": "BbbwE8rudhjK4husSRc37X54mYyDBRcykJ7fk5oHpump",
+        "price": "0.0003540",
+        "liquidity": 82796.48,
+        "volume": 3015.74,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/hrh8kkv3q8tu9qj8avgqpejgl4zguwd1puh8nvne6vbf",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "BROTHER",
+        "name": "STARKNET BROTHER",
+        "address": "0x03b405a98c9e795d427fe82cdeeeed803f221b52471e3a757574a2b4180793ee",
+        "price": "0.00000000009820",
+        "liquidity": 19514.33,
+        "volume": 1.7,
+        "chain": "starknet",
+        "dex": "ekubo",
+        "url": "https://dexscreener.com/starknet/0x03b405a98c9e795d427fe82cdeeeed803f221b52471e3a757574a2b4180793ee-0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d-1020847100762815390390123822295304634-5982-0x0",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume"
+        ]
+      },
+      {
+        "symbol": "TRUST",
+        "name": "$TRUST ME BROs by Virtuals",
+        "address": "0xC841b4eaD3F70bE99472FFdB88E5c3C7aF6A481a",
+        "price": "0.0001134",
+        "liquidity": 17273.77,
+        "volume": 1.59,
+        "chain": "base",
+        "dex": "aerodrome",
+        "url": "https://dexscreener.com/base/0x5bb3f373a46a5b0a7a8de9cf10b3d962daae7845",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume"
+        ]
+      },
+      {
+        "symbol": "N1",
+        "name": "N1",
+        "address": "6xfKQmB2vcqWuoD9JKDptCNSHxYz6XwJ8iw3QtSpxWrG",
+        "price": "0.0004192",
+        "liquidity": 16492.94,
+        "volume": 0.18,
+        "chain": "solana",
+        "dex": "orca",
+        "url": "https://dexscreener.com/solana/eiznzu1dthrnzutueki9jzty64awvfueakngvdecbro",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume"
+        ]
+      },
+      {
+        "symbol": "AGENTIC",
+        "name": "Agentic Coin",
+        "address": "5FDELwgxWVANvYF45dimCsD9p878i3Rwjax7merbpump",
+        "price": "0.000002130",
+        "liquidity": 3649.12,
+        "volume": 643.49,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/244fmshprhczad8hc4jqvyhayiecnvrwxwuuex6napmy",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "Agentic",
+        "name": "Agentic era",
+        "address": "0x55096D6e7D805b69c5662912AE668A20f8F84444",
+        "price": "0.000003612",
+        "liquidity": 0,
+        "volume": 3372.79,
+        "chain": "bsc",
+        "dex": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x55096d6e7d805b69c5662912ae668a20f8f84444:4meme",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup"
+        ]
+      },
+      {
+        "symbol": "Agentic",
+        "name": "Agentic Payments on ",
+        "address": "0x894Bb716093F7ca688E53d39C593487e63394444",
+        "price": "0.000003631",
+        "liquidity": 0,
+        "volume": 660.7,
+        "chain": "bsc",
+        "dex": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x894bb716093f7ca688e53d39c593487e63394444:4meme",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup"
+        ]
+      },
+      {
+        "symbol": "Agentic AI",
+        "name": "Agentic AI",
+        "address": "0x45bF5EF1E41eF697033f079Ae134A7c68205Fb07",
+        "price": "0.0000002158",
+        "liquidity": 21897.87,
+        "volume": 0.96,
+        "chain": "base",
+        "dex": "uniswap",
+        "url": "https://dexscreener.com/base/0xab5bd59a81cd67f219e0bfa50b5139ab962cd6c3829d0f7f4fde1abfc7dd8556",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume"
+        ]
+      },
+      {
+        "symbol": "ROME",
+        "name": "ROMEisObviouslyanAgenticModEl",
+        "address": "Di9gPj9pfHnpZNyLocPqSZff3wrgkGFGqt9FvpuVpump",
+        "price": "0.000006237",
+        "liquidity": 6471.22,
+        "volume": 625.17,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/dtjstsvi3dnocqpjnacawnc1avakpkg2r5mbqqkpbimp",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "MOLTIC",
+        "name": "Molt Agentic",
+        "address": "GnkitxfvNLGGsXKGckU2Bw9uEnzwmVmJKzTaHpp1pump",
+        "price": "0.000004279",
+        "liquidity": 6000.24,
+        "volume": 8.37,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/dlpnqlfyup31vj5iucsatqp5jtaww9gbvh8rrsespgus",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "engineering",
+        "name": "agentic engineering",
+        "address": "6XkKLKtcfgphsyHQVbQv9jM54WQ8HuKQdW9fRqC9oMEQ",
+        "price": "0.000002793",
+        "liquidity": 4268.34,
+        "volume": 0.22,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/bhcqsk7wwaw5evq1huaib7fgpztk5yy8kaekdqt1sokf",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "ROME",
+        "name": "ROMEisObviouslyanAgenticModEl",
+        "address": "B6yUJrNd4vtpqWMLN9qHQXviGi4YMg1GTuLtf6u8pump",
+        "price": "0.000002509",
+        "liquidity": 4023.36,
+        "volume": 15.55,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/9e269vmfkn6dqubmxa5wzymepdoafh67yqvmdberfkeq",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "Engineer",
+        "name": "Agentic Engineer",
+        "address": "9ymRWwbkhprjQNCLGf3eVzs6q6pFeraKHqGXtWL4FmCR",
+        "price": "0.000002119",
+        "liquidity": 3746.39,
+        "volume": 1.2,
+        "chain": "solana",
+        "dex": "pumpswap",
+        "url": "https://dexscreener.com/solana/ebm9op9zau9w2nq6u6dbb6nxndecebyfr67puzt1aiht",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume",
+          "\u26a0\ufe0f Pump.fun token - known for scams"
+        ]
+      },
+      {
+        "symbol": "BACS",
+        "name": "Bonk Agentic Cashback System",
+        "address": "TCCj4Bad94K1ueoDLHe7rEgUS9JBTUdUXMAtvPabonk",
+        "price": "0.000002568",
+        "liquidity": 0,
+        "volume": 800.12,
+        "chain": "solana",
+        "dex": "launchlab",
+        "url": "https://dexscreener.com/solana/7iaeznqehpcqqjqqohcbsumnd5hnvkz2fuvsgyhj9zxk",
+        "risk_score": 2,
+        "risk_factors": [
+          "\u26a0\ufe0f Zero liquidity - rug pull setup"
+        ]
+      },
+      {
+        "symbol": "WFUND",
+        "name": "World Agentic Fund",
+        "address": "0xD55c9869bf65D87ce183CA4f87400f64054804cb",
+        "price": "0.00001526",
+        "liquidity": 786.62,
+        "volume": 0.61,
+        "chain": "worldchain",
+        "dex": "uniswap",
+        "url": "https://dexscreener.com/worldchain/0x55fcaa62ba5fa9fe50f48c5508168b253c2312e7",
+        "risk_score": 1,
+        "risk_factors": [
+          "\u26a0\ufe0f Very low volume"
+        ]
+      }
+    ],
+    "unrelated": [
+      {
+        "symbol": "Fartcoin ",
+        "name": "Fartcoin ",
+        "address": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+        "price": "0.1798",
+        "liquidity": 7209392.73,
+        "volume": 656815.76,
+        "chain": "solana",
+        "dex": "raydium",
+        "url": "https://dexscreener.com/solana/bzc9nzfmqkxr6fz1dbph7bdf9broyef6pnzesp7v5iiw",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "Broccoli",
+        "name": "Broccoli",
+        "address": "0x12B4356C65340Fb02cdff01293F95FEBb1512F3b",
+        "price": "0.003235",
+        "liquidity": 690601.32,
+        "volume": 20481.03,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xdb25c09d96c165b62f6e6f9d9b17174738d897ba",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "Broccoli",
+        "name": "CZ'S DOG",
+        "address": "0x6d5AD1592ed9D6D1dF9b93c793AB759573Ed6714",
+        "price": "0.01249",
+        "liquidity": 1421046.33,
+        "volume": 10128.23,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xa5067360b13fc7a2685dc82dcd1bf2b4b8d7868b",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BROCCOLI",
+        "name": "Broccoli",
+        "address": "0x23D3F4EaaA515403C6765bb623F287a8Cca28F2b",
+        "price": "0.001107",
+        "liquidity": 156507.35,
+        "volume": 5003.1,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xc18caa1658b91076425c8d287ca1b8e238344bfe",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BROWNIE",
+        "name": "CZ's Dog",
+        "address": "0xAA7cD678C8a2809c6DFF1250a87f184E779922c9",
+        "price": "0.0002521",
+        "liquidity": 226060.5,
+        "volume": 16.2,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0x0b0fa20afd2d1f5b890d3083819e8a4039ecb9a5",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BabyBroccoli",
+        "name": "Baby Broccoli",
+        "address": "0x709A6bB090b8C4C72Cb44533624F3DF320a8bA80",
+        "price": "0.0002972",
+        "liquidity": 210805.56,
+        "volume": 58.54,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xaaa1307d7498cfbc221629b25bef4cd504cb53fd",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "ZEREBRO",
+        "name": "zerebro",
+        "address": "8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn",
+        "price": "0.006618",
+        "liquidity": 1059951.38,
+        "volume": 120257.41,
+        "chain": "solana",
+        "dex": "raydium",
+        "url": "https://dexscreener.com/solana/3sjnocnkkhwpvxygdtem8rccihsgc9jsfzuuazkbvrvp",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BRC",
+        "name": "Broccoli",
+        "address": "0x17404885ed03A98bDF1F8c398bbb8D6518E3CB78",
+        "price": "0.0001389",
+        "liquidity": 40356.37,
+        "volume": 33.07,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xe01bec961625758fb3839d0bedfcc6b8a9c33c75",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "NEIRO",
+        "name": "Neiro",
+        "address": "CTg3ZgYx79zrE1MteDVkmkcGniiFrK1hJ6yiabropump",
+        "price": "0.0002412",
+        "liquidity": 207459.18,
+        "volume": 4073.43,
+        "chain": "solana",
+        "dex": "raydium",
+        "url": "https://dexscreener.com/solana/hvaqakzgurmr2br1egwpu6eefcxzmew8n6mn7ejef3dv",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BRO",
+        "name": "Neurobro by Virtuals",
+        "address": "0xc796E499CC8f599A2a8280825d8BdA92F7a895e0",
+        "price": "0.0005348",
+        "liquidity": 116421.12,
+        "volume": 1174.13,
+        "chain": "base",
+        "dex": "uniswap",
+        "url": "https://dexscreener.com/base/0x932a65f4e1f12c969f0e0636097e094d69a89ac3",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BRO",
+        "name": "My Bro",
+        "address": "0x42069000770c482fEd048e1Da03A5f82773abD69",
+        "price": "0.0000000002003",
+        "liquidity": 143404.02,
+        "volume": 11.4,
+        "chain": "avalanche",
+        "dex": "traderjoe",
+        "url": "https://dexscreener.com/avalanche/0x8b60ebf60f36d4adebe64f2eec3c5776c913be43",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "Broak",
+        "name": "Broak on Base",
+        "address": "0x02537463e57a44f861Ee861Ba4F590C413f984a6",
+        "price": "0.0002437",
+        "liquidity": 40364.16,
+        "volume": 341.17,
+        "chain": "base",
+        "dex": "uniswap",
+        "url": "https://dexscreener.com/base/0x14a2ef702bf1174629c81173017e1c7d2dae4e65",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "Broccoli",
+        "name": "Broccoli",
+        "address": "0x343E66bAD706EED4350fE96385ffc6336bd653Ef",
+        "price": "0.0002812",
+        "liquidity": 140012.29,
+        "volume": 13.24,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xd6a4b81cab92a228ed36858adbdd43a34d0f6cbb",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "\ud83c\udfc8GOATTB",
+        "name": "Tam Brody",
+        "address": "8N8FcyK46Ji6zMGmdXRJm7rbcQnKPFJZLoSA1RejoQGm",
+        "price": "0.5609",
+        "liquidity": 18871.73,
+        "volume": 2165.71,
+        "chain": "solana",
+        "dex": "raydium",
+        "url": "https://dexscreener.com/solana/ep4qnwss6cv1cau2xvnhzx2stvdfrp3dzaq4mzyz4dpa",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BROWSER-USE",
+        "name": "BROWSER-USE github.com/browser-use/BROWSER-USE",
+        "address": "0xADFa7b8c74b5F1446F140622F62E89FDd9569A38",
+        "price": "0.0001444",
+        "liquidity": 36973.34,
+        "volume": 60435.64,
+        "chain": "base",
+        "dex": "uniswap",
+        "url": "https://dexscreener.com/base/0x0d8078d335874d28978268ceefec4f63817cf145",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "XROCK",
+        "name": "xRocket Token",
+        "address": "EQAVfEY2iKSpEkUhgFLFWAgHeSz2NH2XV-MvDuiKF5plSbsU",
+        "price": "0.01353",
+        "liquidity": 34666.58,
+        "volume": 63.26,
+        "chain": "ton",
+        "dex": "stonfi",
+        "url": "https://dexscreener.com/ton/eqbroogfatrl79y7yflackhv9xj0px7cjj4f6g3puyg_ig3p",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "trust me bro",
+        "name": "trust me bro",
+        "address": "0x44441412b008Cb20f06685780fD5AAF916cBA63d",
+        "price": "0.00001297",
+        "liquidity": 21481.17,
+        "volume": 204.28,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0x6564498ef57e138b43e531aac3698836c880af1e",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "BRKL",
+        "name": "Brokoli Token [via ChainPort.io]",
+        "address": "0x66Cafcf6C32315623C7fFd3f2FF690aa36EBeD38",
+        "price": "0.002185",
+        "liquidity": 42919.99,
+        "volume": 37.79,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xf06818d93d506459a8df15de451aa0c26084e2a5",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "STAT\u53bb\u54ea\u8bfb",
+        "name": "Study Abroad Token",
+        "address": "0x9c2fd8991227BC6B21C46877a7EcFdDB9FD34444",
+        "price": "0.0001182",
+        "liquidity": 32903.36,
+        "volume": 52.44,
+        "chain": "bsc",
+        "dex": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xd53a0b88b6d2d4a6b18abc57f9c6a05ad4c6b5e5",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "AGENTIC",
+        "name": "Agentic RTS Playcoin",
+        "address": "xi84b465xwqnC7VJSiohp28guu6BNis3nELUoACPLAY",
+        "price": "0.000002199",
+        "liquidity": 3604.94,
+        "volume": 17.98,
+        "chain": "solana",
+        "dex": "meteora",
+        "url": "https://dexscreener.com/solana/2msttkpg6tfmxcqbloqooptbrggb7k73byt2w5qvkyys",
+        "risk_score": 0,
+        "risk_factors": []
+      },
+      {
+        "symbol": "AQN",
+        "name": "Agentic Quantum Networks",
+        "address": "7AuwZ7gUpUjXqYXUUpA3q3K3WVzVo496cFbn9QKTpump",
+        "price": "0.000004768",
+        "liquidity": 7588.72,
+        "volume": 11.92,
+        "chain": "solana",
+        "dex": "raydium",
+        "url": "https://dexscreener.com/solana/4vjl4sl2quntlyj8s4yss93whz3eiiua3raxeqhjkuk8",
+        "risk_score": 0,
+        "risk_factors": []
+      }
+    ]
+  },
+  "summary": {
+    "total_analyzed": 55,
+    "high_risk": 0,
+    "medium_risk": 17,
+    "low_risk": 16,
+    "unrelated": 21
+  }
+}

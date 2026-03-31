@@ -1,0 +1,6 @@
+{
+  "scan_date": "2026-03-26T12:26:28.671301",
+  "contract_address": "9U2p5SMjWkk8SUhM6prFB89EYY3MtBvVvuoNr9cpUwNw",
+  "status": "not_found",
+  "error": "Token not found on any exchange - contract address may be invalid or token is not listed on DexScreener"
+}
