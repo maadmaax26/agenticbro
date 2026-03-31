@@ -1,0 +1,3069 @@
+{
+  "scan_date": "2026-03-26T13:17:00.471887",
+  "legitimate_token": {
+    "found": true,
+    "source": "dexscreener",
+    "symbol": "AGNTCBRO",
+    "name": "Agentic Bro",
+    "address": "52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump",
+    "price": "0.000003441",
+    "volume": 17.24,
+    "liquidity": 0,
+    "chain": "solana",
+    "dex": "pumpfun",
+    "url": "https://dexscreener.com/solana/bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k",
+    "pairAddress": "BwaPiaK2D43zt443X6WczJ4rDEAmdCBA5MDRzZ3rQD9K",
+    "websites": [
+      {
+        "url": "https://agenticbro.app",
+        "label": "Website"
+      },
+      {
+        "url": "https://agenticbro.app",
+        "label": "Docs"
+      },
+      {
+        "url": "https://www.reddit.comu/AgenticBro?utm_source=share&utm_medium=android_app&utm_name=androidcss&utm_term=1&utm_content=1",
+        "label": ""
+      }
+    ],
+    "socials": [
+      {
+        "url": "https://x.com/AgenticBro11",
+        "type": "twitter"
+      },
+      {
+        "url": "https://t.me/Agenticbro1",
+        "type": "telegram"
+      }
+    ],
+    "creation_date": 1773711385000
+  },
+  "suspicious_tokens": [
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k",
+        "pairAddress": "BwaPiaK2D43zt443X6WczJ4rDEAmdCBA5MDRzZ3rQD9K",
+        "baseToken": {
+          "address": "52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump",
+          "name": "Agentic Bro",
+          "symbol": "AGNTCBRO"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000003746",
+        "priceUsd": "0.000003441",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 4,
+            "sells": 0
+          }
+        },
+        "volume": {
+          "h24": 17.24,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": 0.54
+        },
+        "fdv": 3441.56,
+        "marketCap": 3441.56,
+        "pairCreatedAt": 1773711385000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/LUIDn1M0g1q_DGE-?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/SM7u3Uzv7A3wgrx4?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://agenticbro.app",
+              "label": "Website"
+            },
+            {
+              "url": "https://agenticbro.app",
+              "label": "Docs"
+            },
+            {
+              "url": "https://www.reddit.comu/AgenticBro?utm_source=share&utm_medium=android_app&utm_name=androidcss&utm_term=1&utm_content=1",
+              "label": ""
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/AgenticBro11",
+              "type": "twitter"
+            },
+            {
+              "url": "https://t.me/Agenticbro1",
+              "type": "telegram"
+            }
+          ]
+        },
+        "source_method": "symbol"
+      },
+      "analysis": {
+        "similarity_score": 100,
+        "factors": [
+          "\ud83d\udea8 EXACT SYMBOL MATCH",
+          "\u26a0\ufe0f Name contains legitimate name",
+          "\u26a0\ufe0f Recent token (-20508528 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": true
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/244fmshprhczad8hc4jqvyhayiecnvrwxwuuex6napmy",
+        "pairAddress": "244fmShPrhcZad8hC4JqVyHAyiecNvRwxwUUEx6NapMy",
+        "baseToken": {
+          "address": "5FDELwgxWVANvYF45dimCsD9p878i3Rwjax7merbpump",
+          "name": "Agentic Coin",
+          "symbol": "AGENTIC"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002433",
+        "priceUsd": "0.000002130",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 3
+          }
+        },
+        "volume": {
+          "h24": 246.16,
+          "h6": 21.3,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": -6.02,
+          "h24": -15.3
+        },
+        "liquidity": {
+          "usd": 3649.12,
+          "base": 856221277,
+          "quote": 20.8536
+        },
+        "fdv": 2061,
+        "marketCap": 2061,
+        "pairCreatedAt": 1771893108000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/eAZqhw41wnddxFMy?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/letOngujnbNq4uF5?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/5FDELwgxWVANvYF45dimCsD9p878i3Rwjax7merbpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://x.com/i/communities/2032447564931350966",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/sebdevz/status/2032491312637772274",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20487483 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x55096d6e7d805b69c5662912ae668a20f8f84444:4meme",
+        "pairAddress": "0x55096D6e7D805b69c5662912AE668A20f8F84444:4meme",
+        "baseToken": {
+          "address": "0x55096D6e7D805b69c5662912AE668A20f8F84444",
+          "name": "Agentic era",
+          "symbol": "Agentic"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000005739",
+        "priceUsd": "0.000003612",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 17,
+            "sells": 29
+          }
+        },
+        "volume": {
+          "h24": 3372.79,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -25.75
+        },
+        "fdv": 3612.86,
+        "marketCap": 3612.86,
+        "pairCreatedAt": 1774518627000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517871 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "meteora",
+        "url": "https://dexscreener.com/solana/2msttkpg6tfmxcqbloqooptbrggb7k73byt2w5qvkyys",
+        "pairAddress": "2MsTTkpg6tFMXcqBLoQooPtBRGGB7k73byt2w5QvKYYs",
+        "labels": [
+          "DYN2"
+        ],
+        "baseToken": {
+          "address": "xi84b465xwqnC7VJSiohp28guu6BNis3nELUoACPLAY",
+          "name": "Agentic RTS Playcoin",
+          "symbol": "AGENTIC"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002394",
+        "priceUsd": "0.000002199",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 2
+          }
+        },
+        "volume": {
+          "h24": 17.98,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -0.55
+        },
+        "liquidity": {
+          "usd": 3604.94,
+          "base": 819712546,
+          "quote": 19.6232
+        },
+        "fdv": 2196,
+        "marketCap": 2196,
+        "pairCreatedAt": 1772111422000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20490010 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/2yluinzy4njtx63jxbbdum5xdypphkycjf9vag7fqnad",
+        "pairAddress": "2YLuiNZY4njtx63jxbbduM5xdyppHKYcJF9vaG7FQNAd",
+        "baseToken": {
+          "address": "H4tHzG9GkXQr1gCLzcUWDHWHwyzTrgRZKUZiCTF62Dea",
+          "name": "agentic meme",
+          "symbol": "agentic"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002559",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 2,
+            "sells": 2
+          }
+        },
+        "volume": {
+          "h24": 1356.22,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -26.28
+        },
+        "fdv": 2559.37,
+        "marketCap": 2559.37,
+        "pairCreatedAt": 1774473225000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517345 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x894bb716093f7ca688e53d39c593487e63394444:4meme",
+        "pairAddress": "0x894Bb716093F7ca688E53d39C593487e63394444:4meme",
+        "baseToken": {
+          "address": "0x894Bb716093F7ca688E53d39C593487e63394444",
+          "name": "Agentic Payments on ",
+          "symbol": "Agentic"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000005758",
+        "priceUsd": "0.000003631",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 3,
+            "sells": 2
+          }
+        },
+        "volume": {
+          "h24": 660.7,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "fdv": 3631.9,
+        "marketCap": 3631.9,
+        "pairCreatedAt": 1774522808000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517919 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/cvand5sppucluwtzgu4nhdixw6deanvgazqx5cjjjhvy",
+        "pairAddress": "CVand5sPpUcLUwtzGu4NhdixW6DeANVGaZQX5CJjjHVY",
+        "baseToken": {
+          "address": "3tfdixxzJ2wNLTWgQEVDNqhG6EUGQFuJVMBqNuraNmwG",
+          "name": "Agentic AI",
+          "symbol": "Agentic"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002566",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 1.19,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "fdv": 2566.92,
+        "marketCap": 2566.92,
+        "pairCreatedAt": 1774437546000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20516932 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x6f30c8bd00206e68a9c25eb945532d471cdc4444:4meme",
+        "pairAddress": "0x6F30c8BD00206E68A9c25eB945532D471CdC4444:4meme",
+        "baseToken": {
+          "address": "0x6F30c8BD00206E68A9c25eB945532D471CdC4444",
+          "name": "Agentic Payments",
+          "symbol": "Agentic"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000005758",
+        "priceUsd": "0.000003610",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 1,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 1,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 0
+          }
+        },
+        "volume": {
+          "h24": 6.2,
+          "h6": 6.2,
+          "h1": 6.2,
+          "m5": 0
+        },
+        "priceChange": {},
+        "fdv": 3610.71,
+        "marketCap": 3610.71,
+        "pairCreatedAt": 1774544402000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20518169 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/d9klh141ppnbtzx8zbbg4fs9wbwrq4nh4ptbpjbpxknz",
+        "pairAddress": "D9KLH141pPNbtZX8ZBbg4fs9WBWRq4nH4PtbPJBPxknZ",
+        "baseToken": {
+          "address": "6TJ3RBxceTrT9eEWJ6EgDVdK1nfYgLaCp6W8SZ5BFuuD",
+          "name": "Trillion Dollar Agentic Economy",
+          "symbol": "Agentic "
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002796",
+        "priceUsd": "0.000002557",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0.07,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "fdv": 2557.55,
+        "marketCap": 2557.55,
+        "pairCreatedAt": 1773414261000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20505089 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "base",
+        "dexId": "uniswap",
+        "url": "https://dexscreener.com/base/0x40f7af4ab6ab3bcb805f31181bedba681d243114b955630eda905a7ddb636713",
+        "pairAddress": "0x40f7af4ab6ab3bcb805f31181bedba681d243114b955630eda905a7ddb636713",
+        "labels": [
+          "v4"
+        ],
+        "baseToken": {
+          "address": "0x8202004BEeE1986cC8aB67D78e75413a81FE23D6",
+          "name": "The Agentic Computer",
+          "symbol": "Lobster"
+        },
+        "quoteToken": {
+          "address": "0x0000000000000000000000000000000000000000",
+          "name": "Ether",
+          "symbol": "ETH"
+        },
+        "priceNative": "0.0000001900",
+        "priceUsd": "0.0003945",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 295904.37,
+          "base": 749996463,
+          "quote": 0.000682
+        },
+        "fdv": 394539,
+        "marketCap": 394539,
+        "pairCreatedAt": 1771644165000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20484602 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/dtjstsvi3dnocqpjnacawnc1avakpkg2r5mbqqkpbimp",
+        "pairAddress": "DtjSTSvi3dnocqPJnACAwNC1aVAKpKg2r5mbQqKpBiMP",
+        "baseToken": {
+          "address": "Di9gPj9pfHnpZNyLocPqSZff3wrgkGFGqt9FvpuVpump",
+          "name": "ROMEisObviouslyanAgenticModEl",
+          "symbol": "ROME"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000006778",
+        "priceUsd": "0.000005913",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 2
+          },
+          "h6": {
+            "buys": 1,
+            "sells": 2
+          },
+          "h24": {
+            "buys": 6,
+            "sells": 6
+          }
+        },
+        "volume": {
+          "h24": 650.53,
+          "h6": 178.22,
+          "h1": 90.63,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": -4.48,
+          "h6": -5.19,
+          "h24": 1.63
+        },
+        "liquidity": {
+          "usd": 6266.41,
+          "base": 526748952,
+          "quote": 36.1228
+        },
+        "fdv": 5913,
+        "marketCap": 5913,
+        "pairCreatedAt": 1772900275000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/XMINt5pgp1elvOo0?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/48YC-inOJ-_shTkd?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/Di9gPj9pfHnpZNyLocPqSZff3wrgkGFGqt9FvpuVpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://arxiv.org/pdf/2512.24873",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/i/communities/2030304857471455280",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20499140 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "raydium",
+        "url": "https://dexscreener.com/solana/4vjl4sl2quntlyj8s4yss93whz3eiiua3raxeqhjkuk8",
+        "pairAddress": "4vjL4sL2quNtLyj8S4YSS93WhZ3eiiUa3rAXEqHJkUk8",
+        "baseToken": {
+          "address": "7AuwZ7gUpUjXqYXUUpA3q3K3WVzVo496cFbn9QKTpump",
+          "name": "Agentic Quantum Networks",
+          "symbol": "AQN"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000005356",
+        "priceUsd": "0.000004768",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 11.92,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 7588.72,
+          "base": 795899000,
+          "quote": 42.6052
+        },
+        "fdv": 4757,
+        "marketCap": 4757,
+        "pairCreatedAt": 1734267070000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/04d9af2f35e1070c5de634dd27ad03ee90e42012a368b05ea8cc744f4d4f6105?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/fdf7bf7e06321ec239c54304bf0eb1890acba18ff22ab42784fecfed4877ce74?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/7AuwZ7gUpUjXqYXUUpA3q3K3WVzVo496cFbn9QKTpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://agenticportal.online/",
+              "label": "Website"
+            },
+            {
+              "url": "https://mega.nz/file/mMw2kaoQ#W2PrejIKufdPYnneQhkeYXMdqL4CgsJIaKv7fS0sO4w",
+              "label": "Docs"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/AgenticQN",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20051996 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/58b7zrqygqx1nkzupefngu6qvx8zxcarxs3oaxfw52az",
+        "pairAddress": "58B7zrQyGqx1NKZUPefNGu6qVX8zxcaRXS3oAXfW52aZ",
+        "baseToken": {
+          "address": "6XNxPVyTAWGFEBauPMeVevq5qpszsagzuZzA5SSJpump",
+          "name": "ElizaAgentic",
+          "symbol": "ELGNT"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000005561",
+        "priceUsd": "0.000004870",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 1.93,
+          "h6": 1.93,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 6040.89,
+          "base": 616410562,
+          "quote": 34.6937
+        },
+        "fdv": 4797,
+        "marketCap": 4797,
+        "pairCreatedAt": 1767084623000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/2119f941a7b3f646494f7f42d5758697d6bf903ee3bbb6fd1ca7d55bc1512439?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/06586899bedb91c99f3a6fe1808a6bd6aff7e5f6877f1f0a380a471a6f5e8d67?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/6XNxPVyTAWGFEBauPMeVevq5qpszsagzuZzA5SSJpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://elgntworld.com/",
+              "label": "Website"
+            },
+            {
+              "url": "https://elizagents.com/",
+              "label": "Eliza Agentic"
+            },
+            {
+              "url": "https://github.com/ElizenDevVini/eliza-town",
+              "label": "Github"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/ElizaAgentic",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20431829 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/dlpnqlfyup31vj5iucsatqp5jtaww9gbvh8rrsespgus",
+        "pairAddress": "DLPNQLfYUp31vj5iUcsATQP5jTAwW9GbvH8RRsespGUs",
+        "baseToken": {
+          "address": "GnkitxfvNLGGsXKGckU2Bw9uEnzwmVmJKzTaHpp1pump",
+          "name": "Molt Agentic",
+          "symbol": "MOLTIC"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000004884",
+        "priceUsd": "0.000004279",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 8.37,
+          "h6": 8.37,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 6000.24,
+          "base": 697685114,
+          "quote": 34.4113
+        },
+        "fdv": 4279,
+        "marketCap": 4279,
+        "pairCreatedAt": 1771532442000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/i4ubAOKUKKxZ-wz5?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/x8vu92fLMvdddEAl?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/GnkitxfvNLGGsXKGckU2Bw9uEnzwmVmJKzTaHpp1pump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://moltic.io",
+              "label": "Website"
+            },
+            {
+              "url": "https://moltic.io/docs",
+              "label": "Docs"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/i/communities/2024522697854898247",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20483308 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/bhcqsk7wwaw5evq1huaib7fgpztk5yy8kaekdqt1sokf",
+        "pairAddress": "BHCqsk7WwAw5Evq1HuAib7FGpZTk5yy8KaEkdqT1SoKF",
+        "baseToken": {
+          "address": "6XkKLKtcfgphsyHQVbQv9jM54WQ8HuKQdW9fRqC9oMEQ",
+          "name": "agentic engineering",
+          "symbol": "engineering"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000003045",
+        "priceUsd": "0.000002793",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0.22,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 4268.34,
+          "base": 759257211,
+          "quote": 23.4109
+        },
+        "fdv": 2793,
+        "marketCap": 2793,
+        "pairCreatedAt": 1772138689000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/U8aX3vOLlchXSPFW?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/5cc0fkiCqtQYCnAb?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/6XkKLKtcfgphsyHQVbQv9jM54WQ8HuKQdW9fRqC9oMEQ?timestamp=1774545300000",
+          "websites": [],
+          "socials": [
+            {
+              "url": "https://x.com/i/communities/2027123773988843742",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20490325 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/ebm9op9zau9w2nq6u6dbb6nxndecebyfr67puzt1aiht",
+        "pairAddress": "EBm9oP9zAU9w2Nq6u6DbB6nXndeCEbyfR67PuZT1aiHt",
+        "baseToken": {
+          "address": "9ymRWwbkhprjQNCLGf3eVzs6q6pFeraKHqGXtWL4FmCR",
+          "name": "Agentic Engineer",
+          "symbol": "Engineer"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002306",
+        "priceUsd": "0.000002119",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 1.2,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 3746.39,
+          "base": 878567594,
+          "quote": 20.5045
+        },
+        "fdv": 2119,
+        "marketCap": 2119,
+        "pairCreatedAt": 1770236154000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/a65f70b8179c741ee55b20060fd0dddf43fc297e5f0d3c038d34fa9a858fd806?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/f9b98b5a74705b7ef930894736d0ae45b4f8873cee4f53d6e0120a962bd3a004?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/9ymRWwbkhprjQNCLGf3eVzs6q6pFeraKHqGXtWL4FmCR?timestamp=1774545300000",
+          "websites": [],
+          "socials": [
+            {
+              "url": "https://x.com/i/communities/2019140189268914599",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20468305 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/9e269vmfkn6dqubmxa5wzymepdoafh67yqvmdberfkeq",
+        "pairAddress": "9e269VmfKN6DQuBMxA5WZYMEpDoAFh67yQVmDBERfKEQ",
+        "baseToken": {
+          "address": "B6yUJrNd4vtpqWMLN9qHQXviGi4YMg1GTuLtf6u8pump",
+          "name": "ROMEisObviouslyanAgenticModEl",
+          "symbol": "ROME"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002617",
+        "priceUsd": "0.000002283",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 3
+          }
+        },
+        "volume": {
+          "h24": 97.26,
+          "h6": 87.03,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": -9.01,
+          "h24": -10.06
+        },
+        "liquidity": {
+          "usd": 3756.82,
+          "base": 836522395,
+          "quote": 21.1602
+        },
+        "fdv": 2040,
+        "marketCap": 2040,
+        "pairCreatedAt": 1773954031000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/jExOmRtMBx8lmVdq?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/H4DBl3r4LAeqNP1B?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/B6yUJrNd4vtpqWMLN9qHQXviGi4YMg1GTuLtf6u8pump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://www.dailystar.co.uk/news/latest-news/ai-bot-escapes-test-computer-36895932",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/dailystar/status/2034734850402402456",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20511336 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/4fymds35wfytjhgrrf5pn97feij6s8cdpw4yaxzdzmzz",
+        "pairAddress": "4FYmds35wFYTjHgrRF5pn97feij6S8CDPW4YaXZDZmzZ",
+        "baseToken": {
+          "address": "bXV4fvPwW2AAMXk46e616PZfEtCS9jNP17uRXTMhisj",
+          "name": "agentic internet markets",
+          "symbol": "AIM"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002800",
+        "priceUsd": "0.000002563",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 85,
+            "sells": 84
+          }
+        },
+        "volume": {
+          "h24": 8667,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -26.34
+        },
+        "fdv": 2563.73,
+        "marketCap": 2563.73,
+        "pairCreatedAt": 1774489873000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517538 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/3tabdtckgg6pcqzo8gd7x6v8e93i3oleoh2uxavig6rf",
+        "pairAddress": "3TAbdTCKgg6PcQzo8gd7X6V8e93i3oLEoH2UXaVig6Rf",
+        "baseToken": {
+          "address": "3oZ2QJbFNm4m3fuZT9kv5WQKbsVUNrxaYBqPLToLpump",
+          "name": "Agentic Pet",
+          "symbol": "Willy"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000001801",
+        "priceUsd": "0.000001574",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 2.4,
+          "h6": 2.4,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 3122.82,
+          "base": 986012894,
+          "quote": 17.9575
+        },
+        "fdv": 1571,
+        "marketCap": 1571,
+        "pairCreatedAt": 1771335235000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/vEyPTttjTcjphDFC?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/LNn3pMV0_x7HzKvN?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/3oZ2QJbFNm4m3fuZT9kv5WQKbsVUNrxaYBqPLToLpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://grok.com/share/bGVnYWN5_04a1c075-fe3f-458e-af68-3b6daf915bfa?rid=cdaa98fb-b1ad-4d22-9c62-4f01add13a2f",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/i/communities/2023747386183491754",
+              "type": "twitter"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20481026 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/fpudvuvjnjxrgw7t5zpjxrbf4gxfduhfdsgtrczimv8u",
+        "pairAddress": "FPudvuvjnJxrGW7T5zPJxRbf4GXFDuhfDsgtrCziMv8U",
+        "baseToken": {
+          "address": "A2uvwjRMaiGeAAzpFDtt6vzCYgEq9WATms6huKCEnxU8",
+          "name": "agentic internet markets",
+          "symbol": "AIM"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002797",
+        "priceUsd": "0.000002564",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 43,
+            "sells": 24
+          }
+        },
+        "volume": {
+          "h24": 7804.09,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -26.24
+        },
+        "fdv": 2564.78,
+        "marketCap": 2564.78,
+        "pairCreatedAt": 1774486376000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517498 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "launchlab",
+        "url": "https://dexscreener.com/solana/7iaeznqehpcqqjqqohcbsumnd5hnvkz2fuvsgyhj9zxk",
+        "pairAddress": "7iAezNQehPcQQJqQohCbsUmnd5HnVkZ2fuvsgyhj9ZXK",
+        "baseToken": {
+          "address": "TCCj4Bad94K1ueoDLHe7rEgUS9JBTUdUXMAtvPabonk",
+          "name": "Bonk Agentic Cashback System",
+          "symbol": "BACS"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002568",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 3,
+            "sells": 3
+          }
+        },
+        "volume": {
+          "h24": 800.12,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -5.66
+        },
+        "fdv": 2568.88,
+        "marketCap": 2568.88,
+        "pairCreatedAt": 1774462482000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517221 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "worldchain",
+        "dexId": "uniswap",
+        "url": "https://dexscreener.com/worldchain/0x55fcaa62ba5fa9fe50f48c5508168b253c2312e7",
+        "pairAddress": "0x55FcAa62bA5fa9FE50f48c5508168b253c2312e7",
+        "baseToken": {
+          "address": "0xD55c9869bf65D87ce183CA4f87400f64054804cb",
+          "name": "World Agentic Fund",
+          "symbol": "WFUND"
+        },
+        "quoteToken": {
+          "address": "0x2cFc85d8E48F8EAB294be644d9E25C3030863003",
+          "name": "Worldcoin",
+          "symbol": "WLD"
+        },
+        "priceNative": "0.00005034",
+        "priceUsd": "0.00001482",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 1,
+            "sells": 3
+          },
+          "h6": {
+            "buys": 2,
+            "sells": 13
+          },
+          "h24": {
+            "buys": 14,
+            "sells": 69
+          }
+        },
+        "volume": {
+          "h24": 0.61,
+          "h6": 0.03,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": -1.54,
+          "h6": -3.75,
+          "h24": -7.36
+        },
+        "liquidity": {
+          "usd": 763.54,
+          "base": 25759212,
+          "quote": 1296.7782
+        },
+        "fdv": 4491,
+        "marketCap": 4491,
+        "pairCreatedAt": 1771769095000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20486048 days old)",
+          "\u26a0\ufe0f Very low liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/af5xqqo77g3zycsejjupf2s6gfovft9nsydywicdtt34",
+        "pairAddress": "AF5XqQo77g3ZYcsEjJuPf2s6gfoVFt9NSyDyWicdtt34",
+        "baseToken": {
+          "address": "4CYeqhn48VESV9GXwwg94Lf8VVCeDZSabfSB4bs9pump",
+          "name": "agentic internet markets",
+          "symbol": "AIM"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000003231",
+        "priceUsd": "0.000002835",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 24,
+            "sells": 26
+          }
+        },
+        "volume": {
+          "h24": 2297.85,
+          "h6": 0.2,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": -1.27,
+          "h24": 4.08
+        },
+        "fdv": 2835.85,
+        "marketCap": 2835.85,
+        "pairCreatedAt": 1774457991000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517169 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xc09ef8019961d140329ec937f18c33a2a701b00f",
+        "pairAddress": "0xC09EF8019961D140329ec937F18c33A2a701B00F",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0x570Cc80cB8d3a8F4929154F68869Ee3Decd64444",
+          "name": "Agentic CZ",
+          "symbol": "Agentic CZ"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000006618",
+        "priceUsd": "0.000004157",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h6": {
+            "buys": 3,
+            "sells": 5
+          },
+          "h24": {
+            "buys": 9,
+            "sells": 14
+          }
+        },
+        "volume": {
+          "h24": 107.89,
+          "h6": 12.83,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": 0.04,
+          "h6": -0.46,
+          "h24": -3.85
+        },
+        "liquidity": {
+          "usd": 6327.49,
+          "base": 760915485,
+          "quote": 5.03613
+        },
+        "fdv": 4158,
+        "marketCap": 4158,
+        "pairCreatedAt": 1761916770000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20372016 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xb6e0e3f29e01d691caf3a502951b63156c32a620",
+        "pairAddress": "0xb6e0E3f29e01d691caf3A502951b63156C32A620",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0x5CFfD2E97864381a754cbA5710eB66503C484444",
+          "name": "\u9996\u4e2a\u539f\u751f Agentic \u4ee3\u5e01\u53d1\u5c04\u53f0",
+          "symbol": "AGNTC"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000004410",
+        "priceUsd": "0.000002768",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 2,
+            "sells": 2
+          },
+          "h24": {
+            "buys": 3,
+            "sells": 4
+          }
+        },
+        "volume": {
+          "h24": 36.19,
+          "h6": 20.04,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": -0.36,
+          "h24": -1.01
+        },
+        "liquidity": {
+          "usd": 5242.37,
+          "base": 946794009,
+          "quote": 4.1762
+        },
+        "fdv": 2768,
+        "marketCap": 2768,
+        "pairCreatedAt": 1772632940000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20496046 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/9urfjtpbd9ffjlnviunzwhgdqhwc1rdqyhj36dpjg861",
+        "pairAddress": "9URfJtPBd9FFJLNviUnZwhgDqhWc1RdQyHj36DpJG861",
+        "baseToken": {
+          "address": "J4wyvGTSSuQWri7HXFqpffV5bUDjMRD34QZHtp1opump",
+          "name": "Agentic Internet",
+          "symbol": "AI"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000003288",
+        "priceUsd": "0.000002893",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 11,
+            "sells": 7
+          }
+        },
+        "volume": {
+          "h24": 385.22,
+          "h6": 18.43,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": -4.88,
+          "h24": 9.73
+        },
+        "fdv": 2893.73,
+        "marketCap": 2893.73,
+        "pairCreatedAt": 1774457899000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517168 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "fourmeme",
+        "url": "https://dexscreener.com/bsc/0x22298974d27402982a36837ccc704a9e3946ffff:4meme",
+        "pairAddress": "0x22298974d27402982a36837ccC704A9E3946ffFf:4meme",
+        "baseToken": {
+          "address": "0x22298974d27402982a36837ccC704A9E3946ffFf",
+          "name": "\u7b2c\u4e00\u4e2aU\u6c60\u9500\u6bc1Agentic mode",
+          "symbol": "UCLAW"
+        },
+        "quoteToken": {
+          "address": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+          "name": "World Liberty Financial USD",
+          "symbol": "USD1"
+        },
+        "priceNative": "0.000004640",
+        "priceUsd": "0.000004640",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0.15,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "fdv": 4640.13,
+        "marketCap": 4640.13,
+        "pairCreatedAt": 1772411173000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20493479 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/bxmvx38x438fvtkg96vmk6ereexd8gduwqdzasywtptx",
+        "pairAddress": "BXMVX38X438FvTKG96VmK6erEExD8gduWQdZAsywTptX",
+        "baseToken": {
+          "address": "46GXmQdiPjkqeEBXjs59LWnVTdj5jJXG7wYfRAgYpump",
+          "name": "Agentic Semantic Isolation",
+          "symbol": "ASI"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002438",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 17,
+            "sells": 13
+          },
+          "h6": {
+            "buys": 17,
+            "sells": 13
+          },
+          "h24": {
+            "buys": 17,
+            "sells": 13
+          }
+        },
+        "volume": {
+          "h24": 1961.77,
+          "h6": 1961.77,
+          "h1": 1961.77,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": -21.21,
+          "h6": -21.21,
+          "h24": -21.21
+        },
+        "fdv": 2438.58,
+        "marketCap": 2438.58,
+        "pairCreatedAt": 1774543330000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20518157 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/9drwj4yxhlndgvprbg5aknzdxnire4qd1pqpu8sdpebs",
+        "pairAddress": "9DrWj4YxhLnDGVpRbg5AKnZDxnire4Qd1pQpu8SdPEbS",
+        "baseToken": {
+          "address": "DiFTRuvpVS3RHJo95Pww1uk9qeSobCZKoPf6nKGzpump",
+          "name": "Agentic Semantic Isolation",
+          "symbol": "ASI"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002438",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 7,
+            "sells": 11
+          },
+          "h6": {
+            "buys": 7,
+            "sells": 11
+          },
+          "h24": {
+            "buys": 7,
+            "sells": 11
+          }
+        },
+        "volume": {
+          "h24": 1862.69,
+          "h6": 1862.69,
+          "h1": 1862.69,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": -21.23,
+          "h6": -21.23,
+          "h24": -21.23
+        },
+        "fdv": 2438.02,
+        "marketCap": 2438.02,
+        "pairCreatedAt": 1774543334000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20518157 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpswap",
+        "url": "https://dexscreener.com/solana/bjx64j3spdhyd6umntjys1vgu6xljcfcqzuyatuohley",
+        "pairAddress": "Bjx64J3sPdHYD6uMnTJyS1VGU6XLjcFcQZuYAtuoHLEY",
+        "baseToken": {
+          "address": "ALjFPsMMzGT3hkAD3sfa9BkPmfFwEsk8wWpFmx1Ypump",
+          "name": "Agentic Money Gllitch",
+          "symbol": "AMG"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002903",
+        "priceUsd": "0.000002650",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 18.33,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "liquidity": {
+          "usd": 4319.82,
+          "base": 813416276,
+          "quote": 23.7154
+        },
+        "fdv": 2408,
+        "marketCap": 2408,
+        "pairCreatedAt": 1773414984000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20505097 days old)",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "base",
+        "dexId": "uniswap",
+        "url": "https://dexscreener.com/base/0x932a65f4e1f12c969f0e0636097e094d69a89ac3",
+        "pairAddress": "0x932a65f4E1F12c969F0e0636097e094d69a89aC3",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0xc796E499CC8f599A2a8280825d8BdA92F7a895e0",
+          "name": "Neurobro by Virtuals",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b",
+          "name": "Virtual Protocol",
+          "symbol": "VIRTUAL"
+        },
+        "priceNative": "0.0007729",
+        "priceUsd": "0.0005303",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h6": {
+            "buys": 1,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 9,
+            "sells": 11
+          }
+        },
+        "volume": {
+          "h24": 1208.05,
+          "h6": 33.91,
+          "h1": 33.52,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": -0.39,
+          "h6": -0.85,
+          "h24": -9.68
+        },
+        "liquidity": {
+          "usd": 115501.69,
+          "base": 108894734,
+          "quote": 84175
+        },
+        "fdv": 521734,
+        "marketCap": 423574,
+        "pairCreatedAt": 1733665489000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/0a0179cb66764abdeacf9bec7452f39997b368d1c3b054a7fa8729ac4178eba4?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/24462490733f78c41bcb65b6e5de8ca70c1427d468de97db66915f588fe3ba61?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/base/0xc796e499cc8f599a2a8280825d8bda92f7a895e0?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://neurobro.ai/",
+              "label": "Website"
+            },
+            {
+              "url": "https://neurobro.gitbook.io/neuro.bro",
+              "label": "Docs"
+            },
+            {
+              "url": "https://www.tiktok.com/@0xneurobro?_t=8rqeq1epfra&_r=1",
+              "label": "TikTok"
+            },
+            {
+              "url": "https://www.youtube.com/@0xNeurobro?sub_confirmation=1",
+              "label": "YouTube"
+            },
+            {
+              "url": "https://drive.google.com/file/d/1bYpSioNPVpK-UdeX2Zma7gu8vpx8IZSj/view?usp=sharing",
+              "label": "Presentation"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/0xNeurobro",
+              "type": "twitter"
+            },
+            {
+              "url": "https://t.me/Neurobro_Official",
+              "type": "telegram"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20045034 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "pulsechain",
+        "dexId": "pulsex",
+        "url": "https://dexscreener.com/pulsechain/0xc71d381833cd81fdde68f7fce85525e8dbb0f1a9",
+        "pairAddress": "0xc71d381833cD81fddE68F7FcE85525E8dbb0F1a9",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0x401464296A7e0cd14D85AB6baF0Dc91B5ad5Ad1b",
+          "name": "BROmance",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0xf21aeE14137E9bC4B3D5170300dde849f7fE2D85",
+          "name": "Orange Man Good",
+          "symbol": "OMG"
+        },
+        "priceNative": "0.008022",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 1,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 1,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h1": 0.73,
+          "h6": 0.73,
+          "h24": 0.73
+        },
+        "pairCreatedAt": 1768155705000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/40f397e603e1144e57f50b501750730a0acfa353eb18b7c5b8133a0ea8fd1e2f?width=800&height=800&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/pulsechain/0x401464296a7e0cd14d85ab6baf0dc91b5ad5ad1b?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://app.9inch.io/?chain=pulsechain&inputCurrency=0x401464296A7e0cd14D85AB6baF0Dc91B5ad5Ad1b",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://twitter.com/BenArmstrongsX",
+              "type": "twitter"
+            },
+            {
+              "url": "https://t.me/plsBROmance",
+              "type": "telegram"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20444226 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "raydium",
+        "url": "https://dexscreener.com/solana/84wgswwhiz7cw7pd1nrz9tohunirkjxqq8d8fr8wptpo",
+        "pairAddress": "84wGswWhiz7Cw7Pd1NRZ9toHUNiRkJxqq8d8FR8WPtPo",
+        "baseToken": {
+          "address": "33rVymHHPxfMvg4EHKBRF3h8a37cG7Et3eQWZzAkpump",
+          "name": "bro the cat",
+          "symbol": "bro"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.0000002545",
+        "priceUsd": "0.00002325",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 2
+          }
+        },
+        "volume": {
+          "h24": 2.88,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -0.71
+        },
+        "liquidity": {
+          "usd": 28689.89,
+          "base": 616018690,
+          "quote": 157.1943
+        },
+        "fdv": 23255,
+        "marketCap": 23255,
+        "pairCreatedAt": 1728238033000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/2b9601a6eba0b4811ead2a421952b37a09c162e204a1f3af8388cc0fb1ca314e?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/54ed7773216d1b3ece2842582056a7b84696425e05a5a1ea39cf5593a9af21cd?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/33rVymHHPxfMvg4EHKBRF3h8a37cG7Et3eQWZzAkpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://brothecat.xyz/",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/brothecatsolana",
+              "type": "twitter"
+            },
+            {
+              "url": "https://t.me/brothecatcto",
+              "type": "telegram"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-19982216 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "algorand",
+        "dexId": "tinyman",
+        "url": "https://dexscreener.com/algorand/krlkvzl3rvanzcncjkk4nale7m2qav576li2mua7kmb4fcrus7djdgyug4",
+        "pairAddress": "KRLKVZL3RVANZCNCJKK4NALE7M2QAV576LI2MUA7KMB4FCRUS7DJDGYUG4",
+        "baseToken": {
+          "address": "2637100337",
+          "name": "TERABRO",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0",
+          "name": "Algorand",
+          "symbol": "ALGO"
+        },
+        "priceNative": "0.00008610",
+        "priceUsd": "0.000007310",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 1,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 5,
+            "sells": 2
+          }
+        },
+        "volume": {
+          "h24": 2.24,
+          "h6": 0.31,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": 0.71,
+          "h24": -2.54
+        },
+        "liquidity": {
+          "usd": 4117.99,
+          "base": 281651835,
+          "quote": 24252
+        },
+        "fdv": 7310,
+        "marketCap": 7310,
+        "pairCreatedAt": 1735209274000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/4017f5a331f33b2d4ddf7a59bfda6e24b14b2a23f9692b20d2696b8afe7c08cc?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/c1a69cd77245ce10e0b4e00ff26a73e0edb9b28a45d49ebafb17f746e62ce270?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/algorand/2637100337?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://terabro.org",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/0xterabro",
+              "type": "twitter"
+            },
+            {
+              "url": "https://discord.gg/Scxht3h2Eg",
+              "type": "discord"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20062901 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "raydium",
+        "url": "https://dexscreener.com/solana/2mohemvwztnifqd5mnrimst722gmdwmewprprta4sbks",
+        "pairAddress": "2moheMVwztNiFQd5mnRiMsT722GMDWMewPRprTA4sbkS",
+        "baseToken": {
+          "address": "6h5QZc6MoMyZL471g2K5WCyQVpBaeh8AhUXGK6fTpump",
+          "name": "brodogcoin",
+          "symbol": "Bro"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000006514",
+        "priceUsd": "0.000005785",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 1,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 3.05,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -0.88
+        },
+        "liquidity": {
+          "usd": 9314.83,
+          "base": 804088634,
+          "quote": 52.4936
+        },
+        "fdv": 5582,
+        "marketCap": 5582,
+        "pairCreatedAt": 1720718659000,
+        "info": {
+          "imageUrl": "https://cdn.dexscreener.com/cms/images/26e9fcc538bc88382d999b9c8986fba45133638b28ee2992312eb1c050149b34?width=800&height=800&quality=95&format=auto",
+          "header": "https://cdn.dexscreener.com/cms/images/a230343529bda7048c1e148a5bae05db101f982ab3cb47f84629c07a3bd75e05?width=1500&height=500&quality=95&format=auto",
+          "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/6h5QZc6MoMyZL471g2K5WCyQVpBaeh8AhUXGK6fTpump?timestamp=1774545300000",
+          "websites": [
+            {
+              "url": "https://brodogonsol.com",
+              "label": "Website"
+            }
+          ],
+          "socials": [
+            {
+              "url": "https://x.com/BroDogCoinCTO",
+              "type": "twitter"
+            },
+            {
+              "url": "https://t.me/brodogcoincto",
+              "type": "telegram"
+            }
+          ]
+        },
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 25,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-19895186 days old)"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/hexalqpxsuh6ksez385aa6csfnmc2etmdxsygb2kco6w",
+        "pairAddress": "HexALQpXsuH6KSeZ385aa6CsfNmC2EtmdxsygB2Kco6w",
+        "baseToken": {
+          "address": "3VSasxkKxvgB3obLgJu4cj3m1RryBxisKsM938mtpump",
+          "name": "BRO",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002795",
+        "priceUsd": "0.000002545",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 77,
+            "sells": 71
+          }
+        },
+        "volume": {
+          "h24": 9044.93,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -2.18
+        },
+        "fdv": 2545.95,
+        "marketCap": 2545.95,
+        "pairCreatedAt": 1774485883000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517492 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/4njewuxasv6tm5dbnccnpvgyb2mz3fqmeszmqvez5grd",
+        "pairAddress": "4njEwUxasv6Tm5DbnCcNPVGyB2mz3fqmESzmQvez5GRd",
+        "baseToken": {
+          "address": "9FQdsQbnPZiJttKmd6z41qYnZ2FhU96vbf9peww9pump",
+          "name": "SOL BROTHERS",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000003143",
+        "priceUsd": "0.000002851",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 2,
+            "sells": 10
+          }
+        },
+        "volume": {
+          "h24": 198.07,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -6.32
+        },
+        "fdv": 2851.15,
+        "marketCap": 2851.15,
+        "pairCreatedAt": 1740509887000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20124251 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "solana",
+        "dexId": "pumpfun",
+        "url": "https://dexscreener.com/solana/cwrg9q8q6uknc2jpccsohyxvfcdti9pwcoxuwtqbyxqp",
+        "pairAddress": "CWrG9q8Q6uKNC2JPCcSoHYxVFCdti9pwcoxUWtQByXqp",
+        "baseToken": {
+          "address": "HjS5U9u3VKnBLx1v1a6wRdrFoTrEAWLzqZxtppwpump",
+          "name": "Me and Bro",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "So11111111111111111111111111111111111111112",
+          "name": "Wrapped SOL",
+          "symbol": "SOL"
+        },
+        "priceNative": "0.00000002797",
+        "priceUsd": "0.000002548",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 16,
+            "sells": 16
+          }
+        },
+        "volume": {
+          "h24": 1898.94,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -11.8
+        },
+        "fdv": 2548.75,
+        "marketCap": 2548.75,
+        "pairCreatedAt": 1774476405000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 40,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517382 days old)",
+          "\u26a0\ufe0f Zero liquidity",
+          "\u26a0\ufe0f Pump.fun token"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0x1f306f5d76d38534c01f82d1bdd898b27cf10cd1",
+        "pairAddress": "0x1F306F5d76D38534c01F82D1BdD898b27cF10CD1",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0xeB6d79e0D920223cD77641EB79E52d7c26865170",
+          "name": "CryptoBro AI",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.00000000004859",
+        "priceUsd": "0.00000003068",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 2,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 2,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 14.61,
+          "h6": 14.61,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": 2.22,
+          "h24": 2.22
+        },
+        "liquidity": {
+          "usd": 159.75,
+          "base": 2603495503,
+          "quote": 0.1265
+        },
+        "fdv": 307,
+        "marketCap": 307,
+        "pairCreatedAt": 1750728211000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20242519 days old)",
+          "\u26a0\ufe0f Very low liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "xrpl",
+        "dexId": "xrpl",
+        "url": "https://dexscreener.com/xrpl/bro.ru6psp49xjznqv1bmnk1jed13kjwval6hu_xrp",
+        "pairAddress": "BRO.rU6PSp49XJzNQV1BMNk1jeD13KjwVAL6Hu_XRP",
+        "baseToken": {
+          "address": "BRO.rU6PSp49XJzNQV1BMNk1jeD13KjwVAL6Hu",
+          "name": "BRO",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "XRP",
+          "name": "XRP",
+          "symbol": "XRP"
+        },
+        "priceNative": "0.00000002403",
+        "priceUsd": "0.00000003302",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 2,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 2,
+            "sells": 0
+          }
+        },
+        "volume": {
+          "h24": 0.54,
+          "h6": 0.54,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h6": 3.77,
+          "h24": 3.77
+        },
+        "liquidity": {
+          "usd": 44.92,
+          "base": 680190935,
+          "quote": 16.3471
+        },
+        "fdv": 33,
+        "marketCap": 33,
+        "pairCreatedAt": 1773982050000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20511660 days old)",
+          "\u26a0\ufe0f Very low liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "algorand",
+        "dexId": "tinyman",
+        "url": "https://dexscreener.com/algorand/psxxsx6su5aoedlpyofhz4mb2gwtpunheajktr7dd6nloswwzzdagebsea",
+        "pairAddress": "PSXXSX6SU5AOEDLPYOFHZ4MB2GWTPUNHEAJKTR7DD6NLOSWWZZDAGEBSEA",
+        "baseToken": {
+          "address": "2225389245",
+          "name": "BRO",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "2190997399",
+          "name": "Popcorn",
+          "symbol": "PCORN"
+        },
+        "priceNative": "1.2848",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 1
+          },
+          "h24": {
+            "buys": 0,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {},
+        "pairCreatedAt": 1725964429000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 35,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-19955901 days old)",
+          "\u26a0\ufe0f Zero liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0x2c7ba00e8f50ff1be7a531528f27610fc2c1d29f",
+        "pairAddress": "0x2C7ba00E8f50fF1be7a531528F27610Fc2c1D29f",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0x71ccE3dFD755e9248eD44F6CaC170a460a8D09ed",
+          "name": "LLMBro ",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000008041",
+        "priceUsd": "0.000005187",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 3,
+            "sells": 1
+          }
+        },
+        "volume": {
+          "h24": 0.07,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": 344
+        },
+        "liquidity": {
+          "usd": 0.07,
+          "base": 7567.1516,
+          "quote": 6.085e-05
+        },
+        "fdv": 5,
+        "marketCap": 5,
+        "pairCreatedAt": 1774293661000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20515267 days old)",
+          "\u26a0\ufe0f Very low liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    },
+    {
+      "token_data": {
+        "chainId": "bsc",
+        "dexId": "pancakeswap",
+        "url": "https://dexscreener.com/bsc/0xf0e2fc8202c9271b9054c57b548fbcf4359b79fc",
+        "pairAddress": "0xF0e2FC8202c9271b9054c57b548fbCf4359b79fC",
+        "labels": [
+          "v2"
+        ],
+        "baseToken": {
+          "address": "0xBe11f5ac92052aE2f66294134d6ce984DF3ED00B",
+          "name": "Bro",
+          "symbol": "BRO"
+        },
+        "quoteToken": {
+          "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+          "name": "Wrapped BNB",
+          "symbol": "WBNB"
+        },
+        "priceNative": "0.000000001147",
+        "priceUsd": "0.0000007288",
+        "txns": {
+          "m5": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h1": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h6": {
+            "buys": 0,
+            "sells": 0
+          },
+          "h24": {
+            "buys": 25,
+            "sells": 8
+          }
+        },
+        "volume": {
+          "h24": 1972.58,
+          "h6": 0,
+          "h1": 0,
+          "m5": 0
+        },
+        "priceChange": {
+          "h24": -99.92
+        },
+        "liquidity": {
+          "usd": 0.02,
+          "base": 19809,
+          "quote": 2.272e-05
+        },
+        "fdv": 1,
+        "marketCap": 1,
+        "pairCreatedAt": 1774510659000,
+        "source_method": "name"
+      },
+      "analysis": {
+        "similarity_score": 30,
+        "factors": [
+          "\u26a0\ufe0f Name contains related keywords",
+          "\u26a0\ufe0f Recent token (-20517779 days old)",
+          "\u26a0\ufe0f Very low liquidity"
+        ],
+        "is_exact_symbol_copy": false
+      }
+    }
+  ],
+  "total_analyzed": 44,
+  "alert": "\ud83d\udea8 AGNTCBRO IMPERSONATION ALERT \ud83d\udea8\n\nEnhanced scan detected 43 potentially impersonating tokens!\n\n\u2705 LEGITIMATE AGNTCBRO: Verified Safe\nContract: 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump\nPrice: $0.000003441 | Volume: $17.24\n\n\ud83d\udea8 CRITICAL - EXACT SYMBOL COPIES (1):\nThese tokens use the EXACT same symbol 'AGNTCBRO'!\n\n1. \ud83d\udea8 AGNTCBRO (Agentic Bro)\n   Contract: 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump\n   Similarity: 100%\n   Chain: N/A | DEX: N/A\n   Factors: \ud83d\udea8 EXACT SYMBOL MATCH, \u26a0\ufe0f Name contains legitimate name, \u26a0\ufe0f Recent token (-20508528 days old)\n\n\u26a0\ufe0f HIGH SIMILARITY TOKENS (33):\n1. agentic (agentic meme)\n   Similarity: 40%\n   Factors: \u26a0\ufe0f Name contains related keywords, \u26a0\ufe0f Recent token (-20517345 days old)\n\n2. Agentic (Agentic AI)\n   Similarity: 40%\n   Factors: \u26a0\ufe0f Name contains related keywords, \u26a0\ufe0f Recent token (-20516932 days old)\n\n3. Agentic  (Trillion Dollar Agentic Economy)\n   Similarity: 40%\n   Factors: \u26a0\ufe0f Name contains related keywords, \u26a0\ufe0f Recent token (-20505089 days old)\n\n\ud83d\udee1\ufe0f PROTECTION:\n\u2705 ALWAYS verify contract address\n\u2705 ONLY trust AGNTCBRO at 52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump\n\u2705 Check token age and liquidity\n\u2705 Verify official social media accounts\n\n\ud83d\udcca SCAN SUMMARY:\n\u2022 Legitimate: AGNTCBRO\n\u2022 Exact copies: 1\n\u2022 High similarity: 33\n\u2022 Medium similarity: 9\n\u2022 Total suspicious: 43\n\n\ud83d\udd10 Scan first, ape later!\n\nAGNTCBRO #ImpersonationDetection #Solana #CryptoSafety"
+}
