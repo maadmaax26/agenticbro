@@ -632,7 +632,7 @@ function App() {
                 💰 Buy $AGNTCBRO
               </a>
               <LanguageSelector current={locale} onChange={setLocale} />
-              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-1 !rounded-md !h-auto !leading-normal !min-w-0" />
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-[10px] !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
             </div>
           </header>
 
