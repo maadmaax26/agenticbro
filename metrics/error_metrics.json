@@ -1,0 +1,22 @@
+{
+  "total_errors": 0,
+  "total_requests": 0,
+  "error_rate": 0,
+  "by_type": {
+    "agent_not_available": 0,
+    "timeout": 0,
+    "delegation_failure": 0,
+    "tool_error": 0,
+    "model_error": 0,
+    "other": 0
+  },
+  "by_agent": {
+    "query-router-1": 0,
+    "query-router-2": 0,
+    "telegram-manager": 0,
+    "web-scraper": 0,
+    "file-manager": 0,
+    "complex-op-agent-1": 0,
+    "complex-op-agent-2": 0
+  }
+}
