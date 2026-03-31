@@ -1156,7 +1156,7 @@ function App() {
             Built for degens, by degens •{' '}
             <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300">@AgenticBro11</a>
             {' '}•{' '}
-            <a href="https://t.me/AgenticBro" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
+            <a href="https://t.me/agenticbro11" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
             {' '}•{' '}
             <a href="/AgenticBro_WhitePaper.pdf" target="_blank" className="hover:text-white transition-colors" style={{color: '#39ff14'}}>White Paper</a>
           </p>

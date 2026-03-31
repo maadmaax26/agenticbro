@@ -393,7 +393,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
         {/* CTA */}
         <section className="text-center py-12">
           <p className="text-sm text-gray-500 mb-6 font-mono">
-            Built for degens, by degens · agenticbro.app · @AgenticBro11 · t.me/AgenticBro
+            Built for degens, by degens · agenticbro.app · @AgenticBro11 · t.me/agenticbro11
           </p>
           <button
             onClick={onBack}
