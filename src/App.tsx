@@ -19,6 +19,9 @@ import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import MarketSentiment from './components/MarketSentiment'
 import PreConnectScanWidget from './components/PreConnectScanWidget'
 import LanguageSelector, { type Locale } from './components/LanguageSelector'
+import UserMenu from './components/UserMenu'
+import AuthModal from './components/AuthModal'
+import PaymentModal from './components/PaymentModal'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -173,6 +176,13 @@ function App() {
 
   // Denial popover state — null = hidden, 'holder' | 'whale' = show message
   const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
+
+  // Auth and Payment modals
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+
+  // Auth context is available via AuthProvider in main.tsx
 
   const handleTierClick = useCallback((tier: 'holder' | 'whale') => {
     const unlocked = tier === 'holder' ? holderTierUnlocked : whaleTierUnlocked
@@ -509,6 +519,15 @@ function App() {
 
             {/* Center — tier access buttons (click-to-check balance) */}
             <div className="flex items-center gap-3">
+
+              {/* User Menu (Login/Balance) */}
+              <UserMenu 
+                onLoginClick={() => {
+                  setAuthMode('login')
+                  setShowAuthModal(true)
+                }}
+                onBuyCreditsClick={() => setShowPaymentModal(true)}
+              />
 
               {/* Holder Tier button */}
               <div className="relative">
@@ -1133,6 +1152,19 @@ function App() {
           </p>
         </footer>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+      />
     </div>
   )
 }
@@ -1535,3 +1567,8 @@ function GemPreviewCard({
 }
 
 export default App
+
+// ─── Auth Modal Wrapper ─────────────────────────────────────────────────────────
+
+// Auth Modal is rendered at the App level, passed via props to components that need it
+export { AuthModal, PaymentModal }
