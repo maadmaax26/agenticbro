@@ -500,7 +500,7 @@ function App() {
             <span className="text-gray-300">Holder & Whale tier access reduced to <span className="text-green-400 font-bold">$15</span> during early development. Tier thresholds will increase as we approach production launch.</span>
           </div>
 
-          <header className="relative z-10 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
+          <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
             {/* Left — icon + branding */}
             <div className="flex items-center gap-2 md:gap-3">
               <img
