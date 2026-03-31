@@ -3,6 +3,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
 import PortfolioCard from './components/PortfolioCard'
+import MobileMenu from './components/MobileMenu'
 
 import SignalFeed from './components/dashboard/SignalFeed'
 import TradeAnalysis from './components/dashboard/TradeAnalysis'
@@ -499,26 +500,26 @@ function App() {
             <span className="text-gray-300">Holder & Whale tier access reduced to <span className="text-green-400 font-bold">$15</span> during early development. Tier thresholds will increase as we approach production launch.</span>
           </div>
 
-          <header className="relative z-10 px-6 py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
+          <header className="relative z-10 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
             {/* Left — icon + branding */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <img
                 src="/icon.png"
                 alt="Agentic Bro"
-                className="w-12 h-12 rounded-xl object-cover ring-2 ring-purple-500/50"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover ring-2 ring-purple-500/50"
               />
               <div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">
+                <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight">
                   Agentic Bro
                 </h1>
-                <p className="text-xs font-mono" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
+                <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
                   $AGNTCBRO · Your agentic degen advisor
                 </p>
               </div>
             </div>
 
-            {/* Center — tier access buttons (click-to-check balance) */}
-            <div className="flex items-center gap-3">
+            {/* Center — tier access buttons (hidden on mobile) */}
+            <div className="hidden md:flex items-center gap-3">
 
               {/* User Menu (Login/Balance) */}
               <UserMenu 
@@ -595,31 +596,31 @@ function App() {
               )}
             </div>
 
-            {/* Right — nav + wallet */}
-            <div className="flex items-center gap-3">
+            {/* Right — nav + wallet (desktop only) */}
+            <div className="hidden lg:flex items-center gap-2 xl:gap-3">
               <a
                 href="/AgenticBro_WhitePaper.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-md text-xs font-semibold transition-colors"
+                className="px-2 xl:px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 White Paper
               </a>
               <button
                 onClick={() => setShowRoadmap(true)}
-                className="px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
+                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 Roadmap
               </button>
               <button
                 onClick={() => setShowValueProp(true)}
-                className="px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
+                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
               >
                 Why Agentic Bro?
               </button>
               <button
                 onClick={() => setShowScamDatabase(true)}
-                className="px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
+                className="px-2 xl:px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
               >
                 🔍 Scam Database
               </button>
@@ -627,13 +628,22 @@ function App() {
                 href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1 bg-[#39ff14]/20 hover:bg-[#39ff14]/40 text-[#39ff14] border border-[#39ff14]/40 rounded-md text-xs font-bold transition-colors flex items-center gap-1"
+                className="px-2 xl:px-3 py-1 bg-[#39ff14]/20 hover:bg-[#39ff14]/40 text-[#39ff14] border border-[#39ff14]/40 rounded-md text-xs font-bold transition-colors flex items-center gap-1"
               >
                 💰 Buy $AGNTCBRO
               </a>
               <LanguageSelector current={locale} onChange={setLocale} />
               <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-[10px] !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
             </div>
+
+            {/* Mobile menu button */}
+            <MobileMenu
+              onNavigate={(section) => {
+                if (section === 'roadmap') setShowRoadmap(true)
+                if (section === 'features') setShowValueProp(true)
+                if (section === 'scanners') setShowScamDatabase(true)
+              }}
+            />
           </header>
 
           {/* ── Wallet Connected Welcome Banner ── */}
@@ -653,7 +663,7 @@ function App() {
                     <p className="text-sm text-gray-300 mb-4">
                       Your wallet is connected. You now have access to:
                     </p>
-                    <div className="grid md:grid-cols-3 gap-3 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
                         { icon: '🔍', title: 'Priority Scans', desc: '10 free wallet/channel/token scans' },
                         { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
@@ -676,7 +686,7 @@ function App() {
             </div>
           )}
 
-      <main className="relative z-10 container mx-auto px-6 pb-10">
+      <main className="relative z-10 container mx-auto px-4 md:px-6 pb-10">
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner />
 
@@ -709,7 +719,7 @@ function App() {
             </div>
 
             {/* Stats bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
               {[
                 { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
@@ -766,7 +776,7 @@ function App() {
                 <p className="text-gray-300 text-sm leading-relaxed mb-4">
                   Run a deep-dive investigation on any wallet, Telegram channel, or token in under 30 seconds. Get alpha signals, risk scores, and actionable insights so you trade with conviction — not hope.
                 </p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   {[
                     { icon: '👛', label: 'Wallet Scan', desc: 'Track alpha signals and risk profile' },
                     { icon: '📡', label: 'Channel Scan', desc: 'Verify Telegram channel credibility' },
@@ -868,7 +878,7 @@ function App() {
                 </div>
 
                 {/* ── Scan mode tabs ── */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                   {([
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
@@ -984,7 +994,7 @@ function App() {
                         Select a scan mode above, enter your target, and run<br />a Priority Scan to see full token details here.
                       </p>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 w-full max-w-xs mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-xs mt-2">
                       {[
                         { icon: '👛', label: 'Wallet', desc: 'Track alpha for a wallet' },
                         { icon: '📡', label: 'Channel', desc: 'Deep-scan a Telegram channel' },
@@ -1262,7 +1272,7 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
           )}
 
           {/* Price stats row */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               {
                 label: 'Price',
@@ -1303,7 +1313,7 @@ function ScanResultCard({ result, icon, defaultExpanded = false }: { result: Sca
           </div>
 
           {/* Channel stats row */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { label: 'Win Rate',  value: `${Math.round(result.winRate * 100)}%`,            color: 'text-green-400' },
               { label: 'Rug Rate',  value: `${Math.round(result.rugRate * 100)}%`,            color: result.rugRate > 0.3 ? 'text-red-400' : 'text-gray-300' },
