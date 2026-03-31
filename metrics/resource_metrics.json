@@ -1,0 +1,43 @@
+{
+  "total_ram_gb": 6.6,
+  "total_cpu_percent": 3.5714285714285716,
+  "by_agent": {
+    "query-router-1": {
+      "ram_gb": 6.6,
+      "cpu_percent": 25,
+      "context_window_usage": 60,
+      "browser_tabs": 0
+    },
+    "query-router-2": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0
+    },
+    "telegram-manager": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0
+    },
+    "web-scraper": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0,
+      "browser_tabs": 0
+    },
+    "file-manager": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0
+    },
+    "complex-op-agent-1": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0
+    },
+    "complex-op-agent-2": {
+      "ram_gb": 0,
+      "cpu_percent": 0,
+      "context_window_usage": 0
+    }
+  }
+}
