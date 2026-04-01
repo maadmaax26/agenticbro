@@ -2,11 +2,13 @@
  * Profile Verifier Scanner Component
  *
  * Allows users to verify social media profiles for scam detection
- * 3 free scans available, then requires Holder tier
+ * 3 free scans available, then $1/scan via Stripe, USDC, or AGNTCBRO
+ * Credits tracked by wallet address or email
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useCredits } from '../lib/payments';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,38 +41,23 @@ interface ProfileScanResult {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProfileVerifierScanner() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey } = useWallet();
   const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook'>('twitter');
   const [username, setUsername] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Free scan tracking
-  const getScanKey = () => {
-    if (!publicKey) return 'profileFreeScans_anon';
-    return `profileFreeScans_${publicKey.toString()}`;
-  };
+  // Get wallet address for credit tracking
+  const walletAddress = publicKey?.toString() || null;
   
-  const [freeScansRemaining, setFreeScansRemaining] = useState(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem(getScanKey()) : null;
-    return saved ? Math.max(0, parseInt(saved, 10)) : 3;
-  });
-
-  // Update key when wallet changes
-  useEffect(() => {
-    const saved = localStorage.getItem(getScanKey());
-    if (!saved) {
-      setFreeScansRemaining(3);
-    } else {
-      setFreeScansRemaining(Math.max(0, parseInt(saved, 10)));
-    }
-  }, [publicKey]);
-
-  const updateScanCount = (newCount: number) => {
-    setFreeScansRemaining(newCount);
-    localStorage.setItem(getScanKey(), String(newCount));
-  };
+  // Use the credits system ($1/scan, tracked by wallet/email)
+  const { 
+    credits, 
+    freeScansRemaining, 
+    hasScans, 
+    useCredit 
+  } = useCredits(null, null, walletAddress);
 
   const handleScan = async () => {
     if (!username.trim()) {
@@ -78,13 +65,9 @@ export default function ProfileVerifierScanner() {
       return;
     }
 
-    if (freeScansRemaining <= 0 && !connected) {
-      setError('Connect wallet for more scans, or upgrade to Holder tier for unlimited scans');
-      return;
-    }
-
-    if (freeScansRemaining <= 0) {
-      setError('You have used all your free scans. Upgrade to Holder tier for unlimited scans.');
+    // Check if user has scans available (free or paid)
+    if (!hasScans) {
+      setError('No scans remaining. Purchase credits to continue scanning - $1/scan via Stripe, USDC, or AGNTCBRO.');
       return;
     }
 
@@ -93,6 +76,14 @@ export default function ProfileVerifierScanner() {
     setResult(null);
 
     const cleanUsername = username.trim().replace(/^@/, '');
+
+    // Use a credit (free first, then paid)
+    const creditResult = useCredit();
+    if (!creditResult.success) {
+      setError('Failed to use scan credit. Please try again.');
+      setScanning(false);
+      return;
+    }
 
     try {
       // Priority 1: Try local Chrome CDP backend (development)
@@ -203,8 +194,7 @@ export default function ProfileVerifierScanner() {
         scanResult = generateDemoResult(platform, cleanUsername);
       }
 
-      // Decrease scan count and set result
-      updateScanCount(freeScansRemaining - 1);
+      // Credit was already used, set the result
       setResult(scanResult);
 
     } catch (err) {
@@ -306,6 +296,9 @@ Recommendation: ${result.recommendation}`;
             }}>
             <span>🎁</span>
             <span>{freeScansRemaining} Free Scan{freeScansRemaining !== 1 ? 's' : ''}</span>
+            {credits > 0 && (
+              <span className="text-purple-400 ml-2">+ {credits} Paid Credits</span>
+            )}
           </div>
         </div>
 
@@ -369,15 +362,34 @@ Recommendation: ${result.recommendation}`;
           {/* Scan Button */}
           <button
             onClick={handleScan}
-            disabled={scanning || !username.trim() || freeScansRemaining <= 0}
+            disabled={scanning || !username.trim() || !hasScans}
             className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
+              background: hasScans 
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+              boxShadow: hasScans ? '0 4px 15px rgba(16,185,129,0.3)' : 'none',
             }}
           >
-            {scanning ? '🔄 Scanning...' : `🚀 Verify Profile (${freeScansRemaining} free)`}
+            {scanning ? '🔄 Scanning...' : hasScans 
+              ? `🚀 Verify Profile (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
+              : '❌ No Scans - Buy Credits'}
           </button>
+          
+          {/* Pricing Info */}
+          {!hasScans && (
+            <div 
+              className="text-center p-3 rounded-lg"
+              style={{
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+              }}
+            >
+              <p className="text-sm text-purple-400">
+                💎 Purchase scan credits: <strong>$1/scan</strong> via Stripe, USDC, or AGNTCBRO
+              </p>
+            </div>
+          )}
         </div>
 
         {error && (
