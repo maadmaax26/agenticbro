@@ -11,6 +11,36 @@
 
 ## Key Insights (March 2026)
 
+### March 31, 2026
+
+**Website Payment System Complete:**
+- Unified credit system across Token Scanner and Profile Verifier
+- 3 free scans per user (tracked by wallet address or email in localStorage)
+- $1/scan after free scans exhausted
+- Payment options: Stripe (USD), USDC (Solana/Base), AGNTCBRO
+- Credit packages: Starter ($5/5), Basic ($10/10), Pro ($25/25), Whale ($100/110)
+- Receiving wallets: Solana (`9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F`), Base (`0x1c793592adf512dfe590817225c3b2b6bd913fac`)
+
+**Mobile Menu Architecture:**
+- Fixed hamburger menu using React Portal (`createPortal`)
+- Renders at `document.body` level to bypass parent container constraints
+- z-index 99999, prevents background scrolling when open
+
+**Model Unification:**
+- All 10 agents unified to `ollama/glm-4.7:cloud`
+- Default model set to `glm-4.7:cloud` in config
+- Removed `glm-5:cloud` as primary
+
+**Chrome CDP Scanning Enhancement:**
+- WebSocket extraction now primary method for X profile scanning
+- Added `PAID PROMOTER` verification level (6 total levels now)
+- Risk scoring updated: +15 pts for shill accounts, +10 pts for high-risk token promotion
+- Technical reference created: `/scam-detection-framework/CHROME_CDP_PROFILE_SCANNER.md`
+
+**Git Activity Today:**
+- 20+ commits: mobile menu fixes, Token Scanner component, payment system, USDC wallets
+- 1,807 lines added, 290 lines removed
+
 ### March 26, 2026
 
 **Token Impersonation Scanner Added:**
@@ -157,7 +187,8 @@
 ### Risk Scoring
 - 10 red flags with weighted scoring (90 total points)
 - Risk levels: 0-3 (LOW), 3-5 (MEDIUM), 5-7 (HIGH), 7-10 (CRITICAL)
-- Verification tiers: 5 levels from Unverified to Legitimate
+- Verification tiers: 6 levels from Unverified → Partially Verified → Verified → Legitimate → PAID PROMOTER → HIGH RISK
+- Paid promoter detection: +15 pts for shill accounts, +10 pts for high-risk token promotion
 
 ---
 
@@ -268,12 +299,17 @@
 
 ## Blocked Items / Need Input
 
-### March 25, 2026
-1. **TypeScript Compiler Missing** - `tsc: command not found` - needs dependency verification
-2. **Token Mint Address Placeholder** - Update in services/tokenVerification.ts with actual AGNTCBRO mint address
-3. **Real Wallet Stats Integration** - RoastDisplay.tsx using mock data
-4. **Transaction Analysis Implementation** - helius.ts needs real Helius API integration
-5. **Backend Server Testing** - New endpoints need testing with live backend
+### March 31, 2026
+1. **Stripe Production Keys** - Need to add production Stripe keys to Vercel environment (`VITE_STRIPE_PUBLISHABLE_KEY`)
+2. **Chrome CDP Automation** - Profile Verifier needs Chrome CDP running on port 18800 for live scanning
+3. **AMA Scheduling** - Need to finalize date/time and announce in Telegram group
+
+### Resolved (March 31)
+- ✅ TypeScript build working (20+ commits deployed)
+- ✅ Token mint address configured (`52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump`)
+- ✅ Payment system implemented (Stripe, USDC Solana/Base, AGNTCBRO)
+- ✅ Credit system unified across scanners (3 free scans, $1/scan after)
+- ✅ Mobile menu working (React Portal fix)
 
 ### Previous (Resolved)
 - WhaleChat data access issue - FIXED with backend health monitoring
@@ -282,21 +318,20 @@
 
 ## Next High-Priority Actions
 
-### Immediate (Tomorrow)
-1. **Fix TypeScript Compiler** - Verify dependencies, install missing TypeScript packages
-2. **Update Token Mint Address** - Replace placeholder in services/tokenVerification.ts with actual AGNTCBRO mint
-3. **Test Backend Endpoints** - Verify `/api/scam-investigate` and scam database endpoints work with live server
-4. **Build Verification** - Run `npm run build` to verify production build works
+### Immediate (Tomorrow - April 1, 2026)
+1. **Add Stripe Production Keys** - Configure `VITE_STRIPE_PUBLISHABLE_KEY` in Vercel environment
+2. **Test Payment Flow End-to-End** - Verify Stripe checkout and USDC/AGNTCBRO payments work
+3. **Chrome CDP Verification** - Ensure Chrome CDP is running on port 18800 for Profile Verifier
+4. **Post Community Update** - Announce payment system launch in Telegram group
 
 ### Short Term (This Week)
-1. **Integrate Real Wallet Stats** - Replace mock data in RoastDisplay.tsx with PortfolioCard integration
-2. **Implement Transaction Analysis** - Add real Helius API parsing in helius.ts
-3. **Contact @DianaSanchez_04** - Send partnership pitch email and Telegram DM
-4. **Schedule AMA** - Finalize date/time and announce in Telegram group
+1. **Contact @DianaSanchez_04** - Send partnership pitch email and Telegram DM
+2. **Schedule AMA** - Finalize date/time and announce in Telegram group
+3. **Integrate Real Wallet Stats** - Replace mock data in RoastDisplay.tsx with PortfolioCard integration
+4. **Test Credit System** - Verify 3 free scans per user works correctly
 
 ### Ongoing
-5. **Implement Payment Gateways** - Set up Stripe for USDC payments
+5. **Monitor Payment Conversions** - Track free → paid conversions
 6. **Prepare AMA Demo** - Test 3-5 profile scans using Chrome automation
-7. **Create Pricing Page** - Design and develop tiered pricing UI
+7. **KOL Outreach** - Continue partnership discussions with target influencers
 8. **Token-Gating Setup** - Collab.Land integration for token-based access
-9. **Test Payment Flows** - End-to-end testing of USDC and AGNTCBRO payments
