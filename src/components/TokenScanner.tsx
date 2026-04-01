@@ -103,9 +103,12 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
         // Liquidity check
         const liquidity = mainPair.liquidity?.usd || 0;
         if (liquidity < 10000) {
-          riskScore += 20;
-          flags.push('⚠️ Low liquidity (<$10k)');
+          riskScore += 25;
+          flags.push('🚨 Very low liquidity (<$10k)');
         } else if (liquidity < 50000) {
+          riskScore += 15;
+          flags.push('⚠️ Low liquidity (<$50k)');
+        } else if (liquidity < 100000) {
           riskScore += 10;
           flags.push('⚡ Medium liquidity');
         }
@@ -113,22 +116,52 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
         // Market cap check
         const marketCap = mainPair.marketCap || 0;
         if (marketCap < 100000) {
-          riskScore += 15;
-          flags.push('⚠️ Low market cap');
+          riskScore += 20;
+          flags.push('🚨 Very low market cap (<$100k)');
+        } else if (marketCap < 1000000) {
+          riskScore += 10;
+          flags.push('⚠️ Low market cap (<$1M)');
         }
         
         // Volume check
         const volume = mainPair.volume?.h24 || 0;
         if (volume < 1000) {
-          riskScore += 15;
+          riskScore += 20;
+          flags.push('🚨 Very low 24h volume (<$1k)');
+        } else if (volume < 10000) {
+          riskScore += 10;
           flags.push('⚠️ Low 24h volume');
         }
         
-        // Price change check (extreme volatility)
+        // Price change check (extreme volatility - PUMP INDICATOR)
         const priceChange = mainPair.priceChange?.h24 || 0;
-        if (Math.abs(priceChange) > 50) {
+        if (Math.abs(priceChange) > 10000) {
+          riskScore += 40;
+          flags.push('🚨 EXTREME PUMP: >10,000% in 24h (Pump & Dump risk)');
+        } else if (Math.abs(priceChange) > 1000) {
+          riskScore += 30;
+          flags.push('🔴 MASSIVE PUMP: >1,000% in 24h (High rug risk)');
+        } else if (Math.abs(priceChange) > 100) {
+          riskScore += 20;
+          flags.push('⚠️ Large pump: >100% in 24h (Caution advised)');
+        } else if (Math.abs(priceChange) > 50) {
           riskScore += 10;
-          flags.push('⚡ High volatility');
+          flags.push('⚡ High volatility (>50% change)');
+        }
+        
+        // Liquidity to Market Cap ratio (low liquidity relative to cap = RISK)
+        if (liquidity > 0 && marketCap > 0) {
+          const liquidityRatio = (liquidity / marketCap) * 100;
+          if (liquidityRatio < 1) {
+            riskScore += 30;
+            flags.push(`🚨 DANGER: Liquidity only ${liquidityRatio.toFixed(1)}% of market cap`);
+          } else if (liquidityRatio < 5) {
+            riskScore += 20;
+            flags.push(`🔴 Low liquidity ratio: ${liquidityRatio.toFixed(1)}% of market cap`);
+          } else if (liquidityRatio < 10) {
+            riskScore += 10;
+            flags.push(`⚠️ Moderate liquidity ratio: ${liquidityRatio.toFixed(1)}%`);
+          }
         }
         
         // Fdv vs market cap ratio
@@ -138,11 +171,36 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
           flags.push('🔴 High FDV/MCap ratio');
         }
         
+        // Check for pump.fun indicators (if in pair data)
+        const dexId = mainPair.dexId || '';
+        const pairAddress = mainPair.pairAddress || '';
+        if (dexId === 'pumpswap' || dexId === 'pumpfun' || pairAddress.includes('pump')) {
+          riskScore += 20;
+          flags.push('🚨 PUMP.FUN TOKEN (Highest rug risk platform)');
+        }
+        
+        // Check for paid promotion (boosts)
+        const boosts = (mainPair as any).boosts?.active || 0;
+        if (boosts > 100) {
+          riskScore += 15;
+          flags.push(`🔴 PAID PROMOTION: ${boosts} DexScreener boosts`);
+        } else if (boosts > 10) {
+          riskScore += 5;
+          flags.push(`⚡ ${boosts} DexScreener boosts detected`);
+        }
+        
+        // Recent pullback check (1h negative while 24h positive = dump started)
+        const priceChange1h = mainPair.priceChange?.h1 || 0;
+        if (priceChange > 100 && priceChange1h < -5) {
+          riskScore += 15;
+          flags.push('🔴 PULLBACK IN PROGRESS: 1h down while 24h up');
+        }
+        
         // Determine risk level
         let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-        if (riskScore >= 60) riskLevel = 'CRITICAL';
-        else if (riskScore >= 40) riskLevel = 'HIGH';
-        else if (riskScore >= 20) riskLevel = 'MEDIUM';
+        if (riskScore >= 70) riskLevel = 'CRITICAL';
+        else if (riskScore >= 50) riskLevel = 'HIGH';
+        else if (riskScore >= 25) riskLevel = 'MEDIUM';
         else riskLevel = 'LOW';
         
         // Determine confidence
