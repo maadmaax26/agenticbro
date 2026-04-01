@@ -310,8 +310,8 @@ Recommendation: ${result.recommendation}`;
             </label>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               {([
-                { id: 'twitter', icon: '𝕏', label: 'Twitter/X' },
-                { id: 'telegram', icon: '📱', label: 'Telegram' },
+                { id: 'twitter', icon: '𝕏', label: 'X' },
+                { id: 'telegram', icon: '✈️', label: 'Telegram' },
                 { id: 'instagram', icon: '📷', label: 'Instagram' },
                 { id: 'discord', icon: '💬', label: 'Discord' },
                 { id: 'linkedin', icon: '💼', label: 'LinkedIn' },
@@ -321,15 +321,14 @@ Recommendation: ${result.recommendation}`;
                   key={p.id}
                   onClick={() => setPlatform(p.id)}
                   disabled={scanning}
-                  className="px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                  className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
                   style={platform === p.id
                     ? { background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.5)', color: '#4ade80' }
                     : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }
                   }
                 >
-                  <span className="mr-1">{p.icon}</span>
-                  <span className="hidden md:inline">{p.label}</span>
-                  <span className="md:hidden">{p.icon}</span>
+                  <span className="text-xl">{p.icon}</span>
+                  <span className="text-xs">{p.label}</span>
                 </button>
               ))}
             </div>
