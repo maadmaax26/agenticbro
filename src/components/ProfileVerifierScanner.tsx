@@ -63,7 +63,8 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     credits, 
     freeScansRemaining, 
     hasScans, 
-    useCredit 
+    useCredit,
+    isTestWallet 
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
   const handleScan = async () => {
@@ -302,8 +303,14 @@ Recommendation: ${result.recommendation}`;
               color: freeScansRemaining > 0 ? '#4ade80' : '#fbbf24',
             }}>
             <span>🎁</span>
-            <span>{freeScansRemaining} Free Scan{freeScansRemaining !== 1 ? 's' : ''}</span>
-            {credits > 0 && (
+            <span>
+              {isTestWallet 
+                ? '∞ Unlimited Scans (Test)' 
+                : freeScansRemaining > 0 
+                  ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}` 
+                  : 'No Free Scans'}
+            </span>
+            {credits > 0 && !isTestWallet && (
               <span className="text-purple-400 ml-2">+ {credits} Paid Credits</span>
             )}
           </div>

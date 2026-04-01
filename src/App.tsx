@@ -13,6 +13,7 @@ import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
 import ProfileVerifierScanner from './components/ProfileVerifierScanner'
+import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import Roadmap from './components/Roadmap'
@@ -694,6 +695,9 @@ function App() {
       <main className="relative z-10 container mx-auto px-4 md:px-6 pb-10">
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
+
+        {/* ── Priority Token Scanner - Advanced analysis with honeypot detection ── */}
+        <PriorityTokenScanner onLoginRequired={() => setShowAuthModal(true)} />
 
         {/* ── Token Scanner - Scan any token by contract address ── */}
         <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />

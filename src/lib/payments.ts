@@ -243,6 +243,11 @@ export async function loadStripe(): Promise<any | null> {
 
 // ─── Credit Management Hook ───────────────────────────────────────────────────
 
+// Test wallets get unlimited scans
+const TEST_WALLETS_UNLIMITED = new Set<string>([
+  'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
+]);
+
 export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
   const [credits, setCredits] = useState(0);
   const [freeScansRemaining, setFreeScansRemaining] = useState(3);
@@ -253,10 +258,21 @@ export function useCredits(userId: string | null, email: string | null, walletAd
     return walletAddress?.toLowerCase() || email?.toLowerCase() || userId || 'anonymous';
   }, [userId, email, walletAddress]);
 
+  // Check if this is a test wallet (unlimited scans)
+  const isTestWallet = walletAddress && TEST_WALLETS_UNLIMITED.has(walletAddress);
+
   // Load credits from storage
   useEffect(() => {
     const loadCredits = async () => {
       setLoading(true);
+      
+      // Test wallet gets unlimited scans
+      if (isTestWallet) {
+        setCredits(999999);
+        setFreeScansRemaining(999999);
+        setLoading(false);
+        return;
+      }
       
       const storageKey = getStorageKey();
       const stored = localStorage.getItem(`agenticbro_credits_${storageKey}`);
@@ -277,21 +293,28 @@ export function useCredits(userId: string | null, email: string | null, walletAd
     };
 
     loadCredits();
-  }, [getStorageKey]);
+  }, [getStorageKey, isTestWallet]);
 
   const saveCredits = (newCredits: number) => {
+    if (isTestWallet) return; // Don't save for test wallets
     const storageKey = getStorageKey();
     localStorage.setItem(`agenticbro_credits_${storageKey}`, String(newCredits));
     setCredits(newCredits);
   };
 
   const saveFreeScans = (newFree: number) => {
+    if (isTestWallet) return; // Don't save for test wallets
     const storageKey = getStorageKey();
     localStorage.setItem(`agenticbro_free_${storageKey}`, String(newFree));
     setFreeScansRemaining(newFree);
   };
 
   const useCredit = (): { success: boolean; remaining: number; type: 'free' | 'paid' } => {
+    // Test wallet always succeeds
+    if (isTestWallet) {
+      return { success: true, remaining: 999999, type: 'free' };
+    }
+
     // Try free scans first
     if (freeScansRemaining > 0) {
       const newFree = freeScansRemaining - 1;
@@ -310,11 +333,13 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   };
 
   const addCredits = (amount: number) => {
+    if (isTestWallet) return; // Don't need to add for test wallets
     const newCredits = credits + amount;
     saveCredits(newCredits);
   };
 
-  const hasScans = freeScansRemaining > 0 || credits > 0;
+  // Test wallets always have scans available
+  const hasScans = isTestWallet || freeScansRemaining > 0 || credits > 0;
 
   return {
     credits,
@@ -326,6 +351,7 @@ export function useCredits(userId: string | null, email: string | null, walletAd
     addCredits,
     saveCredits,
     saveFreeScans,
+    isTestWallet, // Expose for UI display
   };
 }
 
