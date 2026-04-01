@@ -644,6 +644,10 @@ function App() {
                 if (section === 'features') setShowValueProp(true)
                 if (section === 'scanners') setShowScamDatabase(true)
               }}
+              onLoginClick={() => {
+                setAuthMode('login')
+                setShowAuthModal(true)
+              }}
             />
           </header>
 
