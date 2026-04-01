@@ -14,6 +14,18 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
 
   const coreStrengths: FeatureCard[] = [
     {
+      name: 'profile-verifier',
+      icon: '🔍',
+      title: 'Profile Verifier Scanner',
+      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. 3 free scans, then $1/scan.',
+    },
+    {
+      name: 'token-impersonation',
+      icon: '🪙',
+      title: 'Token Impersonation Scanner',
+      description: 'Protect yourself from fake tokens impersonating legitimate projects. Enter any contract address and instantly identify copycat tokens, honeypots, and rug pulls before you invest.',
+    },
+    {
       name: 'scam-detection',
       icon: '🛡',
       title: 'Scam Detection System',
@@ -21,7 +33,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
     },
     {
       name: 'priority-scan',
-      icon: '🔍',
+      icon: '⚡',
       title: 'Priority Scan',
       description: 'Scan any wallet, Telegram channel, or token address for hidden risk signals. Uncover insider patterns, suspicious flows, and low-trust actors -- all in seconds.',
     },
@@ -37,18 +49,6 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
       title: 'Scammer Database',
       description: 'Community-powered database of known scammers, rug-pull deployers, and fake signal providers -- cross-referenced against every scan you run.',
     },
-    {
-      name: 'informed-decisions',
-      icon: '🧠',
-      title: 'Informed Trading Intelligence',
-      description: 'Every scan produces a trust score, risk tier, and actionable recommendation -- so you know exactly whether to buy, avoid, or investigate further.',
-    },
-    {
-      name: 'token-burn',
-      icon: '🔥',
-      title: 'Deflationary Token Model',
-      description: 'Every scan burns $AGNTCBRO tokens. The more Agentic Bro protects users, the scarcer the supply -- value appreciation built into every investigation.',
-    },
   ];
 
   const howItWorks = [
@@ -59,10 +59,10 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
   ];
 
   const stats = [
+    { value: '6', label: 'Platforms Supported' },
     { value: '5,000+', label: 'Known Scammers in Database' },
     { value: '< 30s', label: 'Average Scan Time' },
     { value: '3 Free', label: 'Scans for Every User' },
-    { value: '100%', label: 'On-Chain Verified Results' },
   ];
 
   return (
@@ -194,6 +194,61 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                     </li>
                   ))}
                 </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-20">
+          <div className="bg-gradient-to-br from-cyan-950/40 to-gray-900/60 border border-cyan-500/20 rounded-3xl p-10">
+            <div className="grid md:grid-cols-2 gap-10 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/30 rounded-full px-3 py-1 text-sm text-cyan-400 mb-4">
+                  🔍 Featured Tool
+                </div>
+                <h2 className="text-4xl font-black text-white mb-4">Profile Verifier Scanner</h2>
+                <p className="text-gray-300 text-lg mb-6">
+                  Instantly verify any social media profile for authenticity. Our AI-powered scanner checks for 
+                  bot activity, fake followers, engagement patterns, and scam signals across 6 major platforms.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    'X (Twitter) — follower quality, bot detection, engagement rate',
+                    'Telegram — channel credibility, member quality, scam history',
+                    'Discord — server activity, role distribution, warning signs',
+                    'Instagram — follower authenticity, engagement quality',
+                    'TikTok — view-to-like ratio, comment quality analysis',
+                    'YouTube — subscriber legitimacy, view quality metrics',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-gray-300">
+                      <span className="text-cyan-400 mt-0.5 flex-shrink-0">✔</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 flex items-center gap-4">
+                  <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-4 py-2">
+                    <span className="text-cyan-400 font-bold">3 Free Scans</span>
+                  </div>
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2">
+                    <span className="text-purple-400 font-bold">$1/scan after</span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-900/80 border border-cyan-500/20 rounded-2xl p-6">
+                <div className="text-center mb-4">
+                  <div className="text-5xl mb-2">🔍</div>
+                  <div className="text-xl font-bold text-white">Profile Scan Result</div>
+                  <div className="text-sm text-gray-500">Sample output</div>
+                </div>
+                <div className="space-y-3 text-sm">
+                  {[{ label: 'Platform', value: 'X (Twitter)', color: 'text-cyan-400' }, { label: 'Username', value: '@elonmusk', color: 'text-white font-mono' }, { label: 'Trust Score', value: '98 / 100', color: 'text-green-400 font-bold' }, { label: 'Risk Level', value: 'LOW', color: 'text-green-500 font-bold' }, { label: 'Bot Score', value: '2%', color: 'text-green-400' }, { label: 'Verdict', value: '✅ LEGITIMATE', color: 'text-green-500 font-bold' }].map((row, i) => (
+                    <div key={i} className="flex justify-between items-center border-b border-gray-800/50 pb-2">
+                      <span className="text-gray-500">{row.label}</span>
+                      <span className={row.color}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
