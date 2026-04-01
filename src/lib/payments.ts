@@ -48,6 +48,31 @@ export const AGNTCBRO_DECIMALS = 6;
 export const USDC_MINT_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 export const USDC_MINT_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
+// ─── Payment Receiving Wallets ─────────────────────────────────────────────────
+
+// Solana wallet for receiving USDC and AGNTCBRO payments
+export const PAYMENT_WALLET_SOLANA = '9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F';
+
+// Base/Ethereum wallet for receiving USDC payments
+export const PAYMENT_WALLET_BASE = '0x1c793592adf512dfe590817225c3b2b6bd913fac';
+
+// Payment Configuration
+export const PAYMENT_CONFIG = {
+  solana: {
+    wallet: PAYMENT_WALLET_SOLANA,
+    usdcMint: USDC_MINT_SOLANA,
+    agntcbroMint: AGNTCBRO_MINT,
+    network: 'Solana Mainnet',
+    rpcEndpoint: 'https://api.mainnet-beta.solana.com',
+  },
+  base: {
+    wallet: PAYMENT_WALLET_BASE,
+    usdcMint: USDC_MINT_BASE,
+    network: 'Base Mainnet',
+    rpcEndpoint: 'https://mainnet.base.org',
+  },
+};
+
 // ─── Credit Packages ($1/scan) ────────────────────────────────────────────────
 
 export const CREDIT_PACKAGES: CreditPackage[] = [
