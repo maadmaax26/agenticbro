@@ -125,7 +125,7 @@ export default function MobileMenu({ onNavigate }: MobileMenuProps) {
               <div className="border-t border-purple-500/30 my-3" />
 
               <a
-                href="https://t.me/agenticbro11"
+                href="https://t.me/Agenticbro1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center py-4 px-5 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-xl text-white font-semibold text-xl hover:opacity-90 transition-opacity"
