@@ -2,13 +2,13 @@
  * Token Impersonation Scanner Component
  *
  * Allows users to scan for tokens impersonating a legitimate token by contract address.
- * Rate-limited per day:
- *   • Anonymous  (no wallet): 2 free scans / day
- *   • Connected wallet:       3 free scans / day
+ * 3 free scans per user (tracked by wallet address or email)
+ * $1 per scan credit via Stripe, USDC, or AGNTCBRO after free scans used
  */
 
 import { useState } from 'react';
-import { useImpersonationScanLimit } from '../hooks/useImpersonationScanLimit';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useCredits } from '../lib/payments';
 
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -71,18 +71,23 @@ interface ScanResult {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface TokenImpersonationScannerProps {
-  walletAddress?: string;
-}
-
-export default function TokenImpersonationScanner({ walletAddress }: TokenImpersonationScannerProps) {
+export default function TokenImpersonationScanner() {
+  const { publicKey } = useWallet();
   const [contractAddress, setContractAddress] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { scansRemaining, scansLimit, canScan, isAnon, recordScan } =
-    useImpersonationScanLimit(walletAddress);
+  // Get wallet address for credit tracking
+  const walletAddress = publicKey?.toString() || null;
+  
+  // Use the credits system ($1/scan, tracked by wallet/email)
+  const { 
+    credits, 
+    freeScansRemaining, 
+    hasScans, 
+    useCredit 
+  } = useCredits(null, null, walletAddress);
 
   const handleScan = async () => {
     if (!contractAddress.trim()) {
@@ -90,12 +95,23 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
       return;
     }
 
-    // Enforce daily limit before firing the request
-    if (!canScan) return;
+    // Check if user has scans available (free or paid)
+    if (!hasScans) {
+      setError('No scans remaining. Purchase credits to continue scanning - $1/scan via Stripe, USDC, or AGNTCBRO.');
+      return;
+    }
 
     setScanning(true);
     setError(null);
     setResult(null);
+
+    // Use a credit (free first, then paid)
+    const creditResult = useCredit();
+    if (!creditResult.success) {
+      setError('Failed to use scan credit. Please try again.');
+      setScanning(false);
+      return;
+    }
 
     try {
       const response = await fetch(`/api/token-impersonation-scan`, {
@@ -115,8 +131,7 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
       }
 
       if (data.success) {
-        // Only consume a scan credit on success
-        recordScan();
+        // Credit was already used before scan
         setResult(data);
       } else {
         throw new Error(data.error || 'Scan failed');
@@ -151,9 +166,11 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
 
   // Scan counter colour
   const counterColour =
-    scansRemaining === 0   ? '#f87171'  // red — exhausted
-    : scansRemaining === 1 ? '#fbbf24'  // amber — last scan
-    : '#4ade80';                         // green — plenty left
+    !hasScans      ? '#f87171'  // red — no scans
+    : freeScansRemaining === 1 ? '#fbbf24'  // amber — last free scan
+    : '#4ade80';                          // green — scans available
+
+  const totalScansRemaining = freeScansRemaining + credits;
 
   return (
     <div className="space-y-6">
@@ -175,7 +192,7 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
             </div>
           </div>
 
-          {/* ── Daily scan counter badge ── */}
+          {/* ── Scan counter badge ── */}
           <div
             className="flex flex-col items-center px-4 py-2 rounded-xl text-center"
             style={{
@@ -185,20 +202,26 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
             }}
           >
             <span className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
-              {isAnon ? 'Free Scans' : 'Daily Scans'}
+              Scans
             </span>
             <span className="text-xl font-black" style={{ color: counterColour }}>
-              {scansRemaining}
-              <span className="text-sm font-normal text-gray-500"> / {scansLimit}</span>
+              {totalScansRemaining}
             </span>
-            <span className="text-xs" style={{ color: counterColour }}>
-              {scansRemaining === 0 ? 'Resets midnight' : 'remaining'}
-            </span>
+            {freeScansRemaining > 0 && (
+              <span className="text-xs text-green-400">
+                {freeScansRemaining} free
+              </span>
+            )}
+            {credits > 0 && (
+              <span className="text-xs text-purple-400">
+                {credits} paid
+              </span>
+            )}
           </div>
         </div>
 
-        {/* ── Locked state — daily limit reached ── */}
-        {!canScan ? (
+        {/* ── No scans remaining ── */}
+        {!hasScans ? (
           <div
             className="rounded-xl p-5 text-center"
             style={{
@@ -207,43 +230,14 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
             }}
           >
             <span className="text-3xl mb-3 block">🔒</span>
-            {isAnon ? (
-              <>
-                <p className="text-white font-bold mb-1">Daily limit reached (2 / 2)</p>
-                <p className="text-sm text-gray-400 mb-4">
-                  Connect your wallet to unlock <span className="text-purple-400 font-semibold">3 free scans per day</span>.
-                </p>
-                <p className="text-xs text-gray-500">Limit resets at midnight · No token required</p>
-              </>
-            ) : (
-              <>
-                <p className="text-white font-bold mb-1">Daily limit reached (3 / 3)</p>
-                <p className="text-sm text-gray-400">
-                  Your {scansLimit} free scans for today have been used.
-                </p>
-                <p className="text-xs text-gray-500 mt-2">Resets at midnight UTC</p>
-              </>
-            )}
+            <p className="text-white font-bold mb-1">No Scans Remaining</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Purchase credits to continue scanning — <span className="text-emerald-400 font-semibold">$1/scan</span> via Stripe, USDC, or AGNTCBRO
+            </p>
           </div>
         ) : (
           /* ── Normal scan form ── */
           <div className="space-y-3">
-            {/* Anon upsell hint — visible only when not connected and scans are low */}
-            {isAnon && scansRemaining <= 1 && (
-              <div
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-                style={{
-                  background: 'rgba(139,92,246,0.08)',
-                  border: '1px solid rgba(139,92,246,0.2)',
-                }}
-              >
-                <span>💡</span>
-                <span className="text-purple-300">
-                  Connect wallet for <strong>3 scans/day</strong> instead of 2
-                </span>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">
                 Contract Address
@@ -262,15 +256,34 @@ export default function TokenImpersonationScanner({ walletAddress }: TokenImpers
 
             <button
               onClick={handleScan}
-              disabled={scanning || !contractAddress.trim()}
+              disabled={scanning || !contractAddress.trim() || !hasScans}
               className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+                background: hasScans 
+                  ? 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)'
+                  : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                boxShadow: hasScans ? '0 4px 15px rgba(139,92,246,0.3)' : 'none',
               }}
             >
-              {scanning ? '🔄 Scanning...' : '🚀 Start Scan'}
+              {scanning ? '🔄 Scanning...' : hasScans 
+                ? `🚀 Start Scan (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
+                : '❌ No Scans - Buy Credits'}
             </button>
+            
+            {/* Pricing Info */}
+            {!hasScans && (
+              <div 
+                className="text-center p-3 rounded-lg"
+                style={{
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                <p className="text-sm text-purple-400">
+                  💎 Purchase scan credits: <strong>$1/scan</strong> via Stripe, USDC, or AGNTCBRO
+                </p>
+              </div>
+            )}
           </div>
         )}
 
