@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
+import { useAuth } from '../lib/AuthContext';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,15 +35,21 @@ interface TokenScanResult {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function TokenScanner() {
+interface TokenScannerProps {
+  onLoginRequired?: () => void;
+}
+
+export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
   const { publicKey } = useWallet();
+  const { isAuthenticated, email, walletAddress: authWalletAddress } = useAuth();
   const [contractAddress, setContractAddress] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<TokenScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get wallet address for credit tracking
-  const walletAddress = publicKey?.toString() || null;
+  // Get wallet address for credit tracking (from wallet connection or auth)
+  const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
+  const effectiveEmail = email || null;
   
   // Use the credits system ($1/scan, tracked by wallet/email)
   const { 
@@ -50,7 +57,7 @@ export default function TokenScanner() {
     freeScansRemaining, 
     hasScans, 
     useCredit 
-  } = useCredits(null, null, walletAddress);
+  } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
   const handleScan = async () => {
     if (!contractAddress.trim()) {
@@ -272,9 +279,34 @@ export default function TokenScanner() {
           >
             <span className="text-3xl mb-3 block">🔒</span>
             <p className="text-white font-bold mb-1">No Scans Remaining</p>
-            <p className="text-sm text-gray-400 mb-4">
-              Purchase credits to continue scanning — <span className="text-emerald-400 font-semibold">$1/scan</span> via Stripe, USDC, or AGNTCBRO
-            </p>
+            
+            {/* Show login prompt if not authenticated */}
+            {!isAuthenticated && !publicKey ? (
+              <>
+                <p className="text-sm text-gray-400 mb-4">
+                  <strong>Sign in required</strong> to purchase scan credits
+                </p>
+                <button
+                  onClick={() => onLoginRequired?.()}
+                  className="px-6 py-2 rounded-lg font-semibold text-white transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                  }}
+                >
+                  Sign In / Connect Wallet
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-400 mb-4">
+                  Purchase credits to continue scanning — <span className="text-emerald-400 font-semibold">$1/scan</span> via Stripe, USDC, or AGNTCBRO
+                </p>
+                <p className="text-xs text-gray-500">
+                  3 free scans included with new accounts
+                </p>
+              </>
+            )}
           </div>
         ) : (
           /* Normal scan form */
