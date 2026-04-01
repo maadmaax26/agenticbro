@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Menu, X, Shield, Search, Map, Users } from 'lucide-react'
 
 interface MobileMenuProps {
@@ -8,10 +9,22 @@ interface MobileMenuProps {
 export default function MobileMenu({ onNavigate }: MobileMenuProps) {
   const [open, setOpen] = useState(false)
 
-  const handleNavigate = (section: string) => {
+  const handleNavigate = useCallback((section: string) => {
     setOpen(false)
     onNavigate?.(section)
-  }
+  }, [onNavigate])
+
+  // Lock body scroll when menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
 
   return (
     <>
@@ -31,26 +44,31 @@ export default function MobileMenu({ onNavigate }: MobileMenuProps) {
         </button>
       </div>
 
-      {/* Menu overlay - full screen */}
-      {open && (
+      {/* Menu overlay - rendered via portal at body level */}
+      {open && createPortal(
         <div 
-          className="fixed inset-0 z-[10000] overflow-y-auto"
+          className="fixed inset-0 z-[99999]"
           style={{ 
             position: 'fixed', 
             top: 0, 
             left: 0, 
             right: 0, 
             bottom: 0,
+            zIndex: 99999,
           }}
         >
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setOpen(false)}
+            style={{ zIndex: 99998 }}
           />
           
           {/* Menu content */}
-          <div className="relative min-h-screen bg-gradient-to-b from-slate-900 to-black">
+          <div 
+            className="fixed inset-0 overflow-y-auto bg-gradient-to-b from-slate-900 to-black"
+            style={{ zIndex: 99999 }}
+          >
             {/* Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-4 border-b border-purple-500/50 bg-slate-900/95 backdrop-blur-sm">
               <div className="flex items-center gap-3">
@@ -125,7 +143,8 @@ export default function MobileMenu({ onNavigate }: MobileMenuProps) {
               </a>
             </nav>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
