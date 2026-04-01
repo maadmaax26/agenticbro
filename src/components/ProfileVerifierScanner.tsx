@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
+import { useAuth } from '../lib/AuthContext';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,16 +41,22 @@ interface ProfileScanResult {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProfileVerifierScanner() {
+interface ProfileVerifierScannerProps {
+  onLoginRequired?: () => void;
+}
+
+export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerifierScannerProps) {
   const { publicKey } = useWallet();
+  const { isAuthenticated, email, walletAddress: authWalletAddress } = useAuth();
   const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook'>('twitter');
   const [username, setUsername] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get wallet address for credit tracking
-  const walletAddress = publicKey?.toString() || null;
+  // Get wallet address for credit tracking (from wallet connection or auth)
+  const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
+  const effectiveEmail = email || null;
   
   // Use the credits system ($1/scan, tracked by wallet/email)
   const { 
@@ -57,7 +64,7 @@ export default function ProfileVerifierScanner() {
     freeScansRemaining, 
     hasScans, 
     useCredit 
-  } = useCredits(null, null, walletAddress);
+  } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
   const handleScan = async () => {
     if (!username.trim()) {
@@ -375,18 +382,41 @@ Recommendation: ${result.recommendation}`;
               : '❌ No Scans - Buy Credits'}
           </button>
           
-          {/* Pricing Info */}
+          {/* Pricing Info - Show login prompt if not authenticated */}
           {!hasScans && (
             <div 
-              className="text-center p-3 rounded-lg"
+              className="text-center p-4 rounded-lg"
               style={{
                 background: 'rgba(139, 92, 246, 0.1)',
                 border: '1px solid rgba(139, 92, 246, 0.3)',
               }}
             >
-              <p className="text-sm text-purple-400">
-                💎 Purchase scan credits: <strong>$1/scan</strong> via Stripe, USDC, or AGNTCBRO
-              </p>
+              {!isAuthenticated && !publicKey ? (
+                <>
+                  <p className="text-sm text-purple-400 mb-2">
+                    🔐 <strong>Sign in required</strong> to purchase scan credits
+                  </p>
+                  <button
+                    onClick={() => onLoginRequired?.()}
+                    className="px-6 py-2 rounded-lg font-semibold text-white transition-all hover:scale-[1.02]"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                    }}
+                  >
+                    Sign In / Connect Wallet
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-purple-400">
+                    💎 Purchase scan credits: <strong>$1/scan</strong> via Stripe, USDC, or AGNTCBRO
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    3 free scans included with new accounts
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
