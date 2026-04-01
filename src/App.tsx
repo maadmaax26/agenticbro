@@ -690,14 +690,13 @@ function App() {
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner />
 
+        {/* ── Token Impersonation Scanner (below Profile Verifier) ── */}
+        <TokenImpersonationScanner />
+
         {/* ── Scam Detection System — requires wallet connection ── */}
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
         )}
-
-        {/* ── Token Impersonation Scanner ── */}
-        {/* 2 free scans/day anon · 3 free scans/day with connected wallet */}
-        <TokenImpersonationScanner />
 
         {!connected ? (
           <div className="max-w-6xl mx-auto">
