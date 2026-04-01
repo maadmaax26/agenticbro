@@ -697,7 +697,7 @@ function App() {
 
         {/* ── Token Impersonation Scanner ── */}
         {/* 2 free scans/day anon · 3 free scans/day with connected wallet */}
-        <TokenImpersonationScanner walletAddress={publicKey?.toBase58()} />
+        <TokenImpersonationScanner />
 
         {!connected ? (
           <div className="max-w-6xl mx-auto">
