@@ -16,7 +16,7 @@ import {
   CREDIT_PACKAGES, 
   useStripePayment,
   getAGNTCBROPrice,
-  AGNTCBRO_MINT,
+  PAYMENT_CONFIG,
 } from '../lib/payments';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -79,9 +79,30 @@ export default function PaymentModal({
       return;
     }
 
-    // For USDC payments, we'll show payment instructions
-    // In production, this would integrate with a wallet connector
-    alert(`Crypto payment integration coming soon! You'll be able to pay ${totalCostUSD} USDC via ${method === 'usdc-solana' ? 'Solana' : method === 'usdc-base' ? 'Base' : 'AGNTCBRO tokens'}.`);
+    // For USDC payments, show payment details
+    const config = method === 'usdc-solana' 
+      ? PAYMENT_CONFIG.solana 
+      : method === 'usdc-base' 
+      ? PAYMENT_CONFIG.base 
+      : null;
+
+    if (method === 'agntcbro') {
+      // AGNTCBRO payment on Solana
+      alert(`AGNTCBRO Payment Details:\n\nAmount: ${agntcbroAmount.toFixed(0)} AGNTCBRO\nSend to: ${PAYMENT_CONFIG.solana.wallet}\nNetwork: Solana Mainnet\n\nAfter sending, your credits will be added within 1-2 minutes.`);
+    } else if (config) {
+      // USDC payment
+      alert(`USDC Payment Details:\n\nAmount: ${totalCostUSD} USDC\nSend to: ${config.wallet}\nNetwork: ${config.network}\n\nAfter sending, your credits will be added within 1-2 minutes.`);
+    }
+  };
+
+  // Get payment wallet for display
+  const getPaymentWallet = () => {
+    if (paymentMethod === 'usdc-solana' || paymentMethod === 'agntcbro') {
+      return PAYMENT_CONFIG.solana.wallet;
+    } else if (paymentMethod === 'usdc-base') {
+      return PAYMENT_CONFIG.base.wallet;
+    }
+    return '';
   };
 
   return (
@@ -229,19 +250,57 @@ export default function PaymentModal({
         </div>
 
         {/* Payment Details */}
-        {paymentMethod === 'agntcbro' && (
+        {paymentMethod !== 'stripe' && (
           <div 
             className="mb-6 p-4 rounded-xl"
             style={{
-              background: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
+              background: paymentMethod === 'agntcbro' 
+                ? 'rgba(245, 158, 11, 0.1)' 
+                : paymentMethod === 'usdc-solana'
+                ? 'rgba(168, 85, 247, 0.1)'
+                : 'rgba(59, 130, 246, 0.1)',
+              border: paymentMethod === 'agntcbro' 
+                ? '1px solid rgba(245, 158, 11, 0.3)'
+                : paymentMethod === 'usdc-solana'
+                ? '1px solid rgba(168, 85, 247, 0.3)'
+                : '1px solid rgba(59, 130, 246, 0.3)',
             }}
           >
-            <h4 className="font-semibold text-amber-400 mb-2">💰 AGNTCBRO Payment</h4>
-            <div className="text-sm text-gray-300 space-y-1">
-              <p>• Current price: ${agntcbroPrice.toFixed(6)} per AGNTCBRO</p>
-              <p>• Required: {agntcbroAmount.toFixed(0)} AGNTCBRO (${totalCostUSD} USD equivalent)</p>
-              <p>• Contract: <code className="text-xs bg-black/30 px-1 rounded">{AGNTCBRO_MINT.slice(0, 12)}...</code></p>
+            <h4 className={`font-semibold mb-2 ${
+              paymentMethod === 'agntcbro' 
+                ? 'text-amber-400' 
+                : paymentMethod === 'usdc-solana'
+                ? 'text-purple-400'
+                : 'text-blue-400'
+            }`}>
+              💰 {paymentMethod === 'agntcbro' ? 'AGNTCBRO' : 'USDC'} Payment
+            </h4>
+            <div className="text-sm text-gray-300 space-y-2">
+              <div className="flex justify-between">
+                <span>Amount:</span>
+                <span className="font-mono font-semibold">
+                  {paymentMethod === 'agntcbro' 
+                    ? `${agntcbroAmount.toFixed(0)} AGNTCBRO`
+                    : `${totalCostUSD} USDC`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Network:</span>
+                <span className="font-semibold">
+                  {paymentMethod === 'usdc-base' ? 'Base Mainnet' : 'Solana Mainnet'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Send to:</span>
+                <code className="text-xs bg-black/30 px-2 py-1 rounded font-mono">
+                  {getPaymentWallet().slice(0, 8)}...{getPaymentWallet().slice(-8)}
+                </code>
+              </div>
+              {paymentMethod === 'agntcbro' && agntcbroPrice > 0 && (
+                <p className="text-xs text-gray-400 pt-1">
+                  ≈ ${agntcbroPrice.toFixed(6)} per AGNTCBRO (${totalCostUSD} USD equivalent)
+                </p>
+              )}
             </div>
           </div>
         )}
