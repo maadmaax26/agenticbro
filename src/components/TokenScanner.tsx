@@ -56,7 +56,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     credits, 
     freeScansRemaining, 
     hasScans, 
-    useCredit 
+    useCredit
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
   const handleScan = async () => {
