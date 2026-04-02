@@ -1,0 +1,23 @@
+{
+  "id": "4509a38661eb",
+  "username": "fujinthehouse",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T17:09:37.789260",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T17:10:30.329337",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2683
+  },
+  "completed_at": "2026-04-02T17:10:38.358635"
+}

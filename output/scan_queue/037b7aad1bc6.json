@@ -1,0 +1,23 @@
+{
+  "id": "037b7aad1bc6",
+  "username": "CNnalue17555",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T16:57:00.614342",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T16:57:00.615592",
+  "result": {
+    "status": "active",
+    "risk_score": 2.7777777777777777,
+    "level": "LOW",
+    "red_flags": [
+      "Unrealistic returns"
+    ],
+    "text_length": 2603
+  },
+  "completed_at": "2026-04-02T16:57:08.671666"
+}

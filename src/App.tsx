@@ -705,72 +705,70 @@ function App() {
         {/* ── Token Impersonation Scanner - Detect fake tokens ── */}
         <TokenImpersonationScanner />
 
-        {/* ── Pre-Connect Scanner Info (shown before wallet connect) ── */}
-        {!connected && (
-          <div className="max-w-6xl mx-auto mb-10">
-            <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-                <p className="text-gray-400">No wallet needed — 3 free scans for each tool below</p>
+        {/* ── Free Scam Protection Tools Info (shown for all users) ── */}
+        <div className="max-w-6xl mx-auto mb-10">
+          <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
+              <p className="text-gray-400">3 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Profile Verifier */}
+              <div className="bg-black/30 rounded-xl p-4 border border-cyan-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">🔍</span>
+                  <h4 className="font-bold text-white">Profile Verifier</h4>
+                </div>
+                <p className="text-sm text-gray-400 mb-3">
+                  Scan any X/Twitter, Telegram, Discord, YouTube, TikTok, or Instagram profile for scam red flags.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-1">
+                  <li>✓ 6 platform support</li>
+                  <li>✓ Risk scoring (0-10)</li>
+                  <li>✓ Paid promoter detection</li>
+                  <li>✓ 10 red flag checks</li>
+                </ul>
               </div>
-              
-              <div className="grid md:grid-cols-3 gap-4">
-                {/* Profile Verifier */}
-                <div className="bg-black/30 rounded-xl p-4 border border-cyan-500/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">🔍</span>
-                    <h4 className="font-bold text-white">Profile Verifier</h4>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-3">
-                    Scan any X/Twitter, Telegram, Discord, YouTube, TikTok, or Instagram profile for scam red flags.
-                  </p>
-                  <ul className="text-xs text-gray-500 space-y-1">
-                    <li>✓ 6 platform support</li>
-                    <li>✓ Risk scoring (0-10)</li>
-                    <li>✓ Paid promoter detection</li>
-                    <li>✓ 10 red flag checks</li>
-                  </ul>
-                </div>
 
-                {/* Token Scanner */}
-                <div className="bg-black/30 rounded-xl p-4 border border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">🪙</span>
-                    <h4 className="font-bold text-white">Token Scanner</h4>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-3">
-                    Analyze any token by contract address across Solana, Base, and Ethereum chains.
-                  </p>
-                  <ul className="text-xs text-gray-500 space-y-1">
-                    <li>✓ Multi-chain support</li>
-                    <li>✓ Liquidity analysis</li>
-                    <li>✓ Holder distribution</li>
-                    <li>✓ Security flags check</li>
-                  </ul>
+              {/* Token Scanner */}
+              <div className="bg-black/30 rounded-xl p-4 border border-purple-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">🪙</span>
+                  <h4 className="font-bold text-white">Token Scanner</h4>
                 </div>
+                <p className="text-sm text-gray-400 mb-3">
+                  Analyze any token by contract address across Solana, Base, and Ethereum chains.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-1">
+                  <li>✓ Multi-chain support</li>
+                  <li>✓ Liquidity analysis</li>
+                  <li>✓ Holder distribution</li>
+                  <li>✓ Security flags check</li>
+                </ul>
+              </div>
 
-                {/* Token Impersonation */}
-                <div className="bg-black/30 rounded-xl p-4 border border-red-500/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">⚠️</span>
-                    <h4 className="font-bold text-white">Fake Token Detector</h4>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-3">
-                    Detect impersonator tokens copying legitimate project names and symbols.
-                  </p>
-                  <ul className="text-xs text-gray-500 space-y-1">
-                    <li>✓ DexScreener API scan</li>
-                    <li>✓ Symbol/name matching</li>
-                    <li>✓ Pump.fun detection</li>
-                    <li>✓ Risk scoring</li>
-                  </ul>
+              {/* Token Impersonation */}
+              <div className="bg-black/30 rounded-xl p-4 border border-red-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">⚠️</span>
+                  <h4 className="font-bold text-white">Fake Token Detector</h4>
                 </div>
+                <p className="text-sm text-gray-400 mb-3">
+                  Detect impersonator tokens copying legitimate project names and symbols.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-1">
+                  <li>✓ DexScreener API scan</li>
+                  <li>✓ Symbol/name matching</li>
+                  <li>✓ Pump.fun detection</li>
+                  <li>✓ Risk scoring</li>
+                </ul>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ── Scam Detection System — requires wallet connection ── */}
+        {/* ── Scam Detection System — for logged-in users ── */}
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
         )}

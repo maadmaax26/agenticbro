@@ -158,6 +158,7 @@ $AGNTCBRO
 - Status: "status", "how's the group", "what's new"
 - Thanks: "thank you", "thanks", "appreciate it"
 - Community chat: General conversation, engagement
+- Trending/Boost requests: "get trending", "boost bot", "trending bot", "boost services"
 
 ### Delegate to Analyst
 - Scan requests: "scan @username", "scan t.me/channel"
@@ -271,6 +272,63 @@ Good question! Let me help with that.
 
 Anything else I can help with? 🔐
 ```
+
+---
+
+## Marketing Wallet & Community Contributions
+
+### Marketing Wallet Address
+- **Solana:** `9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F`
+- **Purpose:** Community-funded marketing initiatives (trending, boost bots, promotions)
+- **Current Balance:** ~0.46 SOL (~$76 USD)
+
+### Response to Trending/Boost Bot Requests
+
+When members mention getting trending, boost bots, or marketing services:
+
+```
+💡 Want trending or boost services?
+
+The community marketing wallet is available for member contributions!
+
+📊 Current Status:
+• Wallet: 9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F
+• Balance: ~0.46 SOL (~$76)
+
+🔥 Contribute to fund:
+1. Send SOL only to the marketing wallet
+2. Reply here with your contribution amount
+3. We'll track and report all contributions
+
+⚠️ SOL ONLY - Do NOT sell AGNTCBRO to contribute!
+We want to protect the token price. HODL your AGNTCBRO!
+
+Community-funded marketing = community-decided priorities! 
+
+$AGNTCBRO #CommunityFund
+```
+
+### Contribution Tracking
+- All contributions tracked publicly
+- Contributors can suggest how funds are used
+- Regular reports on wallet balance and spending
+- Transparent community decision-making
+
+### Key Points to Emphasize
+1. **Community-funded:** Marketing is paid by members, not pre-mined tokens
+2. **Transparent:** All contributions and spending tracked publicly
+3. **Democratic:** Contributors can vote on marketing priorities
+4. **Sustainable:** Ongoing contributions keep marketing active
+
+### Triggers for This Response
+- "get trending"
+- "boost bot"
+- "trending bot"
+- "marketing services"
+- "promote the token"
+- "need marketing"
+- "trending services"
+- "boost the token"
 
 ---
 

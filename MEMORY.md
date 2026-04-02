@@ -11,6 +11,78 @@
 
 ## Key Insights (March 2026)
 
+### April 2, 2026
+
+**Profile Scan Infrastructure Update:**
+- Set Chrome CDP browser automation as DEFAULT scan method for all sessions
+- Created `/scam-detection-framework/PROFILE_SCAN_METHOD.md` - complete scan methodology
+- Created `/scam-detection-framework/SCAN_DATABASE_DISPLAY.md` - display guide for website
+- Added Diana Sanchez (@DianaSanchez_04) scan report as first detailed JSON report
+- Database now supports PAID PROMOTER verification level (legitimate influencers who do paid promos)
+- Scan reports stored in `/output/scan_reports/[HANDLE]_[DATE].json`
+- Database updated in `/scammer-database.csv`
+- Crypto_Genius09 moved to RESOLVED section (AMA completed)
+
+**Scam Database Auto-Sync (Supabase):**
+- Integrated with Supabase: `https://drvasofyghnxfxvkkwad.supabase.co`
+- Created sync service: `/agentic-bro/services/supabase-scam-sync.ts`
+- Created API routes: `/agentic-bro/routes/sync.ts`
+- API endpoints:
+  - `POST /api/v1/sync/scam-db` - Manual sync trigger
+  - `GET /api/v1/sync/status` - Last sync status
+  - `GET /api/v1/sync/csv-stats` - CSV file statistics
+- Scheduled job: `scam_db_hourly_sync` runs every hour
+- Table: `known_scammers` in Supabase
+- Fields mapped: platform, username, display_name, x_handle, telegram_channel, scam_type, victim_count, total_lost_usd, verification_level, threat_level, status, risk_score, notes, evidence_urls
+- First sync: 2 added, 7 updated, 0 errors
+
+**Scan Method:**
+- Port 18800 Chrome CDP
+- User data dir: `/tmp/chrome-openclaw`
+- Duration: ~15 seconds per profile
+- Cost: Free (no X API needed)
+- Output: JSON detailed report + CSV database entry
+
+**Diana Sanchez Scan Results:**
+- Followers: 717K (verified)
+- Account Age: 14+ years (joined Jan 2012)
+- Risk Score: 2.8/10 (LOW)
+- Verification: PAID PROMOTER
+- Status: Viable partnership target for Agentic Bro
+- Action: Proceed with partnership outreach (see `kol-pitch-diana-sanchez.md`)
+
+### April 1, 2026
+
+**Marketing Wallet Community Fund:**
+- Marketing wallet: `9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F` (Solana)
+- Current balance: **0.463 SOL (~$76 USD)** (checked Apr 1, 2026 18:13 EST)
+- Purpose: Community-funded marketing initiatives (trending, boost bots, promotions)
+- Status: No community contributions received yet
+- **SOL ONLY** - Do NOT sell AGNTCBRO to contribute (protects token price)
+- Policy: Remind members about marketing wallet when they request trending/boost services
+- Tracking: All contributions logged in `/memory/MARKETING_WALLET.md`
+- Goals: 2 SOL (basic trending), 5 SOL (premium trending)
+
+**Community Interaction Update:**
+- Added automated response for trending/boost bot requests
+- Triggers: "get trending", "boost bot", "trending bot", "marketing services"
+- Response: Remind about marketing wallet and how to contribute
+- Tone: Educational, not pushy - "Community-funded = community-decided"
+
+### April 1, 2026 — End of Day Summary
+
+**Quiet Day — Documentation & Maintenance:**
+- Marketing wallet tracking fully documented (0.463 SOL, ~$76 USD)
+- Community interaction automation added for trending/boost requests
+- No scam reports or urgent issues
+- Group stable at 5K+ members
+
+**Next High-Priority Actions (April 2):**
+1. Configure Stripe production keys in Vercel
+2. Test payment flow end-to-end
+3. Verify Chrome CDP running on port 18800
+4. Post payment system launch announcement in Telegram
+
 ### March 31, 2026
 
 **Website Payment System Complete:**
@@ -318,7 +390,7 @@
 
 ## Next High-Priority Actions
 
-### Immediate (Tomorrow - April 1, 2026)
+### Immediate (Tomorrow - April 2, 2026)
 1. **Add Stripe Production Keys** - Configure `VITE_STRIPE_PUBLISHABLE_KEY` in Vercel environment
 2. **Test Payment Flow End-to-End** - Verify Stripe checkout and USDC/AGNTCBRO payments work
 3. **Chrome CDP Verification** - Ensure Chrome CDP is running on port 18800 for Profile Verifier
@@ -335,3 +407,11 @@
 6. **Prepare AMA Demo** - Test 3-5 profile scans using Chrome automation
 7. **KOL Outreach** - Continue partnership discussions with target influencers
 8. **Token-Gating Setup** - Collab.Land integration for token-based access
+
+---
+
+## Nightly Reviews Summary
+
+| Date | Key Items | Status |
+|------|-----------|--------|
+| 2026-04-01 | Marketing wallet docs, community automation, quiet day | ✅ Complete |

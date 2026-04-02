@@ -4,6 +4,7 @@
  * Main entry point - Minimal working version
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -60,6 +61,9 @@ app.get('/api/v1', (req, res) => {
       'GET /api/v1/scan/token/:address/history': 'Get scan history',
       'GET /api/v1/scan/trending': 'Get trending tokens',
       'GET /api/v1/scan/stats': 'Get scanner statistics',
+      'POST /api/v1/sync/scam-db': 'Sync local CSV to database',
+      'GET /api/v1/sync/status': 'Get last sync status',
+      'GET /api/v1/sync/csv-stats': 'Get CSV file statistics',
     },
     authentication: 'API key required for premium features',
     rateLimits: {
@@ -75,8 +79,10 @@ app.get('/api/v1', (req, res) => {
 // Import routes after middleware is set up
 import scanRoutes from '../routes/scan';
 import verifyRoutes from '../routes/verify';
+import syncRoutes from '../routes/sync';
 app.use('/api/v1/scan', scanRoutes);
 app.use('/api/v1/verify', verifyRoutes);
+app.use('/api/v1/sync', syncRoutes);
 
 // 404 handler
 app.use((req, res) => {

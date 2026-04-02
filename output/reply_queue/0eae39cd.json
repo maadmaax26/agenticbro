@@ -1,0 +1,14 @@
+{
+  "id": "0eae39cd",
+  "reply_type": "PROTECTION_OFFER",
+  "username": "protect",
+  "reply_text": "\ud83d\udee1\ufe0f Protect yourself from scams!\n\nI noticed you asked about crypto safety. Here's a free scan:\n\n\u2192 Go to agenticbro.app\n\u2192 Enter any handle or wallet\n\u2192 Get instant risk assessment\n\nOur AI analyzes 10+ red flags including:\n\u2022 DM solicitation patterns\n\u2022 Unrealistic return claims\n\u2022 Account age & verification\n\u2022 Follower authenticity\n\nStay safe out there! \ud83d\udcaa\n\n#CryptoSafety #ScamPrevention",
+  "risk_level": "INFO",
+  "risk_score": 0,
+  "red_flags": [],
+  "report_url": "https://agenticbro.app/scan/protect",
+  "target_user": null,
+  "topic": "crypto safety",
+  "created_at": "2026-04-02T17:15:54.122764",
+  "status": "pending_approval"
+}

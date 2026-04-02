@@ -1,0 +1,24 @@
+{
+  "id": "50833a57bcb6",
+  "username": "ChamSo874993929",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T16:57:00.613798",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T16:57:53.158768",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "DM solicitation"
+    ],
+    "text_length": 3440
+  },
+  "completed_at": "2026-04-02T16:58:01.221443"
+}
