@@ -450,7 +450,7 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                 🔍 Scam Detection Database
               </h2>
               <p className="text-sm text-purple-200">
-                Protecting user community from scammers
+                Protecting the user community from scammers
               </p>
             </div>
             <button
