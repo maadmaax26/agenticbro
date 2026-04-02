@@ -598,8 +598,12 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
   const highRiskScans = scanResults.filter(s => ['CRITICAL', 'HIGH', 'MEDIUM'].includes(s.risk_level));
   const lowRiskScans  = scanResults.filter(s => s.risk_level === 'LOW');
 
-  const totalScammers = scammers.length + highRiskScans.length;
-  const totalLegitimate = legitimate.length + lowRiskScans.length;
+  // Split the scammers table the same way — LOW-risk entries belong in Legitimate
+  const highRiskScammers = scammers.filter(s => ['CRITICAL', 'HIGH', 'MEDIUM'].includes(s.risk_level));
+  const lowRiskScammers  = scammers.filter(s => s.risk_level === 'LOW');
+
+  const totalScammers   = highRiskScammers.length + highRiskScans.length;
+  const totalLegitimate = legitimate.length + lowRiskScans.length + lowRiskScammers.length;
 
   const selectEntry = (e: DetailEntry) => setSelectedEntry(prev =>
     prev && prev.kind === e.kind && (prev.data as any).id === (e.data as any).id ? null : e
@@ -685,11 +689,11 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                           </div>
                         </>
                       )}
-                      {scammers.length > 0 && (
+                      {highRiskScammers.length > 0 && (
                         <>
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Known Scammer Database</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {scammers.map(scammer => (
+                            {highRiskScammers.map(scammer => (
                               <ScammerCard
                                 key={`scammer-${scammer.id}`}
                                 scammer={scammer}
@@ -721,6 +725,21 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                                 scan={scan}
                                 selected={selectedEntry?.kind === 'scan' && selectedEntry.data.id === scan.id}
                                 onClick={() => selectEntry({ kind: 'scan', data: scan })}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {lowRiskScammers.length > 0 && (
+                        <>
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Low Risk — From Scammer Database</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                            {lowRiskScammers.map(scammer => (
+                              <ScammerCard
+                                key={`scammer-low-${scammer.id}`}
+                                scammer={scammer}
+                                selected={selectedEntry?.kind === 'scammer' && selectedEntry.data.id === scammer.id}
+                                onClick={() => selectEntry({ kind: 'scammer', data: scammer })}
                               />
                             ))}
                           </div>
