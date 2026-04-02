@@ -34,6 +34,11 @@ export interface TierCreditsState {
   isTestWallet: boolean;
 }
 
+export interface TierCreditsHook extends TierCreditsState {
+  useCredit: () => { success: boolean; remaining: number; type: 'tier' | 'paid' };
+  addCredits: (amount: number) => void;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getMonthKey(): string {
@@ -45,18 +50,9 @@ function getStorageKey(walletAddress: string): string {
   return `agenticbro_tier_${walletAddress.toLowerCase()}`;
 }
 
-function resetIfNewMonth(walletAddress: string, currentData: { month: string; used: number }): void {
-  const thisMonth = getMonthKey();
-  if (currentData.month !== thisMonth) {
-    // New month - reset used count
-    const storageKey = getStorageKey(walletAddress);
-    localStorage.setItem(storageKey, JSON.stringify({ month: thisMonth, used: 0 }));
-  }
-}
-
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useTierCredits(walletAddress: string | null): TierCreditsState {
+export function useTierCredits(walletAddress: string | null): TierCreditsHook {
   const [state, setState] = useState<TierCreditsState>({
     tierMonthlyScans: TIER_MONTHLY_SCANS,
     tierScansUsed: 0,
