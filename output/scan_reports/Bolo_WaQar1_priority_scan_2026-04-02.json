@@ -1,0 +1,220 @@
+{
+  "scan_type": "Priority Scan",
+  "scan_date": "2026-04-02T17:10:00Z",
+  "priority": "HIGH",
+  
+  "subject": {
+    "type": "X Profile + Wallet",
+    "x_handle": "@Bolo_WaQar1",
+    "display_name": "SELINA NOVA",
+    "wallet_address": "0x23FeACd1F50B4aa7a3B4747B0d390b39Cc379C51",
+    "chain": "Ethereum (Multichain)",
+    "x_url": "https://x.com/bolo_waqar1",
+    "wallet_url": "https://etherscan.io/address/0x23FeACd1F50B4aa7a3B4747B0d390b39Cc379C51"
+  },
+  
+  "profile_analysis": {
+    "display_name": "SELINA NOVA",
+    "username": "Bolo_WaQar1",
+    "verified": true,
+    "verified_type": "Blue Checkmark (Purchased)",
+    "bio": "CRYPTO INFLUENCER/DM FOR MARKETING - TURNING PASSION INTO PROFESSION",
+    "location": "United States",
+    "tweets_count": "82.2K posts",
+    "followers": "N/A (not visible)",
+    "account_age_years": "N/A (not visible)"
+  },
+  
+  "wallet_analysis": {
+    "type": "Binance Deposit Address",
+    "identified_as": "Binance Exchange Hot Wallet",
+    "balance_eth": "0.434541210238374463 ETH",
+    "balance_usd": "$895.15",
+    "net_worth_usd": "$1,113.87",
+    "net_worth_eth": "0.540713 ETH",
+    
+    "token_holdings": [
+      {"token": "ETH", "percentage": 80.36, "value": "$895.15", "amount": "0.4345"},
+      {"token": "USDT", "percentage": 15.80, "value": "$175.96", "amount": "176"},
+      {"token": "USDC", "percentage": 1.35, "value": "$15", "amount": "15"},
+      {"token": "BNB (BSC)", "percentage": 1.78, "value": "$19.81", "amount": "0.0342"},
+      {"token": "ETH (Base)", "percentage": 0.38, "value": "$4.22", "amount": "0.002"},
+      {"token": "ETH (Arb)", "percentage": 0.33, "value": "$3.71", "amount": "0.0018"},
+      {"token": "MONAD", "percentage": "<0.01", "value": "$0.02", "amount": "1"},
+      {"token": "POL", "percentage": "<0.01", "value": "$0.00", "amount": "0.039"}
+    ],
+    
+    "multichain_presence": 8,
+    "chains": ["Ethereum", "BSC", "Base", "Arbitrum", "Monad", "Polygon"],
+    
+    "transaction_summary": {
+      "total_transactions": 10,
+      "incoming": 8,
+      "outgoing": 2,
+      "last_activity": "2026-01-02 (89 days ago)",
+      "first_activity": "2025-08-06 (238 days ago)",
+      "activity_period": "149 days"
+    },
+    
+    "recent_transactions": [
+      {"date": "2026-01-02", "from": "zer0lead.eth", "amount": "0.0065 ETH", "type": "IN"},
+      {"date": "2025-12-09", "from": "Unknown", "amount": "0.0059 ETH", "type": "IN"},
+      {"date": "2025-11-25", "from": "0x5cb16A39...", "amount": "0.13 ETH", "type": "IN (2 txs)"},
+      {"date": "2025-11-24", "from": "Robinhood 9", "amount": "0.042 ETH", "type": "IN"},
+      {"date": "2025-11-21", "from": "0x5cb16A39...", "amount": "0.11 ETH", "type": "IN (2 txs)"},
+      {"date": "2025-11-10", "from": "0x7F0Fc3c0...", "amount": "0.007 ETH", "type": "IN"},
+      {"date": "2025-11-04", "from": "0x46099081...", "amount": "0.0077 ETH", "type": "IN"},
+      {"date": "2025-08-30", "from": "0x52a64081...", "amount": "0.001 ETH", "type": "IN"},
+      {"date": "2025-08-06", "to": "Circle USDC", "amount": "USDC", "type": "OUT (2 txs)"},
+      {"date": "2025-08-06", "from": "Binance Funder", "amount": "0.014 ETH", "type": "IN"}
+    ],
+    
+    "funding_source": "Binance: Deposit Funder 1 (0x943080...)",
+    "funded_date": "2025-08-06"
+  },
+  
+  "risk_assessment": {
+    "risk_score": 7.5,
+    "risk_level": "HIGH",
+    "verification_level": "PAID PROMOTER",
+    
+    "red_flags": [
+      {
+        "flag": "Paid Promotion Indicators",
+        "description": "Bio contains 'DM FOR MARKETING' and 'CRYPTO INFLUENCER' - clear paid shill signals",
+        "weight": 25,
+        "severity": "HIGH",
+        "present": true
+      },
+      {
+        "flag": "Binance Exchange Wallet",
+        "description": "Address is identified as Binance deposit address, not personal wallet",
+        "weight": 20,
+        "severity": "HIGH",
+        "present": true
+      },
+      {
+        "flag": "High Post Volume",
+        "description": "82.2K posts suggests automated or spam-level posting activity",
+        "weight": 15,
+        "severity": "MEDIUM",
+        "present": true
+      },
+      {
+        "flag": "Purchased Verification",
+        "description": "Blue checkmark obtained via X Premium subscription, not legacy verification",
+        "weight": 10,
+        "severity": "LOW",
+        "present": true
+      },
+      {
+        "flag": "Multiple Chain Activity",
+        "description": "Active across 8+ chains, suggesting sophisticated operation",
+        "weight": 10,
+        "severity": "MEDIUM",
+        "present": true
+      },
+      {
+        "flag": "Low Transaction Volume",
+        "description": "Only 10 transactions over 149 days suggests limited genuine activity",
+        "weight": 5,
+        "severity": "LOW",
+        "present": true
+      },
+      {
+        "flag": "No Direct Scam Evidence",
+        "description": "No documented reports of scam activity linked to this account",
+        "weight": -15,
+        "severity": "POSITIVE",
+        "present": true
+      }
+    ],
+    
+    "total_red_flag_weight": 70,
+    "max_weight": 100,
+    "risk_percentage": 70
+  },
+  
+  "verification_checks": {
+    "x_profile": {
+      "verified": true,
+      "has_bio": true,
+      "has_location": true,
+      "has_profile_image": true,
+      "has_header": true,
+      "post_count": "82.2K",
+      "paid_promotion_indicators": true
+    },
+    "wallet": {
+      "is_exchange_wallet": true,
+      "exchange_name": "Binance",
+      "balance_visible": true,
+      "multichain": true,
+      "funded_by_exchange": true,
+      "first_activity": "2025-08-06",
+      "last_activity": "2026-01-02"
+    }
+  },
+  
+  "key_findings": {
+    "finding_1": {
+      "title": "Binance Exchange Hot Wallet",
+      "description": "The wallet address 0x23FeACd1F50B4aa7a3B4747B0d390b39Cc379C51 is identified by Etherscan as a 'Binance Deposit' address. This is NOT a personal wallet belonging to @Bolo_WaQar1 but rather a Binance exchange hot wallet used for deposits.",
+      "implication": "Any funds sent to this address go directly to Binance exchange, not the individual."
+    },
+    "finding_2": {
+      "title": "Paid Promotion Account",
+      "description": "The X profile @Bolo_WaQar1 explicitly markets paid promotional services with 'DM FOR MARKETING' in their bio. This indicates they accept payment to promote tokens/crypto projects.",
+      "implication": "Any tokens promoted by this account are likely paid promotions, not genuine recommendations."
+    },
+    "finding_3": {
+      "title": "High Volume Posting",
+      "description": "With 82.2K posts, this account has an extremely high post count, suggesting automated or near-continuous posting activity typical of marketing/influencer accounts.",
+      "implication": "Content is likely scheduled/automated rather than organic engagement."
+    },
+    "finding_4": {
+      "title": "No Direct Scam Reports",
+      "description": "No documented scam reports found linking this specific account to fraudulent activity.",
+      "implication": "While a paid promoter, no victims have publicly reported scams connected to this account yet."
+    }
+  },
+  
+  "recommendations": {
+    "scan_result": "HIGH RISK - PAID PROMOTER",
+    "summary": "This is a Binance exchange deposit wallet paired with a crypto influencer profile that explicitly offers paid promotional services. The wallet is NOT a personal wallet - it's a Binance hot wallet for deposits. Any tokens promoted by @Bolo_WaQar1 are paid advertisements, not organic recommendations. Exercise extreme caution with any promoted projects.",
+    "action": "Do NOT send funds to this wallet expecting them to go to the individual - they go to Binance. Treat all token promotions from this account as paid advertisements.",
+    "risk_factors": [
+      "Paid promoter (DM for Marketing)",
+      "Binance exchange wallet (not personal)",
+      "High post volume (82.2K)",
+      "Purchased verification",
+      "Crypto influencer niche"
+    ],
+    "safety_tips": [
+      "Do NOT send funds to this wallet for the individual - it goes to Binance",
+      "Treat all promoted tokens as paid advertisements",
+      "Research any promoted tokens independently",
+      "Do not trust endorsements without due diligence",
+      "Be aware of undisclosed paid promotions"
+    ]
+  },
+  
+  "related_accounts": {
+    "funded_by": "Binance: Deposit Funder 1 (0x943080...)",
+    "recent_senders": [
+      "zer0lead.eth (0xafe1c5e...)",
+      "0x5cb16A39... (multiple deposits)",
+      "Robinhood 9 (0x1887fa...)",
+      "Coinbase 10 (0xa9d1e0...)"
+    ],
+    "multichain_addresses": "Same address used across 8+ chains"
+  },
+  
+  "notes": [
+    "This wallet is a Binance deposit address, NOT the personal wallet of @Bolo_WaQar1",
+    "The X account is a paid promotional account",
+    "82.2K posts indicates high-volume, possibly automated activity",
+    "No direct scam reports found, but account operates in high-risk niche",
+    "Always verify if the provided wallet address actually belongs to the individual"
+  ]
+}
