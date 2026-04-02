@@ -697,13 +697,38 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
       }
 
       const [scammersRes, legitimateRes, scanResultsRes, statsRes] = await Promise.all([
-        supabase.from('scammers').select('*').order('risk_score', { ascending: false }).limit(50),
+        supabase.from('known_scammers').select('*').order('risk_score', { ascending: false }).limit(50),
         supabase.from('legitimate_accounts').select('*').order('followers', { ascending: false }).limit(20),
         supabase.from('scan_results').select('*').order('scan_date', { ascending: false }).limit(100),
         supabase.from('stats').select('*').single(),
       ]);
 
-      if (scammersRes.data) setScammers(scammersRes.data);
+      if (scammersRes.data) {
+        // Map known_scammers fields to Scammer interface
+        setScammers(scammersRes.data.map((s: any) => ({
+          id: s.id,
+          scammer_name: s.display_name || s.username || s.id,
+          platform: s.platform,
+          x_handle: s.x_handle,
+          telegram_channel: s.telegram_channel,
+          victims_count: s.victim_count || 0,
+          total_lost_usd: typeof s.total_lost_usd === 'string' ? parseFloat(s.total_lost_usd?.replace(/[^0-9.]/g, '') || '0') : (s.total_lost_usd || 0),
+          verification_level: s.verification_level,
+          scam_type: s.scam_type || 'Unknown',
+          risk_score: s.risk_score || 50,
+          risk_level: s.threat_level || 'MEDIUM',
+          last_updated: s.updated_at || s.last_seen,
+          display_name: s.display_name,
+          impersonating: s.impersonating,
+          status: s.status,
+          notes: s.notes,
+          wallet_address: s.wallet_address,
+          evidence_urls: s.evidence_urls || s.evidence_links,
+          red_flags: s.red_flags,
+          scan_notes: s.scan_notes,
+          first_reported: s.first_reported || s.created_at,
+        })));
+      }
       if (legitimateRes.data) setLegitimate(legitimateRes.data);
       if (scanResultsRes.data) setScanResults(scanResultsRes.data);
       if (statsRes.data) setStats(statsRes.data);
