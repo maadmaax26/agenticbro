@@ -480,12 +480,7 @@ function App() {
       {showTierPage === 'holder' ? (
         <HolderDashboard onBack={() => setShowTierPage(null)} />
       ) : showTierPage === 'whale' ? (
-        <WhaleDashboard
-          onBack={() => setShowTierPage(null)}
-          whaleTierUnlocked={whaleTierUnlocked}
-          balance={balance}
-          usdValue={usdValue}
-        />
+        <WhaleDashboard onBack={() => setShowTierPage(null)} />
       ) : showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
