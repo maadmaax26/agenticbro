@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating } from '../../hooks/useTokenGating';
+import { useTierCredits } from '../../hooks/useTierCredits';
 import PublicSignalFeed from '../PublicSignalFeed';
 import HolderSignalFeed from './HolderSignalFeed';
 import HolderAIInsights from './HolderAIInsights';
@@ -12,13 +13,18 @@ import AlphaFeed from './AlphaFeed';
 import PriorityScan from './PriorityScan';
 import MemeCoinAnalyzer from './MemeCoinAnalyzer';
 import ScamDetectionSection from '../ScamDetectionSection';
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine, Dices, ShieldAlert } from 'lucide-react';
+import ProfileVerifierScanner from '../ProfileVerifierScanner';
+import PriorityTokenScanner from '../PriorityTokenScanner';
+import TokenScanner from '../TokenScanner';
+import TokenImpersonationScanner from '../TokenImpersonationScanner';
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Gem, Radio, ScanLine, Dices, ShieldAlert, Search, Shield, AlertTriangle } from 'lucide-react';
 
-type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan' | 'meme' | 'scam';
+type ActiveTab = 'dashboard' | 'signals' | 'insights' | 'analysis' | 'history' | 'settings' | 'gems' | 'alpha' | 'scan' | 'meme' | 'scam' | 'profile' | 'tokenscan' | 'faketoken';
 
 export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
   const { holderTierUnlocked, balance } = useTokenGating();
+  const tierCredits = useTierCredits(publicKey?.toBase58() || null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   if (!connected || !publicKey) {
@@ -45,16 +51,18 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
           <div className="text-sm text-gray-500">
             <p className="mb-2">Holder Tier includes:</p>
             <ul className="text-left max-w-sm mx-auto space-y-1">
+              <li>• 20 free scans per month</li>
+              <li>• Profile Verifier with all platforms</li>
+              <li>• Token Scanner (multi-chain)</li>
+              <li>• Priority Token Scanner</li>
+              <li>• Fake Token Detector</li>
+              <li>• $1/scan after free allowance</li>
               <li>• 25 monthly trading signals</li>
               <li>• 5 AI-powered market insights</li>
               <li>• 10 market analysis requests</li>
-              <li>• Portfolio health & risk assessment</li>
-              <li>• Daily market reports</li>
               <li>• 💎 Gem Advise — AI-ranked token recommendations</li>
               <li>• 🎰 Meme Coin Analyzer — Emerging meme coin opportunities</li>
               <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
-              <li>• 🔍 Priority Scan — 15 free scans (vs 10 regular)</li>
-              <li>• 🚨 Scam Detection — 15 free scam checks, $2.00 AGNTCBRO each additional</li>
             </ul>
           </div>
         </div>
@@ -90,6 +98,9 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
             <p className="text-2xl font-bold text-purple-300">
               {balance.toLocaleString()} AGNTCBRO
             </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {tierCredits.isTestWallet ? '∞ Unlimited Scans' : `${tierCredits.tierScansRemaining}/${tierCredits.tierMonthlyScans} free scans this month`}
+            </p>
           </div>
         </div>
 
@@ -100,6 +111,25 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
             onClick={() => setActiveTab('dashboard')}
             icon={<TrendingUp />}
             label="Dashboard"
+          />
+          <TabButton
+            active={activeTab === 'profile'}
+            onClick={() => setActiveTab('profile')}
+            icon={<Search />}
+            label="Profile Verifier"
+            isNew
+          />
+          <TabButton
+            active={activeTab === 'tokenscan'}
+            onClick={() => setActiveTab('tokenscan')}
+            icon={<Shield />}
+            label="Token Scanner"
+          />
+          <TabButton
+            active={activeTab === 'faketoken'}
+            onClick={() => setActiveTab('faketoken')}
+            icon={<AlertTriangle />}
+            label="Fake Tokens"
           />
           <TabButton
             active={activeTab === 'signals'}
@@ -168,6 +198,14 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
 
       {/* Content */}
       {activeTab === 'dashboard' && <DashboardOverview />}
+      {activeTab === 'profile' && <ProfileVerifierScanner onLoginRequired={() => {}} />}
+      {activeTab === 'tokenscan' && (
+        <>
+          <PriorityTokenScanner onLoginRequired={() => {}} />
+          <TokenScanner onLoginRequired={() => {}} />
+        </>
+      )}
+      {activeTab === 'faketoken' && <TokenImpersonationScanner />}
       {activeTab === 'signals' && <HolderSignalFeed />}
       {activeTab === 'insights' && <HolderAIInsights />}
       {activeTab === 'analysis' && <HolderMarketAnalysis />}
@@ -179,7 +217,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       {activeTab === 'meme' && <MemeCoinAnalyzer />}
       {activeTab === 'scam' && (
         connected && publicKey ? (
-          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={15} />
+          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={20} />
         ) : (
           <div className="text-center py-8">
             <div className="text-4xl mb-4">🔒</div>
@@ -229,6 +267,33 @@ function TabButton({
 
 const HOLDER_FEATURES = [
   {
+    icon: '🔍',
+    title: 'Profile Verifier',
+    desc: 'Scan any X/Twitter, Telegram, Discord, YouTube, TikTok, or Instagram profile for scam red flags. 20 free scans per month.',
+    badge: '20/mo',
+    badgeColor: 'rgba(6,182,212,0.2)',
+    badgeBorder: 'rgba(6,182,212,0.5)',
+    badgeText: '#67e8f9',
+  },
+  {
+    icon: '🪙',
+    title: 'Token Scanner',
+    desc: 'Analyze any token by contract address across Solana, Base, and Ethereum chains with honeypot detection and holder analysis.',
+    badge: 'Multi-chain',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '⚠️',
+    title: 'Fake Token Detector',
+    desc: 'Detect impersonator tokens copying legitimate project names and symbols. Protect yourself from rug pulls.',
+    badge: 'Free',
+    badgeColor: 'rgba(239,68,68,0.15)',
+    badgeBorder: 'rgba(239,68,68,0.5)',
+    badgeText: '#f87171',
+  },
+  {
     icon: '💎',
     title: 'Gem Advise',
     desc: 'AI-ranked token recommendations sourced from audited Telegram alpha channels — filtered by edge score, liquidity, and rug rate.',
@@ -267,8 +332,8 @@ const HOLDER_FEATURES = [
   {
     icon: '🚨',
     title: 'Scam Detection',
-    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 15 free checks included.',
-    badge: '15 Free',
+    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 20 free checks per month.',
+    badge: '20/mo',
     badgeColor: 'rgba(239,68,68,0.15)',
     badgeBorder: 'rgba(239,68,68,0.5)',
     badgeText: '#f87171',
@@ -361,11 +426,29 @@ function DashboardOverview() {
       </div>
 
       {/* Quick stat summary */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
+        <StatCard label="Monthly Scans" value={`${tierCredits.isTestWallet ? '∞' : tierCredits.tierScansRemaining}/${tierCredits.tierMonthlyScans}`} icon="🔍" />
         <StatCard label="Signal Delay" value="15 minutes" icon="⚡" />
         <StatCard label="Watchlist Assets" value="Up to 15" icon="👁" />
         <StatCard label="Signal History" value="30 days" icon="📜" />
       </div>
+
+      {/* Scan credits info */}
+      {!tierCredits.isTestWallet && tierCredits.tierScansRemaining <= 5 && (
+        <div
+          className="rounded-2xl border p-5 flex items-center gap-4"
+          style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
+        >
+          <span className="text-3xl flex-shrink-0">⚠️</span>
+          <div>
+            <p className="font-bold text-white text-sm mb-0.5">Low Scan Credits</p>
+            <p className="text-xs text-gray-400">
+              You have <span className="text-red-400 font-semibold">{tierCredits.tierScansRemaining}</span> free scans remaining this month.
+              Purchase additional credits at <span className="text-cyan-400 font-semibold">$1/scan</span>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Burn discount callout */}
       <div
