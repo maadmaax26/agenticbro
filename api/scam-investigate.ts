@@ -33,6 +33,40 @@ try {
   scammerDb = []
 }
 
+// ─── Supabase live database lookup ────────────────────────────────────────────
+async function fetchFromSupabase(handle: string): Promise<any | null> {
+  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return null
+  }
+
+  try {
+    // Search by X handle or Telegram channel
+    const cleanHandle = handle.replace('@', '').toLowerCase()
+    
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/known_scammers?or=(x_handle.ilike.%25${cleanHandle}%25,telegram_channel.ilike.%25${cleanHandle}%25,username.ilike.%25${cleanHandle}%25)&limit=1`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    const data = await response.json()
+    return data.length > 0 ? data[0] : null
+  } catch {
+    return null
+  }
+}
+
 // ─── Telegram group intelligence ────────────────────────────────────────────
 // Search the AgenticBro scam intel Telegram group for mentions of the target
 const SCAM_INTEL_GROUP_ID = BigInt('-100' + '5183433558') // Telegram supergroup prefix
@@ -197,11 +231,12 @@ interface XProfile {
 
 // ─── Scammer Database Lookup ────────────────────────────────────────────────
 
-function lookupDatabase(username: string, platform: 'X' | 'Telegram'): ScammerDbRow | undefined {
+async function lookupDatabase(username: string, platform: 'X' | 'Telegram'): Promise<ScammerDbRow | undefined> {
   const handle = username.replace(/^@/, '').toLowerCase()
   const db = scammerDb as ScammerDbRow[]
 
-  return db.find(entry => {
+  // First check local JSON (for backwards compatibility)
+  const localMatch = db.find(entry => {
     const xMatch = entry['X Handle']?.replace(/^@/, '').toLowerCase() === handle
     const tgMatch = entry['Telegram Channel']?.replace(/^@/, '').toLowerCase() === handle
     const nameMatch = entry['Scammer Name']?.toLowerCase() === handle
@@ -210,6 +245,31 @@ function lookupDatabase(username: string, platform: 'X' | 'Telegram'): ScammerDb
     if (platform === 'Telegram') return tgMatch || nameMatch
     return xMatch || tgMatch || nameMatch
   })
+
+  // Then check Supabase for live data
+  const supabaseMatch = await fetchFromSupabase(handle)
+  
+  if (supabaseMatch) {
+    // Convert Supabase format to local format
+    return {
+      'Scammer Name': supabaseMatch.display_name || supabaseMatch.username,
+      'Platform': supabaseMatch.platform,
+      'X Handle': supabaseMatch.x_handle || '',
+      'Telegram Channel': supabaseMatch.telegram_channel || '',
+      'Victims Count': String(supabaseMatch.victim_count || 0),
+      'Total Lost USD': supabaseMatch.total_lost_usd || '$0',
+      'Verification Level': supabaseMatch.verification_level,
+      'Scam Type': supabaseMatch.scam_type || 'Unknown',
+      'Last Updated': supabaseMatch.updated_at?.split('T')[0] || '',
+      'Notes': supabaseMatch.notes || '',
+      'Wallet Address': supabaseMatch.wallet_address || '',
+      'Evidence Links': Array.isArray(supabaseMatch.evidence_urls) 
+        ? supabaseMatch.evidence_urls.join(', ') 
+        : supabaseMatch.evidence_links || '',
+    } as ScammerDbRow
+  }
+
+  return localMatch
 }
 
 // ─── X Profile Scraper ──────────────────────────────────────────────────────
@@ -743,7 +803,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ])
 
     // Database lookup (sync)
-    const dbMatch = lookupDatabase(handle, plat)
+    const dbMatch = await lookupDatabase(handle, plat)
 
     // Analyze flags
     const xFlags = xProfile ? analyzeXFlags(xProfile) : { flags: [], evidence: [], risk: 0 }
