@@ -44,6 +44,45 @@ export interface CreditTransaction {
   created_at: string;
 }
 
+// ─── Scan Result Types ─────────────────────────────────────────────────────────
+
+export interface ScanResult {
+  id?: string;
+  username: string;
+  platform: 'X' | 'Telegram';
+  risk_score: number;
+  red_flags: string[];
+  verification_level?: string;
+  scam_type?: string;
+  recommended_action?: string;
+  full_report?: string;
+  x_profile?: Record<string, unknown>;
+  victim_reports?: Record<string, unknown>;
+  known_scammer_match?: Record<string, unknown>;
+  evidence: string[];
+  data_source?: string;
+  wallet_address?: string;
+  scanned_at?: string;
+}
+
+export interface KnownScammer {
+  id?: string;
+  platform: string;
+  username: string;
+  display_name?: string;
+  x_handle?: string;
+  telegram_channel?: string;
+  scam_type?: string;
+  victim_count?: number;
+  total_lost_usd?: string;
+  verification_level?: string;
+  threat_level?: string;
+  status?: string;
+  notes?: string;
+  banned?: boolean;
+  created_at?: string;
+}
+
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 
 export async function signUpWithEmail(email: string, password: string) {
@@ -223,6 +262,68 @@ export async function linkWalletToUser(userId: string, walletAddress: string) {
     .from('user_profiles')
     .update({ wallet_address: walletAddress })
     .eq('id', userId);
+}
+
+// ─── Scan Results (frontend helpers) ──────────────────────────────────────────
+
+/**
+ * Fetch recent scan results for a given wallet address or username.
+ * Falls back to an empty array when Supabase is not configured.
+ */
+export async function getScanResults(opts: {
+  walletAddress?: string;
+  username?: string;
+  limit?: number;
+}): Promise<ScanResult[]> {
+  if (!supabase) return [];
+
+  const { walletAddress, username, limit = 50 } = opts;
+
+  let query = supabase
+    .from('scan_results')
+    .select('*')
+    .order('scanned_at', { ascending: false })
+    .limit(limit);
+
+  if (walletAddress) {
+    query = query.eq('wallet_address', walletAddress);
+  }
+  if (username) {
+    query = query.ilike('username', username.replace(/^@/, ''));
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[Supabase] getScanResults error:', error.message);
+    return [];
+  }
+
+  return (data as ScanResult[]) ?? [];
+}
+
+/**
+ * Look up a username in the known_scammers table.
+ * Useful for quick frontend checks without hitting the backend.
+ */
+export async function lookupKnownScammer(username: string): Promise<KnownScammer | null> {
+  if (!supabase) return null;
+
+  const clean = username.replace(/^@/, '').toLowerCase();
+
+  const { data, error } = await supabase
+    .from('known_scammers')
+    .select('*')
+    .or(`username.ilike.${clean},x_handle.ilike.%${clean}%,telegram_channel.ilike.%${clean}%`)
+    .neq('status', 'suspended')
+    .limit(1);
+
+  if (error) {
+    console.error('[Supabase] lookupKnownScammer error:', error.message);
+    return null;
+  }
+
+  return (data?.[0] as KnownScammer) ?? null;
 }
 
 // Get user by email or wallet
