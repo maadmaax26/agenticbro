@@ -7,7 +7,7 @@ import PriorityTokenScanner from '../PriorityTokenScanner'
 import TokenScanner from '../TokenScanner'
 import TokenImpersonationScanner from '../TokenImpersonationScanner'
 import ScamDetectionSection from '../ScamDetectionSection'
-import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Search, Shield, AlertTriangle } from 'lucide-react'
+import { TrendingUp, Activity, Settings, ArrowLeft, Search, Shield, AlertTriangle } from 'lucide-react'
 
 interface WhaleHolding {
   walletAddress: string
@@ -17,21 +17,8 @@ interface WhaleHolding {
   lastTransaction: Date
 }
 
-interface TransactionActivity {
-  signature: string
-  timestamp: Date
-  amount: number
-  type: 'buy' | 'sell' | 'transfer'
-  token: string
-  from?: string
-  to?: string
-}
-
 interface WhaleDashboardProps {
   onBack?: () => void
-  whaleTierUnlocked?: boolean
-  balance?: number
-  usdValue?: number
 }
 
 type ActiveTab = 'dashboard' | 'profile' | 'tokenscan' | 'faketoken' | 'scam' | 'settings';
@@ -64,45 +51,6 @@ const MOCK_WHALES: WhaleHolding[] = [
     tokenSymbol: 'SOL',
     changePercentage: 3.1,
     lastTransaction: new Date(Date.now() - 5400000)
-  }
-]
-
-const MOCK_TRANSACTIONS: TransactionActivity[] = [
-  {
-    signature: 'signature123456789',
-    timestamp: new Date(Date.now() - 3600000),
-    amount: 1500,
-    type: 'buy',
-    token: 'SOL',
-    from: '5ZT17V9d3j2aJ6h9k3m8p2q4r7s1t5u8v9w0x3y7z8a9b0c1d2e3f4g5h6i7j8k9l0m',
-    to: 'A2B3C4D5E6F7G8H9I0J1K2L3M4N5O6P7Q8R9S0T1U2V3W4X5Y6Z7A8B9C0D1E2F3G4H5'
-  },
-  {
-    signature: 'signature987654321',
-    timestamp: new Date(Date.now() - 7200000),
-    amount: 2200,
-    type: 'sell',
-    token: 'SOL',
-    from: 'A2B3C4D5E6F7G8H9I0J1K2L3M4N5O6P7Q8R9S0T1U2V3W4X5Y6Z7A8B9C0D1E2F3G4H5',
-    to: 'Z9Y8X7W6V5U4T3S2R1Q0P9O8N7M6L5K4J3I2H1G0F9E8D7C6B5A4Z3Y2X1W0V9U8T7S6'
-  },
-  {
-    signature: 'signature456789123',
-    timestamp: new Date(Date.now() - 1800000),
-    amount: 3100,
-    type: 'transfer',
-    token: 'SOL',
-    from: 'Z9Y8X7W6V5U4T3S2R1Q0P9O8N7M6L5K4J3I2H1G0F9E8D7C6B5A4Z3Y2X1W0V9U8T7S6',
-    to: '5ZT17V9d3j2aJ6h9k3m8p2q4r7s1t5u8v9w0x3y7z8a9b0c1d2e3f4g5h6i7j8k9l0m'
-  },
-  {
-    signature: 'signature789123456',
-    timestamp: new Date(Date.now() - 4800000),
-    amount: 1800,
-    type: 'buy',
-    token: 'SOL',
-    from: 'C1D2E3F4G5H6I7J8K9L0M1N2O3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3',
-    to: 'Z9Y8X7W6V5U4T3S2R1Q0P9O8N7M6L5K4J3I2H1G0F9E8D7C6B5A4Z3Y2X1W0V9U8T7S6'
   }
 ]
 
@@ -163,32 +111,19 @@ const WHALE_FEATURES = [
   },
 ]
 
-export default function WhaleDashboard({ onBack, whaleTierUnlocked = false, balance = 0, usdValue = 0 }: WhaleDashboardProps) {
+export default function WhaleDashboard({ onBack }: WhaleDashboardProps) {
   const { connected, publicKey } = useWallet()
-  const { whaleTierUnlocked: hasWhaleAccess, balance: tokenBalance } = useTokenGating()
+  const { whaleTierUnlocked, balance } = useTokenGating()
   const tierCredits = useTierCredits(publicKey?.toBase58() || null)
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard')
-
-  // Use props if provided, otherwise use hook values
-  const effectiveWhaleTierUnlocked = whaleTierUnlocked || hasWhaleAccess
-  const effectiveBalance = balance || tokenBalance
   
   const [whales] = useState<WhaleHolding[]>(MOCK_WHALES)
-  const [lastUpdate] = useState<Date>(new Date())
-
-  const formatTimestamp = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-
-  const formatBalance = (balance: number) => {
-    return balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-  }
 
   if (!connected || !publicKey) {
     return null
   }
 
-  if (!effectiveWhaleTierUnlocked) {
+  if (!whaleTierUnlocked) {
     return (
       <div className="max-w-2xl mx-auto mt-8">
         <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-orange-500/20 p-8 text-center">
@@ -200,7 +135,7 @@ export default function WhaleDashboard({ onBack, whaleTierUnlocked = false, bala
           <div className="bg-orange-900/40 rounded-xl p-6 mb-6">
             <p className="text-sm text-gray-400 mb-2">Current Balance</p>
             <p className="text-2xl font-bold text-orange-300">
-              {effectiveBalance.toLocaleString()} AGNTCBRO
+              {balance.toLocaleString()} AGNTCBRO
             </p>
           </div>
           <div className="text-sm text-gray-500">
@@ -244,7 +179,7 @@ export default function WhaleDashboard({ onBack, whaleTierUnlocked = false, bala
           <div className="text-right">
             <p className="text-sm text-gray-400 mb-1">Your Balance</p>
             <p className="text-2xl font-bold text-orange-300">
-              {effectiveBalance.toLocaleString()} AGNTCBRO
+              {balance.toLocaleString()} AGNTCBRO
             </p>
             <p className="text-xs text-gray-500 mt-1">
               {tierCredits.isTestWallet ? '∞ Unlimited Scans' : `${tierCredits.tierScansRemaining}/${tierCredits.tierMonthlyScans} free scans this month`}
