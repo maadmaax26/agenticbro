@@ -38,6 +38,12 @@ interface LegitimateAccount {
   risk_score: number;
   risk_level: string;
   scan_date: string;
+  // Extended fields from Chrome CDP scan
+  posts_count?: number | null;
+  bio?: string | null;
+  account_age_years?: number | null;
+  red_flags_detected?: string[] | null;
+  notes?: string | null;
 }
 
 interface ScanResult {
@@ -495,11 +501,12 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-lg font-bold text-white">{a.account_name}</h3>
-          <p className="text-xs text-gray-400">{a.platform} · {a.scan_date}</p>
+          <p className="text-xs text-gray-400">{a.platform} · {a.scan_date ? new Date(a.scan_date).toLocaleDateString() : 'Unknown'}</p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-white text-lg flex-shrink-0">✕</button>
       </div>
 
+      {/* Risk Score Gauge */}
       <div className="rounded-lg p-4" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-bold" style={{ color: c.text }}>✅ {a.risk_level} RISK — Legitimate</span>
@@ -510,10 +517,27 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
         </div>
       </div>
 
+      {/* Bio */}
+      {a.bio && (
+        <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <p className="text-xs text-gray-400 mb-1">Bio</p>
+          <p className="text-sm text-gray-200">{a.bio}</p>
+        </div>
+      )}
+
+      {/* Profile Stats Grid */}
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <p className="text-gray-500">Followers</p>
           <p className="text-green-400 font-bold mt-1">{(a.followers ?? 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <p className="text-gray-500">Posts</p>
+          <p className="text-gray-200 font-bold mt-1">{(a.posts_count ?? 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <p className="text-gray-500">Account Age</p>
+          <p className="text-gray-200 font-bold mt-1">{a.account_age_years ? `${a.account_age_years}+ years` : 'Unknown'}</p>
         </div>
         <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <p className="text-gray-500">Verified Badge</p>
@@ -521,6 +545,21 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
         </div>
       </div>
 
+      {/* Red Flags Detected */}
+      {a.red_flags_detected && a.red_flags_detected.length > 0 && (
+        <div className="rounded-lg p-3" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+          <p className="text-xs text-gray-400 mb-2">⚠️ Red Flags Detected</p>
+          <div className="flex flex-wrap gap-2">
+            {a.red_flags_detected.map((flag, i) => (
+              <span key={i} className="px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400">
+                {flag.replace(/_/g, ' ').toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Handles */}
       {(a.x_handle || a.telegram_channel) && (
         <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.15)' }}>
           <p className="text-xs text-gray-400 mb-2">Handles</p>
@@ -531,6 +570,14 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
             </a>
           )}
           {a.telegram_channel && <p className="text-xs text-blue-400">✈️ {a.telegram_channel}</p>}
+        </div>
+      )}
+
+      {/* Scan Notes */}
+      {a.notes && (
+        <div className="rounded-lg p-3" style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+          <p className="text-xs text-gray-400 mb-2">📋 Scan Notes</p>
+          <p className="text-xs text-gray-300 leading-relaxed">{a.notes}</p>
         </div>
       )}
     </div>
