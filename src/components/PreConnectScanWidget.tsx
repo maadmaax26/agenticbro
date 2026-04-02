@@ -363,6 +363,29 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
               </ul>
             </div>
           )}
+
+          {/* View Profile in browser tab — all platforms except Telegram */}
+          {result.platform !== 'telegram' && result.username && (() => {
+            const profileUrls: Record<string, string> = {
+              twitter: `https://x.com/${result.username}`,
+              instagram: `https://instagram.com/${result.username}`,
+              discord: `https://discord.com/users/${result.username}`,
+              linkedin: `https://linkedin.com/in/${result.username}`,
+              facebook: `https://facebook.com/${result.username}`,
+            };
+            const url = profileUrls[result.platform ?? ''];
+            return url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}
+              >
+                🌐 View Profile in Browser Tab
+              </a>
+            ) : null;
+          })()}
         </div>
       )}
 
