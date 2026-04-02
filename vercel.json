@@ -10,6 +10,9 @@
     "api/scammers.ts": {
       "maxDuration": 10
     },
+    "api/scan-report.ts": {
+      "maxDuration": 10
+    },
     "api/telegram/priority-scan.ts": {
       "maxDuration": 30
     }
