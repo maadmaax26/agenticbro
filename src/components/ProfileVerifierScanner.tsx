@@ -35,7 +35,8 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
         ? 'Suspicious'
         : 'Legitimate';
 
-    const { error } = await client.from('scan_results').insert({
+    // Try full rich insert first; fall back to basic if extra columns don't exist
+    const richPayload = {
       target_name: `@${scanResult.username}`,
       platform: platformLabel[scanResult.platform] || scanResult.platform,
       target_handle: `@${scanResult.username}`,
@@ -43,8 +44,36 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
       risk_score: Math.round(scanResult.riskScore) / 10,
       risk_level: scanResult.riskLevel,
       verification_level: verificationLabel,
-    });
-    if (error) console.warn('[Supabase] scan_results insert error:', error.message);
+      // Extended fields (stored if columns exist in the table)
+      scam_type: scanResult.scamType || null,
+      recommendation: scanResult.recommendation || null,
+      red_flags: scanResult.redFlags?.length ? scanResult.redFlags : null,
+      evidence: scanResult.evidence?.length ? scanResult.evidence : null,
+      confidence: scanResult.confidence || null,
+      display_name: scanResult.displayName || null,
+      followers: scanResult.profileData?.followers ?? null,
+      following: scanResult.profileData?.following ?? null,
+      posts: scanResult.profileData?.posts ?? null,
+      bio: scanResult.profileData?.bio || null,
+      profile_image: scanResult.profileData?.profileImage || null,
+      join_date: scanResult.profileData?.joinDate || null,
+      verified: scanResult.verified ?? null,
+    };
+
+    const { error } = await client.from('scan_results').insert(richPayload);
+    if (error) {
+      // Fallback: insert only core columns guaranteed to exist
+      const { error: basicError } = await client.from('scan_results').insert({
+        target_name: richPayload.target_name,
+        platform: richPayload.platform,
+        target_handle: richPayload.target_handle,
+        scan_date: richPayload.scan_date,
+        risk_score: richPayload.risk_score,
+        risk_level: richPayload.risk_level,
+        verification_level: richPayload.verification_level,
+      });
+      if (basicError) console.warn('[Supabase] scan_results basic insert error:', basicError.message);
+    }
   } catch (err) {
     console.warn('[Supabase] scan upload failed:', err);
   }
