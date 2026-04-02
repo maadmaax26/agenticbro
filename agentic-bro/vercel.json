@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/admin",
+      "dest": "/public/admin/index.html"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/public/admin/$1"
+    },
+    {
+      "src": "/api/guardian/pending",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/dashboard",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/approve",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/reject",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/src/index.js"
+    }
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3"
+    }
+  },
+  "public": true
+}
