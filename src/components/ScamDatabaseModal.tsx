@@ -25,6 +25,16 @@ interface Scammer {
   risk_score: number;
   risk_level: string;
   last_updated: string;
+  // Extended fields from database
+  display_name?: string | null;
+  impersonating?: string | null;
+  status?: string | null;
+  notes?: string | null;
+  wallet_address?: string | null;
+  evidence_urls?: string[] | null;
+  red_flags?: string[] | null;
+  scan_notes?: string | null;
+  first_reported?: string | null;
 }
 
 interface LegitimateAccount {
@@ -439,12 +449,13 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
       <div className="h-full overflow-y-auto p-4 space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="text-lg font-bold text-white">{s.scammer_name}</h3>
-            <p className="text-xs text-gray-400">{s.platform} · Last updated: {s.last_updated}</p>
+            <h3 className="text-lg font-bold text-white">{s.display_name || s.scammer_name}</h3>
+            <p className="text-xs text-gray-400">{s.platform} · {s.last_updated ? new Date(s.last_updated).toLocaleDateString() : 'Unknown'}</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-lg flex-shrink-0">✕</button>
         </div>
 
+        {/* Risk Score Gauge */}
         <div className="rounded-lg p-4" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-bold" style={{ color: c.text }}>🚨 {s.risk_level} RISK</span>
@@ -456,25 +467,51 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
           <p className="text-xs mt-2" style={{ color: c.text }}>{s.verification_level}</p>
         </div>
 
+        {/* Impersonating */}
+        {s.impersonating && (
+          <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <p className="text-xs text-gray-400 mb-1">⚠️ Impersonating</p>
+            <p className="text-sm text-red-400 font-bold">{s.impersonating}</p>
+          </div>
+        )}
+
+        {/* Profile Stats Grid */}
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <p className="text-gray-500">Scam Type</p>
             <p className="text-red-400 font-bold mt-1">{s.scam_type || 'Unknown'}</p>
           </div>
           <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <p className="text-gray-500">Status</p>
+            <p className={`font-bold mt-1 ${s.status === 'banned' ? 'text-red-400' : 'text-yellow-400'}`}>
+              {s.status === 'banned' ? '🚫 Banned' : s.status === 'active' ? '⚠️ Active' : s.status || 'Unknown'}
+            </p>
+          </div>
+          <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <p className="text-gray-500">Victims</p>
-            <p className="text-red-400 font-bold mt-1">{s.victims_count}</p>
+            <p className="text-red-400 font-bold mt-1">{s.victims_count?.toLocaleString() || '0'}</p>
           </div>
           <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
             <p className="text-gray-500">Total Lost</p>
             <p className="text-red-400 font-bold mt-1">${(s.total_lost_usd ?? 0).toLocaleString()}</p>
           </div>
-          <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <p className="text-gray-500">Verification</p>
-            <p className="text-white font-bold mt-1">{s.verification_level}</p>
-          </div>
         </div>
 
+        {/* Red Flags Detected */}
+        {s.red_flags && s.red_flags.length > 0 && (
+          <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <p className="text-xs text-gray-400 mb-2">🚨 Red Flags Detected</p>
+            <div className="flex flex-wrap gap-2">
+              {s.red_flags.map((flag, i) => (
+                <span key={i} className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">
+                  {flag.replace(/_/g, ' ').toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Known Handles */}
         {(s.x_handle || s.telegram_channel) && (
           <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.15)' }}>
             <p className="text-xs text-gray-400 mb-2">Known Handles</p>
@@ -487,6 +524,44 @@ function DetailPanel({ entry, onClose }: { entry: DetailEntry; onClose: () => vo
             {s.telegram_channel && (
               <p className="text-xs text-blue-400">✈️ {s.telegram_channel}</p>
             )}
+          </div>
+        )}
+
+        {/* Wallet Address */}
+        {s.wallet_address && (
+          <div className="rounded-lg p-3" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+            <p className="text-xs text-gray-400 mb-1">💰 Wallet Address</p>
+            <p className="text-xs text-yellow-400 font-mono break-all">{s.wallet_address}</p>
+          </div>
+        )}
+
+        {/* Evidence Links */}
+        {s.evidence_urls && s.evidence_urls.length > 0 && (
+          <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <p className="text-xs text-gray-400 mb-2">📋 Evidence Links</p>
+            <div className="space-y-1">
+              {s.evidence_urls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                  className="block text-xs text-blue-400 hover:underline truncate">
+                  {url.length > 50 ? url.substring(0, 50) + '...' : url}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {s.notes && (
+          <div className="rounded-lg p-3" style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+            <p className="text-xs text-gray-400 mb-2">📋 Notes</p>
+            <p className="text-xs text-gray-300 leading-relaxed">{s.notes}</p>
+          </div>
+        )}
+
+        {/* First Reported */}
+        {s.first_reported && (
+          <div className="text-xs text-gray-500 text-center">
+            First reported: {new Date(s.first_reported).toLocaleDateString()}
           </div>
         )}
       </div>
