@@ -197,7 +197,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* Content */}
-      {activeTab === 'dashboard' && <DashboardOverview />}
+      {activeTab === 'dashboard' && <DashboardOverview tierCredits={tierCredits} publicKey={publicKey} />}
       {activeTab === 'profile' && <ProfileVerifierScanner onLoginRequired={() => {}} />}
       {activeTab === 'tokenscan' && (
         <>
@@ -394,9 +394,21 @@ const HOLDER_FEATURES = [
   },
 ];
 
-function DashboardOverview() {
+function DashboardOverview({ tierCredits, publicKey }: { tierCredits: ReturnType<typeof useTierCredits>; publicKey: ReturnType<typeof useWallet>['publicKey'] }) {
   return (
     <div className="space-y-6">
+      {/* Profile Verifier Scanner */}
+      <ProfileVerifierScanner onLoginRequired={() => {}} />
+
+      {/* Priority Token Scanner */}
+      <PriorityTokenScanner onLoginRequired={() => {}} />
+
+      {/* Token Scanner */}
+      <TokenScanner onLoginRequired={() => {}} />
+
+      {/* Token Impersonation Scanner */}
+      <TokenImpersonationScanner />
+
       {/* Feature cards */}
       <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
         <h2 className="text-xl font-bold text-white mb-5">💰 Holder Tier Features</h2>
@@ -464,6 +476,9 @@ function DashboardOverview() {
           </p>
         </div>
       </div>
+
+      {/* Scam Detection Section */}
+      <ScamDetectionSection walletAddress={publicKey?.toBase58() || ''} tokenPriceUsd={0} freeScanLimit={20} />
 
       {/* 15-min delayed signal feed */}
       <PublicSignalFeed mode="holder" />
