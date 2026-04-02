@@ -254,7 +254,7 @@ function RiskLevelBadge({ level, score }: { level: string; score: number }) {
 
   return (
     <span className={`${colors[level as keyof typeof colors]} text-white px-3 py-1 rounded-full text-xs font-semibold`}>
-      {level} ({score.toFixed(2)}/10)
+      {level} ({(score ?? 0).toFixed(2)}/10)
     </span>
   );
 }
@@ -296,7 +296,7 @@ function ScammerCard({ scammer }: { scammer: Scammer }) {
           <span className="text-red-400">{scammer.victims_count}</span>
           <span className="mx-2">•</span>
           <span className="font-semibold mr-2">Lost:</span>
-          <span className="text-red-400">${scammer.total_lost_usd.toLocaleString()}</span>
+          <span className="text-red-400">${(scammer.total_lost_usd ?? 0).toLocaleString()}</span>
         </div>
       </div>
     </div>
@@ -348,22 +348,22 @@ function StatsDashboard({ stats }: { stats: Stats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-4 text-white">
-        <div className="text-2xl font-bold mb-1">{stats.total_scans.toLocaleString()}</div>
+        <div className="text-2xl font-bold mb-1">{(stats.total_scans ?? 0).toLocaleString()}</div>
         <div className="text-blue-200 text-xs">Total Scans</div>
       </div>
       
       <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg p-4 text-white">
-        <div className="text-2xl font-bold mb-1">{stats.total_scammers_detected.toLocaleString()}</div>
+        <div className="text-2xl font-bold mb-1">{(stats.total_scammers_detected ?? 0).toLocaleString()}</div>
         <div className="text-red-200 text-xs">Scammers</div>
       </div>
       
       <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-4 text-white">
-        <div className="text-2xl font-bold mb-1">{stats.total_legitimate_accounts.toLocaleString()}</div>
+        <div className="text-2xl font-bold mb-1">{(stats.total_legitimate_accounts ?? 0).toLocaleString()}</div>
         <div className="text-green-200 text-xs">Legitimate</div>
       </div>
       
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-4 text-white">
-        <div className="text-2xl font-bold mb-1">${stats.total_lost_tracked_usd.toLocaleString()}</div>
+        <div className="text-2xl font-bold mb-1">${(stats.total_lost_tracked_usd ?? 0).toLocaleString()}</div>
         <div className="text-purple-200 text-xs">Loss Tracked</div>
       </div>
     </div>
