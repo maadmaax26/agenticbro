@@ -75,9 +75,9 @@ interface Stats {
 // Supabase Client
 // ============================================
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 // ============================================
 // Risk Level Badge Component
@@ -292,7 +292,13 @@ export default function ScamDetectionDisplay() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
+      if (!supabase) {
+        console.warn('Supabase client not initialized — anon key missing');
+        setLoading(false);
+        return;
+      }
+
       // Fetch all data in parallel
       const [scammersRes, legitimateRes, scanResultsRes, statsRes] = await Promise.all([
         supabase.from('scammers').select('*').order('created_at', { ascending: false }),
@@ -300,12 +306,12 @@ export default function ScamDetectionDisplay() {
         supabase.from('scan_results').select('*').order('scan_date', { ascending: false }).limit(20),
         supabase.from('stats').select('*').single()
       ]);
-      
+
       if (scammersRes.data) setScammers(scammersRes.data);
       if (legitimateRes.data) setLegitimate(legitimateRes.data);
       if (scanResultsRes.data) setScanResults(scanResultsRes.data);
       if (statsRes.data) setStats(statsRes.data);
-      
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
