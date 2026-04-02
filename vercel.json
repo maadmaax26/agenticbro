@@ -7,6 +7,9 @@
       "maxDuration": 30,
       "includeFiles": "api/scammer-database.json"
     },
+    "api/scammers.ts": {
+      "maxDuration": 10
+    },
     "api/telegram/priority-scan.ts": {
       "maxDuration": 30
     }
