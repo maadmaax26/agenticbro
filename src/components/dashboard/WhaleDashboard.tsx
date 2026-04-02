@@ -1,4 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { useTokenGating } from '../../hooks/useTokenGating'
+import { useTierCredits } from '../../hooks/useTierCredits'
+import ProfileVerifierScanner from '../ProfileVerifierScanner'
+import PriorityTokenScanner from '../PriorityTokenScanner'
+import TokenScanner from '../TokenScanner'
+import TokenImpersonationScanner from '../TokenImpersonationScanner'
+import ScamDetectionSection from '../ScamDetectionSection'
+import { TrendingUp, Zap, Activity, Settings, ArrowLeft, Search, Shield, AlertTriangle } from 'lucide-react'
 
 interface WhaleHolding {
   walletAddress: string
@@ -24,6 +33,8 @@ interface WhaleDashboardProps {
   balance?: number
   usdValue?: number
 }
+
+type ActiveTab = 'dashboard' | 'profile' | 'tokenscan' | 'faketoken' | 'scam' | 'settings';
 
 const MOCK_WHALES: WhaleHolding[] = [
   {
@@ -95,49 +106,75 @@ const MOCK_TRANSACTIONS: TransactionActivity[] = [
   }
 ]
 
+const WHALE_FEATURES = [
+  {
+    icon: '🔍',
+    title: 'Profile Verifier',
+    desc: 'Full profile scam detection across all platforms. Whale tier gets priority processing and advanced analysis.',
+    badge: '20/mo',
+    badgeColor: 'rgba(234,88,12,0.2)',
+    badgeBorder: 'rgba(234,88,12,0.5)',
+    badgeText: '#fb923c',
+  },
+  {
+    icon: '🪙',
+    title: 'Token Scanner',
+    desc: 'Deep analysis of any token by contract address with honeypot detection, holder distribution, and security flags.',
+    badge: 'Priority',
+    badgeColor: 'rgba(139,92,246,0.25)',
+    badgeBorder: 'rgba(139,92,246,0.6)',
+    badgeText: '#c4b5fd',
+  },
+  {
+    icon: '⚠️',
+    title: 'Fake Token Detector',
+    desc: 'Real-time detection of impersonator tokens and copycats. Advanced pattern matching across all chains.',
+    badge: 'Free',
+    badgeColor: 'rgba(239,68,68,0.15)',
+    badgeBorder: 'rgba(239,68,68,0.5)',
+    badgeText: '#f87171',
+  },
+  {
+    icon: '🚨',
+    title: 'Scam Detection',
+    desc: 'Full scam investigation with profile analysis, victim reports, wallet forensics & scammer database. 20 free scans/month.',
+    badge: '20/mo',
+    badgeColor: 'rgba(239,68,68,0.15)',
+    badgeBorder: 'rgba(239,68,68,0.5)',
+    badgeText: '#f87171',
+  },
+  {
+    icon: '🐋',
+    title: 'Whale Tracking',
+    desc: 'Real-time tracking of large token holders and their transaction activity.',
+    badge: 'Live',
+    badgeColor: 'rgba(16,185,129,0.15)',
+    badgeBorder: 'rgba(16,185,129,0.5)',
+    badgeText: '#4ade80',
+  },
+  {
+    icon: '🔥',
+    title: 'Burn Discounts',
+    desc: '25% off all pay-per-use features when paying with AGNTCBRO tokens.',
+    badge: '25% off',
+    badgeColor: 'rgba(34,197,94,0.15)',
+    badgeBorder: 'rgba(34,197,94,0.5)',
+    badgeText: '#4ade80',
+  },
+]
+
 export default function WhaleDashboard({ onBack, whaleTierUnlocked = false, balance = 0, usdValue = 0 }: WhaleDashboardProps) {
-  // Use props to avoid unused warning
-  const _unusedProps = { onBack, whaleTierUnlocked, balance, usdValue }
-  void _unusedProps // Suppress unused warning
+  const { connected, publicKey } = useWallet()
+  const { whaleTierUnlocked: hasWhaleAccess, balance: tokenBalance } = useTokenGating()
+  const tierCredits = useTierCredits(publicKey?.toBase58() || null)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard')
+
+  // Use props if provided, otherwise use hook values
+  const effectiveWhaleTierUnlocked = whaleTierUnlocked || hasWhaleAccess
+  const effectiveBalance = balance || tokenBalance
   
-  const [whales, setWhales] = useState<WhaleHolding[]>(MOCK_WHALES)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
-
-  const fetchWhaleData = async () => {
-    try {
-      setLoading(true)
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Simulate data updates
-      const updatedWhales = MOCK_WHALES.map(whale => ({
-        ...whale,
-        balance: whale.balance * (1 + (Math.random() - 0.5) * 0.1), // +/- 5% fluctuation
-        changePercentage: whale.changePercentage + (Math.random() - 0.5) * 2,
-        lastTransaction: new Date(Date.now() - Math.random() * 7200000)
-      }))
-      
-      setWhales(updatedWhales)
-      setLastUpdate(new Date())
-      setError(null)
-    } catch (err) {
-      setError('Failed to fetch whale data')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchWhaleData()
-    
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchWhaleData, 60000)
-    return () => clearInterval(interval)
-  }, [])
+  const [whales] = useState<WhaleHolding[]>(MOCK_WHALES)
+  const [lastUpdate] = useState<Date>(new Date())
 
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -147,153 +184,244 @@ export default function WhaleDashboard({ onBack, whaleTierUnlocked = false, bala
     return balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
   }
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex justify-center items-center h-48">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      </div>
-    )
+  if (!connected || !publicKey) {
+    return null
   }
 
-  if (error) {
+  if (!effectiveWhaleTierUnlocked) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-        <p className="text-red-700 text-center">{error}</p>
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-orange-500/20 p-8 text-center">
+          <div className="text-6xl mb-4">🐋</div>
+          <h2 className="text-2xl font-bold text-white mb-4">Whale Tier Access Required</h2>
+          <p className="text-gray-300 mb-6">
+            Hold at least <span className="text-orange-400 font-bold">$1,000 USD</span> worth of AGNTCBRO to access the Whale Tier dashboard.
+          </p>
+          <div className="bg-orange-900/40 rounded-xl p-6 mb-6">
+            <p className="text-sm text-gray-400 mb-2">Current Balance</p>
+            <p className="text-2xl font-bold text-orange-300">
+              {effectiveBalance.toLocaleString()} AGNTCBRO
+            </p>
+          </div>
+          <div className="text-sm text-gray-500">
+            <p className="mb-2">Whale Tier includes:</p>
+            <ul className="text-left max-w-sm mx-auto space-y-1">
+              <li>• 20 free scans per month</li>
+              <li>• All Holder Tier features</li>
+              <li>• Priority processing</li>
+              <li>• Advanced whale tracking</li>
+              <li>• 25% burn discount</li>
+            </ul>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
-          <h3 className="text-lg font-semibold">Active Whales</h3>
-          <p className="text-3xl font-bold mt-2">{whales.length}</p>
-          <p className="text-sm opacity-90 mt-1">Currently monitored</p>
-        </div>
-        
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-          <h3 className="text-lg font-semibold">Total Value</h3>
-          <p className="text-3xl font-bold mt-2">
-            {whales.reduce((sum, whale) => sum + whale.balance, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </p>
-          <p className="text-sm opacity-90 mt-1">SOL combined holdings</p>
-        </div>
-        
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-          <h3 className="text-lg font-semibold">Recent Activity</h3>
-          <p className="text-3xl font-bold mt-2">{MOCK_TRANSACTIONS.length}</p>
-          <p className="text-sm opacity-90 mt-1">Transactions last hour</p>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto mt-6">
+      {/* Header */}
+      <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-orange-500/20 p-6 mb-6">
+        {/* Back button row */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 mb-4 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125"
+            style={{ background: 'rgba(234,88,12,0.2)', borderColor: 'rgba(234,88,12,0.5)', color: '#fb923c' }}
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back to Home
+          </button>
+        )}
 
-      {/* Whale Holdings Section */}
-      <div className="bg-black/40 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-purple-500/20">
-        <div className="px-6 py-4 border-b border-purple-500/20">
-          <h2 className="text-xl font-bold text-white">🐋 Top Whale Holdings</h2>
-          <p className="text-sm text-gray-400 mt-1">Large token holders and their activity</p>
-        </div>
-        
-        <div className="divide-y divide-purple-500/10">
-          {whales.map((whale, index) => (
-            <div key={index} className="px-6 py-4 hover:bg-purple-500/5 transition-colors">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl w-10 h-10 flex items-center justify-center text-white font-bold">
-                    🐋
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white truncate max-w-xs font-mono text-sm">
-                      {whale.walletAddress.substring(0, 6)}...{whale.walletAddress.substring(-4)}
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      {whale.tokenSymbol} Balance: {formatBalance(whale.balance)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                    whale.changePercentage >= 0 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
-                    {whale.changePercentage >= 0 ? '↑' : '↓'} {Math.abs(whale.changePercentage)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Transactions */}
-      <div className="bg-black/40 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-purple-500/20">
-        <div className="px-6 py-4 border-b border-purple-500/20">
-          <h2 className="text-xl font-bold text-white">💸 Recent Whale Transactions</h2>
-          <p className="text-sm text-gray-400 mt-1">Latest activity from major holders</p>
-        </div>
-        
-        <div className="divide-y divide-purple-500/10">
-          {MOCK_TRANSACTIONS.map((tx, index) => (
-            <div key={index} className="px-6 py-4 hover:bg-purple-500/5 transition-colors">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                    tx.type === 'buy' ? 'bg-green-500/20 text-green-400' :
-                    tx.type === 'sell' ? 'bg-red-500/20 text-red-400' : 
-                    'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {tx.type === 'buy' ? '↑' : tx.type === 'sell' ? '↓' : '⇄'}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold text-white capitalize">{tx.type} transaction</h3>
-                    <p className="text-sm text-gray-400">
-                      {formatBalance(tx.amount)} {tx.token}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-300">
-                    {formatTimestamp(tx.timestamp)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Last updated: {lastUpdate.toLocaleTimeString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Whale Analysis Section */}
-      <div className="bg-black/40 backdrop-blur-md rounded-2xl shadow-lg p-6 border border-purple-500/20">
-        <h2 className="text-xl font-bold text-white mb-4">📊 Whale Activity Insights</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-300">Active Whales</h3>
-            <p className="text-2xl font-bold text-blue-400 mt-1">{whales.length}</p>
-            <p className="text-sm text-blue-300 mt-1">Currently monitored</p>
-          </div>
-          
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-            <h3 className="font-semibold text-green-300">Total Value</h3>
-            <p className="text-2xl font-bold text-green-400 mt-1">
-              {formatBalance(whales.reduce((sum, whale) => sum + whale.balance, 0))}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">🐋 Whale Tier Dashboard</h1>
+            <p className="text-gray-400">
+              Premium access with priority processing and advanced features
             </p>
-            <p className="text-sm text-green-300 mt-1">Combined holdings</p>
           </div>
-          
-          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-            <h3 className="font-semibold text-purple-300">Recent Activity</h3>
-            <p className="text-2xl font-bold text-purple-400 mt-1">{MOCK_TRANSACTIONS.length}</p>
-            <p className="text-sm text-purple-300 mt-1">Transactions today</p>
+          <div className="text-right">
+            <p className="text-sm text-gray-400 mb-1">Your Balance</p>
+            <p className="text-2xl font-bold text-orange-300">
+              {effectiveBalance.toLocaleString()} AGNTCBRO
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {tierCredits.isTestWallet ? '∞ Unlimited Scans' : `${tierCredits.tierScansRemaining}/${tierCredits.tierMonthlyScans} free scans this month`}
+            </p>
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap gap-2">
+          <TabButton
+            active={activeTab === 'dashboard'}
+            onClick={() => setActiveTab('dashboard')}
+            icon={<TrendingUp />}
+            label="Dashboard"
+          />
+          <TabButton
+            active={activeTab === 'profile'}
+            onClick={() => setActiveTab('profile')}
+            icon={<Search />}
+            label="Profile Verifier"
+            isNew
+          />
+          <TabButton
+            active={activeTab === 'tokenscan'}
+            onClick={() => setActiveTab('tokenscan')}
+            icon={<Shield />}
+            label="Token Scanner"
+          />
+          <TabButton
+            active={activeTab === 'faketoken'}
+            onClick={() => setActiveTab('faketoken')}
+            icon={<AlertTriangle />}
+            label="Fake Tokens"
+          />
+          <TabButton
+            active={activeTab === 'scam'}
+            onClick={() => setActiveTab('scam')}
+            icon={<Activity />}
+            label="Scam Detect"
+          />
+          <TabButton
+            active={activeTab === 'settings'}
+            onClick={() => setActiveTab('settings')}
+            icon={<Settings />}
+            label="Settings"
+          />
+        </div>
       </div>
+
+      {/* Content */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-6">
+          {/* Feature cards */}
+          <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-orange-500/20 p-6">
+            <h2 className="text-xl font-bold text-white mb-5">🐋 Whale Tier Features</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {WHALE_FEATURES.map(f => (
+                <div
+                  key={f.title}
+                  className="flex gap-4 rounded-xl p-4 border"
+                  style={{ background: 'rgba(234,88,12,0.07)', borderColor: 'rgba(234,88,12,0.2)' }}
+                >
+                  <span className="text-2xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-bold text-white text-sm">{f.title}</span>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-xs font-semibold"
+                        style={{ background: f.badgeColor, border: `1px solid ${f.badgeBorder}`, color: f.badgeText }}
+                      >
+                        {f.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick stat summary */}
+          <div className="grid md:grid-cols-4 gap-4">
+            <StatCard label="Monthly Scans" value={`${tierCredits.isTestWallet ? '∞' : tierCredits.tierScansRemaining}/${tierCredits.tierMonthlyScans}`} icon="🔍" />
+            <StatCard label="Priority" value="Highest" icon="⚡" />
+            <StatCard label="Whales Tracked" value={whales.length.toString()} icon="🐋" />
+            <StatCard label="Burn Discount" value="25%" icon="🔥" />
+          </div>
+
+          {/* Low credits warning */}
+          {!tierCredits.isTestWallet && tierCredits.tierScansRemaining <= 5 && (
+            <div
+              className="rounded-2xl border p-5 flex items-center gap-4"
+              style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.25)' }}
+            >
+              <span className="text-3xl flex-shrink-0">⚠️</span>
+              <div>
+                <p className="font-bold text-white text-sm mb-0.5">Low Scan Credits</p>
+                <p className="text-xs text-gray-400">
+                  You have <span className="text-red-400 font-semibold">{tierCredits.tierScansRemaining}</span> free scans remaining this month.
+                  Purchase additional credits at <span className="text-orange-400 font-semibold">$1/scan</span>.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'profile' && <ProfileVerifierScanner onLoginRequired={() => {}} />}
+      {activeTab === 'tokenscan' && (
+        <>
+          <PriorityTokenScanner onLoginRequired={() => {}} />
+          <TokenScanner onLoginRequired={() => {}} />
+        </>
+      )}
+      {activeTab === 'faketoken' && <TokenImpersonationScanner />}
+      {activeTab === 'scam' && (
+        connected && publicKey ? (
+          <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={0} freeScanLimit={20} />
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">🔒</div>
+            <p className="text-gray-400">Connect your wallet to access scam detection</p>
+          </div>
+        )
+      )}
+      {activeTab === 'settings' && (
+        <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-orange-500/20 p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Whale Tier Settings</h3>
+          <p className="text-gray-400">Settings coming soon...</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TabButton({
+  active, onClick, icon, label, isNew,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  isNew?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+        active
+          ? 'bg-orange-600 text-white'
+          : 'bg-black/30 text-gray-400 hover:bg-black/50'
+      }`}
+    >
+      {icon}
+      {label}
+      {isNew && (
+        <span
+          className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+          style={{
+            background: 'rgba(234,88,12,0.35)',
+            border: '1px solid rgba(234,88,12,0.7)',
+            color: '#fb923c',
+          }}
+        >
+          NEW
+        </span>
+      )}
+    </button>
+  )
+}
+
+function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <div className="bg-black/40 backdrop-blur-md rounded-xl border border-orange-500/20 p-4">
+      <div className="text-2xl mb-2">{icon}</div>
+      <p className="text-sm text-gray-400">{label}</p>
+      <p className="text-xl font-bold text-orange-300">{value}</p>
     </div>
   )
 }
