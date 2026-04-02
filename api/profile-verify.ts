@@ -3,6 +3,9 @@
  *
  * Endpoint: POST /api/profile-verify
  * Verifies social media profiles for scam detection
+ * 
+ * For Twitter/X: Calls local Chrome CDP scanner for real data
+ * For other platforms: Pattern-based detection
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -29,6 +32,7 @@ interface ProfileVerifyResult {
   verified?: boolean;
   riskScore: number;
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  verificationLevel: string;
   scamType?: string;
   redFlags: string[];
   evidence: string[];
@@ -42,9 +46,38 @@ interface ProfileVerifyResult {
     website?: string;
     joinDate?: string;
     profileImage?: string;
+    accountAge?: string;
+    promotedTokens?: string[];
+    recentPosts?: string[];
   };
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   scanDate: string;
+  dataSource: 'chrome_cdp' | 'pattern_analysis' | 'fallback';
+}
+
+// ─── Chrome CDP Scanner Configuration ───────────────────────────────────────────
+
+const LOCAL_SCANNER_URL = process.env.LOCAL_SCANNER_URL || 'http://localhost:3002';
+
+async function callLocalScanner(platform: string, username: string): Promise<any> {
+  try {
+    const response = await fetch(`${LOCAL_SCANNER_URL}/api/v1/scan/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform, username }),
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+    
+    if (!response.ok) {
+      console.error('Local scanner error:', response.status);
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to call local scanner:', error);
+    return null;
+  }
 }
 
 // ─── Scam Pattern Detection ─────────────────────────────────────────────────────
@@ -74,51 +107,108 @@ const SCAM_PATTERNS: Record<string, { type: string; riskScore: number; flags: st
   '_official': { type: 'Impersonation', riskScore: 75, flags: ['Fake official account', 'Not affiliated', 'Scam indicator'] },
   '_support': { type: 'Support Scam', riskScore: 80, flags: ['Fake support account', 'Will request private keys', 'Do not engage'] },
   'real': { type: 'Impersonation', riskScore: 65, flags: ['"real" in username often indicates fake', 'Impersonation tactic', 'Verify independently'] },
+  
+  // Shill/Promoter patterns
+  'promoter': { type: 'Shill Account', riskScore: 70, flags: ['Self-described promoter', 'Likely paid shill', 'Multiple token promotions'] },
+  'alpha': { type: 'Alpha Bait', riskScore: 65, flags: ['Alpha hunting pattern', 'Likely pump promoter', 'High-risk category'] },
+  'gem': { type: 'Gem Hunter', riskScore: 60, flags: ['Gem/promoter pattern', 'Likely token shill', 'Verify independently'] },
+  '1000x': { type: 'Unrealistic Returns', riskScore: 85, flags: ['1000x claims', 'Too good to be true', 'Classic pump pattern'] },
+  '100x': { type: 'Unrealistic Returns', riskScore: 80, flags: ['100x claims', 'Unrealistic promise', 'Pump and dump likely'] },
+  'moonshot': { type: 'Moonshot Scam', riskScore: 75, flags: ['Moonshot terminology', 'Pump pattern', 'Exit liquidity warning'] },
 };
+
+// ─── Bio Analysis ───────────────────────────────────────────────────────────────
+
+const BIO_RED_FLAGS = [
+  { pattern: /dm me|dm now|dm for|dm to/i, score: 15, flag: 'DM solicitation' },
+  { pattern: /1000x|100x|moonshot|gem|alpha/i, score: 10, flag: 'Unrealistic returns claims' },
+  { pattern: /project promoter|crypto promoter|shill/i, score: 12, flag: 'Self-described shill account' },
+  { pattern: /limited time|act now|hurry|last chance/i, score: 8, flag: 'Urgency tactics' },
+  { pattern: /presale|presale live|presale now/i, score: 10, flag: 'Presale promotion (high risk)' },
+  { pattern: /guaranteed|guarantee|sure thing/i, score: 15, flag: 'Guaranteed returns (scam)' },
+  { pattern: /airdrop|free|giveaway/i, score: 12, flag: 'Giveaway/airdrop pattern' },
+  { pattern: /trusted source|your trusted|verified source/i, score: 8, flag: 'False authority claim' },
+];
+
+function analyzeBio(bio: string): { score: number; flags: string[] } {
+  let score = 0;
+  const flags: string[] = [];
+  
+  for (const { pattern, score: add, flag } of BIO_RED_FLAGS) {
+    if (pattern.test(bio)) {
+      score += add;
+      flags.push(flag);
+    }
+  }
+  
+  return { score, flags };
+}
 
 // ─── Helper Functions ───────────────────────────────────────────────────────────
 
-function detectScamPatterns(username: string): { type: string; riskScore: number; flags: string[] } | null {
+function detectScamPatterns(username: string, bio?: string): { type: string; riskScore: number; flags: string[] } | null {
   const lowerUsername = username.toLowerCase();
+  const lowerBio = (bio || '').toLowerCase();
+  
+  let bestMatch: { type: string; riskScore: number; flags: string[] } | null = null;
+  let maxScore = 0;
   
   for (const [pattern, data] of Object.entries(SCAM_PATTERNS)) {
     if (lowerUsername.includes(pattern)) {
-      return data;
+      if (data.riskScore > maxScore) {
+        maxScore = data.riskScore;
+        bestMatch = data;
+      }
     }
   }
   
   // Check for suspicious patterns
   if (lowerUsername.includes('_') && (lowerUsername.includes('give') || lowerUsername.includes('free'))) {
-    return { type: 'Giveaway Scam', riskScore: 85, flags: ['Suspicious username pattern', 'Giveaway scam indicator', 'Do not engage'] };
+    if (!bestMatch || 85 > maxScore) {
+      bestMatch = { type: 'Giveaway Scam', riskScore: 85, flags: ['Suspicious username pattern', 'Giveaway scam indicator', 'Do not engage'] };
+    }
   }
   
   if (/\d{4,}$/.test(username) && !/^\d{4,}$/.test(username)) {
-    return { type: 'Suspected Bot', riskScore: 55, flags: ['Number suffix pattern', 'Possible bot account', 'Verify independently'] };
+    if (!bestMatch || 55 > maxScore) {
+      bestMatch = { type: 'Suspected Bot', riskScore: 55, flags: ['Number suffix pattern', 'Possible bot account', 'Verify independently'] };
+    }
   }
   
-  return null;
-}
-
-function generateProfileData(platform: string, username: string) {
-  // Generate realistic profile data
-  const followerCount = Math.floor(Math.random() * 50000) + 100;
-  const followingCount = Math.floor(Math.random() * 5000) + 50;
-  const postCount = Math.floor(Math.random() * 1000) + 10;
+  // Analyze bio if provided
+  if (bio) {
+    const bioAnalysis = analyzeBio(bio);
+    if (bioAnalysis.score > 0) {
+      if (bestMatch) {
+        bestMatch.riskScore = Math.min(100, bestMatch.riskScore + bioAnalysis.score);
+        bestMatch.flags = [...bestMatch.flags, ...bioAnalysis.flags];
+      } else if (bioAnalysis.score >= 15) {
+        bestMatch = {
+          type: 'Suspicious Profile',
+          riskScore: bioAnalysis.score,
+          flags: bioAnalysis.flags,
+        };
+      }
+    }
+  }
   
-  return {
-    followers: followerCount,
-    following: followingCount,
-    posts: postCount,
-    bio: `${username}'s profile`,
-    joinDate: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-  };
+  return bestMatch;
 }
 
 function calculateRiskLevel(score: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-  if (score >= 75) return 'CRITICAL';
+  if (score >= 70) return 'CRITICAL';
   if (score >= 50) return 'HIGH';
   if (score >= 30) return 'MEDIUM';
   return 'LOW';
+}
+
+function determineVerificationLevel(score: number, verified: boolean, accountAge?: number): string {
+  if (score >= 80) return 'HIGH RISK';
+  if (score >= 60) return 'Unverified';
+  if (score >= 40) return 'Partially Verified';
+  if (verified) return 'Verified';
+  if (accountAge && accountAge > 365) return 'Legitimate';
+  return 'Unverified';
 }
 
 function generateRecommendation(riskLevel: string, platform: string): string {
@@ -134,6 +224,15 @@ function generateRecommendation(riskLevel: string, platform: string): string {
     default:
       return `✅ No major scam indicators detected. However, always verify accounts independently before sharing sensitive information or sending funds.`;
   }
+}
+
+function formatAccountAge(days: number): string {
+  if (days < 1) return 'less than 1 day';
+  if (days < 7) return `${days} days`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks`;
+  if (days < 365) return `${Math.floor(days / 30)} months`;
+  const years = Math.floor(days / 365);
+  return `${years}+ years`;
 }
 
 // ─── Handler ────────────────────────────────────────────────────────────────────
@@ -196,7 +295,76 @@ export default async function handler(
       });
     }
 
-    // Detect scam patterns
+    let result: ProfileVerifyResult;
+    
+    // Try to call local Chrome CDP scanner for Twitter
+    if (platform === 'twitter') {
+      const scannerResult = await callLocalScanner(platform, cleanUsername);
+      
+      if (scannerResult && scannerResult.success) {
+        // Use real Chrome CDP scan data
+        const data = scannerResult.data;
+        const accountAgeDays = data.accountAgeDays || (data.account_age_years ? data.account_age_years * 365 : null);
+        
+        // Calculate risk from real data
+        let riskScore = 2.0;
+        const redFlags: string[] = [...(data.red_flags || [])];
+        
+        // Add risk points for each red flag
+        for (const flag of redFlags) {
+          if (flag.includes('DM') || flag.includes('solicitation')) riskScore += 2.0;
+          else if (flag.includes('Unrealistic') || flag.includes('1000x')) riskScore += 2.5;
+          else if (flag.includes('shill') || flag.includes('promoter')) riskScore += 2.0;
+          else if (flag.includes('presale')) riskScore += 2.0;
+          else if (flag.includes('Telegram')) riskScore += 1.5;
+          else if (flag.includes('alpha') || flag.includes('gem')) riskScore += 1.0;
+          else if (flag.includes('follower ratio')) riskScore += 0.5;
+          else if (flag.includes('Not verified')) riskScore += 0.3;
+          else riskScore += 0.5;
+        }
+        
+        // Cap at 10
+        riskScore = Math.min(riskScore, 10.0);
+        
+        // Convert to 0-100 scale for API
+        const apiRiskScore = Math.round(riskScore * 10);
+        const riskLevel = calculateRiskLevel(apiRiskScore);
+        
+        result = {
+          success: true,
+          platform,
+          username: cleanUsername,
+          displayName: data.display_name || data.name || cleanUsername,
+          verified: data.verified || false,
+          riskScore: apiRiskScore,
+          riskLevel,
+          verificationLevel: data.verification_level || determineVerificationLevel(apiRiskScore, data.verified || false, accountAgeDays || undefined),
+          scamType: data.scam_type,
+          redFlags,
+          evidence: data.evidence || ['Chrome CDP scan completed', 'Real profile data analyzed'],
+          recommendation: generateRecommendation(riskLevel, platform),
+          profileData: {
+            followers: data.followers,
+            following: data.following,
+            posts: data.posts_count || data.posts,
+            bio: data.bio,
+            location: data.location,
+            website: data.website,
+            joinDate: data.join_date,
+            accountAge: accountAgeDays ? formatAccountAge(accountAgeDays) : undefined,
+            promotedTokens: data.promoted_tokens,
+            recentPosts: data.recent_posts,
+          },
+          confidence: 'HIGH',
+          scanDate: new Date().toISOString(),
+          dataSource: 'chrome_cdp',
+        };
+        
+        return res.status(200).json(result);
+      }
+    }
+    
+    // Fallback: Pattern-based detection (for non-Twitter or when local scanner unavailable)
     const scamDetection = detectScamPatterns(cleanUsername);
     
     // Calculate risk score
@@ -208,11 +376,9 @@ export default async function handler(
       riskScore = Math.min(100, riskScore + 10); // Boost risk for crypto context
     }
     
-    // Generate result
     const riskLevel = calculateRiskLevel(riskScore);
-    const profileData = generateProfileData(platform, cleanUsername);
     
-    const result: ProfileVerifyResult = {
+    result = {
       success: true,
       platform,
       username: cleanUsername,
@@ -220,15 +386,17 @@ export default async function handler(
       verified: false,
       riskScore,
       riskLevel,
+      verificationLevel: scamDetection ? 'Unverified' : 'Unknown',
       scamType: scamDetection?.type,
-      redFlags: scamDetection?.flags || ['Profile analyzed with available data'],
+      redFlags: scamDetection?.flags || ['Pattern analysis only - limited data available'],
       evidence: riskScore >= 50 
-        ? ['Pattern matching indicates potential scam', 'Username contains suspicious elements', 'Recommend manual verification']
-        : ['No strong scam indicators detected', 'Standard profile analysis complete'],
+        ? ['Username pattern indicates potential scam', 'Recommend manual verification', 'Use Chrome CDP scan for full analysis']
+        : ['No strong scam indicators from username pattern', 'Recommend Chrome CDP scan for complete profile data'],
       recommendation: generateRecommendation(riskLevel, platform),
-      profileData,
-      confidence: riskScore >= 50 ? 'HIGH' : 'MEDIUM',
+      profileData: undefined, // No real data in fallback mode
+      confidence: riskScore >= 50 ? 'MEDIUM' : 'LOW',
       scanDate: new Date().toISOString(),
+      dataSource: 'pattern_analysis',
     };
 
     return res.status(200).json(result);
