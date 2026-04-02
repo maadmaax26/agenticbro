@@ -10,6 +10,45 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+// ─── Supabase upload helper ─────────────────────────────────────────────────────
+const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
+const _supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void> {
+  if (!_supabaseAnonKey) return;
+  try {
+    const client = createClient(_supabaseUrl, _supabaseAnonKey);
+    const platformLabel: Record<string, string> = {
+      twitter: 'X (Twitter)',
+      telegram: 'Telegram',
+      instagram: 'Instagram',
+      discord: 'Discord',
+      linkedin: 'LinkedIn',
+      facebook: 'Facebook',
+    };
+    const verificationLabel =
+      scanResult.riskLevel === 'CRITICAL' || scanResult.riskLevel === 'HIGH'
+        ? 'Flagged Scammer'
+        : scanResult.riskLevel === 'MEDIUM'
+        ? 'Suspicious'
+        : 'Legitimate';
+
+    const { error } = await client.from('scan_results').insert({
+      target_name: `@${scanResult.username}`,
+      platform: platformLabel[scanResult.platform] || scanResult.platform,
+      target_handle: `@${scanResult.username}`,
+      scan_date: scanResult.scanDate || new Date().toISOString(),
+      risk_score: Math.round(scanResult.riskScore) / 10,
+      risk_level: scanResult.riskLevel,
+      verification_level: verificationLabel,
+    });
+    if (error) console.warn('[Supabase] scan_results insert error:', error.message);
+  } catch (err) {
+    console.warn('[Supabase] scan upload failed:', err);
+  }
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -204,6 +243,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
       // Credit was already used, set the result
       setResult(scanResult);
+
+      // Upload scan result to Supabase for the Scam Detection Database
+      uploadScanToSupabase(scanResult).catch(() => {});  // fire-and-forget, never block UI
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
