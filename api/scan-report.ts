@@ -5,27 +5,32 @@
  * Used when a scammer card is selected to show full report
  */
 
-export default async function handler(req: Request): Promise<Response> {
+import type { IncomingMessage, ServerResponse } from 'http'
+
+type VercelRequest = IncomingMessage & { body?: any; method?: string }
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse
+  json: (data: any) => void
+  setHeader: (name: string, value: string) => VercelResponse
+  end: () => void
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    res.status(500).json({ error: 'Supabase not configured' });
+    return;
   }
 
   // Get username from query params
-  const url = new URL(req.url);
+  const url = new URL(req.url || '', `https://${req.headers.host}`);
   const username = url.searchParams.get('username');
-  const platform = url.searchParams.get('platform') || 'twitter';
 
   if (!username) {
-    return new Response(JSON.stringify({ error: 'username parameter required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    res.status(400).json({ error: 'username parameter required' });
+    return;
   }
 
   try {
@@ -43,19 +48,15 @@ export default async function handler(req: Request): Promise<Response> {
     );
 
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: 'Database query failed' }), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      res.status(response.status).json({ error: 'Database query failed' });
+      return;
     }
 
     const data = await response.json();
     
     if (data.length === 0) {
-      return new Response(JSON.stringify({ error: 'Record not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      res.status(404).json({ error: 'Record not found' });
+      return;
     }
 
     const record = data[0];
@@ -113,20 +114,13 @@ export default async function handler(req: Request): Promise<Response> {
       wallet_address: record.wallet_address,
     };
 
-    return new Response(JSON.stringify(report, null, 2), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60, stale-while-revalidate=300',
-      }
-    });
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    res.status(200).json(report);
 
   } catch (error) {
     console.error('API error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
 
