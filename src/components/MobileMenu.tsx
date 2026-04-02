@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Shield, Search, Map, Users, LogIn } from 'lucide-react'
+import { Menu, X, Shield, Search, Map, Users, LogIn, Wallet, Gem } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 
 interface MobileMenuProps {
@@ -148,6 +148,30 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
               >
                 <Search className="h-7 w-7 text-purple-400 flex-shrink-0" />
                 <span className="text-white font-semibold text-xl">Scanners</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('holder')}
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-left w-full border border-purple-500/40 transition-colors"
+                type="button"
+              >
+                <Gem className="h-7 w-7 text-purple-300 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-xl">Holder Tier</span>
+                  <p className="text-xs text-purple-300/80 mt-0.5">20 scans/mo • Premium features</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('whale')}
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-orange-600/30 hover:bg-orange-600/50 text-left w-full border border-orange-500/40 transition-colors"
+                type="button"
+              >
+                <Wallet className="h-7 w-7 text-orange-300 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-xl">Whale Tier</span>
+                  <p className="text-xs text-orange-300/80 mt-0.5">Priority access • 25% discount</p>
+                </div>
               </button>
 
               <button
