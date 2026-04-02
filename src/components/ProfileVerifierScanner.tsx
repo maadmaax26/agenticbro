@@ -297,6 +297,18 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
   };
 
+  // Build the public profile URL for all platforms except Telegram
+  const getProfileUrl = (platform: string, username: string): string | null => {
+    const urls: Record<string, string> = {
+      twitter:   `https://x.com/${username}`,
+      instagram: `https://instagram.com/${username}`,
+      discord:   `https://discord.com/users/${username}`,
+      linkedin:  `https://linkedin.com/in/${username}`,
+      facebook:  `https://facebook.com/${username}`,
+    };
+    return urls[platform] ?? null;
+  };
+
   const copyResult = () => {
     if (result) {
       const text = `Profile Verification Result for @${result.username} (${result.platform})
@@ -672,7 +684,22 @@ Recommendation: ${result.recommendation}`;
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {result.platform !== 'telegram' && getProfileUrl(result.platform, result.username) && (
+              <a
+                href={getProfileUrl(result.platform, result.username)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-white transition-all hover:scale-[1.02] text-center"
+                style={{
+                  background: 'rgba(16,185,129,0.2)',
+                  border: '1px solid rgba(16,185,129,0.4)',
+                }}
+              >
+                🌐 View Profile
+              </a>
+            )}
+
             <button
               onClick={copyResult}
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-white transition-all hover:scale-[1.02]"
@@ -683,7 +710,7 @@ Recommendation: ${result.recommendation}`;
             >
               📋 Copy Result
             </button>
-            
+
             <button
               onClick={() => setResult(null)}
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-gray-300 transition-all hover:scale-[1.02]"
