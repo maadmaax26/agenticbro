@@ -1,0 +1,17 @@
+{
+  "id": "1fba7ca9",
+  "reply_type": "USER_INQUIRY",
+  "username": "QuestionableUser",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @QuestionableUser:\n\nRisk Level: UNKNOWN (4.2/10)\nRed Flags: Free crypto, Airdrop\n\n\u26a0\ufe0f Exercise caution - some concerns detected.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/QuestionableUser\n\n#CryptoSafety",
+  "risk_level": "UNKNOWN",
+  "risk_score": 4.2,
+  "red_flags": [
+    "Free crypto",
+    "Airdrop"
+  ],
+  "report_url": "https://agenticbro.app/scan/QuestionableUser",
+  "target_user": null,
+  "topic": null,
+  "created_at": "2026-04-02T17:15:54.030454",
+  "status": "pending_approval"
+}
