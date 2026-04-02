@@ -1,0 +1,18 @@
+{
+  "id": "e67c2472",
+  "reply_type": "SCAM_ALERT",
+  "username": "TestScammer",
+  "reply_text": "\u26a0\ufe0f SCAM ALERT: @TestScammer has been flagged as HIGH RISK (9.5/10).\n\nRed flags: DM solicitation, Guaranteed returns, Airdrop scam\n\nOur AI detected suspicious patterns. Protect yourself:\n\u2192 Scan before you invest: agenticbro.app\n\u2192 Full report: https://agenticbro.app/scan/TestScammer\n\n#CryptoSafety #ScamAlert",
+  "risk_level": "UNKNOWN",
+  "risk_score": 9.5,
+  "red_flags": [
+    "DM solicitation",
+    "Guaranteed returns",
+    "Airdrop scam"
+  ],
+  "report_url": "https://agenticbro.app/scan/TestScammer",
+  "target_user": null,
+  "topic": null,
+  "created_at": "2026-04-02T17:15:53.983204",
+  "status": "pending_approval"
+}
