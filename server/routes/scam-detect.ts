@@ -5,16 +5,22 @@
  *   POST /api/scam-detect → Analyze X/Telegram user for scam patterns
  *
  * Data Sources:
+ *   - Supabase known_scammers table (primary)
+ *   - Hardcoded fallback (when Supabase not configured)
  *   - Nitter (X profiles) — no API key required
  *   - Reddit Search (victim reports) — public API
- *   - Known Scammers Database (hardcoded)
  *
- * Start: Server already runs on port 3001
+ * Scan results are persisted to Supabase scan_results table after each scan.
  */
 
 import express, { Request, Response } from 'express'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import {
+  storeScanResult,
+  queryKnownScammer,
+  isSupabaseConfigured,
+  type ScanResultRow,
+  type KnownScammerRow,
+} from '../lib/supabase.js'
 
 const router = express.Router()
 
@@ -64,9 +70,11 @@ interface ScamDetectionResult {
     status: string
     victims: number
     notes: string
+    threatLevel?: string
   }
   evidence: string[]
   dataSource: 'live' | 'mock'
+  supabaseId?: string   // ID of the stored scan_results row
 }
 
 interface KnownScammerEntry {
@@ -81,9 +89,9 @@ interface KnownScammerEntry {
   notes: string
 }
 
-// ─── Known Scammers Database ─────────────────────────────────────────────────────
+// ─── Hardcoded fallback (used when Supabase is not configured) ────────────────
 
-const KNOWN_SCAMMERS: KnownScammerEntry[] = [
+const KNOWN_SCAMMERS_FALLBACK: KnownScammerEntry[] = [
   {
     name: 'raynft_',
     platform: 'X',
@@ -265,12 +273,43 @@ async function searchVictimReports(username: string): Promise<ScamDetectionResul
   return { totalReports: reports.length, reports }
 }
 
-function checkScammerDatabase(username: string, _platform: string): ScamDetectionResult['knownScammer'] | undefined {
+/**
+ * Check the known scammers database.
+ * Queries Supabase first; falls back to hardcoded list if Supabase is not configured.
+ */
+async function checkScammerDatabase(
+  username: string,
+  _platform: string
+): Promise<ScamDetectionResult['knownScammer'] | undefined> {
   const cleanUsername = username.replace('@', '').toLowerCase()
 
-  const found = KNOWN_SCAMMERS.find(scammer => {
-    const scammerHandle = scammer.xHandle?.replace('@', '').toLowerCase()
-    return scammerHandle === cleanUsername
+  // ── Primary: Supabase ──────────────────────────────────────────────────────
+  if (isSupabaseConfigured) {
+    try {
+      const row: KnownScammerRow | null = await queryKnownScammer(cleanUsername)
+
+      if (row) {
+        const victimCount = typeof row.victim_count === 'number'
+          ? row.victim_count
+          : parseInt(String(row.victim_count ?? '0')) || 0
+
+        return {
+          name: row.username,
+          status: row.verification_level ?? row.threat_level ?? 'Unknown',
+          victims: victimCount,
+          notes: row.notes ?? row.scan_notes ?? '',
+          threatLevel: row.threat_level,
+        }
+      }
+    } catch (err) {
+      console.warn('[Supabase] queryKnownScammer failed, falling back to local list:', err)
+    }
+  }
+
+  // ── Fallback: hardcoded list ───────────────────────────────────────────────
+  const found = KNOWN_SCAMMERS_FALLBACK.find(s => {
+    const handle = s.xHandle?.replace('@', '').toLowerCase()
+    return handle === cleanUsername
   })
 
   if (found) {
@@ -342,11 +381,9 @@ function detectRedFlags(
   return flags
 }
 
-// ─── Generate Full Report ───────────────────────────────────────────────────────
+// ─── Generate Full Report ─────────────────────────────────────────────────────
 
-function generateFullReport(
-  result: ScamDetectionResult
-): string {
+function generateFullReport(result: ScamDetectionResult): string {
   let report = `SCAM DETECTION REPORT
 =====================
 
@@ -365,7 +402,7 @@ ${result.recommendedAction}
 RED FLAGS FOUND (${result.redFlags.length})
 ${result.redFlags.map(flag => `- ${flag}`).join('\n')}`
 
-if (result.scamType) {
+  if (result.scamType) {
     report += `\n\nSCAM TYPE\n${result.scamType}`
   }
 
@@ -399,11 +436,13 @@ ${result.xProfile.isVerified ? '✓ Verified' : '✗ Unverified'}`
     })
   }
 
-  report += `\n\nEVIDENCE
-${result.evidence.map(ev => `- ${ev}`).join('\n')}`
+  report += `\n\nEVIDENCE\n${result.evidence.map(ev => `- ${ev}`).join('\n')}`
 
   if (result.knownScammer) {
     report += `\n\n⚠️ KNOWN SCAMMER DETECTED\nStatus: ${result.knownScammer.status}\nVictims: ${result.knownScammer.victims}\nNotes: ${result.knownScammer.notes}`
+    if (result.knownScammer.threatLevel) {
+      report += `\nThreat Level: ${result.knownScammer.threatLevel}`
+    }
   }
 
   report += `\n\nDISCLAIMER
@@ -412,7 +451,7 @@ This report contains only publicly available information. Use for legitimate awa
   return report
 }
 
-// ─── POST /api/scam-detect ──────────────────────────────────────────────────────
+// ─── POST /api/scam-detect ────────────────────────────────────────────────────
 
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -427,11 +466,11 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid platform. Must be "X" or "Telegram"' })
     }
 
-    // Fetch live data in parallel
+    // Fetch live data in parallel (checkScammerDatabase is now async)
     const [xProfile, victimReports, knownScammer] = await Promise.all([
       platform === 'X' ? fetchXProfile(username) : Promise.resolve(undefined),
       searchVictimReports(username),
-      Promise.resolve(checkScammerDatabase(username, platform)),
+      checkScammerDatabase(username, platform),
     ])
 
     // Detect red flags
@@ -469,6 +508,7 @@ router.post('/', async (req: Request, res: Response) => {
       xProfile ? `Profile data analyzed: ${xProfile.isVerified ? 'Verified' : 'Unverified'}, ${xProfile.followers?.toLocaleString() || 'N/A'} followers` : 'Profile data unavailable',
       victimReports.totalReports > 0 ? `${victimReports.totalReports} victim report(s) found on Reddit` : 'No victim reports found',
       `Investigation timestamp: ${new Date().toISOString()}`,
+      isSupabaseConfigured ? 'Scammer database: Supabase (cloud)' : 'Scammer database: local fallback',
     ]
 
     // Build result
@@ -485,17 +525,64 @@ router.post('/', async (req: Request, res: Response) => {
       knownScammer,
       evidence,
       dataSource: 'live',
-      fullReport: '', // Will be generated below
+      fullReport: '', // generated below
     }
 
-    // Generate full report
+    // Generate full report text
     result.fullReport = generateFullReport(result)
+
+    // ── Persist to Supabase ───────────────────────────────────────────────────
+    const scanRow: ScanResultRow = {
+      username: username.replace(/^@/, ''),
+      platform,
+      risk_score: riskScore,
+      red_flags: redFlags,
+      verification_level: verificationLevel,
+      scam_type: scamType,
+      recommended_action: recommendedAction,
+      full_report: result.fullReport,
+      x_profile: xProfile as any,
+      victim_reports: victimReports as any,
+      known_scammer_match: knownScammer as any,
+      evidence,
+      data_source: 'live',
+      wallet_address: walletAddress || undefined,
+    }
+
+    const supabaseId = await storeScanResult(scanRow)
+    if (supabaseId) {
+      result.supabaseId = supabaseId
+      console.log(`[Supabase] Scan stored: ${supabaseId} (${username})`)
+    }
 
     // Return result
     res.json({ results: [result], mock: false })
   } catch (error) {
     console.error('Scam detection error:', error)
-    res.status(500).json({ error: 'Internal server error', detail: error instanceof Error ? error.message : 'Unknown error' })
+    res.status(500).json({
+      error: 'Internal server error',
+      detail: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// ─── GET /api/scam-detect/history ────────────────────────────────────────────
+
+router.get('/history', async (req: Request, res: Response) => {
+  try {
+    const { username, wallet, limit } = req.query as Record<string, string>
+
+    const { getRecentScanResults } = await import('../lib/supabase.js')
+    const results = await getRecentScanResults({
+      username: username || undefined,
+      walletAddress: wallet || undefined,
+      limit: limit ? parseInt(limit) : 50,
+    })
+
+    res.json({ results, count: results.length })
+  } catch (error) {
+    console.error('Scan history error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 
