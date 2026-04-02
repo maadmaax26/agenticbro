@@ -639,6 +639,8 @@ function App() {
                 if (section === 'roadmap') setShowRoadmap(true)
                 if (section === 'features') setShowValueProp(true)
                 if (section === 'scanners') setShowScamDatabase(true)
+                if (section === 'holder') setShowTierPage('holder')
+                if (section === 'whale') setShowTierPage('whale')
               }}
               onLoginClick={() => {
                 setAuthMode('login')
