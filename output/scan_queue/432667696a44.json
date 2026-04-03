@@ -1,0 +1,23 @@
+{
+  "id": "432667696a44",
+  "username": "BitcoinMagazine",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T16:35:55.334199",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T16:36:21.400082",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2891
+  },
+  "completed_at": "2026-04-03T16:36:29.414490"
+}

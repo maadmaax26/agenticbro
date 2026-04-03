@@ -1,0 +1,23 @@
+{
+  "id": "032f1c43780a",
+  "username": "srial_chllr",
+  "source": "x_search",
+  "search_term": "send SOL to receive",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:01:01.613824",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:01:01.625252",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 3691
+  },
+  "completed_at": "2026-04-03T10:01:09.633877"
+}

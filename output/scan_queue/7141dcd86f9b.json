@@ -1,0 +1,24 @@
+{
+  "id": "7141dcd86f9b",
+  "username": "Malcolm_Pal9",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:51:48.918012",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T11:13:12.778603",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "DM solicitation"
+    ],
+    "text_length": 2696
+  },
+  "completed_at": "2026-04-03T11:13:20.786947"
+}

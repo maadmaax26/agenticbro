@@ -1,0 +1,25 @@
+{
+  "id": "6c21b29ca594",
+  "username": "MKTGWeb3",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T04:47:11.527207",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:10:40.300143",
+  "result": {
+    "status": "active",
+    "risk_score": 6.111111111111112,
+    "level": "HIGH",
+    "red_flags": [
+      "DM solicitation",
+      "Unrealistic returns",
+      "Free crypto"
+    ],
+    "text_length": 2656
+  },
+  "completed_at": "2026-04-03T07:10:48.311183"
+}
