@@ -1,0 +1,21 @@
+{
+  "id": "8244a9d64602",
+  "username": "foresaken_a",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:30:37.836099",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:31:03.878804",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 3223
+  },
+  "completed_at": "2026-04-03T07:31:11.884947"
+}

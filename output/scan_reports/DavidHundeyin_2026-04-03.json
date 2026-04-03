@@ -1,0 +1,21 @@
+{
+  "id": "144c8289551f",
+  "username": "DavidHundeyin",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:40:53.463431",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:40:53.468569",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 3499
+  },
+  "completed_at": "2026-04-03T07:41:01.475574"
+}

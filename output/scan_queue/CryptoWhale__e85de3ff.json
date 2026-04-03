@@ -1,0 +1,14 @@
+{
+  "id": "e85de3ff",
+  "username": "CryptoWhale_",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "pending",
+  "discovered_at": "2026-04-03T17:21:10.216395",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "DM solicitation"
+  ],
+  "risk_score": 1.5
+}
