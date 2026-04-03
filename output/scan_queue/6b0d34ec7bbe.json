@@ -1,0 +1,23 @@
+{
+  "id": "6b0d34ec7bbe",
+  "username": "X95Xander",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:40:53.462355",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T08:01:50.971063",
+  "result": {
+    "status": "active",
+    "risk_score": 2.2222222222222223,
+    "level": "LOW",
+    "red_flags": [
+      "Giveaway"
+    ],
+    "text_length": 3355
+  },
+  "completed_at": "2026-04-03T08:01:58.976293"
+}

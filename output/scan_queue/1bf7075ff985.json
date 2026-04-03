@@ -1,0 +1,21 @@
+{
+  "id": "1bf7075ff985",
+  "username": "CurlyCryptoguy",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:31:16.944924",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:31:16.950236",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 4140
+  },
+  "completed_at": "2026-04-03T10:31:24.959825"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "3b3154d39fbf",
+  "username": "OceanStarsEsp",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:51:09.092022",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:51:09.104348",
+  "result": {
+    "status": "active",
+    "risk_score": 2.2222222222222223,
+    "level": "LOW",
+    "red_flags": [
+      "Giveaway"
+    ],
+    "text_length": 3863
+  },
+  "completed_at": "2026-04-03T07:51:17.112567"
+}

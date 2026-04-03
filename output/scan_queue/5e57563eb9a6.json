@@ -1,0 +1,24 @@
+{
+  "id": "5e57563eb9a6",
+  "username": "venbies",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:01:59.310224",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T23:17:36.521389",
+  "result": {
+    "status": "active",
+    "risk_score": 2.7777777777777777,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation",
+      "Airdrop"
+    ],
+    "text_length": 2712
+  },
+  "completed_at": "2026-04-02T23:17:44.528958"
+}
