@@ -1,0 +1,19 @@
+{
+  "id": "caf2dac1",
+  "username": "CORA",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.207611",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0xd8227c7e269e42a6f05d6bccbeca921fbb78c3b029b963d37769914ba9595984",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888374"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}
