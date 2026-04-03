@@ -1,0 +1,23 @@
+{
+  "id": "3a7187fae634",
+  "username": "butter6868",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T02:22:33.403987",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T02:22:59.453557",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 4274
+  },
+  "completed_at": "2026-04-03T02:39:05.731576"
+}
