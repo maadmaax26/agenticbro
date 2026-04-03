@@ -1,0 +1,14 @@
+{
+  "id": "0ca08bbf",
+  "username": "NFTMintFree",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "pending",
+  "discovered_at": "2026-04-03T17:21:10.217634",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "Wallet drainer"
+  ],
+  "risk_score": 2.0
+}

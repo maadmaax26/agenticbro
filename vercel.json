@@ -24,6 +24,8 @@
     }
   },
   "rewrites": [
+    { "source": "/api/scan/:job_id", "destination": "/api/scan/[job_id].ts" },
+    { "source": "/api/scan", "destination": "/api/scan.ts" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
