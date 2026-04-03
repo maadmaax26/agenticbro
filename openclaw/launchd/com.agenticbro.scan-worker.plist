@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  AgenticBro Scan Worker — launchd Service
+  =========================================
+  Install to ~/Library/LaunchAgents/ on Mac Studio.
+
+  BEFORE LOADING:
+    1. Replace YOUR_SERVICE_ROLE_KEY_HERE with the real key from:
+       Supabase Dashboard → Project Settings → API → service_role
+
+  Load / start:
+    cp com.agenticbro.scan-worker.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.agenticbro.scan-worker.plist
+
+  Verify running:
+    launchctl list | grep agenticbro
+
+  Watch logs:
+    tail -f /tmp/agenticbro-scan-worker.log
+
+  Reload after editing:
+    launchctl unload ~/Library/LaunchAgents/com.agenticbro.scan-worker.plist
+    launchctl load  ~/Library/LaunchAgents/com.agenticbro.scan-worker.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agenticbro.scan-worker</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/earl/agenticbro/openclaw/workers/scan_worker.py</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SUPABASE_URL</key>
+    <string>https://drvasofyghnxfxvkkwad.supabase.co</string>
+    <key>SUPABASE_SERVICE_ROLE_KEY</key>
+    <string>YOUR_SERVICE_ROLE_KEY_HERE</string>
+  </dict>
+
+  <!-- Start automatically when launchd loads (login / boot) -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart automatically if the process exits for any reason -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Log stdout and stderr to /tmp for easy tail -f debugging -->
+  <key>StandardOutPath</key>
+  <string>/tmp/agenticbro-scan-worker.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/agenticbro-scan-worker.err</string>
+
+  <!-- Throttle restarts: wait 10 s before restarting after crash -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>

@@ -15,6 +15,12 @@
     },
     "api/telegram/priority-scan.ts": {
       "maxDuration": 30
+    },
+    "api/scan.ts": {
+      "maxDuration": 15
+    },
+    "api/scan/[job_id].ts": {
+      "maxDuration": 10
     }
   },
   "rewrites": [

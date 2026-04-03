@@ -55,27 +55,65 @@ interface ProfileVerifyResult {
   dataSource: 'chrome_cdp' | 'pattern_analysis' | 'fallback';
 }
 
-// ─── Chrome CDP Scanner Configuration ───────────────────────────────────────────
+// ─── Supabase Queue-Based Scanner ───────────────────────────────────────────────
+// Replaces the old ngrok / LOCAL_SCANNER_URL approach.
+// Submits a profile scan job to Supabase; Mac Studio worker picks it up async.
 
-const LOCAL_SCANNER_URL = process.env.LOCAL_SCANNER_URL || 'http://localhost:3002';
+import { createClient } from '@supabase/supabase-js';
 
+const _supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+/**
+ * Submit a profile scan job to the Supabase queue and wait for completion.
+ * Times out after 30 s and returns null (falls back to pattern analysis).
+ */
 async function callLocalScanner(platform: string, username: string): Promise<any> {
   try {
-    const response = await fetch(`${LOCAL_SCANNER_URL}/api/v1/scan/profile`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, username }),
-      signal: AbortSignal.timeout(30000), // 30 second timeout
-    });
-    
-    if (!response.ok) {
-      console.error('Local scanner error:', response.status);
+    // 1. Enqueue the job
+    const { data: job, error: insertErr } = await _supabase
+      .from('scan_jobs')
+      .insert({
+        scan_type: 'profile',
+        payload: { username, platform },
+        status: 'pending',
+        priority: 3, // profile scans get slightly higher priority
+      })
+      .select('id')
+      .single();
+
+    if (insertErr || !job) {
+      console.error('[profile-verify] Failed to enqueue scan job:', insertErr?.message);
       return null;
     }
-    
-    return await response.json();
+
+    // 2. Poll for completion (max 30 s, 1 s interval)
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const { data: row } = await _supabase
+        .from('scan_jobs')
+        .select('status, result')
+        .eq('id', job.id)
+        .single();
+
+      if (row?.status === 'completed' && row.result) {
+        // Normalise to the shape expected by the handler below
+        return { success: true, data: row.result };
+      }
+      if (row?.status === 'failed' || row?.status === 'timeout') {
+        console.error('[profile-verify] Scan job failed:', row);
+        return null;
+      }
+    }
+
+    console.warn('[profile-verify] Scan job timed out waiting for result:', job.id);
+    return null;
   } catch (error) {
-    console.error('Failed to call local scanner:', error);
+    console.error('[profile-verify] Queue scan error:', error);
     return null;
   }
 }
