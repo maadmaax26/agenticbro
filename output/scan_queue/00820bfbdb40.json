@@ -1,0 +1,21 @@
+{
+  "id": "00820bfbdb40",
+  "username": "Autoalpha11",
+  "source": "x_search",
+  "search_term": "legit or scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T15:13:47.236425",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T15:13:47.263251",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T15:13:55.272710"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "5a126e16e58f",
+  "username": "FrostByteEz",
+  "source": "x_search",
+  "search_term": "is this a scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:20:51.574600",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T13:21:30.643981",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T13:21:38.655778"
+}

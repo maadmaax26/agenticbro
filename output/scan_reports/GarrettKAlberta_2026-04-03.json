@@ -1,0 +1,23 @@
+{
+  "id": "203a5d067f25",
+  "username": "GarrettKAlberta",
+  "source": "x_search",
+  "search_term": "has anyone used @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T16:35:55.334921",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T16:35:55.365405",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 4479
+  },
+  "completed_at": "2026-04-03T16:36:03.377092"
+}

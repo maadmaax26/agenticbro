@@ -1,0 +1,21 @@
+{
+  "id": "372b7cee3468",
+  "username": "TmascOchako",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:42:59.286334",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T14:43:12.336917",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T14:43:20.345665"
+}

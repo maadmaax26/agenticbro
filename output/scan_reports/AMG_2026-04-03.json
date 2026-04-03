@@ -1,0 +1,19 @@
+{
+  "id": "c50a6c79",
+  "username": "AMG",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.206922",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "Bjx64J3sPdHYD6uMnTJyS1VGU6XLjcFcQZuYAtuoHLEY",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888360"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

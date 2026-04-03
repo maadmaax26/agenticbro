@@ -1,0 +1,24 @@
+{
+  "id": "3ec95461feac",
+  "username": "caedibl",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T00:30:58.265191",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T00:31:50.344828",
+  "result": {
+    "status": "active",
+    "risk_score": 2.7777777777777777,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation",
+      "Airdrop"
+    ],
+    "text_length": 3009
+  },
+  "completed_at": "2026-04-03T00:31:58.353258"
+}

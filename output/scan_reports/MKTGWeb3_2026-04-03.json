@@ -1,0 +1,55 @@
+{
+  "scan_id": "MKTGweb3_20260403_100100",
+  "scan_date": "2026-04-03T10:01:00.000Z",
+  "platform": "X (Twitter)",
+  "handle": "@MKTGweb3",
+  "username": "MKTGweb3",
+  "target_handle": "@MKTGweb3",
+  "target_name": "Leo 🐙",
+  "display_name": "Leo 🐙",
+  "risk_score": 0.5,
+  "risk_level": "LOW",
+  "verification_level": "LEGITIMATE",
+  "verification_status": "VERIFIED",
+  "status": "ACTIVE",
+  "classification": "Legitimate Account",
+  "scam_type": "None",
+  "notes": "Verified marketing professional with 3+ year history, 221K followers, no scam indicators",
+  "summary": {
+    "title": "Legitimate Marketing Professional",
+    "recommendation": "SAFE TO ENGAGE",
+    "key_findings": [
+      "Verified account (blue checkmark)",
+      "3+ year account age (joined May 2022)",
+      "221.1K followers, 12.4K following",
+      "36.1K posts - highly active",
+      "Professional marketing focus",
+      "No red flags detected"
+    ],
+    "notes": "Runs @pastelalpha, growth/marketing professional"
+  },
+  "profile": {
+    "bio": "Degen / Alpha Caller | @pastelalpha. Driving growth & innovation through data-driven marketing strategies.",
+    "followers": 221100,
+    "following": 12400,
+    "posts": 36100,
+    "join_date": "2022-05",
+    "verified": true
+  },
+  "red_flags": {
+    "guaranteed_returns": false,
+    "private_alpha": false,
+    "unrealistic_claims": false,
+    "urgency_tactics": false,
+    "no_track_record": false,
+    "requests_crypto": false,
+    "no_verification": false,
+    "fake_followers": false,
+    "new_account": false,
+    "vip_upsell": false
+  },
+  "evidence_links": [],
+  "evidence": [],
+  "scanner": "Jarvis",
+  "x_handle": "@MKTGweb3"
+}

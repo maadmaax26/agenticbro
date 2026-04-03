@@ -50,7 +50,7 @@ REQUEUE_TICK  = 12      # call requeue_timed_out_jobs every N ticks (~60 s)
 # ── Scan script paths ─────────────────────────────────────────────────────────
 # Adjust these paths to match your actual scam-detection-framework layout.
 
-BASE = os.path.expanduser("~/agenticbro/scam-detection-framework")
+BASE = "/Users/efinney/agenticbro/scam-detection-framework"
 
 SCAN_SCRIPTS = {
     "token":   os.path.join(BASE, "token_scan.py"),

@@ -1,0 +1,21 @@
+{
+  "id": "53656ebc7393",
+  "username": "MJTruthUltra",
+  "source": "x_search",
+  "search_term": "send SOL to receive",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:47:31.195263",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T23:47:44.217349",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-02T23:47:52.225085"
+}

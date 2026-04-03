@@ -1,0 +1,20 @@
+{
+  "id": "f367c5a3",
+  "username": "AGT",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.203987",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "AdXTCJBTnpG2vBCW2qvXmRTc56qVjpz9oYoueP8RqZCF",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888317"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

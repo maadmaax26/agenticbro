@@ -1,0 +1,21 @@
+{
+  "id": "28a165c21739",
+  "username": "gimjinh77441238",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:41:32.872287",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:41:45.894054",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T10:41:53.901194"
+}

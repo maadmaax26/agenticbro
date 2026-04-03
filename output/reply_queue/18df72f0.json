@@ -1,0 +1,16 @@
+{
+  "id": "18df72f0",
+  "reply_type": "USER_INQUIRY",
+  "username": "SecretSpy039",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @SecretSpy039:\n\nRisk Level: LOW (2.8/10)\nRed Flags: DM solicitation, Airdrop\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/SecretSpy039\n\n#CryptoSafety",
+  "risk_level": "LOW",
+  "risk_score": 2.7777777777777777,
+  "red_flags": [
+    "DM solicitation",
+    "Airdrop"
+  ],
+  "search_term": "ending soon airdrop",
+  "report_url": "https://agenticbro.app/scan/SecretSpy039",
+  "created_at": "2026-04-03T07:35:51.302386",
+  "status": "pending_approval"
+}
