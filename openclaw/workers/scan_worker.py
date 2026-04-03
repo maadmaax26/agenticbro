@@ -19,6 +19,13 @@ Setup:
 Or use the launchd plist to run automatically on startup.
 """
 
+# Add user site-packages to path for launchd
+import sys
+import os
+user_site = os.path.expanduser('~/Library/Python/3.9/lib/python/site-packages')
+if user_site not in sys.path:
+    sys.path.insert(0, user_site)
+
 import json
 import logging
 import os
@@ -62,9 +69,11 @@ SCAN_SCRIPTS = {
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+from typing import Any, Dict, Optional
+
 # ── Job lifecycle helpers ─────────────────────────────────────────────────────
 
-def claim_job() -> dict | None:
+def claim_job() -> Optional[Dict[str, Any]]:
     """Atomically claim the next pending job (SKIP LOCKED, race-condition safe)."""
     try:
         result = supabase.rpc(
@@ -118,7 +127,7 @@ def fail_job(job_id: str, error: str) -> None:
 
 # ── Scan execution ────────────────────────────────────────────────────────────
 
-def run_scan(job: dict) -> dict:
+def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
     """Run the appropriate local scan script and return parsed JSON result."""
     scan_type = job["scan_type"]
     payload   = job["payload"]
@@ -155,7 +164,7 @@ def run_scan(job: dict) -> dict:
     return json.loads(proc.stdout)
 
 
-def process_job(job: dict) -> None:
+def process_job(job: Dict[str, Any]) -> None:
     """Orchestrate the full lifecycle of one scan job."""
     job_id = job["id"]
     log.info(
