@@ -302,7 +302,7 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
     
     if (data && data.length > 0) {
       const row = data[0];
-      const level = (row.verification_level || 'UNVERIFIED').toUpperCase();
+      const level = (row.verification_level || row.threat_level || 'UNVERIFIED').toUpperCase();
       console.log('[profile-verify] Found:', row.username, level);
       return {
         found: true,
