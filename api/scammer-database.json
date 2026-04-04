@@ -258,12 +258,14 @@
     "Telegram Channel": "",
     "Victims Count": "Unknown",
     "Total Lost USD": "Unknown",
-    "Verification Level": "UNVERIFIED",
+    "Verification Level": "HIGH RISK",
     "Scam Type": "Pump & Dump",
     "Last Updated": "2026-04-03",
-    "Notes": "Unrealistic return claims",
+    "Notes": "Unrealistic return claims. Known pump & dump promoter. Gem/promoter pattern. 100x claims. VERIFIED SCAMMER - do not engage.",
     "Wallet Address": "",
-    "Evidence Links": ""
+    "Evidence Links": "",
+    "verification_level": "HIGH RISK",
+    "scam_type": "Pump & Dump"
   },
   {
     "Scammer Name": "PresaleKing",
