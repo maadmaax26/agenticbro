@@ -127,6 +127,42 @@ def fail_job(job_id: str, error: str) -> None:
 
 # ── Scan execution ────────────────────────────────────────────────────────────
 
+def check_scan_report_cache(username: str) -> Optional[Dict[str, Any]]:
+    """Check for existing scan report in output directory."""
+    # Use fixed path to workspace
+    workspace_dir = "/Users/efinney/.openclaw/workspace"
+    output_dir = os.path.join(workspace_dir, "output", "scan_reports")
+    
+    if not os.path.exists(output_dir):
+        return None
+    
+    # Look for existing report
+    for filename in os.listdir(output_dir):
+        if username.lower() in filename.lower() and filename.endswith('.json'):
+            filepath = os.path.join(output_dir, filename)
+            try:
+                with open(filepath, 'r') as f:
+                    data = json.load(f)
+                    # Check if report is recent (within 24 hours)
+                    scan_date = data.get("scan_date", "")
+                    if scan_date:
+                        try:
+                            from datetime import datetime, timedelta
+                            # Handle various date formats
+                            scan_dt_str = scan_date.split("+")[0].split("Z")[0]
+                            if "T" in scan_dt_str:
+                                scan_dt = datetime.fromisoformat(scan_dt_str)
+                                if datetime.now() - scan_dt.replace(tzinfo=None) < timedelta(hours=24):
+                                    log.info("Found cached report: %s", filename)
+                                    return data
+                        except Exception as e:
+                            log.warning("Failed to parse scan_date: %s", e)
+            except Exception as e:
+                log.warning("Failed to read cache: %s", e)
+    
+    return None
+
+
 def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
     """Run the appropriate local scan script and return parsed JSON result."""
     scan_type = job["scan_type"]
@@ -135,6 +171,14 @@ def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
     script = SCAN_SCRIPTS.get(scan_type, SCAN_SCRIPTS["token"])
     if not os.path.exists(script):
         raise FileNotFoundError(f"Scan script not found: {script}")
+    
+    # For profile scans, check cache first
+    if scan_type == "profile" and payload.get("username"):
+        username = payload["username"].lstrip("@")
+        cached = check_scan_report_cache(username)
+        if cached:
+            log.info("Using cached scan report for %s", username)
+            return cached
 
     # Build CLI args
     cmd = ["python3", script, "--json"]
@@ -148,6 +192,10 @@ def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
         cmd += ["--chain", payload["options"]["chain"]]
     if payload.get("options", {}).get("deepScan"):
         cmd.append("--deep")
+    
+    # Always use cache for profile scans
+    if scan_type == "profile":
+        cmd.append("--use-cache")
 
     log.info("Running: %s", " ".join(cmd))
 
