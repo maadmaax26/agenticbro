@@ -1,0 +1,85 @@
+{
+  "scan_date": "2026-04-03T19:56:00Z",
+  "scanner": "Jarvis (Chrome CDP)",
+  "platform": "X/Twitter",
+  "handle": "@Degen_chad119",
+  "display_name": "Mania",
+  "profile_data": {
+    "followers": "7,825",
+    "following": "2,178",
+    "posts": "3,733",
+    "join_date": "August 2017",
+    "account_age_years": 8,
+    "verified": false,
+    "location": "All time high",
+    "bio": "Notable investor and advisor |KOL For Notable projects|Keep building|partnered: @MezoNetwork $ETH $SOL $ARB $LINK $ASTER $BULLISH",
+    "telegram": "t.me/Degen_chad119",
+    "website": null,
+    "cash_tags": ["$ETH", "$SOL", "$ARB", "$LINK", "$ASTER", "$BULLISH", "$ROCKET"]
+  },
+  "recent_tweets": [
+    {
+      "text": "Why bringing my name into this 'Mania'",
+      "date": "2025-04-28",
+      "likes": 90,
+      "retweets": 4,
+      "replies": 22
+    },
+    {
+      "text": "If you're looking for a perfect entry, you're only fading again and again. The movement is massive with $ROCKET. You need a perfect entry? Hahaha. See you at the top. Ca: 4YiLHDR4B4pE4R5GUMA8HG8YunyeLwcobtEtvwMupump",
+      "date": "2026-04-03",
+      "likes": 47,
+      "retweets": 13,
+      "replies": 22
+    },
+    {
+      "text": "The most used symbol in crypto. The universal signal for 'we're going to the moon.' Trillions flow through markets... Billions are spent on $ROCKET every year... The symbol that turned 'price go up' into a global language. $ROCKET isn't a coin.",
+      "date": "2026-04-03",
+      "likes": 76,
+      "retweets": 51,
+      "replies": 24
+    },
+    {
+      "text": "I tried to tell you $ogg was for real. The chart will speak for itself soon.",
+      "date": "2026-04-03",
+      "likes": 33,
+      "retweets": 10,
+      "replies": 8
+    }
+  ],
+  "red_flags": {
+    "guaranteed_returns": false,
+    "private_alpha": false,
+    "unrealistic_claims": true,
+    "urgency_tactics": true,
+    "no_track_record": false,
+    "requests_crypto": false,
+    "no_verification": true,
+    "fake_followers": false,
+    "new_account": false,
+    "vip_upsell": true,
+    "external_warnings": true
+  },
+  "risk_score": {
+    "calculation": {
+      "unrealistic_claims": 15,
+      "urgency_tactics": 10,
+      "no_verification": 5,
+      "vip_upsell": 2,
+      "external_warnings": 15
+    },
+    "total_points": 47,
+    "max_points": 90,
+    "score": 5.2
+  },
+  "verification_level": "PARTIALLY VERIFIED",
+  "external_evidence": [
+    {
+      "source": "Nicegram Platform",
+      "warning": "Many users reported this account as a scam or fake account",
+      "url": "nicegram.app"
+    }
+  ],
+  "notes": "Account has external scam warnings on Nicegram platform. Self-proclaimed 'KOL' and 'Notable investor' with no verification. Actively promoting $ROCKET token with contract address. Telegram channel linked in bio. High engagement metrics suggest legitimate following but promotional content pattern indicates paid promoter or shill account. Recommended for PARTIALLY VERIFIED status with caution advised.",
+  "recommendation": "EXERCISE CAUTION - External scam reports exist. Account appears to be a paid promoter/shill account. Verify any token promotions independently before engaging."
+}
