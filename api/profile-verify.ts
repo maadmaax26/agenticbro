@@ -302,13 +302,15 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
     
     if (data && data.length > 0) {
       const row = data[0];
-      const level = (row.verification_level || row.threat_level || 'UNVERIFIED').toUpperCase();
-      console.log('[profile-verify] Found:', row.username, level);
+      // Use verification_level, threat_level, or fallback
+      const rawLevel = row.verification_level || row.threat_level || 'UNVERIFIED';
+      const level = rawLevel.toUpperCase();
+      console.log('[profile-verify] Found:', row.username, 'verification_level:', row.verification_level, 'threat_level:', row.threat_level, 'normalized:', level);
       return {
         found: true,
         level,
         scamType: row.scam_type || 'Unknown',
-        riskScore: row.risk_score || (level === 'HIGH RISK' ? 95 : level === 'LEGITIMATE' ? 5 : 50),
+        riskScore: row.risk_score || (level === 'HIGH RISK' ? 95 : level === 'CRITICAL' ? 95 : level === 'LEGITIMATE' ? 5 : 50),
         notes: row.notes || '',
       };
     }
@@ -445,9 +447,10 @@ export default async function handler(
         
         // Check known scammers database
         const knownScammer = await checkKnownScammers(cleanUsername);
+        console.log('[profile-verify] Known scammer check result:', JSON.stringify(knownScammer));
         if (knownScammer.found) {
           // Override risk score for known scammers
-          if (knownScammer.level === 'HIGH RISK') {
+          if (knownScammer.level === 'HIGH RISK' || knownScammer.level === 'CRITICAL') {
             riskScore = Math.max(riskScore, 8.0); // At least 8/10 for known scammers
             redFlags.unshift('KNOWN SCAMMER - In database as HIGH RISK');
             verificationLevel = 'HIGH RISK';
