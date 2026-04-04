@@ -163,6 +163,51 @@ def check_scan_report_cache(username: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def normalize_profile_result(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize profile scan result to flat structure expected by API."""
+    # If data has nested profile_data, flatten it
+    if "profile_data" in data and isinstance(data.get("profile_data"), dict):
+        pd = data["profile_data"]
+        
+        # Extract followers/following as strings
+        followers = pd.get("followers", "")
+        following = pd.get("following", "")
+        
+        # Extract verified status
+        verified = pd.get("verified", False)
+        
+        # Extract risk score
+        risk_score = data.get("risk_score", {})
+        if isinstance(risk_score, dict):
+            score = risk_score.get("score", 0)
+        else:
+            score = risk_score
+        
+        # Build flat structure
+        return {
+            "scan_type": data.get("scan_type", "profile"),
+            "target_handle": data.get("target_handle", ""),
+            "scan_date": data.get("scan_date", ""),
+            "platform": data.get("platform", "twitter"),
+            "username": pd.get("username", ""),
+            "display_name": pd.get("display_name", ""),
+            "followers": followers,
+            "following": following,
+            "verified": verified,
+            "bio": pd.get("bio", ""),
+            "risk_score": score,
+            "risk_level": risk_score.get("risk_level", "UNKNOWN") if isinstance(risk_score, dict) else "UNKNOWN",
+            "verification_level": data.get("verification_level", "UNVERIFIED"),
+            "red_flags": data.get("red_flags", []) or list(data.get("red_flag_analysis", {}).keys()) if data.get("red_flag_analysis") else [],
+            "evidence": data.get("evidence", []),
+            "profile_data": pd,  # Keep nested data for reference
+            "final_verdict": data.get("final_verdict", {}),
+        }
+    
+    # Already flat, return as-is
+    return data
+
+
 def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
     """Run the appropriate local scan script and return parsed JSON result."""
     scan_type = job["scan_type"]
@@ -178,7 +223,8 @@ def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
         cached = check_scan_report_cache(username)
         if cached:
             log.info("Using cached scan report for %s", username)
-            return cached
+            # Normalize cached data to flat structure
+            return normalize_profile_result(cached)
 
     # Build CLI args
     cmd = ["python3", script, "--json"]
