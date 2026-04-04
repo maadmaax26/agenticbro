@@ -252,8 +252,13 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
+    console.log('[profile-verify] Checking known scammers for:', handle);
+    console.log('[profile-verify] Supabase URL:', supabaseUrl ? 'set' : 'not set');
+    console.log('[profile-verify] Supabase Key:', supabaseKey ? 'set' : 'not set');
+    
     if (!supabaseUrl || !supabaseKey) {
       // Fallback to local JSON
+      console.log('[profile-verify] Using local JSON fallback');
       const dbPath = path.join(process.cwd(), 'api', 'scammer-database.json');
       if (fs.existsSync(dbPath)) {
         const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
@@ -262,13 +267,14 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
           (row.username || '').toLowerCase() === handle
         );
         if (match) {
-          const level = (row['Verification Level'] || row.verification_level || 'UNVERIFIED').toUpperCase();
+          const level = (match['Verification Level'] || match.verification_level || 'UNVERIFIED').toUpperCase();
+          console.log('[profile-verify] Found in local JSON:', level);
           return {
             found: true,
             level,
-            scamType: row['Scam Type'] || row.scam_type || 'Unknown',
+            scamType: match['Scam Type'] || match.scam_type || 'Unknown',
             riskScore: level === 'HIGH RISK' ? 95 : level === 'LEGITIMATE' ? 5 : 50,
-            notes: row['Notes'] || row.notes || '',
+            notes: match['Notes'] || match.notes || '',
           };
         }
       }
@@ -276,22 +282,28 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
     }
     
     // Check Supabase
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/known_scammers?or=(x_handle.ilike.%25${handle}%25,username.ilike.%25${handle}%25)&limit=1`,
-      {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-      }
-    );
+    const queryUrl = `${supabaseUrl}/rest/v1/known_scammers?or=(x_handle.ilike.%25${handle}%25,username.ilike.%25${handle}%25)&limit=1`;
+    console.log('[profile-verify] Querying:', queryUrl);
     
-    if (!res.ok) return { found: false };
+    const res = await fetch(queryUrl, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+    });
+    
+    if (!res.ok) {
+      console.log('[profile-verify] Supabase error:', res.status, res.statusText);
+      return { found: false };
+    }
     
     const data = await res.json();
+    console.log('[profile-verify] Supabase returned:', data.length, 'records');
+    
     if (data && data.length > 0) {
       const row = data[0];
       const level = (row.verification_level || 'UNVERIFIED').toUpperCase();
+      console.log('[profile-verify] Found:', row.username, level);
       return {
         found: true,
         level,
@@ -302,7 +314,8 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
     }
     
     return { found: false };
-  } catch {
+  } catch (error) {
+    console.error('[profile-verify] Error checking known scammers:', error);
     return { found: false };
   }
 }
@@ -426,6 +439,34 @@ export default async function handler(
           else if (flag.includes('follower ratio')) riskScore += 0.5;
           else if (flag.includes('Not verified')) riskScore += 0.3;
           else riskScore += 0.5;
+        }
+        
+        // Check known scammers database
+        const knownScammer = await checkKnownScammers(cleanUsername);
+        if (knownScammer.found) {
+          // Override risk score for known scammers
+          if (knownScammer.level === 'HIGH RISK') {
+            riskScore = Math.max(riskScore, 8.0); // At least 8/10 for known scammers
+            redFlags.unshift('KNOWN SCAMMER - In database as HIGH RISK');
+            verificationLevel = 'HIGH RISK';
+          } else if (knownScammer.level === 'LEGITIMATE') {
+            riskScore = Math.min(riskScore, 2.0); // Max 2/10 for legitimate accounts
+            redFlags.unshift('Known legitimate account');
+            verificationLevel = 'LEGITIMATE';
+          } else if (knownScammer.level === 'PAID PROMOTER') {
+            riskScore = Math.max(riskScore, 3.0);
+            redFlags.unshift('Known paid promoter - verify promoted projects independently');
+            verificationLevel = 'PAID PROMOTER';
+          } else if (knownScammer.level === 'VERIFIED') {
+            // Verified scammer in database
+            riskScore = Math.max(riskScore, 9.0);
+            redFlags.unshift('VERIFIED SCAMMER - Multiple victim reports');
+            verificationLevel = 'VERIFIED';
+          }
+          
+          if (knownScammer.scamType) {
+            scamType = knownScammer.scamType;
+          }
         }
         
         // Cap at 10
