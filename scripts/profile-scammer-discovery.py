@@ -125,6 +125,14 @@ LEGITIMATE_TOKENS = {
     'SOL': 'So11111111111111111111111111111111111111112',
 }
 
+# Known legitimate profiles (never flag these)
+LEGITIMATE_PROFILES = {
+    # Agentic Bro official accounts
+    'agntcbro',
+    'agenticbro',
+    # Add other verified legitimate accounts here
+}
+
 # Token impersonation patterns (highest confidence detection)
 TOKEN_IMPERSONATION_PATTERNS = [
     # Direct symbol matches (95% confidence)
