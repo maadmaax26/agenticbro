@@ -426,6 +426,8 @@ export default async function handler(
         
         // Calculate risk from real data
         let riskScore = 2.0;
+        let verificationLevel: string | undefined;
+        let scamType: string | undefined;
         const redFlags: string[] = [...(data.red_flags || [])];
         
         // Add risk points for each red flag
