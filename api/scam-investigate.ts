@@ -627,11 +627,24 @@ function computeRiskScore(
   else if (victimCount >= 1) score += 0.5
 
   if (dbMatch) {
-    const level = dbMatch['Verification Level']
-    if (level === 'Verified' || level === 'High Risk') score += 2
-    else if (level === 'Partially Verified') score += 1
-    else if (level === 'Legitimate') score -= 2
-    else score += 0.5
+    const level = (dbMatch['Verification Level'] || '').toLowerCase()
+    if (level === 'verified' || level === 'high risk' || level === 'legitimate') {
+      // Known scammer or verified safe
+      if (level === 'high risk' || level === 'verified') score += 4  // Known scammer - high boost
+      else if (level === 'verified') score += 2  // Verified scammer
+      else if (level === 'legitimate') score -= 3  // Known safe
+    } else if (level === 'partially verified') {
+      score += 1.5
+    } else if (level === 'unverified') {
+      score += 0.5
+    }
+
+    // Also boost based on database risk_score if available
+    const dbRiskScore = (dbMatch as any).risk_score || (dbMatch as any)['Risk Score']
+    if (dbRiskScore && typeof dbRiskScore === 'number') {
+      // Add half the database risk score (0-100 scale, convert to 0-5 boost)
+      score += Math.min(5, dbRiskScore / 20)
+    }
   }
 
   return Math.min(10, Math.max(1, parseFloat(score.toFixed(1))))
