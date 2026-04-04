@@ -448,9 +448,11 @@ export default async function handler(
         // Check known scammers database
         const knownScammer = await checkKnownScammers(cleanUsername);
         console.log('[profile-verify] Known scammer check result:', JSON.stringify(knownScammer));
-        if (knownScammer.found) {
+        if (knownScammer && knownScammer.found) {
+          console.log('[profile-verify] FOUND KNOWN SCAMMER:', knownScammer.level, knownScammer.scamType);
           // Override risk score for known scammers
           if (knownScammer.level === 'HIGH RISK' || knownScammer.level === 'CRITICAL') {
+            console.log('[profile-verify] Setting HIGH RISK - boosting riskScore');
             riskScore = Math.max(riskScore, 8.0); // At least 8/10 for known scammers
             redFlags.unshift('KNOWN SCAMMER - In database as HIGH RISK');
             verificationLevel = 'HIGH RISK';
