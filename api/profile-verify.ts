@@ -9,6 +9,9 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import fetch from 'node-fetch';
+import fs from 'fs';
+import path from 'path';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -238,6 +241,70 @@ function calculateRiskLevel(score: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICA
   if (score >= 50) return 'HIGH';
   if (score >= 30) return 'MEDIUM';
   return 'LOW';
+}
+
+// ─── Known Scammers Database Check ───────────────────────────────────────────
+
+async function checkKnownScammers(username: string): Promise<{ found: boolean; level?: string; scamType?: string; riskScore?: number; notes?: string }> {
+  const handle = username.replace(/^@/, '').toLowerCase();
+  
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      // Fallback to local JSON
+      const dbPath = path.join(process.cwd(), 'api', 'scammer-database.json');
+      if (fs.existsSync(dbPath)) {
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+        const match = db.find((row: any) => 
+          (row['X Handle'] || row.x_handle || '').toLowerCase().replace('@', '') === handle ||
+          (row.username || '').toLowerCase() === handle
+        );
+        if (match) {
+          const level = (row['Verification Level'] || row.verification_level || 'UNVERIFIED').toUpperCase();
+          return {
+            found: true,
+            level,
+            scamType: row['Scam Type'] || row.scam_type || 'Unknown',
+            riskScore: level === 'HIGH RISK' ? 95 : level === 'LEGITIMATE' ? 5 : 50,
+            notes: row['Notes'] || row.notes || '',
+          };
+        }
+      }
+      return { found: false };
+    }
+    
+    // Check Supabase
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/known_scammers?or=(x_handle.ilike.%25${handle}%25,username.ilike.%25${handle}%25)&limit=1`,
+      {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+      }
+    );
+    
+    if (!res.ok) return { found: false };
+    
+    const data = await res.json();
+    if (data && data.length > 0) {
+      const row = data[0];
+      const level = (row.verification_level || 'UNVERIFIED').toUpperCase();
+      return {
+        found: true,
+        level,
+        scamType: row.scam_type || 'Unknown',
+        riskScore: row.risk_score || (level === 'HIGH RISK' ? 95 : level === 'LEGITIMATE' ? 5 : 50),
+        notes: row.notes || '',
+      };
+    }
+    
+    return { found: false };
+  } catch {
+    return { found: false };
+  }
 }
 
 function determineVerificationLevel(score: number, verified: boolean, accountAge?: number): string {
