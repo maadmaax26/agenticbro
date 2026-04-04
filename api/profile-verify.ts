@@ -281,9 +281,8 @@ async function checkKnownScammers(username: string): Promise<{ found: boolean; l
       return { found: false };
     }
     
-    // Check Supabase with exact match first, then wildcard
-    const encodedHandle = encodeURIComponent(`@${handle}`);
-    const queryUrl = `${supabaseUrl}/rest/v1/known_scammers?or=(x_handle.eq.${encodedHandle},x_handle.eq.${handle},username.eq.${handle})&limit=1`;
+    // Check Supabase with case-insensitive search
+    const queryUrl = `${supabaseUrl}/rest/v1/known_scammers?or=(x_handle.ilike.%25${handle}%25,username.ilike.%25${handle}%25)&limit=1`;
     console.log('[profile-verify] Querying:', queryUrl);
     
     const res = await fetch(queryUrl, {
