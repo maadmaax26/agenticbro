@@ -205,14 +205,14 @@ function StatsDashboard({ stats }: { stats: Stats }) {
         <div className="text-blue-100">Total Scans</div>
       </div>
       
-      <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
         <div className="text-3xl font-bold mb-2">{stats.total_scammers_detected.toLocaleString()}</div>
-        <div className="text-red-100">Scammers Detected</div>
+        <div className="text-orange-100">Medium/High Risk</div>
       </div>
       
       <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
         <div className="text-3xl font-bold mb-2">{stats.total_legitimate_accounts.toLocaleString()}</div>
-        <div className="text-green-100">Legitimate Accounts</div>
+        <div className="text-green-100">Low Risk</div>
       </div>
       
       <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
@@ -355,11 +355,11 @@ export default function ScamDetectionDisplay() {
             onClick={() => setActiveTab('scammers')}
             className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
               activeTab === 'scammers'
-                ? 'bg-red-600 text-white'
+                ? 'bg-orange-600 text-white'
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            🚨 Scammers ({scammers.length})
+            ⚠️ Medium/High Risk ({scammers.length})
           </button>
           <button
             onClick={() => setActiveTab('legitimate')}
@@ -369,7 +369,7 @@ export default function ScamDetectionDisplay() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            ✅ Legitimate ({legitimate.length})
+            ✅ Low Risk ({legitimate.length})
           </button>
           <button
             onClick={() => setActiveTab('scans')}

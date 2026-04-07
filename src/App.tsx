@@ -510,7 +510,7 @@ function App() {
                   Agentic Bro
                 </h1>
                 <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
-                  $AGNTCBRO · Your agentic degen advisor
+                  AI-powered scam detection · Scan first, trust later!
                 </p>
               </div>
             </div>

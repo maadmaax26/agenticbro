@@ -205,13 +205,13 @@ function StatsDashboard({ stats, totalScans }: { stats: Stats; totalScans: numbe
         <div className="text-2xl font-bold mb-1">{((stats.total_scans ?? 0) + totalScans).toLocaleString()}</div>
         <div className="text-blue-200 text-xs">Total Scans</div>
       </div>
-      <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg p-4 text-white">
+      <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">{(stats.total_scammers_detected ?? 0).toLocaleString()}</div>
-        <div className="text-red-200 text-xs">Scammers</div>
+        <div className="text-orange-200 text-xs">Medium/High Risk</div>
       </div>
       <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">{(stats.total_legitimate_accounts ?? 0).toLocaleString()}</div>
-        <div className="text-green-200 text-xs">Legitimate</div>
+        <div className="text-green-200 text-xs">Low Risk</div>
       </div>
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">${(stats.total_lost_tracked_usd ?? 0).toLocaleString()}</div>
@@ -800,15 +800,15 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                   <div className="flex space-x-2 mb-4 flex-wrap gap-y-2">
                     <button
                       onClick={() => setActiveTab('scammers')}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'scammers' ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'scammers' ? 'bg-orange-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                     >
-                      🚨 Scammers ({totalScammers})
+                      ⚠️ Medium/High Risk ({totalScammers})
                     </button>
                     <button
                       onClick={() => setActiveTab('legitimate')}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'legitimate' ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                     >
-                      ✅ Legitimate ({totalLegitimate})
+                      ✅ Low Risk ({totalLegitimate})
                     </button>
                     <button
                       onClick={() => setActiveTab('scans')}
