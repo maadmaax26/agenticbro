@@ -595,26 +595,30 @@ function App() {
 
             {/* Right — nav + wallet (desktop only) */}
             <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-              <a
-                href="/AgenticBro_WhitePaper.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 xl:px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                White Paper
-              </a>
-              <button
-                onClick={() => setShowRoadmap(true)}
-                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                Roadmap
-              </button>
-              <button
-                onClick={() => setShowValueProp(true)}
-                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                Why Agentic Bro?
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setShowValueProp(true)}
+                  className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
+                >
+                  Why Agentic Bro?
+                </button>
+                <div className="absolute left-0 top-full mt-1 z-50 rounded-xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden min-w-[130px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <a
+                    href="/AgenticBro_WhitePaper.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-3 py-2 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    📄 White Paper
+                  </a>
+                  <button
+                    onClick={() => setShowRoadmap(true)}
+                    className="w-full px-3 py-2 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    🗺️ Roadmap
+                  </button>
+                </div>
+              </div>
               <button
                 onClick={() => setShowScamDatabase(true)}
                 className="px-2 xl:px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
@@ -630,7 +634,7 @@ function App() {
                 💰 Buy $AGNTCBRO
               </a>
               <LanguageSelector current={locale} onChange={setLocale} />
-              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-[10px] !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
             </div>
 
             {/* Mobile menu button */}
