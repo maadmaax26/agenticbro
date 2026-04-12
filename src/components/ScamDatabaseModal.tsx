@@ -715,7 +715,7 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
           total_lost_usd: typeof s.total_lost_usd === 'string' ? parseFloat(s.total_lost_usd?.replace(/[^0-9.]/g, '') || '0') : (s.total_lost_usd || 0),
           verification_level: s.verification_level,
           scam_type: s.scam_type || 'Unknown',
-          risk_score: s.risk_score || 50,
+          risk_score: (s.risk_score || 50) / 10,
           risk_level: s.threat_level || 'MEDIUM',
           last_updated: s.updated_at || s.last_seen,
           display_name: s.display_name,
