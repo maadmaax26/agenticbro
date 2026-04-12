@@ -773,6 +773,20 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
           </div>
         </div>
 
+        {/* Disclaimer Banner */}
+        <div className="flex-shrink-0 px-6 py-3" style={{ background: 'rgba(251,191,36,0.07)', borderBottom: '1px solid rgba(251,191,36,0.25)' }}>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-bold text-yellow-400">📋 DISCLAIMER</p>
+            <div style={{ borderTop: '1px solid rgba(251,191,36,0.35)', margin: '2px 0' }} />
+            <div className="flex flex-wrap gap-x-5 gap-y-0.5 text-xs font-semibold" style={{ color: 'rgba(253,224,71,0.8)' }}>
+              <span>• EDUCATIONAL PURPOSES ONLY</span>
+              <span>• NOT FINANCIAL ADVICE</span>
+              <span>• NOT AN INVESTMENT RECOMMENDATION</span>
+              <span>• NOT A GUARANTEE OF SAFETY</span>
+              <span>• ALWAYS DO YOUR OWN DUE DILIGENCE</span>
+            </div>
+          </div>
+        </div>
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
 
