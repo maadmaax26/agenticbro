@@ -27,6 +27,7 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
       discord: 'Discord',
       linkedin: 'LinkedIn',
       facebook: 'Facebook',
+      tiktok: 'TikTok',
     };
     const verificationLabel =
       scanResult.riskLevel === 'CRITICAL' || scanResult.riskLevel === 'HIGH'
@@ -83,7 +84,7 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
 
 interface ProfileScanResult {
   success: boolean;
-  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook';
+  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok';
   username: string;
   displayName?: string;
   verified?: boolean;
@@ -116,9 +117,10 @@ interface ProfileVerifierScannerProps {
 export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerifierScannerProps) {
   const { publicKey } = useWallet();
   const { isAuthenticated, email, walletAddress: authWalletAddress } = useAuth();
-  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook'>('twitter');
+  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok'>('twitter');
   const [username, setUsername] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
@@ -162,125 +164,99 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
 
     try {
-      // Priority 1: Try local Chrome CDP backend (development)
-      const localEndpoints = [
-        'http://localhost:3003/api/v1/verify/profile',
-        'http://localhost:3002/api/v1/verify/profile',
-        'http://127.0.0.1:3003/api/v1/verify/profile',
-        'http://127.0.0.1:3002/api/v1/verify/profile',
-      ];
-      
-      // Priority 2: Try Vercel serverless (production fallback)
-      const remoteEndpoints = [
-        '/api/profile-verify',
-        '/api/verify/profile',
-      ];
-      
-      let lastError: Error | null = null;
+      // ── Queue-based scan: insert job into scan_jobs, poll for result ──
       let scanResult: ProfileScanResult | null = null;
+      let jobQueued = false;
 
-      // Try local endpoints first
-      for (const endpoint of localEndpoints) {
+      if (_supabaseAnonKey) {
         try {
-          console.log(`Trying local endpoint: ${endpoint}`);
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // No API key needed for local development
-            },
-            body: JSON.stringify({
-              platform,
-              username: cleanUsername,
-              verificationContext: 'crypto',
-              options: {
-                deepScan: false,
-                includeMedia: false,
-              }
-            }),
-            signal: AbortSignal.timeout(30000)
-          });
+          const client = createClient(_supabaseUrl, _supabaseAnonKey);
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`Local endpoint ${endpoint} succeeded:`, data);
-            
-            if (data.success || data.riskScore !== undefined) {
-              scanResult = normalizeResult(data, platform, cleanUsername);
-              break;
-            }
-            
-            if (data.error) {
-              throw new Error(data.error.message || data.error);
-            }
-          }
-        } catch (err) {
-          lastError = err instanceof Error ? err : new Error('Unknown error');
-          console.log(`Local endpoint ${endpoint} failed:`, lastError.message);
-          continue;
-        }
-      }
-
-      // If local failed, try remote endpoints
-      if (!scanResult) {
-        for (const endpoint of remoteEndpoints) {
-          try {
-            console.log(`Trying remote endpoint: ${endpoint}`);
-            const response = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
+          // Enqueue the scan job
+          const { data: jobData, error: insertError } = await client
+            .from('scan_jobs')
+            .insert({
+              scan_type: 'profile',
+              status: 'pending',
+              payload: {
                 platform,
                 username: cleanUsername,
+                requestedAt: new Date().toISOString(),
                 verificationContext: 'crypto',
-                options: {
-                  deepScan: false,
-                  includeMedia: false,
-                }
-              }),
-              signal: AbortSignal.timeout(30000)
-            });
+              },
+            })
+            .select('id')
+            .single();
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log(`Remote endpoint ${endpoint} succeeded:`, data);
-              
-              if (data.success || data.riskScore !== undefined) {
-                scanResult = normalizeResult(data, platform, cleanUsername);
+          if (!insertError && jobData?.id) {
+            jobQueued = true;
+            setScanStatus('Queued — waiting for agent...');
+            const jobId = jobData.id;
+            console.log('[Queue] Scan job enqueued:', jobId);
+
+            // Poll for result — Mac Studio agent processes and writes result back
+            const POLL_INTERVAL_MS = 3000;
+            const POLL_TIMEOUT_MS = 90000; // 90 seconds
+            const startedAt = Date.now();
+
+            while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
+              await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+              const { data: job, error: pollError } = await client
+                .from('scan_jobs')
+                .select('status, payload')
+                .eq('id', jobId)
+                .single();
+
+              if (pollError) {
+                console.warn('[Queue] Poll error:', pollError.message);
                 break;
               }
-              
-              if (data.error) {
-                throw new Error(data.error.message || data.error);
+
+              console.log('[Queue] Job status:', job?.status);
+
+              if (job?.status === 'running' || job?.status === 'claimed') {
+                setScanStatus('Agent scanning...');
+              }
+
+              if (job?.status === 'completed' && job.payload?.result) {
+                scanResult = normalizeResult(job.payload.result, platform, cleanUsername);
+                break;
+              }
+
+              if (job?.status === 'failed' || job?.status === 'timeout') {
+                console.warn('[Queue] Job failed/timeout, falling back to demo');
+                break;
               }
             }
-          } catch (err) {
-            lastError = err instanceof Error ? err : new Error('Unknown error');
-            console.log(`Remote endpoint ${endpoint} failed:`, lastError.message);
-            continue;
+          } else {
+            console.warn('[Queue] Insert error:', insertError?.message);
           }
+        } catch (queueErr) {
+          console.warn('[Queue] Queue error, falling back:', queueErr);
         }
       }
 
-      // If all endpoints failed, generate a demo result
+      // Fallback: demo result if queue unavailable or job didn't complete in time
       if (!scanResult) {
-        console.warn('All endpoints failed, generating demo result');
+        console.warn(jobQueued
+          ? '[Queue] Job queued but timed out — using demo result'
+          : '[Queue] Queue unavailable — using demo result');
         scanResult = generateDemoResult(platform, cleanUsername);
       }
 
-      // Credit was already used, set the result
+      // Set the result
+      setScanStatus(null);
       setResult(scanResult);
 
-      // Upload scan result to Supabase for the Scam Detection Database
-      uploadScanToSupabase(scanResult).catch(() => {});  // fire-and-forget, never block UI
-
+      // Upload scan result to Supabase scan_results for the Scam Detection Database
+      uploadScanToSupabase(scanResult).catch(() => {}); // fire-and-forget, never block UI
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
       setError(errorMessage);
     } finally {
       setScanning(false);
+      setScanStatus(null);
     }
   };
 
@@ -334,6 +310,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       discord:   `https://discord.com/users/${username}`,
       linkedin:  `https://linkedin.com/in/${username}`,
       facebook:  `https://facebook.com/${username}`,
+      tiktok: `https://tiktok.com/@${username}`,
     };
     return urls[platform] ?? null;
   };
@@ -405,7 +382,7 @@ Recommendation: ${result.recommendation}`;
             <label className="block text-sm font-semibold text-gray-300 mb-2">
               Platform
             </label>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
               {([
                 { id: 'twitter', icon: '𝕏', label: 'X' },
                 { id: 'telegram', icon: '✈️', label: 'Telegram' },
@@ -413,6 +390,7 @@ Recommendation: ${result.recommendation}`;
                 { id: 'discord', icon: '💬', label: 'Discord' },
                 { id: 'linkedin', icon: '💼', label: 'LinkedIn' },
                 { id: 'facebook', icon: '📘', label: 'Facebook' },
+              { id: 'tiktok', icon: '🎵', label: 'TikTok' },
               ] as const).map((p) => (
                 <button
                   key={p.id}
@@ -467,7 +445,7 @@ Recommendation: ${result.recommendation}`;
               boxShadow: hasScans ? '0 4px 15px rgba(16,185,129,0.3)' : 'none',
             }}
           >
-            {scanning ? '🔄 Scanning...' : hasScans 
+            {scanning ? (scanStatus ? `⏳ ${scanStatus}` : '🔄 Scanning...') : hasScans 
               ? `🚀 Verify Profile (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
               : '❌ No Scans - Buy Credits'}
           </button>
@@ -741,7 +719,7 @@ Recommendation: ${result.recommendation}`;
             </button>
 
             <button
-              onClick={() => setResult(null)}
+              onClick={() => { setResult(null); setScanStatus(null); }}
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-gray-300 transition-all hover:scale-[1.02]"
               style={{
                 background: 'rgba(255,255,255,0.05)',
@@ -817,7 +795,7 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
 
   return {
     success: true,
-    platform: platform as 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook',
+    platform: platform as 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok',
     username,
     displayName: `${username}'s Profile`,
     verified: false,
