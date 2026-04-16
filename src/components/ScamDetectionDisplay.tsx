@@ -195,45 +195,6 @@ function LegitimateCard({ account }: { account: LegitimateAccount }) {
 
 
 // ============================================
-// Disclaimer Notice Component
-// ============================================
-function DisclaimerNotice() {
-  return (
-    <div className="mb-8 rounded-xl p-6 border-2" style={{ background: 'rgba(245,158,11,0.08)', border: '2px solid rgba(245,158,11,0.4)' }}>
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-yellow-400">⚠️ DISCLAIMER NOTICE ⚠️</h3>
-        <div className="text-yellow-500/60 text-sm font-mono">══════════════════════════════════════════════════════════════</div>
-      </div>
-      <p className="text-center text-sm text-gray-300 mb-4">
-        This scan is an AI-powered threat assessment of social media content.<br />
-        For complete accuracy, verify information through multiple sources.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <div>
-          <h4 className="font-bold text-yellow-400 mb-2">LIMITATIONS:</h4>
-          <ul className="space-y-1 text-gray-400">
-            <li>• Only scans public profile data</li>
-            <li>• Does NOT verify user identity</li>
-            <li>• May miss sophisticated, well-hidden scams</li>
-            <li>• Scans HTML/timestamp - not reliable for all assets</li>
-            <li>• Subject to website rules and rate limiting</li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold text-yellow-400 mb-2">INDEPENDENT VERIFICATION REQUIRED:</h4>
-          <ul className="space-y-1 text-gray-400">
-            <li>• Cross-check username across multiple platforms</li>
-            <li>• Verify contract addresses manually</li>
-            <li>• Beware of "guaranteed returns" or "insider information"</li>
-            <li>• Never send money or share private keys</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================
 // Stats Dashboard Component
 // ============================================
 
