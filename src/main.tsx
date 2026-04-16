@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import '@solana/wallet-adapter-react-ui/styles.css'
 import './index.css'
@@ -11,6 +11,7 @@ import { AuthProvider } from './lib/AuthContext'
 
 const wallets = [
   new PhantomWalletAdapter(),
+  new SolflareWalletAdapter(),
 ]
 
 // Use Helius RPC if configured, otherwise fall back to publicnode (more reliable than Solana public RPC)
