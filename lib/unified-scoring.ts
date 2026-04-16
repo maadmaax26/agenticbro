@@ -180,6 +180,29 @@ const PLATFORM_SPECIFIC: Record<string, Record<string, RedFlag>> = {
 const RISK_THRESHOLDS = { LOW: 3.0, MEDIUM: 5.0, HIGH: 7.0 };
 const VERIFICATION_THRESHOLDS = { LIKELY_SAFE: 0, PATTERN_MATCHES: 2, UNVERIFIED: 4 };
 
+// ── HTML text extraction (strip JS/CSS, keep visible text only) ─────────────
+
+/**
+ * Extract visible text from HTML, stripping all script/style tags and HTML markup.
+ * This prevents the scoring engine from flagging JavaScript/CSS boilerplate
+ * (which contains words like 'free', 'alpha', 'download', 'vip' etc.)
+ */
+export function extractVisibleText(html: string): string {
+  // 1. Remove all <script> blocks (including content)
+  let text = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  // 2. Remove all <style> blocks (including content)
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
+  // 3. Remove all <noscript> blocks
+  text = text.replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
+  // 4. Remove all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, ' ');
+  // 5. Decode common HTML entities
+  text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+  // 6. Collapse whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+}
+
 // ── Core scoring function ──────────────────────────────────────────────────
 
 export interface ScoringMetadata {

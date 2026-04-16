@@ -286,7 +286,12 @@ function App() {
         })
         const data = await res.json() as any
         if (!data.success || data.error) {
-          addMsg({ type: 'error', icon: '❌', text: data.error ?? `Scan failed (${res.status})` })
+          if (data.error === 'PROFILE_LOGIN_REQUIRED') {
+            addMsg({ type: 'warning', icon: '🔒', text: `${socialPlatform.charAt(0).toUpperCase() + socialPlatform.slice(1)} requires login to view @${uName}. This profile can't be scanned via web.` })
+            addMsg({ type: 'system', icon: '💡', text: 'For accurate scanning, use the Jeeevs Telegram bot or request a Chrome CDP scan.' })
+          } else {
+            addMsg({ type: 'error', icon: '❌', text: data.error ?? `Scan failed (${res.status})` })
+          }
         } else {
           const emoji = data.riskLevel === 'LOW' ? '✅' : data.riskLevel === 'MEDIUM' ? '🟡' : data.riskLevel === 'HIGH' ? '🔴' : '🚨'
           addMsg({ type: 'result', icon: emoji, text: `Risk Score: ${data.riskScore}/10 — ${data.riskLevel} ${emoji} | Verification: ${data.verificationLevel}` })
