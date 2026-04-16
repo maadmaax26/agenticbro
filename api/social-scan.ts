@@ -7,13 +7,13 @@
  *   Body:  { platform: 'instagram'|'tiktok'|'facebook', username: string }
  *   Returns: { success, riskScore, riskLevel, verificationLevel, flagDetails, ... }
  *
- * Uses the same unified 90-point weighted scoring as the local Python scanners,
- * ensuring consistent results between website and local CLI scans.
+ * Key fix: Strips JS/CSS before scoring to avoid false positives from
+ * platform boilerplate code. Detects login walls / error pages.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { calculateRiskScore } from '../lib/unified-scoring';
+import { calculateRiskScore, extractVisibleText } from '../lib/unified-scoring';
 
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
 type VercelResponse = ServerResponse & {
@@ -31,11 +31,34 @@ const PROFILE_URLS: Record<string, (u: string) => string> = {
   facebook:  (u) => `https://www.facebook.com/${u}`,
 };
 
+// Login wall / error page indicators per platform
+const LOGIN_WALL_PATTERNS: Record<string, string[]> = {
+  instagram: ['PolarisErrorRoot', 'show_lox_redesigned_404_page', 'httpErrorPage', 'loginWall'],
+  tiktok:    ["Couldn't find this account", 'Page not found', 'tiktok-login'],
+  facebook:  ["This page isn't available", 'Page Not Found', 'login_page'],
+};
+
+// Profile-not-found text patterns (visible text)
 const NOT_FOUND_PATTERNS: Record<string, string[]> = {
   instagram: ["Sorry, this page isn't available", 'Unable to load this page'],
   tiktok:    ["Couldn't find this account", 'Page not found'],
   facebook:  ["This page isn't available", 'Page Not Found'],
 };
+
+function makeUnavailableResponse(platform: string, username: string, message: string) {
+  return {
+    success: false,
+    error: 'PROFILE_LOGIN_REQUIRED',
+    message,
+    platform,
+    username,
+    riskScore: 0,
+    riskLevel: 'UNAVAILABLE',
+    verificationLevel: 'UNAVAILABLE',
+    redFlagsDetected: 0,
+    flagDetails: [],
+  };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // CORS
@@ -74,11 +97,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       redirect: 'follow',
     });
 
-    const content = await fetchRes.text();
+    const rawHtml = await fetchRes.text();
 
-    // Check for profile not found
+    // ── 1. Detect login walls / error pages ──────────────────────────────
+    const loginWallPatterns = LOGIN_WALL_PATTERNS[platform] ?? [];
+    if (loginWallPatterns.some((p) => rawHtml.includes(p))) {
+      res.status(200).json(makeUnavailableResponse(
+        platform,
+        username,
+        `${platform.charAt(0).toUpperCase() + platform.slice(1)} requires login to view this profile. For accurate scanning, use the Jeeevs Telegram bot or Chrome CDP scan.`,
+      ));
+      return;
+    }
+
+    // ── 2. Extract visible text (strip all JS/CSS/HTML) ──────────────────
+    const visibleText = extractVisibleText(rawHtml);
+
+    // ── 3. Check for profile-not-found in visible text ───────────────────
     const notFoundPatterns = NOT_FOUND_PATTERNS[platform] ?? [];
-    if (notFoundPatterns.some((p) => content.includes(p))) {
+    if (notFoundPatterns.some((p) => visibleText.includes(p))) {
       res.status(200).json({
         success: false,
         error: 'Profile not found or unreachable',
@@ -93,9 +130,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    // Extract follower count
+    // ── 4. Also extract OG/meta description for scoring ─────────────────
+    const ogDesc = rawHtml.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i);
+    const metaDesc = rawHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+    const twDesc = rawHtml.match(/<meta\s+(?:property|name)=["']twitter:description["']\s+content=["']([^"']+)["']/i);
+
+    let scoringText = visibleText;
+    if (ogDesc?.[1]) scoringText += '\n' + ogDesc[1];
+    if (metaDesc?.[1] && metaDesc[1] !== ogDesc?.[1]) scoringText += '\n' + metaDesc[1];
+    if (twDesc?.[1] && twDesc[1] !== ogDesc?.[1]) scoringText += '\n' + twDesc[1];
+
+    // ── 5. Extract follower count from HTML ──────────────────────────────
     const metadata: { followers?: number } = {};
-    const followerMatch = content.toLowerCase().match(/(\d+[,.]?\d*[KkMm]?)\s*followers/);
+    const followerMatch = rawHtml.toLowerCase().match(/(\d+[,.]?\d*[KkMm]?)\s*followers/);
     if (followerMatch) {
       const raw = followerMatch[1].toLowerCase();
       if (raw.includes('k')) {
@@ -107,8 +154,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
     }
 
-    // Run unified scoring (identical to Python)
-    const result = calculateRiskScore(content, platform, metadata);
+    // ── 6. Run unified scoring on VISIBLE TEXT only ─────────────────────
+    const result = calculateRiskScore(scoringText, platform, metadata);
 
     res.status(200).json({
       success: true,
