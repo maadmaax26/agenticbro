@@ -74,7 +74,7 @@ const knownChannels: Record<string, any> = {
 
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
-type ScanMode = 'wallet' | 'channels' | 'token'
+type ScanMode = 'wallet' | 'channels' | 'token' | 'social'
 
 type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
 
@@ -166,6 +166,8 @@ function App() {
   const [walletInput, setWalletInput]   = useState('')
   const [channelInput, setChannelInput] = useState('')
   const [tokenInput, setTokenInput]     = useState('')
+  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'tiktok' | 'facebook'>('instagram')
+  const [socialUsername, setSocialUsername] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   // Update default scans when holder tier status changes
@@ -268,6 +270,42 @@ function App() {
   }
 
   const runScan = useCallback(async () => {
+    // Social profile scan uses a different API
+    if (scanMode === 'social') {
+      const uName = socialUsername.trim().replace(/^@/, '')
+      if (!uName) return
+      setIsScanning(true)
+      setShowScanChat(true)
+      setScanMessages([])
+      addMsg({ type: 'system', icon: '🔍', text: `Scanning ${socialPlatform} profile: @${uName}…` })
+      try {
+        const res = await fetch(`${API_BASE}/api/social-scan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: socialPlatform, username: uName }),
+        })
+        const data = await res.json() as any
+        if (!data.success || data.error) {
+          addMsg({ type: 'error', icon: '❌', text: data.error ?? `Scan failed (${res.status})` })
+        } else {
+          const emoji = data.riskLevel === 'LOW' ? '✅' : data.riskLevel === 'MEDIUM' ? '🟡' : data.riskLevel === 'HIGH' ? '🔴' : '🚨'
+          addMsg({ type: 'result', icon: emoji, text: `Risk Score: ${data.riskScore}/10 — ${data.riskLevel} ${emoji} | Verification: ${data.verificationLevel}` })
+          if (data.flagDetails?.length) {
+            for (const flag of data.flagDetails) {
+              const fEmoji = flag.weight >= 15 ? '🚨' : flag.weight >= 10 ? '⚠️' : '📌'
+              addMsg({ type: flag.weight >= 15 ? 'warning' : 'result', icon: fEmoji, text: `${flag.description} (${flag.weight} pts)${flag.platformSpecific ? ' [Platform-Specific]' : ''}` })
+            }
+          }
+          addMsg({ type: 'system', icon: '🔐', text: '⚠️ AI assessment — independent verification always recommended' })
+        }
+      } catch (err: any) {
+        addMsg({ type: 'error', icon: '❌', text: err?.message ?? 'Scan request failed' })
+      } finally {
+        setIsScanning(false)
+      }
+      return
+    }
+
     const inputValue = scanMode === 'wallet' ? walletInput.trim()
                      : scanMode === 'channels' ? channelInput.trim()
                      : scanMode === 'token' ? tokenInput.trim()
@@ -953,11 +991,12 @@ function App() {
                 </div>
 
                 {/* ── Scan mode tabs ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
                   {([
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                    { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
                   ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
                     <button
                       key={m.id}
@@ -1007,6 +1046,27 @@ function App() {
                       className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
                     />
                   )}
+                  {scanMode === 'social' && (
+                    <div className="flex gap-2">
+                      <select
+                        value={socialPlatform}
+                        onChange={e => setSocialPlatform(e.target.value as any)}
+                        className="bg-black/50 border border-purple-500/30 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:border-purple-500/60 transition-colors"
+                      >
+                        <option value="instagram">📸 Instagram</option>
+                        <option value="tiktok">🎵 TikTok</option>
+                        <option value="facebook">📘 Facebook</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={socialUsername}
+                        onChange={e => setSocialUsername(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                        placeholder="e.g. crypto_scammer99"
+                        className="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Launch button ── */}
@@ -1015,7 +1075,8 @@ function App() {
                   disabled={isScanning ||
                     (scanMode === 'wallet'   && !walletInput.trim())  ||
                     (scanMode === 'channels' && !channelInput.trim()) ||
-                    (scanMode === 'token'    && !tokenInput.trim())}
+                    (scanMode === 'token'    && !tokenInput.trim())    ||
+                    (scanMode === 'social'   && !socialUsername.trim())}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
                 >
