@@ -278,25 +278,61 @@ function App() {
       setShowScanChat(true)
       setScanMessages([])
       addMsg({ type: 'system', icon: '🔍', text: `Scanning ${socialPlatform} profile: @${uName}…` })
+
       try {
-        const res = await fetch(`${API_BASE}/api/social-scan`, {
+        // Start async scan — get job ID immediately
+        const startRes = await fetch(`${API_BASE}/api/social-scan?async=1`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ platform: socialPlatform, username: uName }),
         })
-        const data = await res.json() as any
-        if (!data.success || data.error) {
-          if (data.error === 'PROFILE_LOGIN_REQUIRED') {
+        const startData = await startRes.json() as any
+
+        let data: any = null
+        if (startData.status === 'pending' && startData.id) {
+          // Poll for result (max 15 seconds)
+          const jobId = startData.id
+          let attempts = 0
+          const maxAttempts = 30
+          const pollInterval = 500
+
+          while (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, pollInterval))
+            const pollRes = await fetch(`${API_BASE}/api/social-scan/${jobId}`)
+            data = await pollRes.json() as any
+            if (data.status === 'done' || data.status === 'error') break
+            attempts++
+          }
+
+          if (!data || (data.status !== 'done' && data.status !== 'error')) {
+            addMsg({ type: 'error', icon: '⏱️', text: 'Scan timed out. The platform may be slow or blocking requests.' })
+          } else {
+            data = { ...data, ...data.result }
+          }
+        } else {
+          // Fallback: sync scan
+          const syncRes = await fetch(`${API_BASE}/api/social-scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: socialPlatform, username: uName }),
+          })
+          data = await syncRes.json() as any
+        }
+
+        // Process result (same for async and sync)
+        const result = data?.result ?? data
+        if (!result.success || result.error) {
+          if (result.error === 'PROFILE_LOGIN_REQUIRED') {
             addMsg({ type: 'warning', icon: '🔒', text: `${socialPlatform.charAt(0).toUpperCase() + socialPlatform.slice(1)} requires login to view @${uName}. This profile can't be scanned via web.` })
             addMsg({ type: 'system', icon: '💡', text: 'For accurate scanning, use the Jeeevs Telegram bot or request a Chrome CDP scan.' })
           } else {
-            addMsg({ type: 'error', icon: '❌', text: data.error ?? `Scan failed (${res.status})` })
+            addMsg({ type: 'error', icon: '❌', text: result.error ?? 'Scan failed' })
           }
         } else {
-          const emoji = data.riskLevel === 'LOW' ? '✅' : data.riskLevel === 'MEDIUM' ? '🟡' : data.riskLevel === 'HIGH' ? '🔴' : '🚨'
-          addMsg({ type: 'result', icon: emoji, text: `Risk Score: ${data.riskScore}/10 — ${data.riskLevel} ${emoji} | Verification: ${data.verificationLevel}` })
-          if (data.flagDetails?.length) {
-            for (const flag of data.flagDetails) {
+          const emoji = result.riskLevel === 'LOW' ? '✅' : result.riskLevel === 'MEDIUM' ? '🟡' : result.riskLevel === 'HIGH' ? '🔴' : '🚨'
+          addMsg({ type: 'result', icon: emoji, text: `Risk Score: ${result.riskScore}/10 — ${result.riskLevel} ${emoji} | Verification: ${result.verificationLevel}` })
+          if (result.flagDetails?.length) {
+            for (const flag of result.flagDetails) {
               const fEmoji = flag.weight >= 15 ? '🚨' : flag.weight >= 10 ? '⚠️' : '📌'
               addMsg({ type: flag.weight >= 15 ? 'warning' : 'result', icon: fEmoji, text: `${flag.description} (${flag.weight} pts)${flag.platformSpecific ? ' [Platform-Specific]' : ''}` })
             }
