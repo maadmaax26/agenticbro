@@ -19,6 +19,9 @@
     "api/scan.ts": {
       "maxDuration": 15
     },
+    "api/social-scan.ts": {
+      "maxDuration": 15
+    },
     "api/scan/[job_id].ts": {
       "maxDuration": 10
     }
