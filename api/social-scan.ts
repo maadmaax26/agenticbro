@@ -1,16 +1,13 @@
 /**
  * api/social-scan.ts — Self-contained Vercel Serverless Function
  * ================================================================
+ * Supports two modes:
+ *   POST /api/social-scan          → Sync scan (original, for backward compat)
+ *   POST /api/social-scan?async=1  → Returns job ID immediately, poll for result
+ *   GET  /api/social-scan/[job_id] → Poll for async result
+ *
  * All scoring logic inlined (Vercel can't import from ../lib/)
- *
- * POST /api/social-scan
- *   Body:  { platform: 'instagram'|'tiktok'|'facebook', username: string }
- *
- * Key features:
- * - Detects login walls / error pages (no false scoring on JS boilerplate)
- * - Strips all <script>/<style>/HTML before scoring
- * - Includes OG/meta description text for scoring
- * - 90-point unified scoring identical to Python local scanner
+ * 90-point unified scoring identical to Python local scanner
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
@@ -22,6 +19,30 @@ type VercelResponse = ServerResponse & {
   setHeader: (name: string, value: string) => VercelResponse;
   end: () => void;
 };
+
+// ── In-memory job queue (resets on cold start, fine for Vercel) ──────────────
+interface ScanJob {
+  id: string;
+  platform: string;
+  username: string;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  result?: Record<string, unknown>;
+  error?: string;
+  createdAt: number;
+}
+
+const jobs = new Map<string, ScanJob>();
+
+function cleanupOldJobs() {
+  const cutoff = Date.now() - 10 * 60 * 1000; // 10 min
+  for (const [id, job] of jobs) {
+    if (job.createdAt < cutoff) jobs.delete(id);
+  }
+}
+
+function generateId(): string {
+  return `scan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // ── Inline: extractVisibleText ──────────────────────────────────────────────
 function extractVisibleText(html: string): string {
@@ -131,13 +152,105 @@ const NOT_FOUND_PATTERNS: Record<string, string[]> = {
   facebook:  ["This page isn't available", 'Page Not Found'],
 };
 
+// ── Core scan function ──────────────────────────────────────────────────────
+
+async function performScan(platform: string, username: string): Promise<Record<string, unknown>> {
+  const url = PROFILE_URLS[platform](username);
+
+  const fetchRes = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    },
+    signal: AbortSignal.timeout(10000),
+    redirect: 'follow',
+  });
+
+  const rawHtml = await fetchRes.text();
+
+  // Detect login walls / error pages
+  const loginWallPatterns = LOGIN_WALL_PATTERNS[platform] ?? [];
+  if (loginWallPatterns.some((p) => rawHtml.includes(p))) {
+    return {
+      success: false, error: 'PROFILE_LOGIN_REQUIRED',
+      message: `${platform.charAt(0).toUpperCase() + platform.slice(1)} requires login to view this profile. For accurate scanning, use the Jeeevs Telegram bot or Chrome CDP scan.`,
+      platform, username, riskScore: 0, riskLevel: 'UNAVAILABLE', verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
+    };
+  }
+
+  // Extract visible text (strip JS/CSS/HTML)
+  const visibleText = extractVisibleText(rawHtml);
+
+  // Check for not-found
+  const notFoundPatterns = NOT_FOUND_PATTERNS[platform] ?? [];
+  if (notFoundPatterns.some((p) => visibleText.includes(p))) {
+    return {
+      success: false, error: 'Profile not found or unreachable',
+      platform, username, riskScore: 0, riskLevel: 'ERROR', verificationLevel: 'ERROR', redFlagsDetected: 0, flagDetails: [],
+    };
+  }
+
+  // Include OG/meta description
+  const ogDesc = rawHtml.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i);
+  const metaDesc = rawHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+  let scoringText = visibleText;
+  if (ogDesc?.[1]) scoringText += '\n' + ogDesc[1];
+  if (metaDesc?.[1] && metaDesc[1] !== ogDesc?.[1]) scoringText += '\n' + metaDesc[1];
+
+  // Extract follower count
+  const metadata: { followers?: number } = {};
+  const followerMatch = rawHtml.toLowerCase().match(/(\d+[,.]?\d*[KkMm]?)\s*followers/);
+  if (followerMatch) {
+    const raw = followerMatch[1].toLowerCase();
+    metadata.followers = raw.includes('k') ? parseFloat(raw.replace('k','').replace(',','')) * 1000
+      : raw.includes('m') ? parseFloat(raw.replace('m','').replace(',','')) * 1000000
+      : parseFloat(raw.replace(',',''));
+  }
+
+  // Score VISIBLE TEXT only
+  const result = calculateRiskScore(scoringText, platform, metadata);
+
+  return {
+    success: true, platform, username, url,
+    riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
+    redFlagsDetected: result.redFlagsDetected, flagDetails: result.flagDetails,
+    weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
+    scanTimestamp: result.scanTimestamp,
+    disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
+  };
+}
+
 // ── Handler ────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  // ── GET: Poll for async job result ──────────────────────────────────────
+  if (req.method === 'GET') {
+    const url = (req.url ?? '').split('?')[0];
+    const jobId = url.split('/').pop();
+    if (!jobId || !jobs.has(jobId)) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+    const job = jobs.get(jobId)!;
+    res.status(200).json({
+      id: job.id,
+      status: job.status,
+      platform: job.platform,
+      username: job.username,
+      ...(job.status === 'done' ? job.result : {}),
+      ...(job.status === 'error' ? { error: job.error } : {}),
+    });
+    return;
+  }
+
+  // ── POST: Start scan (sync or async) ────────────────────────────────────
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   const body = req.body ?? {};
@@ -147,74 +260,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!VALID_PLATFORMS.includes(platform)) { res.status(400).json({ error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}` }); return; }
   if (!username) { res.status(400).json({ error: 'username is required' }); return; }
 
-  const url = PROFILE_URLS[platform](username);
+  const isAsync = (req.url ?? '').includes('async=1');
 
+  // ── Async mode: return job ID immediately ──────────────────────────────
+  if (isAsync) {
+    cleanupOldJobs();
+    const id = generateId();
+    const job: ScanJob = { id, platform, username, status: 'pending', createdAt: Date.now() };
+    jobs.set(id, job);
+
+    // Process in background (Vercel won't wait, but the function keeps running briefly)
+    performScan(platform, username)
+      .then((result) => {
+        job.status = 'done';
+        job.result = result;
+      })
+      .catch((err: any) => {
+        job.status = 'error';
+        job.error = err?.message ?? String(err);
+      });
+
+    res.status(202).json({ id, status: 'pending', platform, username, message: 'Scan started. Poll GET /api/social-scan/' + id + ' for results.' });
+    return;
+  }
+
+  // ── Sync mode: scan and return immediately ──────────────────────────────
   try {
-    const fetchRes = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-      signal: AbortSignal.timeout(10000),
-      redirect: 'follow',
-    });
-
-    const rawHtml = await fetchRes.text();
-
-    // 1. Detect login walls / error pages
-    const loginWallPatterns = LOGIN_WALL_PATTERNS[platform] ?? [];
-    if (loginWallPatterns.some((p) => rawHtml.includes(p))) {
-      res.status(200).json({
-        success: false, error: 'PROFILE_LOGIN_REQUIRED',
-        message: `${platform.charAt(0).toUpperCase() + platform.slice(1)} requires login to view this profile. For accurate scanning, use the Jeeevs Telegram bot or Chrome CDP scan.`,
-        platform, username, riskScore: 0, riskLevel: 'UNAVAILABLE', verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
-      });
-      return;
-    }
-
-    // 2. Extract visible text (strip JS/CSS/HTML)
-    const visibleText = extractVisibleText(rawHtml);
-
-    // 3. Check for not-found in visible text
-    const notFoundPatterns = NOT_FOUND_PATTERNS[platform] ?? [];
-    if (notFoundPatterns.some((p) => visibleText.includes(p))) {
-      res.status(200).json({
-        success: false, error: 'Profile not found or unreachable',
-        platform, username, riskScore: 0, riskLevel: 'ERROR', verificationLevel: 'ERROR', redFlagsDetected: 0, flagDetails: [],
-      });
-      return;
-    }
-
-    // 4. Include OG/meta description
-    const ogDesc = rawHtml.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i);
-    const metaDesc = rawHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-
-    let scoringText = visibleText;
-    if (ogDesc?.[1]) scoringText += '\n' + ogDesc[1];
-    if (metaDesc?.[1] && metaDesc[1] !== ogDesc?.[1]) scoringText += '\n' + metaDesc[1];
-
-    // 5. Extract follower count
-    const metadata: { followers?: number } = {};
-    const followerMatch = rawHtml.toLowerCase().match(/(\d+[,.]?\d*[KkMm]?)\s*followers/);
-    if (followerMatch) {
-      const raw = followerMatch[1].toLowerCase();
-      metadata.followers = raw.includes('k') ? parseFloat(raw.replace('k','').replace(',','')) * 1000
-        : raw.includes('m') ? parseFloat(raw.replace('m','').replace(',','')) * 1000000
-        : parseFloat(raw.replace(',',''));
-    }
-
-    // 6. Score VISIBLE TEXT only
-    const result = calculateRiskScore(scoringText, platform, metadata);
-
-    res.status(200).json({
-      success: true, platform, username, url,
-      riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
-      redFlagsDetected: result.redFlagsDetected, flagDetails: result.flagDetails,
-      weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
-      scanTimestamp: result.scanTimestamp,
-      disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
-    });
+    const result = await performScan(platform, username);
+    res.status(200).json(result);
   } catch (err: any) {
     const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
     res.status(200).json({
