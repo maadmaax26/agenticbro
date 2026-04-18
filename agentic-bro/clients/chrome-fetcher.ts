@@ -42,7 +42,7 @@ export class ChromeProfileFetcher {
   /**
    * Get list of available pages/tabs
    */
-  async getPages(): Promise<Array<{ id: string; url: string; title: string }>> {
+  async getPages(): Promise<Array<{ id: string; url: string; title: string; webSocketDebuggerUrl?: string }>> {
     const response = await fetch(`${this.cdpUrl}/json/list`);
     const pages = await response.json();
     return pages.filter((p: any) => p.type === 'page');
@@ -63,20 +63,27 @@ export class ChromeProfileFetcher {
       let target = pages.find(p => p.url.includes(`x.com/${cleanUsername}`));
 
       if (!target) {
-        // Open new tab
-        const response = await fetch(`${this.cdpUrl}/json/new?${encodeURIComponent(xUrl)}`);
+        // Open new tab - MUST use PUT method for /json/new endpoint
+        const response = await fetch(`${this.cdpUrl}/json/new?${encodeURIComponent(xUrl)}`, {
+          method: 'PUT'
+        });
         target = await response.json();
       }
 
-      // Wait for page to load
-      await this.sleep(5000);
+      // Wait for page to load (increased to 8 seconds for slower X.com loads)
+      await this.sleep(8000);
 
       // Get updated page list
       const updatedPages = await this.getPages();
-      target = updatedPages.find(p => p.id === target.id);
+      target = updatedPages.find(p => p.id === target?.id);
 
-      // Use osascript to extract data from Chrome
-      const profileData = await this.extractProfileData(cleanUsername);
+      if (!target || !target.webSocketDebuggerUrl) {
+        console.log(`Could not find Chrome tab for ${cleanUsername}`);
+        return null;
+      }
+
+      // Use WebSocket CDP to extract data
+      const profileData = await this.extractProfileDataViaCDP(cleanUsername, target.webSocketDebuggerUrl);
 
       return profileData;
 
@@ -87,137 +94,180 @@ export class ChromeProfileFetcher {
   }
 
   /**
-   * Extract profile data using AppleScript
+   * Extract profile data using WebSocket CDP
    */
-  private async extractProfileData(username: string): Promise<ProfileData | null> {
-    try {
-      // Find the X profile tab and extract data using JavaScript
-      const script = `
-        tell application "Google Chrome"
-          set theTab to missing value
-          
-          repeat with w in windows
-            repeat with t in tabs of w
-              if URL of t contains "x.com/${username}" then
-                set theTab to t
-                exit repeat
-              end if
-            end repeat
-            if theTab is not missing value then exit repeat
-          end repeat
-          
-          if theTab is missing value then
-            return "TAB_NOT_FOUND"
-          end if
-          
-          -- Execute JavaScript to extract profile data
-          set jsResult to execute theTab javascript "
-            (function() {
-              function parseNum(value) {
-                if (!value) return 0;
-                var str = String(value).toUpperCase().replace(/,/g, '').trim();
-                if (str.slice(-1) === 'K') return parseFloat(str) * 1000;
-                if (str.slice(-1) === 'M') return parseFloat(str) * 1000000;
-                if (str.slice(-1) === 'B') return parseFloat(str) * 1000000000;
-                return parseInt(str) || 0;
-              }
+  private async extractProfileDataViaCDP(username: string, wsUrl: string): Promise<ProfileData | null> {
+    const WebSocket = require('ws');
+    
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(wsUrl);
+      
+      ws.on('open', () => {
+        // Execute JavaScript to extract profile data
+        // Uses multiple selector strategies for X.com's changing UI
+        ws.send(JSON.stringify({
+          id: 1,
+          method: 'Runtime.evaluate',
+          params: {
+            expression: `
+              (function() {
+                function parseNum(value) {
+                  if (!value) return 0;
+                  var str = String(value).toUpperCase().replace(/,/g, '').trim();
+                  if (str.slice(-1) === 'K') return parseFloat(str) * 1000;
+                  if (str.slice(-1) === 'M') return parseFloat(str) * 1000000;
+                  if (str.slice(-1) === 'B') return parseFloat(str) * 1000000000;
+                  return parseInt(str) || 0;
+                }
 
-              const data = {
-                username: null,
-                displayName: null,
-                verified: false,
-                verifiedType: null,
-                followers: 0,
-                following: 0,
-                tweets: 0,
-                bio: null,
-                location: null,
-                website: null,
-                profileImage: null
-              };
+                const data = {
+                  username: null,
+                  displayName: null,
+                  verified: false,
+                  verifiedType: null,
+                  followers: 0,
+                  following: 0,
+                  tweets: 0,
+                  bio: null,
+                  location: null,
+                  website: null,
+                  profileImage: null
+                };
 
-              // Username
-              const usernameEl = document.querySelector('[data-testid=\"UserScreenName\"] span');
-              if (usernameEl) data.username = usernameEl.textContent.replace('@', '');
+                // Username - try multiple selectors
+                var usernameEl = document.querySelector('[data-testid="UserScreenName"] span') ||
+                                 document.querySelector('span[css-1jxf68p]') ||
+                                 document.querySelector('[data-testid="UserName"] + div span');
+                if (usernameEl) {
+                  data.username = usernameEl.textContent.replace('@', '').trim();
+                }
 
-              // Display name
-              const nameEl = document.querySelector('[data-testid=\"UserName\"]');
-              if (nameEl) data.displayName = nameEl.textContent.trim();
+                // Display name - try multiple selectors
+                var nameEl = document.querySelector('[data-testid="UserName"]') ||
+                            document.querySelector('div[data-testid="UserName"] span');
+                if (nameEl) {
+                  data.displayName = nameEl.textContent.trim();
+                }
 
-              // Verified
-              const verifiedEl = document.querySelector('[data-testid=\"icon-verified\"]');
-              data.verified = !!verifiedEl;
-              data.verifiedType = verifiedEl ? 'blue' : null;
+                // Verified badge
+                var verifiedEl = document.querySelector('[data-testid="icon-verified"]') ||
+                                document.querySelector('[data-testid="verified-badge"]') ||
+                                document.querySelector('svg[aria-label*="Verified"]');
+                data.verified = !!verifiedEl;
+                data.verifiedType = verifiedEl ? 'blue' : null;
 
-              // Bio
-              const bioEl = document.querySelector('[data-testid=\"UserDescription\"] div[dir=\"ltr\"]');
-              if (bioEl) data.bio = bioEl.textContent.trim();
+                // Bio
+                var bioEl = document.querySelector('[data-testid="UserDescription"] div[dir="ltr"]') ||
+                           document.querySelector('[data-testid="UserDescription"]') ||
+                           document.querySelector('div[data-testid="UserDescription"] span');
+                if (bioEl) data.bio = bioEl.textContent.trim();
 
-              // Follow stats
-              const statsDiv = document.querySelector('[data-testid=\"UserName\"] + div + div');
-              if (statsDiv) {
-                const links = statsDiv.querySelectorAll('a');
-                links.forEach(link => {
-                  const text = link.textContent || '';
-                  if (text.includes('Followers') || text.includes('followers')) {
-                    const span = link.querySelector('span');
-                    if (span) data.followers = parseNum(span.textContent || '');
-                  }
-                  if (text.includes('Following') || text.includes('following')) {
-                    const span = link.querySelector('span');
-                    if (span) data.following = parseNum(span.textContent || '');
+                // Follow stats - X uses links in the profile header
+                var links = document.querySelectorAll('a[href*="/followers"], a[href*="/following"]');
+                links.forEach(function(link) {
+                  var href = link.getAttribute('href') || '';
+                  var text = link.textContent || '';
+                  // Try to extract numbers from the link text
+                  var match = text.match(/([\d,\.]+[KMk]?)\s*(Followers?|Following)/i);
+                  if (match) {
+                    if (match[2].toLowerCase().startsWith('follower')) {
+                      data.followers = parseNum(match[1]);
+                    } else if (match[2].toLowerCase() === 'following') {
+                      data.following = parseNum(match[1]);
+                    }
                   }
                 });
-              }
 
-              // Profile image
-              const imgEl = document.querySelector('[data-testid=\"UserAvatar\"] img');
-              if (imgEl) data.profileImage = imgEl.src;
+                // Alternative: look for span elements with follower/following text
+                if (data.followers === 0) {
+                  var allSpans = document.querySelectorAll('span');
+                  allSpans.forEach(function(span) {
+                    var text = span.textContent || '';
+                    var match = text.match(/([\d,\.]+[KMk]?)\s*Followers?/i);
+                    if (match) data.followers = parseNum(match[1]);
+                  });
+                }
 
-              // Location
-              const locationEl = document.querySelector('[data-testid=\"UserLocation\"] span');
-              if (locationEl) data.location = locationEl.textContent.trim();
+                // Profile image
+                var imgEl = document.querySelector('[data-testid="UserAvatar"] img') ||
+                           document.querySelector('img[alt*="avatar"]') ||
+                           document.querySelector('img[src*="profile_images"]');
+                if (imgEl) data.profileImage = imgEl.src;
 
-              // Website
-              const urlEl = document.querySelector('[data-testid=\"UserUrl\"] span');
-              if (urlEl) data.website = urlEl.textContent.trim();
+                // Location
+                var locationEl = document.querySelector('[data-testid="UserLocation"] span') ||
+                                document.querySelector('[data-testid="UserLocation"]');
+                if (locationEl) data.location = locationEl.textContent.trim();
 
-              return JSON.stringify(data);
-            })();
-          "
-          
-          return jsResult
-        end tell
-      `;
+                // Website
+                var urlEl = document.querySelector('[data-testid="UserUrl"] span') ||
+                           document.querySelector('[data-testid="UserUrl"]');
+                if (urlEl) data.website = urlEl.textContent.trim();
 
-      const { execFileSync } = require('child_process');
-      const result = execFileSync('osascript', ['-e', script], { encoding: 'utf-8' });
-
-      if (result.includes('TAB_NOT_FOUND')) {
-        return null;
-      }
-
-      const data = JSON.parse(result);
+                return JSON.stringify(data);
+              })();
+            `
+          }
+        }));
+      });
       
-      return {
-        username: data.username || username,
-        displayName: data.displayName || username,
-        verified: data.verified,
-        verifiedType: data.verifiedType,
-        followers: this.parseNumber(data.followers),
-        following: this.parseNumber(data.following),
-        tweets: this.parseNumber(data.tweets),
-        bio: data.bio,
-        location: data.location,
-        website: data.website,
-        profileImage: data.profileImage,
-        createdAt: new Date().toISOString(),
-      };
-
-    } catch (error) {
-      console.log(`AppleScript extraction failed: ${error}`);
-      return null;
-    }
+      ws.on('message', (data: Buffer) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.id === 1) {
+            ws.close();
+            
+            if (msg.error) {
+              console.log(`CDP Runtime.evaluate error: ${msg.error.message}`);
+              resolve(null);
+              return;
+            }
+            
+            const result = msg.result?.result?.value;
+            if (!result) {
+              console.log('No result from CDP Runtime.evaluate');
+              resolve(null);
+              return;
+            }
+            
+            try {
+              const parsed = JSON.parse(result);
+              resolve({
+                username: parsed.username || username,
+                displayName: parsed.displayName || username,
+                verified: parsed.verified || false,
+                verifiedType: parsed.verifiedType,
+                followers: parsed.followers || 0,
+                following: parsed.following || 0,
+                tweets: parsed.tweets || 0,
+                bio: parsed.bio,
+                location: parsed.location,
+                website: parsed.website,
+                profileImage: parsed.profileImage,
+                createdAt: new Date().toISOString(),
+              });
+            } catch (e) {
+              console.log(`Failed to parse CDP result: ${e}`);
+              resolve(null);
+            }
+          }
+        } catch (e) {
+          console.log(`Failed to parse CDP message: ${e}`);
+          reject(e);
+        }
+      });
+      
+      ws.on('error', (err: Error) => {
+        console.log(`WebSocket error: ${err}`);
+        reject(err);
+      });
+      
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        ws.close();
+        reject(new Error('Timeout extracting profile data'));
+      }, 15000);
+    });
   }
 
   /**
