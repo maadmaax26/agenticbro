@@ -608,8 +608,13 @@ export class ProfileVerifier {
     const username = profileData.username;
     const displayName = profileData.displayName;
 
-    // Check if in known scammer database
-    const scammerMatch = await this.scammerDb.findByUsername(username);
+    // Check if in known scammer database (gracefully skip if DB is unavailable)
+    let scammerMatch = null;
+    try {
+      scammerMatch = await this.scammerDb.findByUsername(username);
+    } catch {
+      // Database not reachable — scammer-DB lookup skipped
+    }
     if (scammerMatch) {
       return {
         score: 0,

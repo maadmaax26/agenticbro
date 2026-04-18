@@ -8,6 +8,7 @@ import { Router, Request, Response } from 'express';
 import { TokenScanner, TokenScanResult } from '../services/token-scanner';
 import { Pool } from 'pg';
 import { Cache } from '../utils/cache';
+import { ChromeProfileFetcher } from '../clients/chrome-fetcher';
 
 const router = Router();
 
@@ -19,6 +20,9 @@ const scanner = new TokenScanner({ cache, db });
 
 // Chrome CDP endpoint
 const CHROME_CDP_URL = process.env.CHROME_CDP_URL || 'http://localhost:18800';
+
+// Initialize Chrome profile fetcher
+const chromeFetcher = new ChromeProfileFetcher(CHROME_CDP_URL);
 
 /**
  * POST /api/v1/scan/profile
@@ -76,275 +80,116 @@ router.post('/profile', async (req: Request, res: Response) => {
 /**
  * Scan Twitter profile using Chrome CDP
  */
+/**
+ * Scan Twitter profile using Chrome CDP via ChromeProfileFetcher
+ * Falls back to web scrape if Chrome CDP is unavailable
+ */
 async function scanTwitterProfile(username: string): Promise<any> {
-  const WebSocket = require('ws');
+  console.log(`[scanTwitterProfile] Starting scan for @${username}`);
+  
+  // Try Chrome CDP first (more accurate)
+  try {
+    const chromeAvailable = await chromeFetcher.isAvailable();
+    
+    if (chromeAvailable) {
+      console.log(`[scanTwitterProfile] Chrome CDP available, using real browser scan`);
+      const profileData = await chromeFetcher.fetchProfile(username);
+      
+      if (profileData) {
+        console.log(`[scanTwitterProfile] Successfully fetched profile via Chrome CDP`);
+        
+        // Calculate risk score based on profile data
+        const riskAnalysis = analyzeProfileRisk(profileData);
+        
+        return {
+          success: true,
+          data: {
+            platform: 'twitter',
+            username: `@${profileData.username}`,
+            displayName: profileData.displayName,
+            verified: profileData.verified,
+            verifiedType: profileData.verifiedType,
+            followers: profileData.followers,
+            following: profileData.following,
+            posts_count: profileData.tweets,
+            bio: profileData.bio,
+            location: profileData.location,
+            website: profileData.website,
+            profileImage: profileData.profileImage,
+            createdAt: profileData.createdAt,
+            ...riskAnalysis,
+          },
+          source: 'chrome_cdp',
+          scanTime: new Date().toISOString(),
+        };
+      }
+    }
+  } catch (error: any) {
+    console.error(`[scanTwitterProfile] Chrome CDP error: ${error.message}`);
+  }
+  
+  // Fallback: Web scrape (less accurate but always available)
+  console.log(`[scanTwitterProfile] Falling back to web scrape`);
+  return await scanTwitterProfileFallback(username);
+}
+
+/**
+ * Fallback: Scan Twitter profile using simple web fetch
+ * Used when Chrome CDP is not available
+ */
+async function scanTwitterProfileFallback(username: string): Promise<any> {
   const fetch = require('node-fetch');
   
   try {
-    // Get Chrome DevTools Protocol tabs
-    const tabsResponse = await fetch(`${CHROME_CDP_URL}/json`);
-    const tabs = await tabsResponse.json();
-    
-    // Find or create a tab for X
-    let targetTab = tabs.find((t: any) => t.url?.includes('x.com') || t.url?.includes('twitter.com'));
-    
-    if (!targetTab) {
-      // Open new tab
-      const newTabResponse = await fetch(`${CHROME_CDP_URL}/json/new?https://x.com/${username}`, {
-        method: 'PUT'
-      });
-      targetTab = await newTabResponse.json();
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for page load
-    } else {
-      // Navigate existing tab
-      const ws = new WebSocket(targetTab.webSocketDebuggerUrl);
-      
-      await new Promise((resolve, reject) => {
-        ws.on('open', () => {
-          ws.send(JSON.stringify({
-            id: 1,
-            method: 'Page.navigate',
-            params: { url: `https://x.com/${username}` }
-          }));
-        });
-        
-        ws.on('message', (data: string) => {
-          const msg = JSON.parse(data);
-          if (msg.id === 1) {
-            setTimeout(resolve, 3000); // Wait for navigation
-          }
-        });
-        
-        setTimeout(reject, 10000); // 10s timeout
-      });
-      
-      ws.close();
-    }
-    
-    // Get fresh tabs list after navigation
-    const freshTabsResponse = await fetch(`${CHROME_CDP_URL}/json`);
-    const freshTabs = await freshTabsResponse.json();
-    const xTab = freshTabs.find((t: any) => t.url?.includes(username) || t.url?.includes('x.com'));
-    
-    if (!xTab) {
-      throw new Error('Could not find X tab after navigation');
-    }
-    
-    // Connect and extract data
-    const ws = new WebSocket(xTab.webSocketDebuggerUrl);
-    
-    const profileData = await new Promise((resolve, reject) => {
-      ws.on('open', () => {
-        // Get page text content
-        ws.send(JSON.stringify({
-          id: 1,
-          method: 'Runtime.evaluate',
-          params: {
-            expression: 'document.body.innerText'
-          }
-        }));
-      });
-      
-      ws.on('message', (data: string) => {
-        try {
-          const msg = JSON.parse(data);
-          if (msg.id === 1 && msg.result?.result?.value) {
-            resolve(parseProfileText(msg.result.result.value, username));
-          }
-        } catch (e) {
-          reject(e);
-        }
-      });
-      
-      setTimeout(() => reject(new Error('Timeout extracting profile data')), 15000);
+    const response = await fetch(`https://x.com/${username}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
     });
     
-    ws.close();
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+        source: 'web_scrape',
+      };
+    }
+    
+    const html = await response.text();
+    const profileData = parseProfileHtml(html, username);
+    
+    if (!profileData) {
+      return {
+        success: false,
+        error: 'Could not parse profile data from page',
+        source: 'web_scrape',
+      };
+    }
+    
+    const riskAnalysis = analyzeProfileRisk(profileData);
     
     return {
       success: true,
-      data: profileData,
-      source: 'chrome_cdp',
+      data: {
+        platform: 'twitter',
+        username: `@${username}`,
+        ...profileData,
+        ...riskAnalysis,
+      },
+      source: 'web_scrape',
       scanTime: new Date().toISOString(),
     };
     
   } catch (error: any) {
-    console.error('Chrome CDP scan error:', error);
+    console.error(`[scanTwitterProfileFallback] Error: ${error.message}`);
     return {
       success: false,
       error: error.message,
-      source: 'chrome_cdp',
+      source: 'web_scrape',
     };
   }
-}
-
-/**
- * Parse profile text content from X
- */
-function parseProfileText(text: string, username: string): any {
-  const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l);
-  
-  const profile: any = {
-    platform: 'twitter',
-    username: `@${username}`,
-    name: '',
-    verified: false,
-    followers: 0,
-    following: 0,
-    posts_count: 0,
-    bio: '',
-    location: '',
-    join_date: '',
-    account_age_years: 0,
-    red_flags: [],
-    promoted_tokens: [],
-    recent_posts: [],
-  };
-  
-  // Extract basic info
-  for (let i = 0; i < Math.min(50, lines.length); i++) {
-    const line = lines[i];
-    
-    // Name (usually first line with uppercase)
-    if (!profile.name && /^[A-Z][a-z]+/.test(line) && !line.includes('@')) {
-      profile.name = line;
-    }
-    
-    // Verified badge
-    if (line.includes('Verified') || line.includes('✓')) {
-      profile.verified = true;
-    }
-    
-    // Followers
-    if (line.toLowerCase().includes('follower')) {
-      const match = line.match(/([\d,\.]+[KM]?)\s*Follower/i);
-      if (match) {
-        profile.followers = parseNumber(match[1]);
-      }
-    }
-    
-    // Following
-    if (line.toLowerCase().includes('following')) {
-      const match = line.match(/([\d,\.]+[KM]?)\s*Following/i);
-      if (match) {
-        profile.following = parseNumber(match[1]);
-      }
-    }
-    
-    // Posts
-    if (line.toLowerCase().includes('post')) {
-      const match = line.match(/([\d,\.]+[KM]?)\s*Post/i);
-      if (match) {
-        profile.posts_count = parseNumber(match[1]);
-      }
-    }
-    
-    // Join date
-    if (line.includes('Joined')) {
-      const match = line.match(/Joined\s+(\w+\s+\d{4})/);
-      if (match) {
-        profile.join_date = match[1];
-        // Calculate account age
-        const yearMatch = match[1].match(/\d{4}/);
-        if (yearMatch) {
-          const joinYear = parseInt(yearMatch[0]);
-          profile.account_age_years = new Date().getFullYear() - joinYear;
-        }
-      }
-    }
-    
-    // Location
-    if (line.includes('·') && !profile.location) {
-      const parts = line.split('·');
-      for (const part of parts) {
-        if (part.match(/^[A-Z]/) && !part.includes('http') && !part.includes('@')) {
-          profile.location = part.trim();
-          break;
-        }
-      }
-    }
-    
-    // Bio (longer lines with keywords)
-    if (line.length > 20 && !profile.bio && !line.startsWith('http') && !line.startsWith('@')) {
-      if (/[A-Za-z]/.test(line) && !line.includes('Follower') && !line.includes('Following')) {
-        profile.bio = line.substring(0, 200);
-      }
-    }
-  }
-  
-  // Calculate red flags from bio
-  if (profile.bio) {
-    const bioLower = profile.bio.toLowerCase();
-    
-    if (bioLower.includes('dm ') || bioLower.includes('dm me')) {
-      profile.red_flags.push('DM solicitation in bio');
-    }
-    if (bioLower.includes('1000x') || bioLower.includes('100x') || bioLower.includes('moonshot')) {
-      profile.red_flags.push('Unrealistic returns claims (1000x/100x)');
-    }
-    if (bioLower.includes('project promoter') || bioLower.includes('crypto promoter')) {
-      profile.red_flags.push('Self-described shill account');
-    }
-    if (bioLower.includes('presale')) {
-      profile.red_flags.push('Presale promotion (high risk)');
-    }
-    if (bioLower.includes('trusted source') || bioLower.includes('your trusted')) {
-      profile.red_flags.push('False authority claim');
-    }
-    if (bioLower.includes('t.me/') || bioLower.includes('telegram')) {
-      profile.red_flags.push('Telegram redirect in bio');
-    }
-  }
-  
-  // Check account age
-  if (profile.account_age_years < 1) {
-    profile.red_flags.push('Account less than 1 year old');
-  }
-  
-  // Check verification
-  if (!profile.verified && profile.followers < 10000) {
-    profile.red_flags.push('Not verified');
-  }
-  
-  // Check follower ratio
-  if (profile.following > 0 && profile.followers > 0) {
-    const ratio = profile.followers / profile.following;
-    if (ratio < 1.5) {
-      profile.red_flags.push(`Low follower ratio (${ratio.toFixed(1)}:1)`);
-    }
-  }
-  
-  // Calculate risk score
-  let riskScore = 2.0;
-  for (const flag of profile.red_flags) {
-    if (flag.includes('DM')) riskScore += 2.0;
-    else if (flag.includes('Unrealistic')) riskScore += 2.5;
-    else if (flag.includes('shill')) riskScore += 2.0;
-    else if (flag.includes('presale')) riskScore += 2.0;
-    else if (flag.includes('Telegram')) riskScore += 1.5;
-    else if (flag.includes('alpha') || flag.includes('gem')) riskScore += 1.0;
-    else if (flag.includes('follower ratio')) riskScore += 0.5;
-    else if (flag.includes('Not verified')) riskScore += 0.3;
-    else riskScore += 0.5;
-  }
-  
-  profile.risk_score = Math.min(riskScore, 10.0);
-  profile.risk_level = riskScore >= 7 ? 'CRITICAL' : riskScore >= 5 ? 'HIGH' : riskScore >= 3 ? 'MEDIUM' : 'LOW';
-  
-  // Determine verification level
-  if (riskScore >= 8) {
-    profile.verification_level = 'HIGH RISK';
-  } else if (riskScore >= 5) {
-    profile.verification_level = 'Unverified';
-  } else if (profile.verified && profile.account_age_years >= 2) {
-    profile.verification_level = 'Verified';
-  } else if (profile.account_age_years >= 5) {
-    profile.verification_level = 'Legitimate';
-  } else {
-    profile.verification_level = 'Partially Verified';
-  }
-  
-  return profile;
 }
 
 /**
@@ -360,6 +205,239 @@ function parseNumber(str: string): number {
   }
   return parseInt(num) || 0;
 }
+
+/**
+ * Parse profile data from HTML response
+ */
+function parseProfileHtml(html: string, username: string): any {
+  const profile: any = {
+    username,
+    displayName: username,
+    verified: false,
+    followers: 0,
+    following: 0,
+    tweets: 0,
+    bio: '',
+  };
+  
+  // Extract from meta tags
+  const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
+  const ogDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
+  const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+  
+  if (ogTitle) profile.displayName = ogTitle[1];
+  if (ogDesc) {
+    profile.bio = ogDesc[1];
+    // Try to extract follower count from description
+    const followerMatch = ogDesc[1].match(/([\d,\.]+[KM]?)\s*Followers?/i);
+    if (followerMatch) profile.followers = parseNumber(followerMatch[1]);
+  }
+  if (ogImage) profile.profileImage = ogImage[1];
+  
+  // Check for verified badge
+  if (html.includes('verified') || html.includes('isVerified')) {
+    profile.verified = true;
+  }
+  
+  return profile;
+}
+
+/**
+ * Analyze profile for risk indicators
+ */
+function analyzeProfileRisk(profileData: any): any {
+  const redFlags: string[] = [];
+  let riskScore = 0;
+  
+  const bio = (profileData.bio || '').toLowerCase();
+  
+  // Check bio for scam patterns
+  if (/guarantee|100%|risk.?free|can'?t lose/i.test(bio)) {
+    redFlags.push('Bio contains guaranteed-returns language');
+    riskScore += 2.0;
+  }
+  if (/send.*crypto|dm.*for.*signals|private.*alpha/i.test(bio)) {
+    redFlags.push('Bio solicits crypto or private signals');
+    riskScore += 2.5;
+  }
+  if (/limited.*spots|act.*now|last.*chance|hurry/i.test(bio)) {
+    redFlags.push('Bio uses urgency tactics');
+    riskScore += 1.5;
+  }
+  if (/x10|x100|1000%|moonshot/i.test(bio)) {
+    redFlags.push('Bio makes unrealistic profit claims');
+    riskScore += 2.0;
+  }
+  if (/\.t\.me\/|telegram/i.test(bio)) {
+    redFlags.push('Telegram redirect in bio');
+    riskScore += 1.0;
+  }
+  
+  // Check follower count
+  if (profileData.followers < 100) {
+    redFlags.push('Very low follower count');
+    riskScore += 0.5;
+  }
+  
+  // Check verification
+  if (!profileData.verified) {
+    redFlags.push('Account not verified');
+    riskScore += 0.3;
+  }
+  
+  // Determine risk level
+  const riskLevel = riskScore >= 7 ? 'CRITICAL' : riskScore >= 5 ? 'HIGH' : riskScore >= 3 ? 'MEDIUM' : 'LOW';
+  
+  // Determine verification level
+  let verificationLevel = 'Unverified';
+  if (riskScore >= 8) verificationLevel = 'HIGH RISK';
+  else if (profileData.verified && profileData.followers > 10000) verificationLevel = 'Verified';
+  else if (profileData.followers > 5000) verificationLevel = 'Partially Verified';
+  
+  return {
+    redFlags,
+    riskScore: Math.min(riskScore, 10),
+    riskLevel,
+    verificationLevel,
+  };
+}
+
+/**
+ * POST /api/v1/scan/profile/queue
+ * 
+ * Submit a profile scan job to the Supabase queue
+ * Returns job_id for frontend to poll for results
+ */
+router.post('/profile/queue', async (req: Request, res: Response) => {
+  try {
+    const { platform, username, walletAddress } = req.body;
+
+    if (!platform || !username) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'MISSING_PARAMS',
+          message: 'platform and username are required',
+        },
+      });
+    }
+
+    const cleanUsername = username.replace(/^@/, '').trim();
+    const jobId = crypto.randomUUID(); // UUID for Supabase
+
+    // Submit to Supabase queue
+    // Note: This requires Supabase client to be configured
+    // For now, we'll return a job_id and process inline
+    // TODO: Integrate with scan_worker.py via Supabase
+
+    // Check if Supabase is configured
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      // Submit to Supabase scan_jobs table
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { data, error } = await supabase
+        .from('scan_jobs')
+        .insert({
+          id: jobId,
+          scan_type: 'profile',
+          payload: {
+            username: cleanUsername,
+            platform: platform.toLowerCase(),
+            wallet_address: walletAddress || null,
+          },
+          status: 'pending',
+          priority: 5,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to submit job to queue:', error);
+        // Fall back to inline processing
+      } else {
+        return res.json({
+          success: true,
+          job_id: jobId,
+          status: 'pending',
+          message: 'Scan job submitted to queue',
+          poll_url: `/api/v1/scan/jobs/${jobId}`,
+        });
+      }
+    }
+
+    // Fallback: Process inline (no queue)
+    const result = await scanTwitterProfile(cleanUsername);
+    return res.json({
+      success: true,
+      job_id: jobId,
+      status: 'completed',
+      result: result,
+    });
+
+  } catch (error: any) {
+    console.error('Queue submission error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'QUEUE_ERROR',
+        message: 'Failed to submit scan job',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/v1/scan/jobs/:jobId
+ * 
+ * Get status of a queued scan job
+ */
+router.get('/jobs/:jobId', async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { data, error } = await supabase
+        .from('scan_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (error) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'JOB_NOT_FOUND', message: 'Job not found' },
+        });
+      }
+
+      return res.json({
+        success: true,
+        job: data,
+      });
+    }
+
+    return res.status(503).json({
+      success: false,
+      error: { code: 'QUEUE_NOT_CONFIGURED', message: 'Job queue not available' },
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'JOB_ERROR', message: 'Failed to get job status' },
+    });
+  }
+});
 
 /**
  * POST /api/v1/scan/token
