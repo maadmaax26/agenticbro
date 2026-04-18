@@ -21,7 +21,7 @@ if (fs.existsSync(envPath)) {
   envContent.split('\n').forEach(line => {
     const [key, ...valueParts] = line.split('=');
     if (key && valueParts.length > 0) {
-      const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+      const value = valueParts.join('=').replace(/^\"|\'|["']$/g, '');
       process.env[key.trim()] = value;
     }
   });
@@ -160,12 +160,12 @@ function mapScamType(scamType: string): string {
 }
 
 /**
- * Get threat level from risk score
+ * Get threat level from risk score (0-10 scale)
  */
 function getThreatLevel(riskScore: number): string {
-  if (riskScore <= 30) return 'LOW';
-  if (riskScore <= 50) return 'MEDIUM';
-  if (riskScore <= 70) return 'HIGH';
+  if (riskScore <= 3) return 'LOW';
+  if (riskScore <= 5) return 'MEDIUM';
+  if (riskScore <= 7) return 'HIGH';
   return 'CRITICAL';
 }
 
@@ -230,9 +230,43 @@ function mapToDatabaseRecord(csvRecord: Record<string, string>): ScammerRecord {
   const riskMatch = notes.match(/Risk Score[:\s]+([\d.]+)\/10/i);
   let riskScore: number;
   if (riskMatch) {
-    riskScore = Math.round(parseFloat(riskMatch[1]) * 10);  // Convert 0-10 scale to 0-100
+    // Risk scores in notes are already in 0-10 scale
+    // Just parse the number directly
+    riskScore = parseFloat(riskMatch[1]);
+    // Cap at 10 for database constraint
+    if (riskScore > 10) riskScore = 10;
+    if (riskScore < 0) riskScore = 0;
   } else {
-    riskScore = scoreMap[verificationLevel.toUpperCase()] || 50;
+    // For legitimate accounts: use low scores (0-5)
+    // For scammers: use high scores (5-10)
+    const isLegitimate = ['LEGITIMATE', 'VERIFIED SAFE', 'VERIFIED', 'PAID PROMOTER', 'RESOLVED', 'NORMAL USER', 'PROJECT ACCOUNT', 'MEDIA OUTLET', 'INFLUENCER', 'NEWS AGGREGATOR', 'EVENT TRACKER', 'TRACKER', 'BLOCK EXPLORER', 'PUBLIC FIGURE'].includes(verificationLevel.toUpperCase());
+    
+    // Default risk scores (0-10 scale for database)
+    const scoreMap: Record<string, number> = {
+      // High risk / scammer levels
+      'HIGH RISK': 10,
+      'CRITICAL': 10,
+      'PARTIALLY VERIFIED': 7,
+      'UNVERIFIED': 5,
+      
+      // Legitimate levels
+      'LEGITIMATE': 1,
+      'VERIFIED SAFE': 0.5,
+      'VERIFIED': isLegitimate ? 1 : 9,
+      'PAID PROMOTER': 2.5,
+      'RESOLVED': 1,
+      'NORMAL USER': 1.5,
+      'PROJECT ACCOUNT': 0.5,
+      'MEDIA OUTLET': 0.5,
+      'INFLUENCER': 0.5,
+      'NEWS AGGREGATOR': 1,
+      'EVENT TRACKER': 1,
+      'TRACKER': 0.5,
+      'BLOCK EXPLORER': 0.5,
+      'PUBLIC FIGURE': 0.5,
+    };
+    
+    riskScore = scoreMap[verificationLevel.toUpperCase()] || 5;
   }
   
   // Map verification level
@@ -330,16 +364,15 @@ async function sync(): Promise<SyncResult> {
 
         if (isLegitimate) {
           // Map to legitimate_accounts schema
-          // For legitimate accounts, risk score must be LOW (0-20) per database constraint
-          // Extract from notes if available, otherwise default to 5
+          // For legitimate accounts, risk score must be 0-10 per database constraint
+          // Extract from notes if available, otherwise default to 1
           const notes = csvRecord['Notes'] || '';
           const notesRiskMatch = notes.match(/Risk Score[:\s]+([\d.]+)\/10/i);
-          let extractedRiskScore = 5;  // Default LOW for legitimate
+          let legitimateRiskScore = 1;  // Default LOW for legitimate
           if (notesRiskMatch) {
-            // Convert 0-10 scale to 0-100, then cap at 20 for legitimate
-            extractedRiskScore = Math.min(Math.round(parseFloat(notesRiskMatch[1]) * 10), 20);
+            // Risk scores in notes are already in 0-10 scale
+            legitimateRiskScore = Math.min(parseFloat(notesRiskMatch[1]), 10);
           }
-          const legitimateRiskScore = extractedRiskScore;
           const legitimateRiskLevel = 'LOW';  // Always LOW for legitimate accounts
           
           const legitimateRecord = {
