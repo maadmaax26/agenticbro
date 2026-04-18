@@ -120,6 +120,19 @@ class ScammerDiscovery:
     def _is_known(self, identifier: str) -> bool:
         """Check if identifier is already in database"""
         return identifier.lower() in self.known_scammers
+
+    def _is_wallet_known(self, wallet_address: str) -> bool:
+        """Check if wallet address is already in database"""
+        for key, data in self.known_scammers.items():
+            if data.get('row', ''):
+                # Extract wallet address from row
+                row = data.get('row', '')
+                parts = row.split(',')
+                if len(parts) > 10:
+                    existing_wallet = parts[10].strip('"').lower()
+                    if existing_wallet and existing_wallet == wallet_address.lower():
+                        return True
+        return False
     
     def _calculate_risk_score(self, profile_data: dict) -> Tuple[float, str]:
         """Calculate risk score from 0-10 and return score with level"""
@@ -228,6 +241,14 @@ class ScammerDiscovery:
                         risk_flags.append('suspicious_fdv')
                     
                     if is_impersonator or len(risk_flags) >= 2:
+                        # Skip legitimate token
+                        if pair_address == LEGITIMATE_TOKENS.get('AGNTCBRO'):
+                            continue
+                        
+                        # Check if wallet already in database
+                        if self._is_wallet_known(pair_address):
+                            continue
+                        
                         scammer = {
                             'name': f"{token_symbol} ({base_token.get('name', 'Unknown')})",
                             'platform': 'Solana Token',

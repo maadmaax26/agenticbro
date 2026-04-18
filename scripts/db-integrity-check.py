@@ -3,7 +3,7 @@
 Scammer Database Integrity Check
 =================================
 Verifies scammer-database.csv matches Supabase known_scammers table.
-Runs every 30 minutes via cron.
+Runs every 6 hours via cron.
 Reports discrepancies and can auto-fix if enabled.
 
 Usage:
@@ -17,16 +17,30 @@ import json
 from datetime import datetime
 from typing import Dict, List, Any
 
-# Add user site-packages for supabase
-user_site = os.path.expanduser('~/Library/Python/3.9/lib/python/site-packages')
-if user_site not in sys.path:
-    sys.path.insert(0, user_site)
-
+# Try importing supabase directly (works with venv or installed packages)
 try:
     from supabase import create_client, Client
 except ImportError:
-    print("ERROR: supabase not installed. Run: pip3 install supabase")
-    sys.exit(1)
+    # Fall back to user site-packages for Python 3.14
+    user_site = os.path.expanduser('~/Library/Python/3.14/lib/python/site-packages')
+    if user_site not in sys.path:
+        sys.path.insert(0, user_site)
+    try:
+        from supabase import create_client, Client
+    except ImportError:
+        print("ERROR: supabase not installed. Run: pip3 install supabase")
+        sys.exit(1)
+
+# ─── Load Environment ────────────────────────────────────────────────────────
+
+# Load .env file from agentic-bro directory
+ENV_FILE = os.path.expanduser('~/.openclaw/workspace/agentic-bro/.env')
+if os.path.exists(ENV_FILE):
+    with open(ENV_FILE) as f:
+        for line in f:
+            if '=' in line and not line.startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 

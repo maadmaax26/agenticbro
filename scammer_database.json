@@ -3,11 +3,19 @@
     {
       "username": "ArisKols",
       "id": "5923337339",
-      "name": "𝖠𝗋𝗂𝗌 | 𝖪𝗈𝗅𝗌 𝖨𝗇𝖿𝗅𝗎𝖾𝗇𝖼𝖾𝗋𝗌 |",
+      "name": "\ud835\udda0\ud835\uddcb\ud835\uddc2\ud835\uddcc | \ud835\uddaa\ud835\uddc8\ud835\uddc5\ud835\uddcc \ud835\udda8\ud835\uddc7\ud835\uddbf\ud835\uddc5\ud835\uddce\ud835\uddbe\ud835\uddc7\ud835\uddbc\ud835\uddbe\ud835\uddcb\ud835\uddcc |",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services", "Paid ads solicitation"],
-      "red_flags": ["Generic KOL pattern", "Affordable pricing (low quality)", "Fast exposure claims", "No verifiable portfolio"],
+      "violations": [
+        "Marketing promotion services",
+        "Paid ads solicitation"
+      ],
+      "red_flags": [
+        "Generic KOL pattern",
+        "Affordable pricing (low quality)",
+        "Fast exposure claims",
+        "No verifiable portfolio"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Typical marketing bot offering paid promotions with generic claims about fast exposure"
@@ -15,11 +23,20 @@
     {
       "username": "NovaCryptoAds",
       "id": "5771563757",
-      "name": "Nova | • 𝖨𝗇𝖿𝗅𝗎𝖾𝗇𝖼𝖾𝗋 𝖬𝖺𝗋𝗄𝖾𝗍𝗂𝗇𝗀 • | 𝖪𝗈𝗅𝗌",
+      "name": "Nova | \u2022 \ud835\udda8\ud835\uddc7\ud835\uddbf\ud835\uddc5\ud835\uddce\ud835\uddbe\ud835\uddc7\ud835\uddbc\ud835\uddbe\ud835\uddcb \ud835\uddac\ud835\uddba\ud835\uddcb\ud835\uddc4\ud835\uddbe\ud835\uddcd\ud835\uddc2\ud835\uddc7\ud835\uddc0 \u2022 | \ud835\uddaa\ud835\uddc8\ud835\uddc5\ud835\uddcc",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services", "Budget-friendly packages"],
-      "red_flags": ["30+ Telegram channels claim", "15+ X accounts claim", "Budget-friendly = low quality", "Real buyers claim (exaggerated)", "No verifiable portfolio"],
+      "violations": [
+        "Marketing promotion services",
+        "Budget-friendly packages"
+      ],
+      "red_flags": [
+        "30+ Telegram channels claim",
+        "15+ X accounts claim",
+        "Budget-friendly = low quality",
+        "Real buyers claim (exaggerated)",
+        "No verifiable portfolio"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Marketing bot claiming large network of channels with no verification"
@@ -30,8 +47,14 @@
       "name": "Kaif | KOLs influencers",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services"],
-      "red_flags": ["KOLs influencer in username", "Standard marketing template", "DM for details pattern"],
+      "violations": [
+        "Marketing promotion services"
+      ],
+      "red_flags": [
+        "KOLs influencer in username",
+        "Standard marketing template",
+        "DM for details pattern"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "KOL service bot using standard marketing templates"
@@ -42,8 +65,14 @@
       "name": "Adam Lucas(kols influencer)",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services"],
-      "red_flags": ["KOL influencer in name", "Promotion without advance payment (suspicious)", "High engagement claims"],
+      "violations": [
+        "Marketing promotion services"
+      ],
+      "red_flags": [
+        "KOL influencer in name",
+        "Promotion without advance payment (suspicious)",
+        "High engagement claims"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Marketing bot offering promotion services with suspicious claims about engagement"
@@ -51,11 +80,18 @@
     {
       "username": "Jax_Kols_Maneger",
       "id": "5553062450",
-      "name": "𝐣𝐚𝐱 | 𝐂𝐫𝐲𝐩𝐭𝐨 𝐊𝐨𝐋𝐬 𝐌𝐚𝐧𝐚𝐠𝐞𝐫",
+      "name": "\ud835\udc23\ud835\udc1a\ud835\udc31 | \ud835\udc02\ud835\udc2b\ud835\udc32\ud835\udc29\ud835\udc2d\ud835\udc28 \ud835\udc0a\ud835\udc28\ud835\udc0b\ud835\udc2c \ud835\udc0c\ud835\udc1a\ud835\udc27\ud835\udc1a\ud835\udc20\ud835\udc1e\ud835\udc2b",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services"],
-      "red_flags": ["Kols Manager in name", "30+ channels claim", "15 Twitter communities claim", "No verification"],
+      "violations": [
+        "Marketing promotion services"
+      ],
+      "red_flags": [
+        "Kols Manager in name",
+        "30+ channels claim",
+        "15 Twitter communities claim",
+        "No verification"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Marketing bot claiming to manage multiple channels without proof"
@@ -66,8 +102,15 @@
       "name": "LUC1F3R | @LucifersCalls",
       "threat_level": "HIGH",
       "category": "Call Group/Paid Calls",
-      "violations": ["Call/marketing promotion services"],
-      "red_flags": ["$250K+ buying volume claim", "$450K market cap claim", "Paid service", "No verifiable track record"],
+      "violations": [
+        "Call/marketing promotion services"
+      ],
+      "red_flags": [
+        "$250K+ buying volume claim",
+        "$450K market cap claim",
+        "Paid service",
+        "No verifiable track record"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Paid call group offering volume generation services"
@@ -78,8 +121,14 @@
       "name": "Nicoletta",
       "threat_level": "HIGH",
       "category": "Marketing Bot/KOL Service",
-      "violations": ["Marketing promotion services"],
-      "red_flags": ["One free with first order", "Promo tweets", "No verification"],
+      "violations": [
+        "Marketing promotion services"
+      ],
+      "red_flags": [
+        "One free with first order",
+        "Promo tweets",
+        "No verification"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Marketing bot offering promo tweets with free trial tactic"
@@ -90,8 +139,15 @@
       "name": "Gorrila Calls CEO",
       "threat_level": "HIGH",
       "category": "Call Group/Paid Calls",
-      "violations": ["Marketing promotion services"],
-      "red_flags": ["CEO title (common with fakes)", "Premium marketing boost claim", "Real investors claim", "Organic growth claim"],
+      "violations": [
+        "Marketing promotion services"
+      ],
+      "red_flags": [
+        "CEO title (common with fakes)",
+        "Premium marketing boost claim",
+        "Real investors claim",
+        "Organic growth claim"
+      ],
       "banned": true,
       "banned_date": "2026-03-24",
       "scan_notes": "Call group bot with CEO title claiming premium marketing services"
@@ -99,11 +155,21 @@
     {
       "username": "Kexin_Ceo",
       "id": "1160223229",
-      "name": "𝗞𝗲𝘅𝗶𝗻 𝗖𝗲𝗼",
+      "name": "\ud835\uddde\ud835\uddf2\ud835\ude05\ud835\uddf6\ud835\uddfb \ud835\uddd6\ud835\uddf2\ud835\uddfc",
       "threat_level": "CRITICAL",
       "category": "Marketing Bot/KOL Service + Harassment",
-      "violations": ["Repeated marketing spam", "Harassment/abuse", "Ban evasion"],
-      "red_flags": ["CEO title", "Follower services across multiple platforms", "Repeatedly posted after warnings", "Harassment language", "Ban evasion attempts"],
+      "violations": [
+        "Repeated marketing spam",
+        "Harassment/abuse",
+        "Ban evasion"
+      ],
+      "red_flags": [
+        "CEO title",
+        "Follower services across multiple platforms",
+        "Repeatedly posted after warnings",
+        "Harassment language",
+        "Ban evasion attempts"
+      ],
       "banned": true,
       "banned_date": "2026-03-23",
       "scan_notes": "CRITICAL: Persistent spammer who was warned at 10:04 AM, banned at 10:09 AM, but kept posting through the night with marketing spam. Escaped ban multiple times and used harassment when confronted. High threat - extremely persistent.",
@@ -116,8 +182,17 @@
       "name": "Romsa Marketer[CEO]",
       "threat_level": "HIGH",
       "category": "Marketing Bot",
-      "violations": ["Marketing promotion services", "Ban evasion"],
-      "red_flags": ["CEO title (fake)", "Premium marketing boost", "Fast & organic claim (contradictory)", "DM solicitation", "Repeatedly posted after ban"],
+      "violations": [
+        "Marketing promotion services",
+        "Ban evasion"
+      ],
+      "red_flags": [
+        "CEO title (fake)",
+        "Premium marketing boost",
+        "Fast & organic claim (contradictory)",
+        "DM solicitation",
+        "Repeatedly posted after ban"
+      ],
       "banned": true,
       "banned_date": "2026-03-23",
       "scan_notes": "Persistent marketing bot that was warned at 9:00 AM, banned at 6:40 PM, but continued posting same message multiple times through the night. Ban evasion.",

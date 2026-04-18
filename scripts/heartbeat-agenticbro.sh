@@ -2,7 +2,7 @@
 # Heartbeat for Agentic Bro Group - Zero API Cost
 # Uses Telegram Bot API directly
 
-BOT_TOKEN="8798669748:AAEqLvnot5leTfXGoI4VB6gbfozsD78GoBE"
+BOT_TOKEN="8798669748:AAH4mFi-Fmc415aM8jAEGYu7Wm_vx7BQ_nI"
 GROUP_ID="-1003751594817"
 
 HOUR=$(date +%H)

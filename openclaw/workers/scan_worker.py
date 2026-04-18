@@ -22,9 +22,15 @@ Or use the launchd plist to run automatically on startup.
 # Add user site-packages to path for launchd
 import sys
 import os
-user_site = os.path.expanduser('~/Library/Python/3.9/lib/python/site-packages')
-if user_site not in sys.path:
-    sys.path.insert(0, user_site)
+
+# Clear any existing PYTHONPATH that might reference old Python versions
+# Then add only the current Python's site-packages
+if 'PYTHONPATH' in os.environ:
+    del os.environ['PYTHONPATH']
+
+# Force reload of site-packages for current Python
+import site
+site.main()
 
 import json
 import logging

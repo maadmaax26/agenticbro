@@ -3,7 +3,7 @@
 # Sends periodic messages to prevent session timeout
 
 GROUP_ID="-1003751594817"
-BOT_TOKEN="8798669748:AAEqLvnot5leTfXGoI4VB6gbfozsD78GoBE"
+BOT_TOKEN="8798669748:AAH4mFi-Fmc415aM8jAEGYu7Wm_vx7BQ_nI"
 
 # Morning keep-alive (8:00 AM EST)
 if [ "$(date +%H)" = "08" ]; then
