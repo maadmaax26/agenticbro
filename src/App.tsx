@@ -330,14 +330,21 @@ function App() {
           }
         } else {
           const emoji = result.riskLevel === 'LOW' ? '✅' : result.riskLevel === 'MEDIUM' ? '🟡' : result.riskLevel === 'HIGH' ? '🔴' : '🚨'
-          addMsg({ type: 'result', icon: emoji, text: `Risk Score: ${result.riskScore}/10 — ${result.riskLevel} ${emoji} | Verification: ${result.verificationLevel}` })
+          addMsg({ type: 'result', icon: '🔍', text: `Platform: ${socialPlatform.charAt(0).toUpperCase() + socialPlatform.slice(1)}` })
+          addMsg({ type: 'result', icon: '📊', text: `Risk Score: ${result.riskScore}/10 — ${result.riskLevel} RISK ${emoji}` })
           if (result.flagDetails?.length) {
             for (const flag of result.flagDetails) {
               const fEmoji = flag.weight >= 15 ? '🚨' : flag.weight >= 10 ? '⚠️' : '📌'
-              addMsg({ type: flag.weight >= 15 ? 'warning' : 'result', icon: fEmoji, text: `${flag.description} (${flag.weight} pts)${flag.platformSpecific ? ' [Platform-Specific]' : ''}` })
+              addMsg({ type: flag.weight >= 15 ? 'warning' : 'result', icon: fEmoji, text: `• ${flag.flag.replace(/_/g, ' ')} (${flag.weight}pts) — ${flag.description}` })
             }
+            addMsg({ type: 'system', icon: '📊', text: `Total: ${result.weightsSum}/${result.maxPossibleWeight || 90} pts · Flag values: guaranteed_returns(25) · giveaway_airdrop(20) · dm_solicitation(15) · free_crypto(15) · alpha_dm_scheme(15) · unrealistic_claims(10) · download_install(10) · urgency_tactics(10) · emotional_manipulation(10) · low_credibility(10)` })
           }
-          addMsg({ type: 'system', icon: '🔐', text: '⚠️ AI assessment — independent verification always recommended' })
+          const patternText = result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' :
+            result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' :
+            result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' :
+            'No significant scam patterns identified.'
+          addMsg({ type: 'system', icon: '🔍', text: `Behavioral Pattern: ${patternText}` })
+          addMsg({ type: 'system', icon: '📋', text: `Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` })
         }
       } catch (err: any) {
         addMsg({ type: 'error', icon: '❌', text: err?.message ?? 'Scan request failed' })
