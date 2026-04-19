@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash, AlertCircle, Info } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { isTestWallet } from '../../hooks/useTokenGating';
+import PhoneNumberVerifier from '../PhoneNumberVerifier';
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
@@ -9,7 +10,7 @@ const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_U
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ScanStatus = 'idle' | 'scanning' | 'done';
-type ScanTarget = 'all' | 'wallet' | 'channels' | 'token' | 'scam';
+type ScanTarget = 'all' | 'wallet' | 'channels' | 'token' | 'scam' | 'phone';
 
 interface ScanResult {
   id: number;
@@ -138,6 +139,7 @@ const SCAN_TARGETS: { id: ScanTarget; label: string; icon: string; cost: number;
   { id: 'channels', label: 'Channel Scan', icon: '📡', cost: 10000, description: 'Deep-scan a specific channel' },
   { id: 'token',    label: 'Single Token', icon: '🔍', cost: 10000, description: 'Find all calls for a token' },
   { id: 'scam',     label: 'Scam Detection', icon: '🚨', cost: 5000, description: 'Scan X or Telegram user for scam patterns' },
+  { id: 'phone',    label: 'Phone Verify',   icon: '📞', cost: 5000, description: 'Verify phone numbers for scam/virtual/spam' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -163,7 +165,7 @@ export default function PriorityScan() {
   const [isMockData,    setIsMockData]    = useState(false);
   const [scanError,     setScanError]     = useState<string | null>(null);
 
-  const burnCost = scanTarget === 'all' ? 15000 : scanTarget === 'scam' ? 5000 : 10000;
+  const burnCost = scanTarget === 'all' ? 15000 : (scanTarget === 'scam' || scanTarget === 'phone') ? 5000 : 10000;
 
   // Resolve human-readable label for burn modal / history
   const scanLabel = (() => {
@@ -171,6 +173,7 @@ export default function PriorityScan() {
     if (scanTarget === 'channels') return channelInput  ? `📡 ${channelInput}` : 'Channel Scan';
     if (scanTarget === 'token')    return tokenInput     ? `🔍 ${tokenInput}`  : 'Single Token';
     if (scanTarget === 'scam')     return usernameInput ? `🚨 ${platform === 'X' ? 'X' : 'Telegram'}: ${usernameInput}` : 'Scam Detection';
+    if (scanTarget === 'phone')    return '📞 Phone Verify';
     return 'All Channels';
   })();
 
@@ -180,7 +183,8 @@ export default function PriorityScan() {
     (scanTarget === 'wallet'   && !walletInput.trim())  ||
     (scanTarget === 'channels' && !channelInput.trim()) ||
     (scanTarget === 'token'    && !tokenInput.trim()) ||
-    (scanTarget === 'scam'     && !usernameInput.trim());
+    (scanTarget === 'scam'     && !usernameInput.trim()) ||
+    scanTarget === 'phone';
 
   // Test wallet: skip burn confirmation and run immediately
   const startScan = () => { if (isTest) { void confirmScan(); } else { setShowModal(true); } };
@@ -514,6 +518,16 @@ export default function PriorityScan() {
 
             <p className="text-xs text-gray-600 mt-1.5">
               Powered by <span className="text-purple-400 font-semibold">OpenClaw Detection Engine</span> — analyzes profile, posting patterns, victim reports, scammer database, and on-chain data. Only public information is accessed.
+            </p>
+          </div>
+        )}
+
+        {/* ── Phone Number Verifier ── */}
+        {scanTarget === 'phone' && (
+          <div className="space-y-4">
+            <PhoneNumberVerifier />
+            <p className="text-xs text-gray-600 mt-1.5">
+              Powered by <span className="text-purple-400 font-semibold">OpenClaw Detection Engine</span> — carrier lookup, virtual/VoIP detection, scam operation database, spam dialer identification.
             </p>
           </div>
         )}
