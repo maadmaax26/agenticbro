@@ -4,9 +4,17 @@
   "source": "x_search",
   "search_term": "turn on notifications for",
   "mentioned_in": null,
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-04-03T07:30:37.835627",
   "priority": "normal",
-  "attempts": 0,
-  "max_attempts": 3
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:25:00.676541",
+  "completed_at": "2026-04-04T23:25:00.676543",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }
