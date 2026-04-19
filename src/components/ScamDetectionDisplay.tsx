@@ -84,7 +84,7 @@ const supabase = supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : 
 // ============================================
 
 function RiskLevelBadge({ level, score }: { level: string; score: number }) {
-  const colors = {
+  const colors: Record<string, string> = {
     LOW: 'bg-green-500',
     MEDIUM: 'bg-yellow-500',
     HIGH: 'bg-orange-500',
@@ -92,8 +92,8 @@ function RiskLevelBadge({ level, score }: { level: string; score: number }) {
   };
 
   return (
-    <span className={`${colors[level as keyof typeof colors]} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
-      {level} ({score.toFixed(2)}/10)
+    <span className={`${colors[level] || 'bg-gray-500'} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
+      {score.toFixed(1)}/10 — {level} {level === 'CRITICAL' ? '🚨' : level === 'HIGH' ? '⚠️' : level === 'MEDIUM' ? '⚡' : '✅'}
     </span>
   );
 }

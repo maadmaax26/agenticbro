@@ -654,7 +654,7 @@ export default function PriorityScan() {
                     className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
                     style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}
                   >
-                    Risk Score: {result.riskScore}/10
+                    Risk Score: {result.riskScore.toFixed(1)}/10 — {result.riskScore >= 7 ? 'HIGH' : result.riskScore >= 4 ? 'MEDIUM' : 'LOW'} RISK {result.riskScore >= 7 ? '⚠️' : result.riskScore >= 4 ? '⚡' : '✅'}
                   </span>
 
                   <span
@@ -772,15 +772,34 @@ export default function PriorityScan() {
 
                       <div className="space-y-2">
                         <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags ({result.redFlags.length})</p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags with Scores ({result.redFlags.length})</p>
                           <ul className="space-y-1">
-                            {result.redFlags.map((flag, idx) => (
-                              <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
-                                <span className="text-red-500 mt-0.5">•</span>
-                                {flag}
-                              </li>
-                            ))}
+                            {result.redFlags.map((flag, idx) => {
+                              const pointMatch = flag.match(/\((\d+)pts?\)/);
+                              const pts = pointMatch ? parseInt(pointMatch[1]) : 0;
+                              const flagName = flag.replace(/\s*\(\d+pts?\).*/, '').replace(/_/g, ' ');
+                              const descMatch = flag.match(/—\s*(.+)/);
+                              const desc = descMatch ? descMatch[1] : '';
+                              return (
+                                <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
+                                  <span className="text-red-500 mt-0.5">•</span>
+                                  <span className="capitalize">{flagName}</span>
+                                  {pointMatch && <span className="text-xs font-mono ml-1 px-1 py-0.5 rounded" style={{background:'rgba(239,68,68,0.15)',color:'#f87171'}}>{pts}pts</span>}
+                                  {desc && <span className="text-gray-500 ml-1">— {desc}</span>}
+                                </li>
+                              );
+                            })}
                           </ul>
+                          <p className="text-xs text-gray-600 mt-2">Flag values: guaranteed_returns(25) · giveaway_airdrop(20) · dm_solicitation(15) · free_crypto(15) · alpha_dm_scheme(15) · unrealistic_claims(10) · download_install(10) · urgency_tactics(10) · emotional_manipulation(10) · low_credibility(10)</p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Behavioral Pattern</p>
+                          <p className="text-sm text-gray-300">
+                            {result.riskScore >= 7 ? 'Multiple high-severity scam indicators detected. This account shows patterns consistent with crypto fraud operations. Extreme caution advised.' :
+                             result.riskScore >= 4 ? 'Significant scam indicators present. Verify independently before any engagement.' :
+                             'No significant scam patterns identified. Always verify independently.'}
+                          </p>
                         </div>
 
                         <div>
