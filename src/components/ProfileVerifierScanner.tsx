@@ -113,38 +113,13 @@ interface ProfileScanResult {
 
 
 // ─── Disclaimer Notice Component ──────────────────────────────────────────────
-function DisclaimerNotice() {
+function DisclaimerNotice({ scanDate }: { scanDate?: string }) {
+  const dateStr = scanDate ? new Date(scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   return (
-    <div className="rounded-xl p-5" style={{ background: 'rgba(245,158,11,0.08)', border: '2px solid rgba(245,158,11,0.35)' }}>
-      <div className="text-center mb-3">
-        <h4 className="text-base font-bold text-yellow-400">⚠️ DISCLAIMER NOTICE ⚠️</h4>
-        <div className="text-yellow-500/40 text-xs font-mono">══════════════════════════════════════════════</div>
-      </div>
-      <p className="text-center text-xs text-gray-300 mb-3">
-        This scan is an AI-powered threat assessment of social media content.<br />
-        For complete accuracy, verify information through multiple sources.
+    <div className="rounded-xl p-4" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+      <p className="text-xs text-gray-400 leading-relaxed">
+        📋 <span className="text-yellow-400 font-semibold">Disclaimer:</span> Educational purposes only. Not financial advice. Not a guarantee of safety. Always do your own due diligence (DYOR). Scan date: {dateStr}
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-        <div>
-          <p className="font-bold text-yellow-400 mb-1">LIMITATIONS:</p>
-          <ul className="space-y-0.5 text-gray-400">
-            <li>• Only scans public profile data</li>
-            <li>• Does NOT verify user identity</li>
-            <li>• May miss sophisticated, well-hidden scams</li>
-            <li>• Scans HTML/timestamp — not reliable for all assets</li>
-            <li>• Subject to website rules and rate limiting</li>
-          </ul>
-        </div>
-        <div>
-          <p className="font-bold text-yellow-400 mb-1">INDEPENDENT VERIFICATION REQUIRED:</p>
-          <ul className="space-y-0.5 text-gray-400">
-            <li>• Cross-check username across multiple platforms</li>
-            <li>• Verify contract addresses manually</li>
-            <li>• Beware of "guaranteed returns" or "insider information"</li>
-            <li>• Never send money or share private keys</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }
@@ -461,12 +436,15 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
   const copyResult = () => {
     if (result) {
-      const text = `Profile Verification Result for @${result.username} (${result.platform})
-Risk Score: ${result.riskScore}/100
-Risk Level: ${result.riskLevel}
-${result.scamType ? `Scam Type: ${result.scamType}` : ''}
-${result.redFlags.length > 0 ? `Red Flags:\n${result.redFlags.map(f => `• ${f}`).join('\n')}` : ''}
-Recommendation: ${result.recommendation}`;
+      const text = `🔍 Platform: ${result.platform === 'twitter' ? 'X (Twitter)' : result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
+📊 Risk Score: ${(result.riskScore / 10).toFixed(1)}/10 — ${result.riskLevel} RISK ${result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
+
+Red Flags with Scores:
+${result.redFlags.map(f => `• ${f}`).join('\n')}
+
+Behavioral Pattern: ${result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' : result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' : result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' : 'No significant scam patterns identified.'}
+
+📋 Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${result.scanDate ? new Date(result.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`;
       navigator.clipboard.writeText(text);
     }
   };
@@ -650,7 +628,7 @@ Recommendation: ${result.recommendation}`;
       {result && (
         <div className="space-y-4">
           {/* Disclaimer Notice */}
-          <DisclaimerNotice />
+          <DisclaimerNotice scanDate={result.scanDate} />
           {/* Risk Score Header */}
           <div
             className="rounded-xl p-6"
@@ -668,7 +646,7 @@ Recommendation: ${result.recommendation}`;
                 </span>
                 <div>
                   <h3 className="text-xl font-bold" style={{ color: getRiskColor(result.riskLevel).color }}>
-                    {result.riskLevel} RISK
+                    {(result.riskScore / 10).toFixed(1)}/10 — {result.riskLevel} RISK {result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
                   </h3>
                   <p className="text-sm text-gray-400">
                     @{result.username} on {result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
@@ -684,7 +662,7 @@ Recommendation: ${result.recommendation}`;
                   color: getRiskColor(result.riskLevel).color,
                 }}
               >
-                {result.riskScore}/100
+                {(result.riskScore / 10).toFixed(1)}/10
               </div>
             </div>
 
@@ -694,10 +672,10 @@ Recommendation: ${result.recommendation}`;
                 <div 
                   className="h-full rounded-full transition-all duration-1000"
                   style={{
-                    width: `${result.riskScore}%`,
+                    width: `${(result.riskScore / 10) * 100}%`,
                     background: `linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)`,
                     backgroundSize: '300% 100%',
-                    backgroundPosition: `${result.riskScore}% 0`,
+                    backgroundPosition: `${(result.riskScore / 10) * 100}% 0`,
                   }}
                 />
               </div>
@@ -717,9 +695,11 @@ Recommendation: ${result.recommendation}`;
               </div>
             )}
 
-            <p className="text-gray-300 text-sm leading-relaxed">
-              {result.recommendation}
-            </p>
+            {result.recommendation && (
+              <div className="mt-3 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <p className="text-gray-300 text-sm leading-relaxed">{result.recommendation}</p>
+              </div>
+            )}
           </div>
 
           {/* Profile Data */}
@@ -790,21 +770,67 @@ Recommendation: ${result.recommendation}`;
               }}
             >
               <h3 className="text-lg font-bold text-red-400 mb-4">
-                🚩 Red Flags ({result.redFlags.length})
+                🚩 Red Flags with Scores ({result.redFlags.length})
               </h3>
               
               <div className="space-y-2">
-                {result.redFlags.map((flag, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-start gap-2 p-3 rounded-lg"
-                    style={{ background: 'rgba(239,68,68,0.05)' }}
-                  >
-                    <span className="text-red-500 mt-0.5">⚠️</span>
-                    <span className="text-sm text-gray-300">{flag}</span>
-                  </div>
-                ))}
+                {result.redFlags.map((flag, index) => {
+                  // Parse flag format: "flag_name (25pts) — description" or plain text
+                  const pointMatch = flag.match(/\((\d+)pts?\)/);
+                  const points = pointMatch ? parseInt(pointMatch[1]) : 0;
+                  const hasPoints = pointMatch !== null;
+                  const flagName = flag.replace(/\s*\(\d+pts?\).*/, '').replace(/_/g, ' ');
+                  const descMatch = flag.match(/—\s*(.+)/);
+                  const desc = descMatch ? descMatch[1] : '';
+                  
+                  return (
+                    <div 
+                      key={index}
+                      className="flex items-start gap-3 p-3 rounded-lg"
+                      style={{ background: 'rgba(239,68,68,0.05)' }}
+                    >
+                      <span className="text-red-500 mt-0.5 text-lg">•</span>
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-300 font-medium capitalize">{flagName}</span>
+                        {hasPoints && (
+                          <span className="ml-2 text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+                            {points}pts
+                          </span>
+                        )}
+                        {desc && (
+                          <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              
+              {/* Point values reference */}
+              <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
+                <p className="text-xs text-gray-500">
+                  Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Behavioral Pattern Summary */}
+          {result.redFlags.length > 0 && (
+            <div
+              className="rounded-xl p-6"
+              style={{
+                background: 'rgba(251,191,36,0.05)',
+                border: '1px solid rgba(251,191,36,0.15)',
+              }}
+            >
+              <h3 className="text-lg font-bold text-yellow-400 mb-3">🔍 Behavioral Pattern</h3>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                {result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. This account shows patterns consistent with crypto fraud operations including guaranteed returns promises, DM solicitation funnels, and coordinated shill activity. Extreme caution advised.' :
+                 result.riskLevel === 'HIGH' ? 'Significant scam indicators present. This account exhibits patterns of paid promotion, unrealistic profit claims, or DM-based solicitation. Verify independently before any engagement.' :
+                 result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. The account may have legitimate elements alongside suspicious indicators. Further verification recommended before engaging.' :
+                 'No significant scam patterns identified. However, always verify accounts independently before sharing sensitive information or sending funds.'}
+              </p>
             </div>
           )}
 
