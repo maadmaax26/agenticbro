@@ -243,62 +243,123 @@ function parseProfileHtml(html: string, username: string): any {
 }
 
 /**
- * Analyze profile for risk indicators
+ * Analyze profile for risk indicators using the 90-point unified scoring system
+ * Red flags: guaranteed_returns(25), giveaway_airdrop(20), dm_solicitation(15),
+ *   free_crypto(15), alpha_dm_scheme(15), unrealistic_claims(10), download_install(10),
+ *   urgency_tactics(10), emotional_manipulation(10), low_credibility(10)
+ * Risk levels: 0-3 LOW, 3-5 MEDIUM, 5-7 HIGH, 7+ CRITICAL (out of 10)
  */
 function analyzeProfileRisk(profileData: any): any {
-  const redFlags: string[] = [];
-  let riskScore = 0;
+  const redFlags: { flag: string; points: number }[] = [];
+  let totalPoints = 0; // Out of 90 max
   
   const bio = (profileData.bio || '').toLowerCase();
+  const displayName = (profileData.displayName || '').toLowerCase();
+  const combined = `${bio} ${displayName}`.toLowerCase();
+  const followers = profileData.followers || 0;
+  const following = profileData.following || 0;
   
-  // Check bio for scam patterns
-  if (/guarantee|100%|risk.?free|can'?t lose/i.test(bio)) {
-    redFlags.push('Bio contains guaranteed-returns language');
-    riskScore += 2.0;
-  }
-  if (/send.*crypto|dm.*for.*signals|private.*alpha/i.test(bio)) {
-    redFlags.push('Bio solicits crypto or private signals');
-    riskScore += 2.5;
-  }
-  if (/limited.*spots|act.*now|last.*chance|hurry/i.test(bio)) {
-    redFlags.push('Bio uses urgency tactics');
-    riskScore += 1.5;
-  }
-  if (/x10|x100|1000%|moonshot/i.test(bio)) {
-    redFlags.push('Bio makes unrealistic profit claims');
-    riskScore += 2.0;
-  }
-  if (/\.t\.me\/|telegram/i.test(bio)) {
-    redFlags.push('Telegram redirect in bio');
-    riskScore += 1.0;
+  // guaranteed_returns (25pts) — promises of guaranteed profits, risk-free returns
+  if (/guarantee|100%|risk.?free|can'?t lose|sure.?thing|guaranteed.?return|safe.?bet/i.test(combined)) {
+    redFlags.push({ flag: 'Guaranteed returns language', points: 25 });
+    totalPoints += 25;
   }
   
-  // Check follower count
-  if (profileData.followers < 100) {
-    redFlags.push('Very low follower count');
-    riskScore += 0.5;
+  // giveaway_airdrop (20pts) — giveaways, airdrops, free token promotions
+  if (/giveaway|airdrop|free.*token|free.*crypto|claim.*now|give.?away|raffle/i.test(combined)) {
+    redFlags.push({ flag: 'Giveaway/airdrop promotion', points: 20 });
+    totalPoints += 20;
   }
   
-  // Check verification
-  if (!profileData.verified) {
-    redFlags.push('Account not verified');
-    riskScore += 0.3;
+  // dm_solicitation (15pts) — "DM me", "DM for", sliding into DMs requested
+  if (/dm.?for|dm.?me|slide.?into|slide.?dm|dm.?to.?join|dm.?lfg|dm.?now|message.?me|hit.?my.?dm/i.test(combined)) {
+    redFlags.push({ flag: 'DM solicitation in bio', points: 15 });
+    totalPoints += 15;
   }
+  
+  // free_crypto (15pts) — offering free crypto, mining, staking rewards
+  if (/free.*crypto|free.*sol|free.*btc|free.*eth|mining.*reward|passive.*income|stake.*earn|earn.*free/i.test(combined)) {
+    redFlags.push({ flag: 'Free crypto/money offers', points: 15 });
+    totalPoints += 15;
+  }
+  
+  // alpha_dm_scheme (15pts) — private alpha, VIP groups, exclusive signals
+  if (/private.*alpha|vip.*group|exclusive.*signal|signal.*group|premium.*group|inner.?circle|secret.?group|t\.me\//i.test(combined)) {
+    redFlags.push({ flag: 'Alpha/DM scheme — private group funnel', points: 15 });
+    totalPoints += 15;
+  }
+  
+  // unrealistic_claims (10pts) — 10x, 100x, moonshot, get rich
+  if (/\d+x(?!.*size)|100x|1000x|moonshot|to.?the.?moon|get.?rich|lamborghini|financial.?freedom|10x.?100x/i.test(combined)) {
+    redFlags.push({ flag: 'Unrealistic profit claims', points: 10 });
+    totalPoints += 10;
+  }
+  
+  // download_install (10pts) — requests to download apps or install software
+  if (/download|install.*app|get.*app|app.?store|play.?store|download.*now/i.test(combined)) {
+    redFlags.push({ flag: 'Download/install request', points: 10 });
+    totalPoints += 10;
+  }
+  
+  // urgency_tactics (10pts) — act now, limited time, last chance
+  if (/limited.*spot|act.?now|last.?chance|hurry|time.?sensitive|ending.?soon|closing.?soon|few.?left|don'?t.?wait|fomo/i.test(combined)) {
+    redFlags.push({ flag: 'Urgency tactics', points: 10 });
+    totalPoints += 10;
+  }
+  
+  // emotional_manipulation (10pts) — fear of missing out, emotional appeals
+  if (/you'?ll.?regret|don'?t.?miss.?out|life.?changing|once.?in.?lifetime|never.?again|must.?have|opportunity.?of/i.test(combined)) {
+    redFlags.push({ flag: 'Emotional manipulation', points: 10 });
+    totalPoints += 10;
+  }
+  
+  // low_credibility (10pts) — suspicious follower ratios, new accounts, no verification
+  const followRatio = followers > 0 ? following / followers : 0;
+  if (followRatio > 2.0 && followers < 5000) {
+    redFlags.push({ flag: `Suspicious follower ratio (${following}/${followers})`, points: 10 });
+    totalPoints += 10;
+  } else if (followRatio > 0.5 && following > 10000 && followers < following * 0.3) {
+    redFlags.push({ flag: 'Engagement pod pattern (following >> followers)', points: 10 });
+    totalPoints += 10;
+  } else if (followers < 100) {
+    redFlags.push({ flag: 'Very low follower count', points: 10 });
+    totalPoints += 10;
+  }
+  
+  // Additional: Telegram link (common scam vector)
+  if (/t\.me\/|telegram\.me\//i.test(combined)) {
+    // Only add if not already caught by alpha_dm_scheme
+    if (!redFlags.some(f => f.flag.includes('Alpha/DM scheme'))) {
+      redFlags.push({ flag: 'Telegram link in bio (common scam vector)', points: 5 });
+      totalPoints += 5;
+    }
+  }
+  
+  // Additional: Marketing/advertising in bio
+  if (/advertis|market.*agency|promo.*service|shill|paid.*promo|sponsored.*post/i.test(combined)) {
+    redFlags.push({ flag: 'Marketing/advertising service (paid shill account)', points: 5 });
+    totalPoints += 5;
+  }
+  
+  // Convert 90-point total to 0-10 scale
+  const riskScore = Math.min(totalPoints / 9, 10); // 90pts = 10/10
   
   // Determine risk level
   const riskLevel = riskScore >= 7 ? 'CRITICAL' : riskScore >= 5 ? 'HIGH' : riskScore >= 3 ? 'MEDIUM' : 'LOW';
   
   // Determine verification level
   let verificationLevel = 'Unverified';
-  if (riskScore >= 8) verificationLevel = 'HIGH RISK';
-  else if (profileData.verified && profileData.followers > 10000) verificationLevel = 'Verified';
-  else if (profileData.followers > 5000) verificationLevel = 'Partially Verified';
+  if (riskScore >= 7) verificationLevel = 'HIGH RISK';
+  else if (profileData.verified && followers > 10000) verificationLevel = 'Verified';
+  else if (followers > 5000) verificationLevel = 'Partially Verified';
   
   return {
-    redFlags,
-    riskScore: Math.min(riskScore, 10),
+    redFlags: redFlags.map(f => `${f.flag} (${f.points}pts)`),
+    riskScore: Math.round(riskScore * 10) / 10,
     riskLevel,
     verificationLevel,
+    totalPoints,
+    maxPoints: 90,
   };
 }
 
