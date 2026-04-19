@@ -11,7 +11,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
 import { createClient } from '@supabase/supabase-js';
-import { useScanResult, submitScan, type ScanJob } from '../hooks/useScanResult';
+import { useScanResult } from '../hooks/useScanResult';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
@@ -163,7 +163,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [fromCache, setFromCache] = useState(false);
+  const [_fromCache, setFromCache] = useState(false);
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Real-time job status via Supabase Realtime (replaces polling)
