@@ -311,57 +311,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
       setFromCache(false);
 
-      // ── STEP 2: Call Vercel serverless scan API directly (primary scan path) ──
+      // ── STEP 2: Direct serverless scan for IG/TikTok/FB (works via web fetch) ──
       const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
 
-      // Twitter: use dedicated /api/twitter-scan serverless function
-      if (platform === 'twitter') {
-        try {
-          setScanStatus('Scanning X profile...');
-          const scanRes = await fetch(`${apiBase}/api/twitter-scan`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: cleanUsername }),
-          });
-
-          if (scanRes.ok) {
-            const scanData = await scanRes.json();
-            if (scanData.success) {
-              const d = scanData;
-              const apiResult: ProfileScanResult = {
-                success: true,
-                platform: 'twitter',
-                username: cleanUsername,
-                displayName: d.displayName || undefined,
-                verified: d.verified ?? false,
-                riskScore: Math.round(d.riskScore * 10),
-                riskLevel: d.riskLevel || 'LOW',
-                scamType: undefined,
-                redFlags: d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) — ${f.description}`) || [],
-                evidence: [],
-                recommendation: `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected out of 90-point system.`,
-                profileData: {
-                  followers: d.followers ?? undefined,
-                  following: d.following ?? undefined,
-                  bio: d.bio ?? undefined,
-                },
-                confidence: d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM',
-                scanDate: d.scanTimestamp || new Date().toISOString(),
-              };
-              setResult(apiResult);
-              uploadScanToSupabase(apiResult).catch(() => {});
-              setScanStatus(null);
-              setScanning(false);
-              return;
-            }
-          }
-          console.warn('[API] Twitter scan failed, falling back to queue');
-        } catch (apiErr) {
-          console.warn('[API] Twitter scan error, falling back to queue:', apiErr);
-        }
-      }
-
-      // Instagram/TikTok/Facebook: use /api/social-scan serverless function
       if (['instagram', 'tiktok', 'facebook'].includes(platform)) {
         try {
           setScanStatus(`Scanning ${platform} profile...`);
@@ -405,7 +357,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
         }
       }
 
-      // ── STEP 3: Supabase queue (secondary path) ────────────────────────
+      // ── STEP 3: Supabase queue → Mac Studio CDP worker (primary for Twitter) ──
       if (_supabaseAnonKey) {
         try {
           const client = createClient(_supabaseUrl, _supabaseAnonKey);
