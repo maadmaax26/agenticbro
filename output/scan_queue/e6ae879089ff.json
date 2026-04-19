@@ -4,9 +4,17 @@
   "source": "x_search",
   "search_term": "check my DM",
   "mentioned_in": null,
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-04-03T15:54:51.260576",
   "priority": "normal",
-  "attempts": 0,
-  "max_attempts": 3
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:15:56.733403",
+  "completed_at": "2026-04-04T23:15:56.733405",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }

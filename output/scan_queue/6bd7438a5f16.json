@@ -9,13 +9,12 @@
   "priority": "normal",
   "attempts": 1,
   "max_attempts": 3,
-  "started_at": "2026-04-03T02:39:10.743001",
+  "started_at": "2026-04-04T23:58:01.839071",
   "result": {
     "status": "active",
-    "risk_score": 0.0,
+    "risk_score": 0,
     "level": "LOW",
-    "red_flags": [],
-    "text_length": 0
+    "red_flags": []
   },
-  "completed_at": "2026-04-03T02:39:18.749206"
+  "completed_at": "2026-04-04T23:58:01.839081"
 }

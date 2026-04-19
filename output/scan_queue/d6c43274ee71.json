@@ -4,9 +4,17 @@
   "source": "x_search",
   "search_term": "send SOL to receive",
   "mentioned_in": null,
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-04-03T12:03:24.173635",
   "priority": "normal",
-  "attempts": 0,
-  "max_attempts": 3
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:17:27.701614",
+  "completed_at": "2026-04-04T23:17:27.701617",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }
