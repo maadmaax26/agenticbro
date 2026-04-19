@@ -4,9 +4,18 @@
   "platform": "X",
   "scan_type": "PROFILE_SCAM_CHECK",
   "priority": "NORMAL",
-  "status": "pending",
+  "status": "completed",
   "discovered_at": "2026-04-03T17:21:10.216181",
   "source": "KNOWN_PATTERN",
   "red_flags": [],
-  "risk_score": 0.0
+  "risk_score": 0.0,
+  "attempts": 3,
+  "started_at": "2026-04-04T23:36:24.087568",
+  "completed_at": "2026-04-04T23:36:24.087571",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }

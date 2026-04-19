@@ -12,5 +12,14 @@
   "source_query": "unknown",
   "source_category": "network_expansion",
   "discovered_at": "2026-04-03T19:14:17.040697",
-  "status": "pending"
+  "status": "completed",
+  "attempts": 2,
+  "started_at": "2026-04-04T23:19:22.409266",
+  "completed_at": "2026-04-04T23:19:22.409269",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }

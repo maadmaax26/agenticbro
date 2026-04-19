@@ -2,7 +2,7 @@
 
 ## Current Status
 
-✅ **Bot Token Configured:** `8798669748:AAEqLvnot5leTfXGoI4VB6gbfozsD78GoBE`
+✅ **Bot Token Configured:** `8798669748:AAH4mFi-Fmc415aM8jAEGYu7Wm_vx7BQ_nI`
 ⚠️ **MTProto Credentials Missing:** Required for priority scan feature
 
 ## Why You're Seeing "Demo Mode"

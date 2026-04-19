@@ -4,9 +4,17 @@
   "source": "x_search",
   "search_term": "legit or scam",
   "mentioned_in": null,
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-04-03T12:13:39.976529",
   "priority": "normal",
-  "attempts": 0,
-  "max_attempts": 3
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:16:29.779374",
+  "completed_at": "2026-04-04T23:16:29.779377",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }

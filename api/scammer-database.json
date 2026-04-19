@@ -8,9 +8,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Pump & Dump Promoter",
-    "Last Updated": "2026-04-02",
     "Notes": "Self-described \"Crypto Project Promoter\" soliciting DMs. Promotes multiple tokens (PPM HTC VALORA NEX) with unrealistic \"1000x\" claims. User reported being scammed. Risk Score: 10.0/10 (CRITICAL).",
-    "Wallet Address": "Unknown",
     "Evidence Links": "https://x.com/22J27"
   },
   {
@@ -22,9 +20,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Suspicious token attempting to confuse users with AGNTCBRO brand. Pump.fun token with $0 liquidity. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "Ct2WWvYBVa2sCZXgSmw2Be1bXpSnsTLK59Yb5RYmpump",
     "Evidence Links": "https://dexscreener.com/solana/abnjkhj1bmwuazdts38ngvwe3ejewhuoxmsgs7izwfmz"
   },
   {
@@ -36,9 +32,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Multiple tokens with identical AGNT symbol on Base network. Zero liquidity on several contracts. Potential confusion attack. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "Multiple contracts - see report",
     "Evidence Links": "https://dexscreener.com/base/?q=AGNT"
   },
   {
@@ -50,9 +44,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "BSC token with \"Agentic\" in name (Chinese). Low liquidity and volume. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "0x5CFfD2E97864381a754cbA5710eB66503C484444",
     "Evidence Links": "https://dexscreener.com/bsc/0xb6e0e3f29e01d691caf3a502951b63156c32a620"
   },
   {
@@ -64,9 +56,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Another suspicious token using AGNT branding. Pump.fun with $0 liquidity. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "2aaBs3xVL4DhRkmmWQGiRHxadj5GtTufcW5e7ZUUpump",
     "Evidence Links": "https://dexscreener.com/solana/p4cwd4rhltiiukkcfjcukdetmqu6yjtttgggdzisfc"
   },
   {
@@ -78,9 +68,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Multiple \"SOL BROTHERS\" tokens on Pump.fun using BRO symbol. Potential confusion with AGNTCBRO \"Bro\" branding. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "9FQdsQbnPZiJttKmd6z41qYnZ2FhU96vbf9peww9pump",
     "Evidence Links": "https://dexscreener.com/solana/4njewuxasv6tm5dbnccnpvgyb2mz4fqmeszmqvez5grd"
   },
   {
@@ -92,9 +80,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Base network token using AGNTC symbol. Zero liquidity. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "0x715B4B3E228995735c539b8Cc9DAF99b0622ebA3",
     "Evidence Links": "https://dexscreener.com/base/0xbc5efe30d0a38f80ecd1bcfd6d196dde46168df4260bf42cf8d0b06ca5d20ff0"
   },
   {
@@ -106,9 +92,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Base network token using AGNTW symbol. Zero liquidity. Multiple contracts found. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "0x98465900B5CfA01982F55bDF66e021A3169fAba3",
     "Evidence Links": "https://dexscreener.com/base/0x7c9616a50b531eb6eae8e0a7ad76feb435ff9f48a87f553a17f3bc81c33c3bf2"
   },
   {
@@ -120,9 +104,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Token Confusion Scam",
-    "Last Updated": "2026-04-02",
     "Notes": "Multiple BRO tokens on Pump.fun with low/zero liquidity. Generic \"BRO\" symbol could confuse users. Moved from SUSPICIOUS to HIGH RISK per policy.",
-    "Wallet Address": "3VSasxkKxvgB3obLgJu4cj3m1RryBxisKsM938mtpump",
     "Evidence Links": "https://dexscreener.com/solana/hexalqpxsuh6ksez385aa6csfnmc2etmdxsygb2kco6w"
   },
   {
@@ -134,9 +116,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "VERIFIED",
     "Scam Type": "PAID PROMOTER",
-    "Last Updated": "KOL/Influencer",
     "Notes": "2026-04-02",
-    "Wallet Address": "Legitimate crypto influencer. 717K followers. 14+ years on X. CEO @Focusw3b. AMA HOST. Does paid token promotions. Risk Score: 2.8/10 (LOW). Viable partnership target for Agentic Bro. VERIFIED via Chrome CDP scan on 2026-04-02.",
     "Evidence Links": "N/A"
   },
   {
@@ -148,9 +128,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "LEGITIMATE",
     "Scam Type": "PAID PROMOTER",
-    "Last Updated": "2026-04-04",
     "Notes": "Verified KOL/influencer (blue checkmark). 7.8K followers. Self-admitted 'KOL For Notable projects' partnered with @MezoNetwork. PAID PROMOTER account - content is sponsored. Risk Score: 2.2/10 (LOW). NOT A SCAM.",
-    "Wallet Address": "N/A",
     "Evidence Links": "https://x.com/Degen_chad119"
   },
   {
@@ -162,9 +140,7 @@
     "Total Lost USD": "$50",
     "Verification Level": "RESOLVED",
     "Scam Type": "AMA Completed",
-    "Last Updated": "2026-04-02",
     "Notes": "Removed from scammer database - AMA was completed. Victim reported $50 loss but dispute was resolved. Account later suspended by X (April 2026).",
-    "Wallet Address": "",
     "Evidence Links": "https://x.com/Crypto_Genius09"
   },
   {
@@ -176,9 +152,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Requires Scan",
-    "Last Updated": "2026-04-02",
     "Notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Education/community channel. Requires verification scan.",
-    "Wallet Address": "N/A",
     "Evidence Links": "https://x.com/CoinLabVerse"
   },
   {
@@ -190,9 +164,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Requires Scan",
-    "Last Updated": "2026-04-02",
     "Notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Events/community channel. Requires verification scan.",
-    "Wallet Address": "N/A",
     "Evidence Links": ""
   },
   {
@@ -204,9 +176,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Requires Scan",
-    "Last Updated": "2026-04-02",
     "Notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Events/partnerships channel. Requires verification scan.",
-    "Wallet Address": "N/A",
     "Evidence Links": ""
   },
   {
@@ -218,9 +188,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Requires Scan",
-    "Last Updated": "2026-04-02",
     "Notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Crypto influencer platform. Requires verification scan.",
-    "Wallet Address": "N/A",
     "Evidence Links": "https://x.com/madapescall"
   },
   {
@@ -232,9 +200,7 @@
     "Total Lost USD": "$0",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Requires Scan",
-    "Last Updated": "2026-04-02",
     "Notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Project strategist channel. Requires verification scan.",
-    "Wallet Address": "N/A",
     "Evidence Links": ""
   },
   {
@@ -246,9 +212,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "DM Solicitation",
-    "Last Updated": "2026-04-03",
     "Notes": "DM for alpha promoter",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -257,15 +221,11 @@
     "X Handle": "@GemHunter100x",
     "Telegram Channel": "",
     "Victims Count": "Unknown",
-    "Total Lost USD": "Unknown",
+    "Total Lost USD": "$0",
     "Verification Level": "HIGH RISK",
     "Scam Type": "Pump & Dump",
-    "Last Updated": "2026-04-03",
-    "Notes": "Unrealistic return claims. Known pump & dump promoter. Gem/promoter pattern. 100x claims. VERIFIED SCAMMER - do not engage.",
-    "Wallet Address": "",
-    "Evidence Links": "",
-    "verification_level": "HIGH RISK",
-    "scam_type": "Pump & Dump"
+    "Notes": "Unrealistic return claims. Known pump & dump promoter. VERIFIED SCAMMER - do not engage.",
+    "Evidence Links": "https://x.com/GemHunter100x"
   },
   {
     "Scammer Name": "PresaleKing",
@@ -276,9 +236,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Presale Scam",
-    "Last Updated": "2026-04-03",
     "Notes": "Fake presale promoter",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -290,9 +248,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "DM Solicitation",
-    "Last Updated": "2026-04-03",
     "Notes": "DM for alpha scam",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -304,9 +260,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Airdrop Scam",
-    "Last Updated": "2026-04-03",
     "Notes": "Wallet drainer via fake airdrop",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -318,9 +272,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Presale Scam",
-    "Last Updated": "2026-04-03",
     "Notes": "Fake presale channel",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -332,9 +284,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Pump & Dump",
-    "Last Updated": "2026-04-03",
     "Notes": "Pump group",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -346,9 +296,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Wallet Drainer",
-    "Last Updated": "2026-04-03",
     "Notes": "Connect wallet scam",
-    "Wallet Address": "",
     "Evidence Links": ""
   },
   {
@@ -360,9 +308,7 @@
     "Total Lost USD": "Unknown",
     "Verification Level": "UNVERIFIED",
     "Scam Type": "Wallet Drainer",
-    "Last Updated": "2026-04-03",
     "Notes": "Fake claim page",
-    "Wallet Address": "",
     "Evidence Links": ""
   }
 ]

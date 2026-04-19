@@ -6,11 +6,12 @@
  * Credits tracked by wallet address or email
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
 import { createClient } from '@supabase/supabase-js';
+import { useScanResult, submitScan, type ScanJob } from '../hooks/useScanResult';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
@@ -161,6 +162,12 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Real-time job status via Supabase Realtime (replaces polling)
+  const { job, isComplete, isFailed, result: jobResult } = useScanResult(activeJobId);
   
   // Get wallet address for credit tracking (from wallet connection or auth)
   const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
@@ -174,6 +181,50 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     useCredit,
     isTestWallet 
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
+
+  // ── Watch Realtime job updates ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!activeJobId || !job) return;
+
+    if (job.status === 'claimed' || job.status === 'running') {
+      setScanStatus('Agent scanning...');
+    }
+
+    if (isComplete && jobResult) {
+      // Worker finished — normalize and display
+      const scanResult = normalizeResult(jobResult, platform, username.replace(/^@/, ''));
+      setResult(scanResult);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+      uploadScanToSupabase(scanResult).catch(() => {});
+    }
+
+    if (isFailed) {
+      console.warn('[Realtime] Job failed, falling back to demo result');
+      const demo = generateDemoResult(platform, username.replace(/^@/, ''));
+      setResult(demo);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+    }
+  }, [job?.status, isComplete, isFailed]);
+
+  // ── Timeout fallback: if Realtime never fires, fall back to demo after 90s ──
+  useEffect(() => {
+    if (!scanning || !activeJobId) return;
+    scanTimeoutRef.current = setTimeout(() => {
+      console.warn('[Realtime] Timed out waiting for job result, falling back to demo');
+      const demo = generateDemoResult(platform, username.replace(/^@/, ''));
+      setResult(demo);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+    }, 90000);
+    return () => {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+    };
+  }, [scanning, activeJobId]);
 
   const handleScan = async () => {
     if (!username.trim()) {
@@ -202,10 +253,65 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
 
     try {
-      // ── Queue-based scan: insert job into scan_jobs, poll for result ──
-      let scanResult: ProfileScanResult | null = null;
-      let jobQueued = false;
+      // ── FIX 2: Check cache before enqueuing ──────────────────────────────
+      const platformLabel: Record<string, string> = {
+        twitter: 'X (Twitter)', telegram: 'Telegram', instagram: 'Instagram',
+        discord: 'Discord', linkedin: 'LinkedIn', facebook: 'Facebook', tiktok: 'TikTok',
+      };
 
+      if (_supabaseAnonKey) {
+        try {
+          const client = createClient(_supabaseUrl, _supabaseAnonKey);
+          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+          const { data: cached, error: cacheErr } = await client
+            .from('scan_results')
+            .select('*')
+            .eq('target_handle', `@${cleanUsername}`)
+            .eq('platform', platformLabel[platform] || platform)
+            .gte('scan_date', twentyFourHoursAgo)
+            .order('scan_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!cacheErr && cached) {
+            console.log('[Cache] Hit for', cleanUsername, 'on', platform);
+            const cachedResult: ProfileScanResult = {
+              success: true,
+              platform: platform as any,
+              username: cleanUsername,
+              displayName: cached.display_name || undefined,
+              verified: cached.verified ?? false,
+              riskScore: Math.round((cached.risk_score ?? 0) * 10),
+              riskLevel: cached.risk_level || 'LOW',
+              scamType: cached.scam_type || undefined,
+              redFlags: cached.red_flags || [],
+              evidence: cached.evidence || [],
+              recommendation: cached.recommendation || 'Cached scan result',
+              profileData: {
+                followers: cached.followers ?? undefined,
+                following: cached.following ?? undefined,
+                bio: cached.bio || undefined,
+                profileImage: cached.profile_image || undefined,
+                joinDate: cached.join_date || undefined,
+              },
+              confidence: cached.confidence || 'MEDIUM',
+              scanDate: cached.scan_date || new Date().toISOString(),
+            };
+            setResult(cachedResult);
+            setFromCache(true);
+            setScanStatus(null);
+            setScanning(false);
+            return; // Done — skip queue entirely
+          }
+        } catch (cacheErr) {
+          console.warn('[Cache] Lookup error, proceeding to queue:', cacheErr);
+        }
+      }
+
+      setFromCache(false);
+
+      // ── FIX 1: Submit job + use Realtime (no more polling) ───────────────
       if (_supabaseAnonKey) {
         try {
           const client = createClient(_supabaseUrl, _supabaseAnonKey);
@@ -227,68 +333,24 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             .single();
 
           if (!insertError && jobData?.id) {
-            jobQueued = true;
             setScanStatus('Queued — waiting for agent...');
-            const jobId = jobData.id;
-            console.log('[Queue] Scan job enqueued:', jobId);
-
-            // Poll for result — Mac Studio agent processes and writes result back
-            const POLL_INTERVAL_MS = 3000;
-            const POLL_TIMEOUT_MS = 90000; // 90 seconds
-            const startedAt = Date.now();
-
-            while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
-              await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-
-              const { data: job, error: pollError } = await client
-                .from('scan_jobs')
-                .select('status, payload')
-                .eq('id', jobId)
-                .single();
-
-              if (pollError) {
-                console.warn('[Queue] Poll error:', pollError.message);
-                break;
-              }
-
-              console.log('[Queue] Job status:', job?.status);
-
-              if (job?.status === 'running' || job?.status === 'claimed') {
-                setScanStatus('Agent scanning...');
-              }
-
-              if (job?.status === 'completed' && job.payload?.result) {
-                scanResult = normalizeResult(job.payload.result, platform, cleanUsername);
-                break;
-              }
-
-              if (job?.status === 'failed' || job?.status === 'timeout') {
-                console.warn('[Queue] Job failed/timeout, falling back to demo');
-                break;
-              }
-            }
+            setActiveJobId(jobData.id);
+            console.log('[Realtime] Scan job enqueued:', jobData.id);
+            // The useScanResult hook + useEffect above will handle updates
+            return; // Don't set scanning=false — keep waiting for Realtime
           } else {
-            console.warn('[Queue] Insert error:', insertError?.message);
+            console.warn('[Realtime] Insert error:', insertError?.message);
           }
         } catch (queueErr) {
-          console.warn('[Queue] Queue error, falling back:', queueErr);
+          console.warn('[Realtime] Queue error, falling back:', queueErr);
         }
       }
 
-      // Fallback: demo result if queue unavailable or job didn't complete in time
-      if (!scanResult) {
-        console.warn(jobQueued
-          ? '[Queue] Job queued but timed out — using demo result'
-          : '[Queue] Queue unavailable — using demo result');
-        scanResult = generateDemoResult(platform, cleanUsername);
-      }
-
-      // Set the result
-      setScanStatus(null);
-      setResult(scanResult);
-
-      // Upload scan result to Supabase scan_results for the Scam Detection Database
-      uploadScanToSupabase(scanResult).catch(() => {}); // fire-and-forget, never block UI
+      // Fallback: demo result if queue unavailable
+      console.warn('[Scan] Queue unavailable — using demo result');
+      const demo = generateDemoResult(platform, cleanUsername);
+      setResult(demo);
+      uploadScanToSupabase(demo).catch(() => {});
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
       setError(errorMessage);

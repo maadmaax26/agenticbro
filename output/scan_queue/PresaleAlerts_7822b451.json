@@ -4,9 +4,18 @@
   "platform": "Telegram",
   "scan_type": "PROFILE_SCAM_CHECK",
   "priority": "NORMAL",
-  "status": "pending",
+  "status": "completed",
   "discovered_at": "2026-04-03T20:02:44.071943",
   "source": "KNOWN_PATTERN",
   "red_flags": [],
-  "risk_score": 0.0
+  "risk_score": 0.0,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:08:40.580066",
+  "completed_at": "2026-04-04T23:08:40.580069",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
 }
