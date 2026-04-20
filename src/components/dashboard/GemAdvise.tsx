@@ -115,7 +115,7 @@ export default function GemAdvise() {
   const [apiGems, setApiGems]           = useState<GemAdviseItem[] | null>(null);
   const [summary, setSummary]           = useState<{ avgEdgeScore: number; highConfidence: number; channelsSourced: number } | null>(null);
   const [freeScansRemaining, setFreeScansRemaining] = useState(() => {
-    try { const s = localStorage.getItem('gemAdviseFreeScans'); return s ? Math.max(0, parseInt(s, 10)) : 3; } catch { return 3; }
+    try { const s = localStorage.getItem('gemAdviseFreeScans'); return s ? Math.max(0, parseInt(s, 10)) : 5; } catch { return 5; }
   });
 
   // Map API response shape → component shape (adds avatar / name fields for display)

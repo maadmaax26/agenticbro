@@ -113,7 +113,7 @@ export async function signUpWithEmail(email: string, password: string) {
   
   if (error) return { user: null, error };
   
-  // Create profile with 3 free scans
+  // Create profile with 5 free scans
   if (data.user) {
     await supabase.from('user_profiles').insert({
       id: data.user.id,
