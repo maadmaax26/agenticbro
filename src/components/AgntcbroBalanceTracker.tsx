@@ -7,7 +7,7 @@
  * Uses the existing useTokenGating hook for data.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating, isTestWallet } from '../hooks/useTokenGating';
 
@@ -16,7 +16,19 @@ export default function AgntcbroBalanceTracker() {
   const { balance, usdValue, tokenPriceUsd, holderTierUnlocked, whaleTierUnlocked, loading, error } = useTokenGating();
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const walletAddr = publicKey?.toBase58() ?? '';
+
+  // Force a fresh balance check by clearing session cache
+  const forceRefresh = useCallback(() => {
+    if (!walletAddr) return;
+    setRetrying(true);
+    const key = `agntcbro_gating_${walletAddr}`;
+    try { sessionStorage.removeItem(key); } catch {}
+    // useTokenGating will re-fetch since cache is cleared
+    // We need a small delay then reset the hook state
+    setTimeout(() => setRetrying(false), 2000);
+  }, [walletAddr]);
 
   // Mark last successful update
   useEffect(() => {
@@ -29,10 +41,10 @@ export default function AgntcbroBalanceTracker() {
   useEffect(() => {
     if (!connected) return;
     const interval = setInterval(() => {
-      // useTokenGating will re-fetch if session cache is stale
-      // Force a fresh check by clearing session cache
-      const key = `agntcbro_gating_${walletAddr}`;
-      try { sessionStorage.removeItem(key); } catch {}
+      if (walletAddr) {
+        const key = `agntcbro_gating_${walletAddr}`;
+        try { sessionStorage.removeItem(key); } catch {}
+      }
     }, 60000);
     return () => clearInterval(interval);
   }, [connected, walletAddr]);
@@ -110,7 +122,18 @@ export default function AgntcbroBalanceTracker() {
                 <span className="text-xs text-gray-500">Loading…</span>
               </div>
             ) : error ? (
-              <span className="text-xs text-red-400">⚠️ RPC Error</span>
+              <button
+                onClick={forceRefresh}
+                disabled={retrying}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+              >
+                {retrying ? (
+                  <><div className="w-3 h-3 border-2 border-red-500/40 border-t-red-400 rounded-full animate-spin" /> Retrying…</>
+                ) : (
+                  <>⚠️ RPC Error — Tap to retry</>
+                )}
+              </button>
             ) : (
               <>
                 <p className="text-white font-bold text-lg leading-tight">
