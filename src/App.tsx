@@ -14,8 +14,6 @@ import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import AgntcbroBalanceTracker from './components/AgntcbroBalanceTracker'
 import Roadmap from './components/Roadmap'
-import HolderDashboard from './components/dashboard/HolderDashboard'
-import WhaleDashboard from './components/dashboard/WhaleDashboard'
 import PreConnectScanWidget from './components/PreConnectScanWidget'
 import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
@@ -142,10 +140,10 @@ function App() {
     return `priorityFreeScans_${publicKey.toString()}`;
   };
 
-  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
+  const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    const defaultScans = holderTierUnlocked ? 15 : 10; // 15 for holders, 10 for regular users
+    const defaultScans = holderTierUnlocked ? 50 : 10; // 50 monthly for holders, 10 for free users
     return saved ? Math.max(0, parseInt(saved, 10)) : defaultScans;
   });
 
@@ -170,13 +168,12 @@ function App() {
   useEffect(() => {
     const saved = localStorage.getItem(getWalletScanKey());
     if (!saved) {
-      const defaultScans = holderTierUnlocked ? 15 : 10;
+      const defaultScans = holderTierUnlocked ? 50 : 10;
       setPriorityScansRemaining(defaultScans);
     }
   }, [holderTierUnlocked]);
 
-  // Denial popover state — null = hidden, 'holder' | 'whale' = show message
-  const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
+  // Tier denial state removed — now scrolls to scan section
 
   // Auth and Payment modals
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -185,15 +182,7 @@ function App() {
 
   // Auth context is available via AuthProvider in main.tsx
 
-  const handleTierClick = useCallback((tier: 'holder' | 'whale') => {
-    const unlocked = tier === 'holder' ? holderTierUnlocked : whaleTierUnlocked
-    if (unlocked) {
-      setShowTierPage(tier)
-    } else {
-      setDenied(tier)
-      setTimeout(() => setDenied(null), 3500)
-    }
-  }, [holderTierUnlocked, whaleTierUnlocked])
+  // Tier click scrolls to priority scan section
 
   // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
@@ -357,7 +346,7 @@ function App() {
 
     if (!inputValue) return
     if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
-      alert('Scan limit reached. Unlock Holder Tier for unlimited priority scans.')
+      alert('Scan limit reached. Hold 10K+ AGNTCBRO for 50 monthly Priority Scans.')
       return
     }
 
@@ -559,11 +548,7 @@ function App() {
       {/* Subtle purple grid on top */}
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-      {showTierPage === 'holder' ? (
-        <HolderDashboard onBack={() => setShowTierPage(null)} />
-      ) : showTierPage === 'whale' ? (
-        <WhaleDashboard onBack={() => setShowTierPage(null)} />
-      ) : showValueProp ? (
+      {showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
         <Roadmap onBack={() => setShowRoadmap(false)} />
@@ -576,7 +561,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder & Whale tier access reduced to <span className="text-green-400 font-bold">$15</span> during early development. Tier thresholds will increase as we approach production launch.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with 10K+ AGNTCBRO. Free tier: 10 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -609,61 +594,22 @@ function App() {
                 onBuyCreditsClick={() => setShowPaymentModal(true)}
               />
 
-              {/* Holder Tier button */}
-              <div className="relative">
-                <button
-                  onClick={() => handleTierClick('holder')}
-                  disabled={gatingLoading}
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
-                  style={holderTierUnlocked
-                    ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
-                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title={holderTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
-                >
-                  {gatingLoading ? (
-                    <span className="animate-pulse">…</span>
-                  ) : holderTierUnlocked ? (
-                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 💰 Holder Tier</>
-                  ) : (
-                    <>🔒 Holder Tier</>
-                  )}
-                </button>
-                {denied === 'holder' && (
-                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
-                    ⛔ You do not meet the access criteria
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
-                  </div>
-                )}
-              </div>
-
-              {/* Whale Tier button */}
-              <div className="relative">
-                <button
-                  onClick={() => handleTierClick('whale')}
-                  disabled={gatingLoading}
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
-                  style={whaleTierUnlocked
-                    ? {background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}
-                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title={whaleTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
-                >
-                  {gatingLoading ? (
-                    <span className="animate-pulse">…</span>
-                  ) : whaleTierUnlocked ? (
-                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🐋 Whale Tier</>
-                  ) : (
-                    <>🔒 Whale Tier</>
-                  )}
-                </button>
-                {denied === 'whale' && (
-                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
-                    ⛔ You do not meet the access criteria
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
-                  </div>
+              {/* Scan Credits badge */}
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold"
+                style={holderTierUnlocked
+                  ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
+                  : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
+                title={holderTierUnlocked
+                  ? `Holder Tier · ${balance.toLocaleString()} AGNTCBRO · 50 scans/month`
+                  : `Hold 10K+ AGNTCBRO for 50 monthly scans (currently ${priorityScansRemaining} free scans)`}
+              >
+                {gatingLoading ? (
+                  <span className="animate-pulse">…</span>
+                ) : holderTierUnlocked ? (
+                  <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/50</>
+                ) : (
+                  <>🔍 {priorityScansRemaining}/10</>
                 )}
               </div>
 
@@ -783,7 +729,7 @@ function App() {
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
 
             {/* ── Priority Scan Section ── */}
-            <div className="max-w-6xl mx-auto mb-6">
+            <div id="priority-scan-section" className="max-w-6xl mx-auto mb-6">
               <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
 
                 {/* Header */}
@@ -802,8 +748,8 @@ function App() {
                            border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
                            color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
                          }}>
-                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans{holderTierUnlocked ? ' (Holder)' : ''}</span></>
-                                                  : <><span>💎</span><span>10K AGNTCBRO/scan</span></>}
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Scans{holderTierUnlocked ? ' (Holder — 50/mo)' : ' (Free)'}</span></>
+                                                  : <><span>💎</span><span>Hold 10K AGNTCBRO for 50/mo</span></>}
                     </div>
                   )}
                   {isTest && (
@@ -913,7 +859,7 @@ function App() {
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
-                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free${holderTierUnlocked ? ' - Holder' : ''})` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${holderTierUnlocked ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold 10K AGNTCBRO' : ''}</>
                   }
                 </button>
 
@@ -1017,7 +963,7 @@ function App() {
               {[
                 { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '3 Free', label: 'Priority Scans',       color: '#a78bfa' },
+                { value: holderTierUnlocked ? '50/mo' : '10 Free', label: 'Scan Credits',       color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
@@ -1103,7 +1049,7 @@ function App() {
                 {[
                   { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
                   { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
-                  { icon: '🏆', title: 'Holder Tier Intelligence', desc: 'Unlock unlimited scans, gem advisory, and whale-level insights by holding $AGNTCBRO.' },
+                  { icon: '🏆', title: 'Holder Tier — 50 Scans/mo', desc: 'Hold 10K+ AGNTCBRO to unlock 50 monthly Priority Scans across all scan types.' },
                 ].map((item) => (
                   <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
                     <div className="text-2xl mb-2">{item.icon}</div>
