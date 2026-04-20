@@ -346,7 +346,7 @@ function App() {
 
     if (!inputValue) return
     if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
-      alert('Scan limit reached. Hold 10K+ AGNTCBRO for 50 monthly Priority Scans.')
+      alert('Scan limit reached. Hold $100+ in AGNTCBRO for 50 monthly Priority Scans.')
       return
     }
 
@@ -561,7 +561,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with 10K+ AGNTCBRO. Free tier: 10 scans. Hold tokens to unlock more.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 10 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -602,7 +602,7 @@ function App() {
                   : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
                 title={holderTierUnlocked
                   ? `Holder Tier · ${balance.toLocaleString()} AGNTCBRO · 50 scans/month`
-                  : `Hold 10K+ AGNTCBRO for 50 monthly scans (currently ${priorityScansRemaining} free scans)`}
+                  : `Hold $100+ in AGNTCBRO for 50 monthly scans (currently ${priorityScansRemaining} free scans)`}
               >
                 {gatingLoading ? (
                   <span className="animate-pulse">…</span>
@@ -749,7 +749,7 @@ function App() {
                            color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
                          }}>
                       {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Scans{holderTierUnlocked ? ' (Holder — 50/mo)' : ' (Free)'}</span></>
-                                                  : <><span>💎</span><span>Hold 10K AGNTCBRO for 50/mo</span></>}
+                                                  : <><span>💎</span><span>Hold $100 AGNTCBRO for 50/mo</span></>}
                     </div>
                   )}
                   {isTest && (
@@ -859,7 +859,7 @@ function App() {
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
-                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${holderTierUnlocked ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold 10K AGNTCBRO' : ''}</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${holderTierUnlocked ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold $100 AGNTCBRO' : ''}</>
                   }
                 </button>
 
@@ -1049,7 +1049,7 @@ function App() {
                 {[
                   { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
                   { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
-                  { icon: '🏆', title: 'Holder Tier — 50 Scans/mo', desc: 'Hold 10K+ AGNTCBRO to unlock 50 monthly Priority Scans across all scan types.' },
+                  { icon: '🏆', title: 'Holder Tier — 50 Scans/mo', desc: 'Hold $100+ in AGNTCBRO to unlock 50 monthly Priority Scans across all scan types.' },
                 ].map((item) => (
                   <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
                     <div className="text-2xl mb-2">{item.icon}</div>
