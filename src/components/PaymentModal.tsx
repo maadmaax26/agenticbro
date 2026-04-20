@@ -366,7 +366,7 @@ export default function PaymentModal({
         >
           <h4 className="font-semibold text-blue-400 mb-2">💡 How It Works</h4>
           <ul className="space-y-1 text-gray-300">
-            <li>• <span className="text-green-400">3 free scans</span> for new users</li>
+            <li>• <span className="text-green-400">5 free scans</span> for new users</li>
             <li>• Free scans are used first</li>
             <li>• After free scans: <span className="text-emerald-400">$1/scan</span></li>
             <li>• Credits tracked by wallet or email</li>

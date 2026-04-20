@@ -13,6 +13,7 @@ import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
 import ProfileVerifierScanner from './components/ProfileVerifierScanner'
+import PhoneNumberVerifier from './components/PhoneNumberVerifier'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
@@ -74,7 +75,7 @@ const knownChannels: Record<string, any> = {
 
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
-type ScanMode = 'wallet' | 'channels' | 'token'
+type ScanMode = 'wallet' | 'channels' | 'token' | 'phone'
 
 type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
 
@@ -668,7 +669,7 @@ function App() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
-                        { icon: '🔍', title: 'Priority Scans', desc: '10 free wallet/channel/token scans' },
+                        { icon: '🔍', title: 'Priority Scans', desc: '5 free wallet/channel/token scans' },
                         { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
@@ -707,7 +708,7 @@ function App() {
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-              <p className="text-gray-400">3 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
+              <p className="text-gray-400">5 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
@@ -794,7 +795,7 @@ function App() {
               {[
                 { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '3 Free', label: 'Priority Scans',       color: '#a78bfa' },
+                { value: '10 Free', label: 'Priority Scans',       color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
@@ -862,7 +863,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
                   <span>🎁</span>
-                  <span>3 free scans when you connect your wallet — no token required</span>
+                  <span>5 free scans when you connect your wallet — no token required</span>
                 </div>
               </div>
             </div>
@@ -954,6 +955,7 @@ function App() {
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                    { id: 'phone',    icon: '📞', label: 'Phone Verify', hint: 'Verify phone numbers for scams' },
                   ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
                     <button
                       key={m.id}
@@ -1003,17 +1005,21 @@ function App() {
                       className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
                     />
                   )}
+                  {scanMode === 'phone' && (
+                    <PhoneNumberVerifier />
+                  )}
                 </div>
 
                 {/* ── Launch button ── */}
                 <button
                   onClick={runScan}
                   disabled={isScanning ||
+                    scanMode === 'phone' ||
                     (scanMode === 'wallet'   && !walletInput.trim())  ||
                     (scanMode === 'channels' && !channelInput.trim()) ||
                     (scanMode === 'token'    && !tokenInput.trim())}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
+                  style={scanMode === 'phone' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
@@ -1163,7 +1169,7 @@ function App() {
                     <div className="bg-purple-900/40 rounded-xl p-4 max-w-md mx-auto border border-purple-500/30">
                       <p className="text-sm text-gray-400 mb-2">Holder Tier includes:</p>
                       <ul className="text-left text-sm space-y-1">
-                        <li>• 3 free gem advise scans</li>
+                        <li>• 5 free gem advise scans</li>
                         <li>• AI-ranked token recommendations</li>
                         <li>• Confidence tiers (HIGH/MEDIUM/LOW)</li>
                         <li>• Rug rate & liquidity guards</li>
