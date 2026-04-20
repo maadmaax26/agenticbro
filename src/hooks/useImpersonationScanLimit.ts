@@ -5,7 +5,7 @@
  *
  * Limits:
  *   • Anonymous (no wallet): 2 free scans per day
- *   • Connected wallet:      3 free scans per day
+ *   • Connected wallet:      5 free scans per day
  *
  * Storage: localStorage, keyed by wallet address or "anon".
  * Resets automatically at midnight (date-based key).

@@ -1,7 +1,7 @@
 /**
  * PreConnectScanWidget.tsx
  * Scam detection widget for pre-wallet-connect section.
- * Allows 3 free scans tracked via localStorage.
+ * Allows 5 free scans tracked via localStorage.
  * Supports EN, ZH, JA, DE, FR, ES languages.
  */
 

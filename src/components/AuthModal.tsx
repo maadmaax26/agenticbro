@@ -118,7 +118,7 @@ export default function AuthModal({
           <p className="text-gray-400 text-sm mt-1">
             {mode === 'login' 
               ? 'Sign in to access your scans and credits' 
-              : 'Get 3 free scans when you sign up'}
+              : 'Get 5 free scans when you sign up'}
           </p>
         </div>
 
@@ -258,7 +258,7 @@ export default function AuthModal({
             color: '#4ade80',
           }}
         >
-          🎁 New accounts get <strong>3 free scans</strong> — no wallet needed!
+          🎁 New accounts get <strong>5 free scans</strong> — no wallet needed!
         </div>
       </div>
     </div>

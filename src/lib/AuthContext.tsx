@@ -80,9 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedFree) {
       setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
     } else {
-      // New user gets 3 free scans
+      // New user gets 10 free scans
       setFreeScansRemaining(3);
-      localStorage.setItem(`agenticbro_free_${key}`, '3');
+      localStorage.setItem(`agenticbro_free_${key}`, '5');
     }
   }, [getStorageKey]);
 

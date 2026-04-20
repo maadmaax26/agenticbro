@@ -30,7 +30,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
             { done: true, text: 'Scam Detection System: AI-powered risk assessment for X/Telegram' },
             { done: true, text: 'Gem Advisor Framework: Quality-gated alpha channel analysis' },
             { done: true, text: 'Enhanced Priority Scan: 4 modes (Wallet, Channel, Token, Scam)' },
-            { done: true, text: 'Free Scan Limit: Increased from 3 to 10 free scans' },
+            { done: true, text: 'Free Scan Limit: Free tier: 5 scans per user' },
             { done: false, text: 'Wallet Integration: Solana wallet (Phantom, Solflare)' },
             { done: false, text: 'Token Gating: Holder / Whale tier validation' },
           ],

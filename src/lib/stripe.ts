@@ -194,9 +194,9 @@ export function useCredits(userId: string | null, email: string | null, walletAd
       if (storedFree) {
         setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
       } else {
-        // New user gets 3 free scans
+        // New user gets 5 free scans
         setFreeScansRemaining(3);
-        localStorage.setItem(`agenticbro_free_${storageKey}`, '3');
+        localStorage.setItem(`agenticbro_free_${storageKey}`, '5');
       }
       
       setLoading(false);
