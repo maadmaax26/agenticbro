@@ -55,11 +55,14 @@ export function useScanResult(jobId: string | null) {
       return;
     }
 
+    // FIX: Capture supabase in a local const so TypeScript narrows it
+    const client = supabase;
+
     setLoading(true);
     setFetchError(null);
 
     // ── 1. Initial fetch ───────────────────────────────────────────────────
-    supabase
+    client
       .from('scan_jobs')
       .select('id, status, scan_type, result, error, created_at, started_at, completed_at, retry_count')
       .eq('id', jobId)
@@ -74,7 +77,7 @@ export function useScanResult(jobId: string | null) {
       });
 
     // ── 2. Realtime subscription — instant push when worker updates row ────
-    const channel = supabase
+    const channel = client
       .channel(`scan-job-${jobId}`)
       .on(
         'postgres_changes',
@@ -92,7 +95,8 @@ export function useScanResult(jobId: string | null) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // FIX: TypeScript knows 'client' is non-null here
+      client.removeChannel(channel);
     };
   }, [jobId]);
 

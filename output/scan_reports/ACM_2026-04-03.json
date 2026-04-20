@@ -1,0 +1,20 @@
+{
+  "id": "2487b9f4",
+  "username": "ACM",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.208225",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "FDKhLPJ4hpLoLkhE2smMa5iJnomknhBzKMX9Aw1mzH1n",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888384"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

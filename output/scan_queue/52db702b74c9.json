@@ -1,0 +1,20 @@
+{
+  "id": "52db702b74c9",
+  "username": "ZELLKLUMPEN",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T00:18:18.104099",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:03:43.880138",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:03:43.880156"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "71243eeb6935",
+  "username": "motha",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:40:53.463171",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T08:02:17.005842",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "Free crypto"
+    ],
+    "text_length": 3098
+  },
+  "completed_at": "2026-04-03T08:02:25.017658"
+}

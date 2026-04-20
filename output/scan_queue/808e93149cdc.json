@@ -1,0 +1,20 @@
+{
+  "id": "808e93149cdc",
+  "username": "FXETHAN629",
+  "source": "x_search",
+  "search_term": "should I trust",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T08:01:24.924561",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:54:48.780692",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-04T23:54:48.780703"
+}

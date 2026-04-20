@@ -1,0 +1,20 @@
+{
+  "id": "bea3c55ceca5",
+  "username": "RohitRMehta",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:31:07.511043",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:26:55.195188",
+  "completed_at": "2026-04-04T23:26:55.195191",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

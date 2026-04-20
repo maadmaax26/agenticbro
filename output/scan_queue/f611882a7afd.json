@@ -1,0 +1,20 @@
+{
+  "id": "f611882a7afd",
+  "username": "KaranjaJojo",
+  "source": "x_search",
+  "search_term": "ending soon airdrop",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:01:55.410472",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:09:54.343194",
+  "completed_at": "2026-04-04T23:09:54.343196",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

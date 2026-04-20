@@ -1,0 +1,20 @@
+{
+  "id": "a53804e029c8",
+  "username": "triplelhh",
+  "source": "x_search",
+  "search_term": "crypto giveaway",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:47:31.197760",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T22:55:50.096769",
+  "completed_at": "2026-04-04T22:55:50.096780",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

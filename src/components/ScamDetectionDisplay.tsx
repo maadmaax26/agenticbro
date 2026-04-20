@@ -84,7 +84,7 @@ const supabase = supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : 
 // ============================================
 
 function RiskLevelBadge({ level, score }: { level: string; score: number }) {
-  const colors = {
+  const colors: Record<string, string> = {
     LOW: 'bg-green-500',
     MEDIUM: 'bg-yellow-500',
     HIGH: 'bg-orange-500',
@@ -92,8 +92,8 @@ function RiskLevelBadge({ level, score }: { level: string; score: number }) {
   };
 
   return (
-    <span className={`${colors[level as keyof typeof colors]} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
-      {level} ({score.toFixed(2)}/10)
+    <span className={`${colors[level] || 'bg-gray-500'} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
+      {score.toFixed(1)}/10 — {level} {level === 'CRITICAL' ? '🚨' : level === 'HIGH' ? '⚠️' : level === 'MEDIUM' ? '⚡' : '✅'}
     </span>
   );
 }
@@ -193,6 +193,7 @@ function LegitimateCard({ account }: { account: LegitimateAccount }) {
   );
 }
 
+
 // ============================================
 // Stats Dashboard Component
 // ============================================
@@ -205,14 +206,14 @@ function StatsDashboard({ stats }: { stats: Stats }) {
         <div className="text-blue-100">Total Scans</div>
       </div>
       
-      <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
         <div className="text-3xl font-bold mb-2">{stats.total_scammers_detected.toLocaleString()}</div>
-        <div className="text-red-100">Scammers Detected</div>
+        <div className="text-orange-100">Medium/High Risk</div>
       </div>
       
       <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
         <div className="text-3xl font-bold mb-2">{stats.total_legitimate_accounts.toLocaleString()}</div>
-        <div className="text-green-100">Legitimate Accounts</div>
+        <div className="text-green-100">Low Risk</div>
       </div>
       
       <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
@@ -355,11 +356,11 @@ export default function ScamDetectionDisplay() {
             onClick={() => setActiveTab('scammers')}
             className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
               activeTab === 'scammers'
-                ? 'bg-red-600 text-white'
+                ? 'bg-orange-600 text-white'
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            🚨 Scammers ({scammers.length})
+            ⚠️ Medium/High Risk ({scammers.length})
           </button>
           <button
             onClick={() => setActiveTab('legitimate')}
@@ -369,7 +370,7 @@ export default function ScamDetectionDisplay() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            ✅ Legitimate ({legitimate.length})
+            ✅ Low Risk ({legitimate.length})
           </button>
           <button
             onClick={() => setActiveTab('scans')}

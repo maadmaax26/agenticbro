@@ -1,0 +1,24 @@
+{
+  "id": "3da4331201bb",
+  "username": "brianjbyrne",
+  "source": "x_search",
+  "search_term": "legit or scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:31:07.508836",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T13:31:59.593043",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "Alpha DM scheme"
+    ],
+    "text_length": 2042
+  },
+  "completed_at": "2026-04-03T13:32:07.603235"
+}
