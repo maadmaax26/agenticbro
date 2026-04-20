@@ -2,13 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
-import PortfolioCard from './components/PortfolioCard'
 import MobileMenu from './components/MobileMenu'
 
-import SignalFeed from './components/dashboard/SignalFeed'
-import TradeAnalysis from './components/dashboard/TradeAnalysis'
-import AlertFeed from './components/dashboard/AlertFeed'
-import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
@@ -20,7 +15,6 @@ import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
-import MarketSentiment from './components/MarketSentiment'
 import PreConnectScanWidget from './components/PreConnectScanWidget'
 import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
@@ -784,13 +778,147 @@ function App() {
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
 
-        {/* ── Priority Token Scanner - Advanced analysis with honeypot detection ── */}
+            {/* ── Priority Scan Section ── */}
+            <div className="max-w-6xl mx-auto mb-6">
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">🔍</div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Priority Scan</h2>
+                      <p className="text-sm text-gray-400">Deep scan your wallet, a Telegram channel, or a specific token</p>
+                    </div>
+                  </div>
+                  {!isTest && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                         style={{
+                           background: priorityScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                           border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
+                           color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
+                         }}>
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans{holderTierUnlocked ? ' (Holder)' : ''}</span></>
+                                                  : <><span>💎</span><span>10K AGNTCBRO/scan</span></>}
+                    </div>
+                  )}
+                  {isTest && (
+                    <span className="text-xs px-2 py-1 rounded-full font-semibold"
+                          style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#4ade80' }}>
+                      ✓ Test Wallet — Unlimited
+                    </span>
+                  )}
+                </div>
+
+                {/* ── Scan mode tabs ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+                  {([
+                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
+                    { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
+                    { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                    { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
+                    { id: 'phone',    icon: '📞', label: 'Phone Verify', hint: 'Verify phone numbers for scams' },
+                  ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setScanMode(m.id)}
+                      className="rounded-xl p-3 text-left transition-all border"
+                      style={scanMode === m.id
+                        ? { background: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.6)' }
+                        : { background: 'rgba(0,0,0,0.3)',       borderColor: 'rgba(139,92,246,0.2)' }}
+                    >
+                      <p className={`text-sm font-semibold ${scanMode === m.id ? 'text-white' : 'text-gray-400'}`}>
+                        {m.icon} {m.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{m.hint}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Input field (changes per mode) ── */}
+                <div className="mb-4">
+                  {scanMode === 'wallet' && (
+                    <input
+                      type="text"
+                      value={walletInput}
+                      onChange={e => setWalletInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="Solana: 7xKX…Bm3a  ·  EVM: 0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                  {scanMode === 'channels' && (
+                    <input
+                      type="text"
+                      value={channelInput}
+                      onChange={e => setChannelInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. CryptoEdgePro  ·  @alphawhalecalls  ·  t.me/defi_gems"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors"
+                    />
+                  )}
+                  {scanMode === 'token' && (
+                    <input
+                      type="text"
+                      value={tokenInput}
+                      onChange={e => setTokenInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. $NOVA  ·  SOL  ·  0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                  {scanMode === 'social' && (
+                    <div className="flex gap-2">
+                      <select
+                        value={socialPlatform}
+                        onChange={e => setSocialPlatform(e.target.value as any)}
+                        className="bg-black/50 border border-purple-500/30 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:border-purple-500/60 transition-colors"
+                      >
+                        <option value="instagram">📸 Instagram</option>
+                        <option value="tiktok">🎵 TikTok</option>
+                        <option value="facebook">📘 Facebook</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={socialUsername}
+                        onChange={e => setSocialUsername(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                        placeholder="e.g. crypto_scammer99"
+                        className="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                      />
+                    </div>
+                  )}
+                  {scanMode === 'phone' && (
+                    <div>
+                      <PhoneNumberVerifier />
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Launch button (hidden for phone mode — uses its own) ── */}
+                <button
+                  onClick={runScan}
+                  disabled={isScanning ||
+                    scanMode === 'phone' ||
+                    (scanMode === 'wallet'   && !walletInput.trim())  ||
+                    (scanMode === 'channels' && !channelInput.trim()) ||
+                    (scanMode === 'token'    && !tokenInput.trim())    ||
+                    (scanMode === 'social'   && !socialUsername.trim())}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={scanMode === 'phone' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
+                >
+                  {isScanning
+                    ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free${holderTierUnlocked ? ' - Holder' : ''})` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
+                  }
+                </button>
+
+              </div>
+            </div>
+
+        {/* ── Token Scanner (consolidated: priority + contract + impersonation) ── */}
         <PriorityTokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-
-        {/* ── Token Scanner - Scan any token by contract address ── */}
         <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-
-        {/* ── Token Impersonation Scanner - Detect fake tokens ── */}
         <TokenImpersonationScanner />
 
         {/* ── Free Scam Protection Tools Info (shown for all users) ── */}
@@ -1007,147 +1135,8 @@ function App() {
               </div>
             </div>
 
-            {/* ── Priority Scan Section ── */}
-            <div className="max-w-6xl mx-auto mb-6">
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">🔍</div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Priority Scan</h2>
-                      <p className="text-sm text-gray-400">Deep scan your wallet, a Telegram channel, or a specific token</p>
-                    </div>
-                  </div>
-                  {!isTest && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                         style={{
-                           background: priorityScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                           border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
-                           color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
-                         }}>
-                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Free Scans{holderTierUnlocked ? ' (Holder)' : ''}</span></>
-                                                  : <><span>💎</span><span>10K AGNTCBRO/scan</span></>}
-                    </div>
-                  )}
-                  {isTest && (
-                    <span className="text-xs px-2 py-1 rounded-full font-semibold"
-                          style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#4ade80' }}>
-                      ✓ Test Wallet — Unlimited
-                    </span>
-                  )}
-                </div>
-
-                {/* ── Scan mode tabs ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-                  {([
-                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
-                    { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
-                    { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
-                    { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
-                    { id: 'phone',    icon: '📞', label: 'Phone Verify', hint: 'Verify phone numbers for scams' },
-                  ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setScanMode(m.id)}
-                      className="rounded-xl p-3 text-left transition-all border"
-                      style={scanMode === m.id
-                        ? { background: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.6)' }
-                        : { background: 'rgba(0,0,0,0.3)',       borderColor: 'rgba(139,92,246,0.2)' }}
-                    >
-                      <p className={`text-sm font-semibold ${scanMode === m.id ? 'text-white' : 'text-gray-400'}`}>
-                        {m.icon} {m.label}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{m.hint}</p>
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── Input field (changes per mode) ── */}
-                <div className="mb-4">
-                  {scanMode === 'wallet' && (
-                    <input
-                      type="text"
-                      value={walletInput}
-                      onChange={e => setWalletInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
-                      placeholder="Solana: 7xKX…Bm3a  ·  EVM: 0x4e3a…f29b"
-                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
-                    />
-                  )}
-                  {scanMode === 'channels' && (
-                    <input
-                      type="text"
-                      value={channelInput}
-                      onChange={e => setChannelInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
-                      placeholder="e.g. CryptoEdgePro  ·  @alphawhalecalls  ·  t.me/defi_gems"
-                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors"
-                    />
-                  )}
-                  {scanMode === 'token' && (
-                    <input
-                      type="text"
-                      value={tokenInput}
-                      onChange={e => setTokenInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
-                      placeholder="e.g. $NOVA  ·  SOL  ·  0x4e3a…f29b"
-                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
-                    />
-                  )}
-                  {scanMode === 'social' && (
-                    <div className="flex gap-2">
-                      <select
-                        value={socialPlatform}
-                        onChange={e => setSocialPlatform(e.target.value as any)}
-                        className="bg-black/50 border border-purple-500/30 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:border-purple-500/60 transition-colors"
-                      >
-                        <option value="instagram">📸 Instagram</option>
-                        <option value="tiktok">🎵 TikTok</option>
-                        <option value="facebook">📘 Facebook</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={socialUsername}
-                        onChange={e => setSocialUsername(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
-                        placeholder="e.g. crypto_scammer99"
-                        className="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
-                      />
-                    </div>
-                  )}
-                  {scanMode === 'phone' && (
-                    <div>
-                      <PhoneNumberVerifier />
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Launch button (hidden for phone mode — uses its own) ── */}
-                <button
-                  onClick={runScan}
-                  disabled={isScanning ||
-                    scanMode === 'phone' ||
-                    (scanMode === 'wallet'   && !walletInput.trim())  ||
-                    (scanMode === 'channels' && !channelInput.trim()) ||
-                    (scanMode === 'token'    && !tokenInput.trim())    ||
-                    (scanMode === 'social'   && !socialUsername.trim())}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={scanMode === 'phone' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
-                >
-                  {isScanning
-                    ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
-                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} free${holderTierUnlocked ? ' - Holder' : ''})` : !isTest ? ' — 10K AGNTCBRO' : ''}</>
-                  }
-                </button>
-
-              </div>
-            </div>
 
             <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
-              <PortfolioCard />
-
               {/* ── Priority Scan Results Panel ── */}
               <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 flex flex-col overflow-hidden" style={{ minHeight: '420px' }}>
                 {/* Panel header */}
@@ -1233,109 +1222,6 @@ function App() {
               </div>
             </div>
 
-            {/* Market sentiment */}
-            <div className="max-w-6xl mx-auto mb-6">
-              <MarketSentiment />
-            </div>
-
-            {/* Trading Signals Section */}
-            <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto mb-6">
-              <SignalFeed />
-              <TradeAnalysis />
-              <AlertFeed />
-            </div>
-
-            {/* Daily Market Report */}
-            <div className="max-w-7xl mx-auto mb-6">
-              <DailyReport />
-            </div>
-
-            {/* Gem Advise Preview */}
-            <div className="max-w-7xl mx-auto mb-6">
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">💎</div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Gem Advise</h2>
-                      <p className="text-sm text-gray-400">AI-ranked token recommendations (Preview)</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowTierPage('holder')}
-                    disabled={!holderTierUnlocked}
-                    className="px-4 py-2 rounded-lg font-semibold text-sm transition-all disabled:opacity-50"
-                    style={holderTierUnlocked
-                      ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
-                      : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
-                    }
-                  >
-                    {holderTierUnlocked ? 'Open Full Version' : 'Unlock (10K AGNTCBRO)'}
-                  </button>
-                </div>
-
-                {!holderTierUnlocked ? (
-                  <div className="text-center py-8">
-                    <div className="text-6xl mb-4 opacity-50">🔒</div>
-                    <h3 className="text-xl font-bold text-white mb-2">Holder Tier Feature</h3>
-                    <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
-                      Get unlimited AI-ranked gem recommendations with confidence tiers, edge scoring, and quality guards.
-                    </p>
-                    <div className="bg-purple-900/40 rounded-xl p-4 max-w-md mx-auto border border-purple-500/30">
-                      <p className="text-sm text-gray-400 mb-2">Holder Tier includes:</p>
-                      <ul className="text-left text-sm space-y-1">
-                        <li>• 3 free gem advise scans</li>
-                        <li>• AI-ranked token recommendations</li>
-                        <li>• Confidence tiers (HIGH/MEDIUM/LOW)</li>
-                        <li>• Rug rate & liquidity guards</li>
-                        <li>• Real-time Telegram alpha analysis</li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <GemPreviewCard
-                        ticker="$NOVA"
-                        name="NovaProtocol"
-                        edgeScore={0.81}
-                        confidence="HIGH"
-                        winRate={44}
-                        rugRate={8}
-                        liquidity="182K"
-                        change="+12.4%"
-                        maxGain="3.2x"
-                      />
-                      <GemPreviewCard
-                        ticker="$FLUX"
-                        name="FluxLayer"
-                        edgeScore={0.76}
-                        confidence="HIGH"
-                        winRate={39}
-                        rugRate={12}
-                        liquidity="94K"
-                        change="+8.1%"
-                        maxGain="2.7x"
-                      />
-                      <GemPreviewCard
-                        ticker="$KRYPT"
-                        name="KryptVault"
-                        edgeScore={0.71}
-                        confidence="HIGH"
-                        winRate={36}
-                        rugRate={14}
-                        liquidity="126K"
-                        change="+6.7%"
-                        maxGain="2.4x"
-                      />
-                    </div>
-                    <p className="text-center text-xs text-gray-500 mt-4">
-                      * Preview mode — Open full version for unlimited scans and advanced filters
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </>
         )}
       </main>
@@ -1686,88 +1572,6 @@ function ScamResultCard({ result }: { result: {
     </div>
   )
 }
-
-// ─── Gem Preview Card Component (for free page preview) ────────────────────────────────────────────────────────────
-
-function GemPreviewCard({
-  ticker, name, edgeScore, confidence, winRate, rugRate: _rugRate, liquidity, change, maxGain,
-}: {
-  ticker: string;
-  name: string;
-  edgeScore: number;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  winRate: number;
-  rugRate: number;
-  liquidity: string;
-  change: string;
-  maxGain: string;
-}) {
-  const edgePct = Math.round(edgeScore * 100);
-  const isPositive = change.startsWith('+');
-
-  const confidenceStyle: Record<'HIGH' | 'MEDIUM' | 'LOW', { bg: string; border: string; color: string }> = {
-    HIGH:   { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)',  color: '#4ade80' },
-    MEDIUM: { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.35)',  color: '#fbbf24' },
-    LOW:    { bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.35)',   color: '#f87171' },
-  };
-  const cs = confidenceStyle[confidence];
-
-  return (
-    <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/20 p-4 hover:border-purple-500/40 transition-all">
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="font-bold text-white text-sm">{name}</div>
-          <p className="text-xs text-gray-500">{ticker}</p>
-        </div>
-        <span
-          className="text-xs font-bold px-2 py-1 rounded-lg"
-          style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
-        >
-          {confidence}
-        </span>
-      </div>
-
-      {/* Metrics */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Win Rate</p>
-          <p className="text-sm font-bold text-green-400">{winRate}%</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">1h Change</p>
-          <p className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>{change}</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Liquidity</p>
-          <p className="text-sm font-bold text-white">${liquidity}</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Max Gain</p>
-          <p className="text-sm font-bold text-purple-300">{maxGain}</p>
-        </div>
-      </div>
-
-      {/* Edge score bar */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">Edge</span>
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${edgePct}%`,
-                background: 'linear-gradient(90deg, #7c3aed, #00d4ff)',
-              }}
-            />
-          </div>
-          <span className="text-xs font-bold text-purple-300">{edgePct}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default App
 
 // ─── Auth Modal Wrapper ─────────────────────────────────────────────────────────
