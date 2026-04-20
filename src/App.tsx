@@ -12,6 +12,7 @@ import PhoneNumberVerifier from './components/PhoneNumberVerifier'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
+import AgntcbroBalanceTracker from './components/AgntcbroBalanceTracker'
 import Roadmap from './components/Roadmap'
 import HolderDashboard from './components/dashboard/HolderDashboard'
 import WhaleDashboard from './components/dashboard/WhaleDashboard'
@@ -775,6 +776,9 @@ function App() {
           )}
 
       <main className="relative z-10 container mx-auto px-4 md:px-6 pb-10">
+        {/* ── AGNTCBRO Balance Tracker — shows after wallet connect ── */}
+        <AgntcbroBalanceTracker />
+
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
 
