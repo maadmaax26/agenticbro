@@ -1,0 +1,16 @@
+{
+  "id": "5338ec95",
+  "reply_type": "USER_INQUIRY",
+  "username": "ChamSo874993929",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @ChamSo874993929:\n\nRisk Level: MEDIUM (3.3/10)\nRed Flags: DM solicitation, DM solicitation\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/ChamSo874993929\n\n#CryptoSafety",
+  "risk_level": "MEDIUM",
+  "risk_score": 3.333333333333333,
+  "red_flags": [
+    "DM solicitation",
+    "DM solicitation"
+  ],
+  "search_term": "100x crypto",
+  "report_url": "https://agenticbro.app/scan/ChamSo874993929",
+  "created_at": "2026-04-03T07:35:51.270678",
+  "status": "pending_approval"
+}

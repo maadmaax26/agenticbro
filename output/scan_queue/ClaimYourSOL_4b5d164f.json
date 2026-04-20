@@ -1,0 +1,21 @@
+{
+  "id": "4b5d164f",
+  "username": "ClaimYourSOL",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-03T17:21:10.217792",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [],
+  "risk_score": 0.0,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:03:41.234498",
+  "completed_at": "2026-04-04T23:03:41.234500",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

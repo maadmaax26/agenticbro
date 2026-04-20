@@ -1,0 +1,20 @@
+{
+  "id": "5d8fda0caae7",
+  "username": "AlphaCryptoGems",
+  "source": "x_search",
+  "search_term": "is this a scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:10:35.573161",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:00:41.255157",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:00:41.255169"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "6c28b62e0f96",
+  "username": "yo_stevve",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:31:16.943205",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T11:02:30.922786",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 3111
+  },
+  "completed_at": "2026-04-03T11:02:38.937441"
+}

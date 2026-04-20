@@ -1,0 +1,136 @@
+{
+  "scan_type": "Profile Identifier Scan",
+  "target_handle": "Degen_chad119",
+  "scan_date": "2026-04-03T19:48:00-04:00",
+  "platform": "X (Twitter)",
+  
+  "profile_data": {
+    "username": "@Degen_chad119",
+    "display_name": "Mania",
+    "followers": "7,825",
+    "following": "2,178",
+    "follower_ratio": 3.6,
+    "verified": true,
+    "verification_type": "Blue Checkmark",
+    "bio": "Notable investor and advisor |KOL For Notable projects|Keep building|partnered: @MezoNetwork $ETH $SOL $ARB $LINK $ASTER $BULLISH",
+    "cashtags_in_bio": ["$ETH", "$SOL", "$ARB", "$LINK", "$ASTER", "$BULLISH"],
+    "partnerships": ["@MezoNetwork"],
+    "recent_tweets": [
+      "Why bringing my name into this 'Mania'",
+      "$ROCKET promotion - 'See you at the top'",
+      "The movement is massive with $ROCKET",
+      "$OGG promotion - 'The chart will speak for itself'",
+      "Generic 'moon' language"
+    ]
+  },
+  
+  "red_flag_analysis": {
+    "guaranteed_returns": {
+      "present": false,
+      "weight": 0,
+      "notes": "No explicit guaranteed returns. Some hype language ('See you at the top') but not guaranteeing profits."
+    },
+    "private_alpha": {
+      "present": false,
+      "weight": 0,
+      "notes": "No private alpha or exclusive group offers detected."
+    },
+    "unrealistic_claims": {
+      "present": false,
+      "weight": 0,
+      "notes": "Hype present but not unrealistic. Standard crypto promotional language."
+    },
+    "urgency_tactics": {
+      "present": true,
+      "weight": 5,
+      "notes": "'You need a perfect entry? Hahaha' - mild FOMO pressure. Slight urgency in $ROCKET promotion."
+    },
+    "no_track_record": {
+      "present": false,
+      "weight": 0,
+      "notes": "7,825 followers is moderate. Admits 'KOL For Notable projects' which implies track record."
+    },
+    "requests_crypto": {
+      "present": false,
+      "weight": 0,
+      "notes": "No direct requests for crypto transfers or wallet addresses."
+    },
+    "no_verification": {
+      "present": false,
+      "weight": 0,
+      "notes": "Blue checkmark verified account."
+    },
+    "fake_followers": {
+      "present": false,
+      "weight": 0,
+      "notes": "Follower/following ratio of 3.6:1 is healthy. No obvious fake follower indicators."
+    },
+    "new_account": {
+      "present": false,
+      "weight": 0,
+      "notes": "Account appears established. Joined date not visible but posting history suggests account age."
+    },
+    "vip_upsell": {
+      "present": false,
+      "weight": 0,
+      "notes": "No VIP channel or paid group upsell detected."
+    },
+    "paid_promoter": {
+      "present": true,
+      "weight": 15,
+      "notes": "Self-admitted 'KOL For Notable projects' and 'partnered: @MezoNetwork'. Multiple promoted tokens in bio. This is a PAID PROMOTER account."
+    }
+  },
+  
+  "risk_score": {
+    "total_weight": 20,
+    "max_weight": 90,
+    "score": 2.2,
+    "risk_level": "MEDIUM",
+    "calculation": "(20 / 90) × 10 = 2.2"
+  },
+  
+  "verification_level": "PAID PROMOTER",
+  
+  "key_findings": [
+    "✅ Verified account (blue checkmark)",
+    "✅ Healthy follower ratio (3.6:1)",
+    "⚠️ Self-admitted KOL/paid promoter",
+    "⚠️ Multiple token promotions in bio ($ETH $SOL $ARB $LINK $ASTER $BULLISH)",
+    "⚠️ Partnered with @MezoNetwork",
+    "⚠️ Promoting $ROCKET and $OGG tokens",
+    "✅ No direct scam indicators",
+    "✅ No crypto requests",
+    "⚠️ Username 'Degen_chad' suggests degen/casino mentality"
+  ],
+  
+  "recommendation": "CAUTION - Paid Promoter Account",
+  
+  "detailed_analysis": {
+    "account_type": "KOL (Key Opinion Leader) / Paid Promoter",
+    "purpose": "Token promotion and project partnerships",
+    "risk_profile": "This account is a paid promoter/influencer account. While not necessarily a scam, content should be treated as sponsored/promotional. Followers should verify any promoted projects independently before investing.",
+    "authenticity": "Account appears authentic with legitimate engagement. Admitted partnerships suggest transparency about paid relationships.",
+    "warning_signs": [
+      "Paid promoter - content is sponsored",
+      "Promotes multiple tokens - diversification suggests portfolio rather than single project",
+      "'Degen' in username - higher risk tolerance implied",
+      "FOMO language in promotions"
+    ],
+    "positive_signs": [
+      "Verified account",
+      "Admits partnerships",
+      "No direct scam indicators",
+      "No wallet/address requests",
+      "Reasonable follower count"
+    ]
+  },
+  
+  "final_verdict": {
+    "status": "PAID PROMOTER",
+    "risk_score": "2.2/10",
+    "risk_level": "MEDIUM",
+    "action": "Content is promotional. Verify promoted projects independently. Not a scam account, but sponsored content.",
+    "database_action": "Add to LEGITIMATE section with PAID PROMOTER verification level"
+  }
+}

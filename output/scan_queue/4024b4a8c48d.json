@@ -1,0 +1,20 @@
+{
+  "id": "4024b4a8c48d",
+  "username": "kukjanostenfx",
+  "source": "x_search",
+  "search_term": "send SOL to receive",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T00:08:02.424903",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:00:49.598535",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:00:49.598551"
+}

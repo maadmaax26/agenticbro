@@ -1,0 +1,20 @@
+{
+  "id": "7861e75641c2",
+  "username": "encyclopedic_fs",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T16:15:23.326058",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:59:17.545588",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-04T23:59:17.545604"
+}
