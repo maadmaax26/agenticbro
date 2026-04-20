@@ -17,7 +17,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
       name: 'profile-verifier',
       icon: '🔍',
       title: 'Profile Verifier Scanner',
-      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. 3 free scans, then $1/scan.',
+      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. 5 free scans, then $1/scan.',
     },
     {
       name: 'token-impersonation',
@@ -62,7 +62,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
     { value: '6', label: 'Platforms Supported' },
     { value: '5,000+', label: 'Known Scammers in Database' },
     { value: '< 30s', label: 'Average Scan Time' },
-    { value: '3 Free', label: 'Scans for Every User' },
+    { value: '5 Free', label: 'Scans for Every User' },
   ];
 
   return (
@@ -228,7 +228,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 </ul>
                 <div className="mt-6 flex items-center gap-4">
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-4 py-2">
-                    <span className="text-cyan-400 font-bold">3 Free Scans</span>
+                    <span className="text-cyan-400 font-bold">5 Free Scans</span>
                   </div>
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2">
                     <span className="text-purple-400 font-bold">$1/scan after</span>
@@ -290,7 +290,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
             <div className="text-5xl mb-4">🛡</div>
             <h2 className="text-4xl font-bold text-white mb-4">Stop Gambling. Start Investigating.</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-              Every scan you skip is a risk you could have avoided. Agentic Bro gives you 3 free scans --
+              Every scan you skip is a risk you could have avoided. Agentic Bro gives you 5 free scans --
               start protecting your portfolio today.
             </p>
             <button onClick={onBack} className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-10 rounded-xl text-lg transition-all transform hover:scale-105">

@@ -2,7 +2,7 @@
  * Token Scanner Component
  *
  * Scan tokens by contract address for risk analysis, scam detection, and trading signals
- * 3 free scans per user, then $1/scan via Stripe, USDC, or AGNTCBRO
+ * 5 free scans per user, then $1/scan via Stripe, USDC, or AGNTCBRO
  */
 
 import { useState } from 'react';
@@ -361,7 +361,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
                   Purchase credits to continue scanning — <span className="text-emerald-400 font-semibold">$1/scan</span> via Stripe, USDC, or AGNTCBRO
                 </p>
                 <p className="text-xs text-gray-500">
-                  3 free scans included with new accounts
+                  5 free scans included with new accounts
                 </p>
               </>
             )}
