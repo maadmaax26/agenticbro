@@ -143,7 +143,7 @@ function App() {
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    const defaultScans = holderTierUnlocked ? 50 : 10; // 50 monthly for holders, 10 for free users
+    const defaultScans = holderTierUnlocked ? 50 : 5; // 50 monthly for holders, 5 for free users
     return saved ? Math.max(0, parseInt(saved, 10)) : defaultScans;
   });
 
@@ -168,7 +168,7 @@ function App() {
   useEffect(() => {
     const saved = localStorage.getItem(getWalletScanKey());
     if (!saved) {
-      const defaultScans = holderTierUnlocked ? 50 : 10;
+      const defaultScans = holderTierUnlocked ? 50 : 5;
       setPriorityScansRemaining(defaultScans);
     }
   }, [holderTierUnlocked]);
@@ -561,7 +561,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 10 scans. Hold tokens to unlock more.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 5 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -609,7 +609,7 @@ function App() {
                 ) : holderTierUnlocked ? (
                   <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/50</>
                 ) : (
-                  <>🔍 {priorityScansRemaining}/10</>
+                  <>🔍 {priorityScansRemaining}/5</>
                 )}
               </div>
 
