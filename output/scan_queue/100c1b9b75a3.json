@@ -1,0 +1,21 @@
+{
+  "id": "100c1b9b75a3",
+  "username": "theereal_one",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:41:32.869811",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:41:32.881624",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 4164
+  },
+  "completed_at": "2026-04-03T10:41:40.891132"
+}

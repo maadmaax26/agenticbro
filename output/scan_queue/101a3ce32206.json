@@ -1,0 +1,23 @@
+{
+  "id": "101a3ce32206",
+  "username": "GeesVeggieBurgr",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T00:18:18.096413",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T00:18:44.154591",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2871
+  },
+  "completed_at": "2026-04-03T00:18:52.166368"
+}

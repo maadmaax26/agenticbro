@@ -1,0 +1,16 @@
+{
+  "id": "89329982",
+  "reply_type": "USER_INQUIRY",
+  "username": "knownasmemories",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @knownasmemories:\n\nRisk Level: MEDIUM (3.3/10)\nRed Flags: DM solicitation, DM solicitation\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/knownasmemories\n\n#CryptoSafety",
+  "risk_level": "MEDIUM",
+  "risk_score": 3.333333333333333,
+  "red_flags": [
+    "DM solicitation",
+    "DM solicitation"
+  ],
+  "search_term": "legit or scam",
+  "report_url": "https://agenticbro.app/scan/knownasmemories",
+  "created_at": "2026-04-03T07:35:51.252541",
+  "status": "pending_approval"
+}

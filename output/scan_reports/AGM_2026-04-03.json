@@ -1,0 +1,19 @@
+{
+  "id": "eb7cb4d8",
+  "username": "AGM",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.205937",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x2888F8800e7B842F396Ad585F46cD1727249388f",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888347"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

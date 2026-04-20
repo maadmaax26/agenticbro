@@ -2,7 +2,7 @@
 
 ## Current Status
 
-✅ **Bot Token Configured:** `TELEGRAM_BOT_TOKEN_REDACTED_OLD`
+✅ **Bot Token Configured:** `TELEGRAM_BOT_TOKEN_REDACTED`
 ⚠️ **MTProto Credentials Missing:** Required for priority scan feature
 
 ## Why You're Seeing "Demo Mode"

@@ -1,0 +1,1132 @@
+{
+  "timestamp": "2026-04-04T00:22:12.808309",
+  "summary": {
+    "total_checked": 43,
+    "matched": 0,
+    "csv_only": 0,
+    "supabase_only": 28,
+    "mismatched": 15
+  },
+  "discrepancies": {
+    "csv_only": [],
+    "supabase_only": [
+      {
+        "handle": "crypto_genius09",
+        "supabase": {
+          "id": "SCM-20260402-CG-ACTIVE",
+          "name": "Crypto Genius",
+          "platform": "twitter",
+          "x_handle": "@Crypto_Genius09",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "PAID PROMOTER",
+          "scam_type": "paid_promotion",
+          "notes": "ACTIVE ACCOUNT. Crypto community account offering paid promotions. Bio: Community where people come together to learn, share insights, and discuss cryptocurrency as well as blockchain technology | Dm for Promotion. Risk Score: 3.3/10 (MEDIUM). Red flags: DM solicitation, paid promotion offered, crypto focus.",
+          "threat_level": "LOW",
+          "risk_score": 33,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "bolo_waqar1",
+        "supabase": {
+          "id": "SCM-20260402-1DB53C",
+          "name": "Bolo WaQar",
+          "platform": "twitter",
+          "x_handle": "@Bolo_WaQar1",
+          "telegram": null,
+          "victims": 2,
+          "total_lost": "$800+",
+          "verification": "HIGH RISK",
+          "scam_type": "investment_fraud",
+          "notes": "VERIFIED SCAMMER. Direct victim report (April 2, 2026). Victim lost $800 to this account. Account engages in investment fraud/cryptocurrency scam.",
+          "threat_level": "CRITICAL",
+          "risk_score": 95,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "elgnt",
+        "supabase": {
+          "id": "SCM-20260403-7F7569",
+          "name": "ELGNT (ElizaAgentic)",
+          "platform": "solana",
+          "x_handle": "@ELGNT",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "thesultaan001",
+        "supabase": {
+          "id": "SCM-20260402-9AC9DD",
+          "name": "thesultaan001",
+          "platform": "twitter",
+          "x_handle": "@TheSultaan001",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "0",
+          "verification": "Insufficient Data",
+          "scam_type": "other",
+          "notes": "INSUFFICIENT DATA. Cannot access X profile directly to see bio, followers, tweets, verification status, or posting activity. Web search found no victim reports. Name 'Sultaan' appears in unrelated contexts (not crypto-specific). NEED: Profile data (bio, description, recent tweets), follower count, verification status, what they post about (crypto, trading, promotions?), any red flags. NOT confirmed as scammer - cannot determine legitimacy without data.",
+          "threat_level": "UNKNOWN",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "oudalserf",
+        "supabase": {
+          "id": "SCM-20260402-84C90A",
+          "name": "oudalserf",
+          "platform": "twitter",
+          "x_handle": "@oudalserf",
+          "telegram": null,
+          "victims": 1,
+          "total_lost": "?",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "X search executed - no public victim reports found. Profile visited but requires detailed extraction. This may be first public allegation. Automated reports in scammer-detection-service/.",
+          "threat_level": "LOW",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "bro",
+        "supabase": {
+          "id": "SCM-20260403-65E652",
+          "name": "BRO (Neurobro by Virtuals)",
+          "platform": "solana",
+          "x_handle": "@BRO",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "knownscammer",
+        "supabase": {
+          "id": "SCM-20260403-23EBA2",
+          "name": "Known Scammer",
+          "platform": "twitter",
+          "x_handle": "@KnownScammer",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "Legitimate",
+          "scam_type": "other",
+          "notes": "The display name 'Known Scammer' appears to be intentionally ironic/satirical. The account shows no signs of actual scamming behavior - no promotional posts, no DM solicitations, no unrealistic claims. The account has been inactive since 2018 and appears to be a dormant personal account that was used for crypto discussion.",
+          "threat_level": "LOW",
+          "risk_score": 5,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agntcbro",
+        "supabase": {
+          "id": "SCM-20260403-836AC0",
+          "name": "AGNTCBRO (Agentic Bro)",
+          "platform": "solana",
+          "x_handle": "@AGNTCBRO",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "engineer",
+        "supabase": {
+          "id": "SCM-20260403-FFEE45",
+          "name": "ENGINEER (Agentic Engineer)",
+          "platform": "solana",
+          "x_handle": "@ENGINEER",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "mktgweb3",
+        "supabase": {
+          "id": "SCM-20260403-3C8A46",
+          "name": "MKTGweb3 (Leo)",
+          "platform": "twitter",
+          "x_handle": "@MKTGweb3",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "Legitimate",
+          "scam_type": "other",
+          "notes": "Verified marketing professional with 3+ year history. 221K followers. Runs @pastelalpha. Growth/marketing focus. Risk Score: 0.5/10 (LOW). VERIFIED via Chrome CDP scan on 2026-04-03.",
+          "threat_level": "LOW",
+          "risk_score": 5,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agm",
+        "supabase": {
+          "id": "SCM-20260403-5E8002",
+          "name": "AGM (Agentic mode)",
+          "platform": "solana",
+          "x_handle": "@AGM",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "wfund",
+        "supabase": {
+          "id": "SCM-20260403-E5652A",
+          "name": "WFUND (World Agentic Fund)",
+          "platform": "solana",
+          "x_handle": "@WFUND",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agentic claw",
+        "supabase": {
+          "id": "SCM-20260403-A7E314",
+          "name": "AGENTIC CLAW (Agentic Claw)",
+          "platform": "solana",
+          "x_handle": "@AGENTIC CLAW",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "am",
+        "supabase": {
+          "id": "SCM-20260403-4DE638",
+          "name": "AM (Agentic Mode)",
+          "platform": "solana",
+          "x_handle": "@AM",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "rome",
+        "supabase": {
+          "id": "SCM-20260403-2DA15F",
+          "name": "ROME (ROMEisObviouslyanAgenticModEl)",
+          "platform": "solana",
+          "x_handle": "@ROME",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agentic",
+        "supabase": {
+          "id": "SCM-20260403-B2A2E3",
+          "name": "AGENTIC (Agentic Finance)",
+          "platform": "solana",
+          "x_handle": "@AGENTIC",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "lobster",
+        "supabase": {
+          "id": "SCM-20260403-7E432C",
+          "name": "LOBSTER (The Agentic Computer)",
+          "platform": "solana",
+          "x_handle": "@LOBSTER",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agt",
+        "supabase": {
+          "id": "SCM-20260403-0CDC41",
+          "name": "AGT (Agentic Wallet)",
+          "platform": "solana",
+          "x_handle": "@AGT",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "wethemonarch",
+        "supabase": {
+          "id": "SCM-20260402-C49134",
+          "name": "wethemonarch",
+          "platform": "telegram",
+          "x_handle": "@wethemonarch",
+          "telegram": "@Monarchcalls001",
+          "victims": 0,
+          "total_lost": "0",
+          "verification": "HIGH RISK",
+          "scam_type": "investment_fraud",
+          "notes": "MEDIUM RISK (6.5/10). Alpha caller claims, paid promotions available, similar to known scam 'Monarch Capital Institute'. No direct victim reports yet. Channel description: 'Only Gambles, print or rekt. NFA/DYOR!! Marketing and AlphaCalls'. Promotes high-risk gambling. Related: Monarch Capital Institute is a known scam with similar branding.",
+          "threat_level": "CRITICAL",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agentic lobster mode",
+        "supabase": {
+          "id": "SCM-20260403-673B55",
+          "name": "AGENTIC LOBSTER MODE (Agentic Lobster Mode)",
+          "platform": "solana",
+          "x_handle": "@AGENTIC LOBSTER MODE",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "raynft_",
+        "supabase": {
+          "id": "SCM-20260402-A323B1",
+          "name": "raynft_",
+          "platform": "twitter",
+          "x_handle": "@raynft_",
+          "telegram": null,
+          "victims": 1,
+          "total_lost": "1200+",
+          "verification": "Verified",
+          "scam_type": "wallet_drainer",
+          "notes": "CONFIRMED SCAM (Solana): Stole $1,200+ USD in Solana tokens. Promoted wallet drainer site https://app.solstreamflow.finance/ claiming to be a \"developer token locker\". Victim connected wallet and all tokens were stolen. SCAM PATTERN: Legitimate-looking account (Verified, 13+ years, 325K followers) promotes drainer site — likely hacked account or paid promotion. SITE: https://app.solstreamflow.finance/ appears to be a Solana wallet drainer (fake token locker service). CHAIN: Solana. NEED: Original recommendation screenshot/post (likely DM), transaction hashes, drainer's receiving wallet address, timestamp. Account may be compromised — legitimate credentials used for malicious promotion.",
+          "threat_level": "HIGH",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "wc2",
+        "supabase": {
+          "id": "SCM-20260403-988C33",
+          "name": "WC2 (Agentic RTS)",
+          "platform": "solana",
+          "x_handle": "@WC2",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agnt",
+        "supabase": {
+          "id": "SCM-20260403-283A77",
+          "name": "AGNT (AGNT SOCIAL)",
+          "platform": "solana",
+          "x_handle": "@AGNT",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "cora",
+        "supabase": {
+          "id": "SCM-20260403-596681",
+          "name": "CORA (Coragentic)",
+          "platform": "solana",
+          "x_handle": "@CORA",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "acm",
+        "supabase": {
+          "id": "SCM-20260403-2A1B9A",
+          "name": "ACM (Agentic Capital Markets)",
+          "platform": "solana",
+          "x_handle": "@ACM",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "agentic cz",
+        "supabase": {
+          "id": "SCM-20260403-9E635B",
+          "name": "AGENTIC CZ (Agentic CZ)",
+          "platform": "solana",
+          "x_handle": "@AGENTIC CZ",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "aagent",
+        "supabase": {
+          "id": "SCM-20260403-E43D89",
+          "name": "AAGENT (AGENTicAI)",
+          "platform": "solana",
+          "x_handle": "@AAGENT",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      },
+      {
+        "handle": "amg",
+        "supabase": {
+          "id": "SCM-20260403-E80679",
+          "name": "AMG (Agentic Money Gllitch)",
+          "platform": "solana",
+          "x_handle": "@AMG",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "other",
+          "notes": "",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        }
+      }
+    ],
+    "mismatched": [
+      {
+        "handle": "gemalerts_",
+        "csv": {
+          "name": "Gem Alerts",
+          "platform": "Telegram",
+          "x_handle": "@GemAlerts_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Pump & Dump",
+          "notes": "Pump group",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-2F2B09",
+          "name": "Gem Alerts",
+          "platform": "telegram",
+          "x_handle": "@GemAlerts_",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Pump group",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Pump & Dump vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "cryptowhale_",
+        "csv": {
+          "name": "CryptoWhale",
+          "platform": "X",
+          "x_handle": "@CryptoWhale_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "DM Solicitation",
+          "notes": "DM for alpha promoter",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-3E9151",
+          "name": "CryptoWhale",
+          "platform": "twitter",
+          "x_handle": "@CryptoWhale_",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "DM for alpha promoter",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=DM Solicitation vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "presalealerts",
+        "csv": {
+          "name": "Presale Alerts",
+          "platform": "Telegram",
+          "x_handle": "@PresaleAlerts",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Presale Scam",
+          "notes": "Fake presale channel",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-F99348",
+          "name": "Presale Alerts",
+          "platform": "telegram",
+          "x_handle": "@PresaleAlerts",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Fake presale channel",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Presale Scam vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "freesolairdrop",
+        "csv": {
+          "name": "Free Sol Airdrop",
+          "platform": "Telegram",
+          "x_handle": "@FreeSolAirdrop",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Airdrop Scam",
+          "notes": "Wallet drainer via fake airdrop",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-890EC9",
+          "name": "Free Sol Airdrop",
+          "platform": "telegram",
+          "x_handle": "@FreeSolAirdrop",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Wallet drainer via fake airdrop",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Airdrop Scam vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "dianasanchez_04",
+        "csv": {
+          "name": "Diana Sanchez",
+          "platform": "X",
+          "x_handle": "@DianaSanchez_04",
+          "telegram": "t.me/diana_sanchezok",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "VERIFIED",
+          "scam_type": "PAID PROMOTER",
+          "notes": "2026-04-02",
+          "last_updated": "KOL/Influencer",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-C41A4C",
+          "name": "Diana Sanchez",
+          "platform": "twitter",
+          "x_handle": "@DianaSanchez_04",
+          "telegram": "diana_sanchezok",
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "Verified",
+          "scam_type": "other",
+          "notes": "2026-04-02",
+          "threat_level": "CRITICAL",
+          "risk_score": 90,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=VERIFIED vs Supabase=Verified",
+          "scam_type: CSV=PAID PROMOTER vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "coinlabverse",
+        "csv": {
+          "name": "CoinLabVerse",
+          "platform": "X",
+          "x_handle": "@CoinLabVerse",
+          "telegram": "@CoinLabVerseNews",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "UNVERIFIED",
+          "scam_type": "Requires Scan",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Education/community channel. Requires verification scan.",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260402-F3E92A",
+          "name": "CoinLabVerse",
+          "platform": "twitter",
+          "x_handle": "@CoinLabVerse",
+          "telegram": "CoinLabVerseNews",
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Education/community channel. Requires verification scan.",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Requires Scan vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "22j27",
+        "csv": {
+          "name": "LUNA GREY (22J27)",
+          "platform": "X",
+          "x_handle": "@22J27",
+          "telegram": "t.me/lunagreyX0",
+          "victims": "1",
+          "total_lost": "Unknown",
+          "verification": "HIGH RISK",
+          "scam_type": "Pump & Dump Promoter",
+          "notes": "Self-described \"Crypto Project Promoter\" soliciting DMs. Promotes multiple tokens (PPM HTC VALORA NEX) with unrealistic \"1000x\" claims. User reported being scammed. Risk Score: 10.0/10 (CRITICAL).",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260402-HIGH-22J27",
+          "name": "LUNA GREY (22J27)",
+          "platform": "twitter",
+          "x_handle": "@22J27",
+          "telegram": "lunagreyX0",
+          "victims": 1,
+          "total_lost": "Unknown",
+          "verification": "High Risk",
+          "scam_type": "pump_and_dump",
+          "notes": "Self-described \"Crypto Project Promoter\" soliciting DMs. Promotes multiple tokens (PPM HTC VALORA NEX) with unrealistic \"1000x\" claims. User reported being scammed. Risk Score: 10.0/10 (CRITICAL).",
+          "threat_level": "CRITICAL",
+          "risk_score": 100,
+          "status": "active",
+          "last_updated": "2026-04-04",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=HIGH RISK vs Supabase=High Risk",
+          "scam_type: CSV=Pump & Dump Promoter vs Supabase=pump_and_dump"
+        ]
+      },
+      {
+        "handle": "nftmintfree",
+        "csv": {
+          "name": "NFT Mint Free",
+          "platform": "X",
+          "x_handle": "@NFTMintFree",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Wallet Drainer",
+          "notes": "Connect wallet scam",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-F68305",
+          "name": "NFT Mint Free",
+          "platform": "twitter",
+          "x_handle": "@NFTMintFree",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "wallet_drainer",
+          "notes": "Connect wallet scam",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Wallet Drainer vs Supabase=wallet_drainer"
+        ]
+      },
+      {
+        "handle": "claimyoursol",
+        "csv": {
+          "name": "Claim Your SOL",
+          "platform": "X",
+          "x_handle": "@ClaimYourSOL",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Wallet Drainer",
+          "notes": "Fake claim page",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-3C504D",
+          "name": "Claim Your SOL",
+          "platform": "twitter",
+          "x_handle": "@ClaimYourSOL",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "wallet_drainer",
+          "notes": "Fake claim page",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Wallet Drainer vs Supabase=wallet_drainer"
+        ]
+      },
+      {
+        "handle": "madapescall",
+        "csv": {
+          "name": "Mad Apes Call",
+          "platform": "X",
+          "x_handle": "@madapescall",
+          "telegram": "@mad_apes_gambles",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "UNVERIFIED",
+          "scam_type": "Requires Scan",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Crypto influencer platform. Requires verification scan.",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260402-28C339",
+          "name": "Mad Apes Call",
+          "platform": "twitter",
+          "x_handle": "@madapescall",
+          "telegram": "mad_apes_gambles",
+          "victims": 0,
+          "total_lost": "$0",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Crypto influencer platform. Requires verification scan.",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Requires Scan vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "presaleking_",
+        "csv": {
+          "name": "PresaleKing",
+          "platform": "X",
+          "x_handle": "@PresaleKing_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Presale Scam",
+          "notes": "Fake presale promoter",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-2F239E",
+          "name": "PresaleKing",
+          "platform": "twitter",
+          "x_handle": "@PresaleKing_",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Fake presale promoter",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Presale Scam vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "gemhunter100x",
+        "csv": {
+          "name": "GemHunter",
+          "platform": "X",
+          "x_handle": "@GemHunter100x",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Pump & Dump",
+          "notes": "Unrealistic return claims",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-384ABD",
+          "name": "GemHunter",
+          "platform": "twitter",
+          "x_handle": "@GemHunter100x",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "Unrealistic return claims",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=Pump & Dump vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "alphacalls_",
+        "csv": {
+          "name": "AlphaCalls",
+          "platform": "X",
+          "x_handle": "@AlphaCalls_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "DM Solicitation",
+          "notes": "DM for alpha scam",
+          "last_updated": "2026-04-03",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260403-B1D2D8",
+          "name": "AlphaCalls",
+          "platform": "twitter",
+          "x_handle": "@AlphaCalls_",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "Unknown",
+          "verification": "Unverified",
+          "scam_type": "other",
+          "notes": "DM for alpha scam",
+          "threat_level": "MEDIUM",
+          "risk_score": 50,
+          "status": "active",
+          "last_updated": "2026-04-03",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=UNVERIFIED vs Supabase=Unverified",
+          "scam_type: CSV=DM Solicitation vs Supabase=other"
+        ]
+      },
+      {
+        "handle": "degen_chad119",
+        "csv": {
+          "name": "Mania (Degen_chad119)",
+          "platform": "X",
+          "x_handle": "@Degen_chad119",
+          "telegram": "t.me/Degen_chad119",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "LEGITIMATE",
+          "scam_type": "PAID PROMOTER",
+          "notes": "Verified KOL/influencer (blue checkmark). 7.8K followers. Self-admitted 'KOL For Notable projects' partnered with @MezoNetwork. PAID PROMOTER account - content is sponsored. Risk Score: 2.2/10 (LOW). NOT A SCAM.",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260402-F8C8B9",
+          "name": "degen_chad119",
+          "platform": "twitter",
+          "x_handle": "@Degen_chad119",
+          "telegram": null,
+          "victims": 0,
+          "total_lost": "0",
+          "verification": "LEGITIMATE",
+          "scam_type": "PAID PROMOTER",
+          "notes": "Verified KOL/influencer (blue checkmark). 7.8K followers. Self-admitted KOL For Notable projects partnered with @MezoNetwork. PAID PROMOTER account - content is sponsored. Risk Score: 2.2/10 (LOW). NOT A SCAM.",
+          "threat_level": "LOW",
+          "risk_score": 22,
+          "status": "active",
+          "last_updated": "2026-04-04",
+          "source": "supabase"
+        },
+        "differences": [
+          "notes differ"
+        ]
+      },
+      {
+        "handle": "crypto_genius_09",
+        "csv": {
+          "name": "Crypto_Genius09",
+          "platform": "X",
+          "x_handle": "@Crypto_Genius_09",
+          "telegram": "",
+          "victims": "1",
+          "total_lost": "$50",
+          "verification": "RESOLVED",
+          "scam_type": "AMA Completed",
+          "notes": "Removed from scammer database - AMA was completed. Victim reported $50 loss but dispute was resolved. Account later suspended by X (April 2026).",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        },
+        "supabase": {
+          "id": "SCM-20260402-6E9045",
+          "name": "Crypto_Genius09",
+          "platform": "twitter",
+          "x_handle": "@Crypto_Genius_09",
+          "telegram": null,
+          "victims": 1,
+          "total_lost": "$50",
+          "verification": "Resolved",
+          "scam_type": "other",
+          "notes": "Removed from scammer database - AMA was completed. Victim reported $50 loss but dispute was resolved. Account later suspended by X (April 2026).",
+          "threat_level": "LOW",
+          "risk_score": 10,
+          "status": "active",
+          "last_updated": "2026-04-02",
+          "source": "supabase"
+        },
+        "differences": [
+          "verification: CSV=RESOLVED vs Supabase=Resolved",
+          "scam_type: CSV=AMA Completed vs Supabase=other"
+        ]
+      }
+    ]
+  },
+  "status": "FAIL"
+}

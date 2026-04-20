@@ -1,0 +1,17 @@
+{
+  "id": "0a7e05e0",
+  "reply_type": "HELPFUL_RESPONSE",
+  "username": "LPNational",
+  "reply_text": "📊 Quick scan for @LPNational:\n\nRisk Score: 4.4/10\nStatus: MEDIUM\nConcerns: DM solicitation, Airdrop, Free crypto\n\n⚠️ Some red flags detected - proceed with caution.\n\nGet a full deep-dive scan at agenticbro.app\n\n#StaySafe",
+  "risk_level": "MEDIUM",
+  "risk_score": 4.444444444444445,
+  "red_flags": [
+    "DM solicitation",
+    "Airdrop",
+    "Free crypto"
+  ],
+  "report_url": "https://agenticbro.app/scan/LPNational",
+  "created_at": "2026-04-03T07:35:22.886741",
+  "status": "approved",
+  "approved_at": "2026-04-03T11:36:26.518Z"
+}

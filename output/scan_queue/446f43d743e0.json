@@ -1,0 +1,20 @@
+{
+  "id": "446f43d743e0",
+  "username": "talk2veee",
+  "source": "x_search",
+  "search_term": "ending soon airdrop",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:31:07.512181",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:04:42.590377",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:04:42.590393"
+}

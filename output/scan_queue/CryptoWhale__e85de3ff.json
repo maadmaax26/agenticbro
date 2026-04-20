@@ -1,0 +1,23 @@
+{
+  "id": "e85de3ff",
+  "username": "CryptoWhale_",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-03T17:21:10.216395",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "DM solicitation"
+  ],
+  "risk_score": 1.5,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:24:44.329040",
+  "completed_at": "2026-04-04T23:24:44.329042",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}
