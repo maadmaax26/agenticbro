@@ -14,21 +14,25 @@ let verifier: ProfileVerifier | null = null;
 let limiter: RateLimiter | null = null;
 let auth: Auth | null = null;
 
-// Only initialize services if database is configured
+// Always initialize ProfileVerifier so the local scanner is used for all scan
+// requests. DATABASE_URL and REDIS_URL are optional — when absent the verifier
+// runs without the scammer-DB lookup and without Redis caching, but the full
+// Instagram/Twitter scraping pipeline still executes correctly.
+verifier = new ProfileVerifier({
+  twitterConfig: {
+    apiKey: process.env.TWITTER_API_KEY || '',
+    apiSecret: process.env.TWITTER_API_SECRET || '',
+    bearerToken: process.env.TWITTER_BEARER_TOKEN || '',
+  },
+  puppeteerEndpoint: process.env.PUPPETEER_ENDPOINT || 'http://localhost:18800',
+  botometerApiKey: process.env.BOTOMETER_API_KEY || '',
+  deepfakeModelPath: process.env.DEEPFAKE_MODEL_PATH || '',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost/agenticbro',
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+});
+
+// Rate-limiter and auth require a live database connection.
 if (process.env.DATABASE_URL) {
-  verifier = new ProfileVerifier({
-    twitterConfig: {
-      apiKey: process.env.TWITTER_API_KEY!,
-      apiSecret: process.env.TWITTER_API_SECRET!,
-      bearerToken: process.env.TWITTER_BEARER_TOKEN!,
-    },
-    puppeteerEndpoint: process.env.PUPPETEER_ENDPOINT || 'http://localhost:18800',
-    botometerApiKey: process.env.BOTOMETER_API_KEY!,
-    deepfakeModelPath: process.env.DEEPFAKE_MODEL_PATH!,
-    databaseUrl: process.env.DATABASE_URL!,
-    redisUrl: process.env.REDIS_URL!,
-  });
-  
   limiter = new RateLimiter();
   auth = new Auth();
 }

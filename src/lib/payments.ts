@@ -8,6 +8,8 @@
  * - AGNTCBRO tokens: $1 equivalent value per scan
  * 
  * Track credits by wallet address or email
+ * 
+ * Free tier: 10 free scans per user (tracked in localStorage)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -250,7 +252,7 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
 
 export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(3);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
   const [loading, setLoading] = useState(true);
 
   // Storage key based on wallet or email
@@ -284,9 +286,9 @@ export function useCredits(userId: string | null, email: string | null, walletAd
       if (storedFree) {
         setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
       } else {
-        // New user gets 3 free scans
-        setFreeScansRemaining(3);
-        localStorage.setItem(`agenticbro_free_${storageKey}`, '3');
+        // New user gets 5 free scans
+        setFreeScansRemaining(5);
+        localStorage.setItem(`agenticbro_free_${storageKey}`, '5');
       }
       
       setLoading(false);

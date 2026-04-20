@@ -2,7 +2,7 @@
  * Profile Verifier Scanner Component
  *
  * Allows users to verify social media profiles for scam detection
- * 3 free scans available, then $1/scan via Stripe, USDC, or AGNTCBRO
+ * 10 free scans available, then $1/scan via Stripe, USDC, or AGNTCBRO
  * Credits tracked by wallet address or email
  */
 
@@ -503,7 +503,7 @@ Recommendation: ${result.recommendation}`;
                     💎 Purchase scan credits: <strong>$1/scan</strong> via Stripe, USDC, or AGNTCBRO
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    3 free scans included with new accounts
+                    5 free scans included with new accounts
                   </p>
                 </>
               )}
