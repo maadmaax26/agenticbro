@@ -1,0 +1,20 @@
+{
+  "id": "46d3ca61452a",
+  "username": "PropFirmMedia",
+  "source": "x_search",
+  "search_term": "limited time offer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T15:54:51.259789",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:04:34.123238",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:04:34.123255"
+}

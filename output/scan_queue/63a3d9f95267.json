@@ -1,0 +1,23 @@
+{
+  "id": "63a3d9f95267",
+  "username": "BananenbrotNr1",
+  "source": "x_search",
+  "search_term": "has anyone used @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T12:37:06.784750",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T12:37:58.867194",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2089
+  },
+  "completed_at": "2026-04-03T12:38:06.876168"
+}

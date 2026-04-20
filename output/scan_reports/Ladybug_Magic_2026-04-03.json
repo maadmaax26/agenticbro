@@ -1,0 +1,24 @@
+{
+  "id": "528afb0fcc73",
+  "username": "Ladybug_Magic",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:41:23.463244",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T13:52:31.522958",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "DM solicitation"
+    ],
+    "text_length": 2446
+  },
+  "completed_at": "2026-04-03T13:52:39.537064"
+}

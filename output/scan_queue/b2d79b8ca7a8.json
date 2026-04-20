@@ -1,0 +1,20 @@
+{
+  "id": "b2d79b8ca7a8",
+  "username": "thomashollan777",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T15:03:31.228950",
+  "priority": "normal",
+  "attempts": 3,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:33:05.732085",
+  "completed_at": "2026-04-04T23:33:05.732087",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "4242600b1822",
+  "username": "802direct",
+  "source": "x_search",
+  "search_term": "only few spots left",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:51:48.919153",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:52:14.968631",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "Free crypto"
+    ],
+    "text_length": 3327
+  },
+  "completed_at": "2026-04-03T10:52:22.981703"
+}

@@ -19,6 +19,19 @@ Setup:
 Or use the launchd plist to run automatically on startup.
 """
 
+# Add user site-packages to path for launchd
+import sys
+import os
+
+# Clear any existing PYTHONPATH that might reference old Python versions
+# Then add only the current Python's site-packages
+if 'PYTHONPATH' in os.environ:
+    del os.environ['PYTHONPATH']
+
+# Force reload of site-packages for current Python
+import site
+site.main()
+
 import json
 import logging
 import os
@@ -50,7 +63,7 @@ REQUEUE_TICK  = 12      # call requeue_timed_out_jobs every N ticks (~60 s)
 # ── Scan script paths ─────────────────────────────────────────────────────────
 # Adjust these paths to match your actual scam-detection-framework layout.
 
-BASE = os.path.expanduser("~/agenticbro/scam-detection-framework")
+BASE = "/Users/efinney/agenticbro/scam-detection-framework"
 
 SCAN_SCRIPTS = {
     "token":   os.path.join(BASE, "token_scan.py"),
@@ -62,9 +75,11 @@ SCAN_SCRIPTS = {
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+from typing import Any, Dict, Optional
+
 # ── Job lifecycle helpers ─────────────────────────────────────────────────────
 
-def claim_job() -> dict | None:
+def claim_job() -> Optional[Dict[str, Any]]:
     """Atomically claim the next pending job (SKIP LOCKED, race-condition safe)."""
     try:
         result = supabase.rpc(
@@ -118,7 +133,88 @@ def fail_job(job_id: str, error: str) -> None:
 
 # ── Scan execution ────────────────────────────────────────────────────────────
 
-def run_scan(job: dict) -> dict:
+def check_scan_report_cache(username: str) -> Optional[Dict[str, Any]]:
+    """Check for existing scan report in output directory."""
+    # Use fixed path to workspace
+    workspace_dir = "/Users/efinney/.openclaw/workspace"
+    output_dir = os.path.join(workspace_dir, "output", "scan_reports")
+    
+    if not os.path.exists(output_dir):
+        return None
+    
+    # Look for existing report
+    for filename in os.listdir(output_dir):
+        if username.lower() in filename.lower() and filename.endswith('.json'):
+            filepath = os.path.join(output_dir, filename)
+            try:
+                with open(filepath, 'r') as f:
+                    data = json.load(f)
+                    # Check if report is recent (within 24 hours)
+                    scan_date = data.get("scan_date", "")
+                    if scan_date:
+                        try:
+                            from datetime import datetime, timedelta
+                            # Handle various date formats
+                            scan_dt_str = scan_date.split("+")[0].split("Z")[0]
+                            if "T" in scan_dt_str:
+                                scan_dt = datetime.fromisoformat(scan_dt_str)
+                                if datetime.now() - scan_dt.replace(tzinfo=None) < timedelta(hours=24):
+                                    log.info("Found cached report: %s", filename)
+                                    return data
+                        except Exception as e:
+                            log.warning("Failed to parse scan_date: %s", e)
+            except Exception as e:
+                log.warning("Failed to read cache: %s", e)
+    
+    return None
+
+
+def normalize_profile_result(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize profile scan result to flat structure expected by API."""
+    # If data has nested profile_data, flatten it
+    if "profile_data" in data and isinstance(data.get("profile_data"), dict):
+        pd = data["profile_data"]
+        
+        # Extract followers/following as strings
+        followers = pd.get("followers", "")
+        following = pd.get("following", "")
+        
+        # Extract verified status
+        verified = pd.get("verified", False)
+        
+        # Extract risk score
+        risk_score = data.get("risk_score", {})
+        if isinstance(risk_score, dict):
+            score = risk_score.get("score", 0)
+        else:
+            score = risk_score
+        
+        # Build flat structure
+        return {
+            "scan_type": data.get("scan_type", "profile"),
+            "target_handle": data.get("target_handle", ""),
+            "scan_date": data.get("scan_date", ""),
+            "platform": data.get("platform", "twitter"),
+            "username": pd.get("username", ""),
+            "display_name": pd.get("display_name", ""),
+            "followers": followers,
+            "following": following,
+            "verified": verified,
+            "bio": pd.get("bio", ""),
+            "risk_score": score,
+            "risk_level": risk_score.get("risk_level", "UNKNOWN") if isinstance(risk_score, dict) else "UNKNOWN",
+            "verification_level": data.get("verification_level", "UNVERIFIED"),
+            "red_flags": data.get("red_flags", []) or list(data.get("red_flag_analysis", {}).keys()) if data.get("red_flag_analysis") else [],
+            "evidence": data.get("evidence", []),
+            "profile_data": pd,  # Keep nested data for reference
+            "final_verdict": data.get("final_verdict", {}),
+        }
+    
+    # Already flat, return as-is
+    return data
+
+
+def run_scan(job: Dict[str, Any]) -> Dict[str, Any]:
     """Run the appropriate local scan script and return parsed JSON result."""
     scan_type = job["scan_type"]
     payload   = job["payload"]
@@ -126,6 +222,15 @@ def run_scan(job: dict) -> dict:
     script = SCAN_SCRIPTS.get(scan_type, SCAN_SCRIPTS["token"])
     if not os.path.exists(script):
         raise FileNotFoundError(f"Scan script not found: {script}")
+    
+    # For profile scans, check cache first
+    if scan_type == "profile" and payload.get("username"):
+        username = payload["username"].lstrip("@")
+        cached = check_scan_report_cache(username)
+        if cached:
+            log.info("Using cached scan report for %s", username)
+            # Normalize cached data to flat structure
+            return normalize_profile_result(cached)
 
     # Build CLI args
     cmd = ["python3", script, "--json"]
@@ -139,6 +244,10 @@ def run_scan(job: dict) -> dict:
         cmd += ["--chain", payload["options"]["chain"]]
     if payload.get("options", {}).get("deepScan"):
         cmd.append("--deep")
+    
+    # Always use cache for profile scans
+    if scan_type == "profile":
+        cmd.append("--use-cache")
 
     log.info("Running: %s", " ".join(cmd))
 
@@ -155,7 +264,7 @@ def run_scan(job: dict) -> dict:
     return json.loads(proc.stdout)
 
 
-def process_job(job: dict) -> None:
+def process_job(job: Dict[str, Any]) -> None:
     """Orchestrate the full lifecycle of one scan job."""
     job_id = job["id"]
     log.info(

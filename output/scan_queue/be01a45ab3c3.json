@@ -1,0 +1,20 @@
+{
+  "id": "be01a45ab3c3",
+  "username": "McKnightsterYT",
+  "source": "x_search",
+  "search_term": "ending soon airdrop",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T00:08:02.422219",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:02:42.383794",
+  "completed_at": "2026-04-04T23:02:42.383801",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

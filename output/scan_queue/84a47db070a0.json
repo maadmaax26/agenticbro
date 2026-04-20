@@ -1,0 +1,20 @@
+{
+  "id": "84a47db070a0",
+  "username": "awfulannouncing",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T11:53:08.145031",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:15:32.173973",
+  "completed_at": "2026-04-04T23:15:32.173975",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}
