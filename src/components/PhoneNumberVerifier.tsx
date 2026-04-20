@@ -26,6 +26,14 @@ interface PhoneScanResult {
   spamDialerMatch: string | null;
   recommendation: string;
   disclaimer: string;
+  // Threat Intel
+  threatIntel?: {
+    voipVirtualDialer: { detected: boolean; provider: string | null; confidence: string };
+    knownScamNumber: { flagged: boolean; source: string | null; reports: number };
+    communityReports: { count: number; source: string | null; lastReport: string | null };
+    breachExposure: { found: boolean; breaches: number; sources: string[] };
+    stirShaken: { attestation: 'A' | 'B' | 'C' | 'unknown'; verified: boolean; description: string };
+  };
   scanDate: string;
 }
 
@@ -308,6 +316,129 @@ export default function PhoneNumberVerifier() {
                   <p className="text-xs text-gray-600">
                     Flag values: premium_rate_number(25) · known_scam_operation(20) · spoofed_caller_id(15) · voip_virtual_number(15) · spam_dialer_service(15) · toll_free_untraceable(10) · burner_disposable(10) · high_risk_country(10) · no_carrier_info(10) · mass_call_pattern(5)
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Threat Intel */}
+            {result.threatIntel && (
+              <div
+                className="rounded-xl p-5"
+                style={{
+                  background: 'rgba(139,92,246,0.05)',
+                  border: '1px solid rgba(139,92,246,0.15)',
+                }}
+              >
+                <h3 className="text-base font-bold text-purple-400 mb-3">
+                  🛡️ Threat Intel
+                </h3>
+                <div className="space-y-3">
+                  {/* VoIP / Virtual Dialer */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{result.threatIntel.voipVirtualDialer.detected ? '☁️' : '✅'}</span>
+                    <div>
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold">VoIP / Virtual Dialer:</span>{' '}
+                        {result.threatIntel.voipVirtualDialer.detected ? (
+                          <>
+                            <span style={{ color: '#f87171' }}>Detected</span>
+                            {result.threatIntel.voipVirtualDialer.provider && (
+                              <span className="text-gray-500"> — {result.threatIntel.voipVirtualDialer.provider}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span style={{ color: '#4ade80' }}>Not detected</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-600">Confidence: {result.threatIntel.voipVirtualDialer.confidence}</p>
+                    </div>
+                  </div>
+
+                  {/* Known Scam Number */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{result.threatIntel.knownScamNumber.flagged ? '🚨' : '✅'}</span>
+                    <div>
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold">Known Scam Number:</span>{' '}
+                        {result.threatIntel.knownScamNumber.flagged ? (
+                          <span style={{ color: '#f87171' }}>Flagged</span>
+                        ) : (
+                          <span style={{ color: '#4ade80' }}>Not flagged</span>
+                        )}
+                      </p>
+                      {result.threatIntel.knownScamNumber.flagged && (
+                        <>
+                          <p className="text-xs text-red-400">{result.threatIntel.knownScamNumber.reports} scam reports found</p>
+                          {result.threatIntel.knownScamNumber.source && (
+                            <p className="text-xs text-gray-600">Source: {result.threatIntel.knownScamNumber.source}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Community Reports */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{result.threatIntel.communityReports.count > 0 ? '📊' : '✅'}</span>
+                    <div>
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold">Community Reports:</span>{' '}
+                        <span style={{ color: result.threatIntel.communityReports.count > 10 ? '#f87171' : result.threatIntel.communityReports.count > 3 ? '#fbbf24' : '#4ade80' }}>
+                          {result.threatIntel.communityReports.count} report{result.threatIntel.communityReports.count !== 1 ? 's' : ''}
+                        </span>
+                      </p>
+                      {result.threatIntel.communityReports.lastReport && (
+                        <p className="text-xs text-gray-600">Last report: {result.threatIntel.communityReports.lastReport}</p>
+                      )}
+                      {result.threatIntel.communityReports.source && (
+                        <p className="text-xs text-gray-600">{result.threatIntel.communityReports.source}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Breach Exposure */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{result.threatIntel.breachExposure.found ? '🔓' : '🔒'}</span>
+                    <div>
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold">Breach Exposure:</span>{' '}
+                        {result.threatIntel.breachExposure.found ? (
+                          <span style={{ color: '#fb923c' }}>{result.threatIntel.breachExposure.breaches} breach{result.threatIntel.breachExposure.breaches !== 1 ? 'es' : ''} found</span>
+                        ) : (
+                          <span style={{ color: '#4ade80' }}>No known breaches</span>
+                        )}
+                      </p>
+                      {result.threatIntel.breachExposure.sources.length > 0 && (
+                        <p className="text-xs text-gray-600">Sources: {result.threatIntel.breachExposure.sources.join(', ')}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* STIR/SHAKEN */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{result.threatIntel.stirShaken.verified ? '✅' : result.threatIntel.stirShaken.attestation === 'unknown' ? '❓' : '⚠️'}</span>
+                    <div>
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold">STIR/SHAKEN:</span>{' '}
+                        <span
+                          className="font-mono px-1.5 py-0.5 rounded text-xs font-bold"
+                          style={{
+                            background: result.threatIntel.stirShaken.attestation === 'A' ? 'rgba(74,222,128,0.15)' :
+                              result.threatIntel.stirShaken.attestation === 'B' ? 'rgba(251,191,36,0.15)' :
+                              result.threatIntel.stirShaken.attestation === 'C' ? 'rgba(239,68,68,0.15)' :
+                              'rgba(156,163,175,0.1)',
+                            color: result.threatIntel.stirShaken.attestation === 'A' ? '#4ade80' :
+                              result.threatIntel.stirShaken.attestation === 'B' ? '#fbbf24' :
+                              result.threatIntel.stirShaken.attestation === 'C' ? '#f87171' :
+                              '#9ca3af',
+                          }}
+                        >
+                          {result.threatIntel.stirShaken.attestation === 'unknown' ? '?' : result.threatIntel.stirShaken.attestation}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">{result.threatIntel.stirShaken.description}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
