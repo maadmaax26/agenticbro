@@ -1,0 +1,20 @@
+{
+  "id": "d857e7b5ebef",
+  "username": "Smart_feelinX",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:51:39.410519",
+  "priority": "normal",
+  "attempts": 3,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:37:54.821483",
+  "completed_at": "2026-04-04T23:37:54.821486",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

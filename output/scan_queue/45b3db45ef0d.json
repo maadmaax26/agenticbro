@@ -1,0 +1,24 @@
+{
+  "id": "45b3db45ef0d",
+  "username": "3rader_emerald",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:01:35.150575",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:02:06.514637",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "Free crypto"
+    ],
+    "text_length": 3068
+  },
+  "completed_at": "2026-04-03T07:02:14.528633"
+}

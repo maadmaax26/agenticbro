@@ -1,0 +1,13 @@
+{
+  "id": "b6e960e5",
+  "reply_type": "USER_INQUIRY",
+  "username": "memeson_SOL",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @memeson_SOL:\n\nRisk Level: LOW (0.0/10)\nRed Flags: None detected\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/memeson_SOL\n\n#CryptoSafety",
+  "risk_level": "LOW",
+  "risk_score": 0.0,
+  "red_flags": [],
+  "search_term": "is this a scam",
+  "report_url": "https://agenticbro.app/scan/memeson_SOL",
+  "created_at": "2026-04-03T07:35:51.271971",
+  "status": "pending_approval"
+}

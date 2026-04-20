@@ -1,0 +1,20 @@
+{
+  "id": "8ee6c3efc5b0",
+  "username": "bamanda462835",
+  "source": "x_search",
+  "search_term": "has anyone used @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T11:32:52.244815",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T22:54:17.946403",
+  "completed_at": "2026-04-04T22:54:17.946416",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

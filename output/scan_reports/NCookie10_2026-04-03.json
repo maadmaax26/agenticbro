@@ -1,0 +1,23 @@
+{
+  "id": "7753b874ceec",
+  "username": "NCookie10",
+  "source": "x_search",
+  "search_term": "send SOL to receive",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:20:51.573628",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T15:24:55.326068",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2227
+  },
+  "completed_at": "2026-04-03T15:25:03.340129"
+}

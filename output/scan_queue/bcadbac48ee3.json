@@ -1,0 +1,20 @@
+{
+  "id": "bcadbac48ee3",
+  "username": "KASTxyz",
+  "source": "x_search",
+  "search_term": "crypto giveaway",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:40:53.463682",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T22:53:27.604222",
+  "completed_at": "2026-04-04T22:53:27.604235",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

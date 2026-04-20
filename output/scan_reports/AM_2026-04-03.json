@@ -1,0 +1,19 @@
+{
+  "id": "5eb66243",
+  "username": "AM",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.206300",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x808EE9Fde15D76d550Bcd99F9020a05cb13Cc6d8",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888352"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

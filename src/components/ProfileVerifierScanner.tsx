@@ -6,11 +6,12 @@
  * Credits tracked by wallet address or email
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
 import { createClient } from '@supabase/supabase-js';
+import { useScanResult } from '../hooks/useScanResult';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
@@ -27,6 +28,7 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
       discord: 'Discord',
       linkedin: 'LinkedIn',
       facebook: 'Facebook',
+      tiktok: 'TikTok',
     };
     const verificationLabel =
       scanResult.riskLevel === 'CRITICAL' || scanResult.riskLevel === 'HIGH'
@@ -83,7 +85,7 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
 
 interface ProfileScanResult {
   success: boolean;
-  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook';
+  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok';
   username: string;
   displayName?: string;
   verified?: boolean;
@@ -109,6 +111,19 @@ interface ProfileScanResult {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+
+// ─── Disclaimer Notice Component ──────────────────────────────────────────────
+function DisclaimerNotice({ scanDate }: { scanDate?: string }) {
+  const dateStr = scanDate ? new Date(scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return (
+    <div className="rounded-xl p-4" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
+      <p className="text-xs text-gray-400 leading-relaxed">
+        📋 <span className="text-yellow-400 font-semibold">Disclaimer:</span> Educational purposes only. Not financial advice. Not a guarantee of safety. Always do your own due diligence (DYOR). Scan date: {dateStr}
+      </p>
+    </div>
+  );
+}
+
 interface ProfileVerifierScannerProps {
   onLoginRequired?: () => void;
 }
@@ -116,24 +131,75 @@ interface ProfileVerifierScannerProps {
 export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerifierScannerProps) {
   const { publicKey } = useWallet();
   const { isAuthenticated, email, walletAddress: authWalletAddress } = useAuth();
-  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook'>('twitter');
+  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok'>('twitter');
   const [username, setUsername] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [_fromCache, setFromCache] = useState(false);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Real-time job status via Supabase Realtime (replaces polling)
+  const { job, isComplete, isFailed, result: jobResult } = useScanResult(activeJobId);
+
   // Get wallet address for credit tracking (from wallet connection or auth)
   const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
   const effectiveEmail = email || null;
-  
+
   // Use the credits system ($1/scan, tracked by wallet/email)
-  const { 
-    credits, 
-    freeScansRemaining, 
-    hasScans, 
+  const {
+    credits,
+    freeScansRemaining,
+    hasScans,
     useCredit,
-    isTestWallet 
+    isTestWallet
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
+
+  // ── Watch Realtime job updates ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!activeJobId || !job) return;
+
+    if (job.status === 'claimed' || job.status === 'running') {
+      setScanStatus('Agent scanning...');
+    }
+
+    if (isComplete && jobResult) {
+      // Worker finished - normalize and display
+      const scanResult = normalizeResult(jobResult, platform, username.replace(/^@/, ''));
+      setResult(scanResult);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+      uploadScanToSupabase(scanResult).catch(() => {});
+    }
+
+    if (isFailed) {
+      console.warn('[Realtime] Job failed, falling back to demo result');
+      const demo = generateDemoResult(platform, username.replace(/^@/, ''));
+      setResult(demo);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+    }
+  }, [job?.status, isComplete, isFailed]);
+
+  // ── Timeout fallback: if Realtime never fires, fall back to demo after 90s ──
+  useEffect(() => {
+    if (!scanning || !activeJobId) return;
+    scanTimeoutRef.current = setTimeout(() => {
+      console.warn('[Realtime] Timed out waiting for job result, falling back to demo');
+      const demo = generateDemoResult(platform, username.replace(/^@/, ''));
+      setResult(demo);
+      setScanStatus(null);
+      setScanning(false);
+      setActiveJobId(null);
+    }, 90000);
+    return () => {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+    };
+  }, [scanning, activeJobId]);
 
   const handleScan = async () => {
     if (!username.trim()) {
@@ -162,125 +228,154 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
 
     try {
-      // Priority 1: Try local Chrome CDP backend (development)
-      const localEndpoints = [
-        'http://localhost:3003/api/v1/verify/profile',
-        'http://localhost:3002/api/v1/verify/profile',
-        'http://127.0.0.1:3003/api/v1/verify/profile',
-        'http://127.0.0.1:3002/api/v1/verify/profile',
-      ];
-      
-      // Priority 2: Try Vercel serverless (production fallback)
-      const remoteEndpoints = [
-        '/api/profile-verify',
-        '/api/verify/profile',
-      ];
-      
-      let lastError: Error | null = null;
-      let scanResult: ProfileScanResult | null = null;
+      const platformLabel: Record<string, string> = {
+        twitter: 'X (Twitter)', telegram: 'Telegram', instagram: 'Instagram',
+        discord: 'Discord', linkedin: 'LinkedIn', facebook: 'Facebook', tiktok: 'TikTok',
+      };
 
-      // Try local endpoints first
-      for (const endpoint of localEndpoints) {
+      // ── STEP 1: Check cache first ──────────────────────────────────────
+      if (_supabaseAnonKey) {
         try {
-          console.log(`Trying local endpoint: ${endpoint}`);
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // No API key needed for local development
-            },
-            body: JSON.stringify({
-              platform,
+          const client = createClient(_supabaseUrl, _supabaseAnonKey);
+          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+          const { data: cached, error: cacheErr } = await client
+            .from('scan_results')
+            .select('*')
+            .eq('target_handle', `@${cleanUsername}`)
+            .eq('platform', platformLabel[platform] || platform)
+            .gte('scan_date', twentyFourHoursAgo)
+            .order('scan_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!cacheErr && cached) {
+            console.log('[Cache] Hit for', cleanUsername, 'on', platform);
+            const cachedResult: ProfileScanResult = {
+              success: true,
+              platform: platform as any,
               username: cleanUsername,
-              verificationContext: 'crypto',
-              options: {
-                deepScan: false,
-                includeMedia: false,
-              }
-            }),
-            signal: AbortSignal.timeout(30000)
+              displayName: cached.display_name || undefined,
+              verified: cached.verified ?? false,
+              riskScore: Math.round((cached.risk_score ?? 0) * 10),
+              riskLevel: cached.risk_level || 'LOW',
+              scamType: cached.scam_type || undefined,
+              redFlags: cached.red_flags || [],
+              evidence: cached.evidence || [],
+              recommendation: cached.recommendation || 'Cached scan result',
+              profileData: {
+                followers: cached.followers ?? undefined,
+                following: cached.following ?? undefined,
+                bio: cached.bio || undefined,
+                profileImage: cached.profile_image || undefined,
+                joinDate: cached.join_date || undefined,
+              },
+              confidence: cached.confidence || 'MEDIUM',
+              scanDate: cached.scan_date || new Date().toISOString(),
+            };
+            setResult(cachedResult);
+            setFromCache(true);
+            setScanStatus(null);
+            setScanning(false);
+            return;
+          }
+        } catch (cacheErr) {
+          console.warn('[Cache] Lookup error, proceeding to scan:', cacheErr);
+        }
+      }
+
+      setFromCache(false);
+
+      // ── STEP 2: Direct serverless scan for IG/TikTok/FB (works via web fetch) ──
+      const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
+
+      if (['instagram', 'tiktok', 'facebook'].includes(platform)) {
+        try {
+          setScanStatus(`Scanning ${platform} profile...`);
+          const scanRes = await fetch(`${apiBase}/api/social-scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform, username: cleanUsername }),
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`Local endpoint ${endpoint} succeeded:`, data);
-            
-            if (data.success || data.riskScore !== undefined) {
-              scanResult = normalizeResult(data, platform, cleanUsername);
-              break;
-            }
-            
-            if (data.error) {
-              throw new Error(data.error.message || data.error);
+          if (scanRes.ok) {
+            const scanData = await scanRes.json();
+            if (scanData.success) {
+              const d = scanData;
+              const apiResult: ProfileScanResult = {
+                success: true,
+                platform: platform as any,
+                username: cleanUsername,
+                verified: false,
+                riskScore: Math.round(d.riskScore * 10),
+                riskLevel: d.riskLevel || 'LOW',
+                scamType: undefined,
+                redFlags: d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) - ${f.description}`) || [],
+                evidence: [],
+                recommendation: `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected.`,
+                profileData: {
+                  followers: d.followers ?? undefined,
+                },
+                confidence: d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM',
+                scanDate: d.scanTimestamp || new Date().toISOString(),
+              };
+              setResult(apiResult);
+              uploadScanToSupabase(apiResult).catch(() => {});
+              setScanStatus(null);
+              setScanning(false);
+              return;
             }
           }
-        } catch (err) {
-          lastError = err instanceof Error ? err : new Error('Unknown error');
-          console.log(`Local endpoint ${endpoint} failed:`, lastError.message);
-          continue;
+          console.warn('[API] Social scan failed, falling back to queue');
+        } catch (apiErr) {
+          console.warn('[API] Social scan error, falling back to queue:', apiErr);
         }
       }
 
-      // If local failed, try remote endpoints
-      if (!scanResult) {
-        for (const endpoint of remoteEndpoints) {
-          try {
-            console.log(`Trying remote endpoint: ${endpoint}`);
-            const response = await fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
+      // ── STEP 3: Supabase queue → Mac Studio CDP worker (primary for Twitter) ──
+      if (_supabaseAnonKey) {
+        try {
+          const client = createClient(_supabaseUrl, _supabaseAnonKey);
+
+          const { data: jobData, error: insertError } = await client
+            .from('scan_jobs')
+            .insert({
+              scan_type: 'profile',
+              status: 'pending',
+              payload: {
                 platform,
                 username: cleanUsername,
+                requestedAt: new Date().toISOString(),
                 verificationContext: 'crypto',
-                options: {
-                  deepScan: false,
-                  includeMedia: false,
-                }
-              }),
-              signal: AbortSignal.timeout(30000)
-            });
+              },
+            })
+            .select('id')
+            .single();
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log(`Remote endpoint ${endpoint} succeeded:`, data);
-              
-              if (data.success || data.riskScore !== undefined) {
-                scanResult = normalizeResult(data, platform, cleanUsername);
-                break;
-              }
-              
-              if (data.error) {
-                throw new Error(data.error.message || data.error);
-              }
-            }
-          } catch (err) {
-            lastError = err instanceof Error ? err : new Error('Unknown error');
-            console.log(`Remote endpoint ${endpoint} failed:`, lastError.message);
-            continue;
+          if (!insertError && jobData?.id) {
+            setScanStatus('Queued - waiting for agent...');
+            setActiveJobId(jobData.id);
+            console.log('[Realtime] Scan job enqueued:', jobData.id);
+            return;
+          } else {
+            console.warn('[Realtime] Insert error:', insertError?.message);
           }
+        } catch (queueErr) {
+          console.warn('[Realtime] Queue error, falling back:', queueErr);
         }
       }
 
-      // If all endpoints failed, generate a demo result
-      if (!scanResult) {
-        console.warn('All endpoints failed, generating demo result');
-        scanResult = generateDemoResult(platform, cleanUsername);
-      }
-
-      // Credit was already used, set the result
-      setResult(scanResult);
-
-      // Upload scan result to Supabase for the Scam Detection Database
-      uploadScanToSupabase(scanResult).catch(() => {});  // fire-and-forget, never block UI
-
+      // ── STEP 4: Fallback demo result ──────────────────────────────────
+      console.warn('[Scan] All paths unavailable - using demo result');
+      const demo = generateDemoResult(platform, cleanUsername);
+      setResult(demo);
+      uploadScanToSupabase(demo).catch(() => {});
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to perform scan';
       setError(errorMessage);
     } finally {
       setScanning(false);
+      setScanStatus(null);
     }
   };
 
@@ -334,18 +429,22 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       discord:   `https://discord.com/users/${username}`,
       linkedin:  `https://linkedin.com/in/${username}`,
       facebook:  `https://facebook.com/${username}`,
+      tiktok: `https://tiktok.com/@${username}`,
     };
     return urls[platform] ?? null;
   };
 
   const copyResult = () => {
     if (result) {
-      const text = `Profile Verification Result for @${result.username} (${result.platform})
-Risk Score: ${result.riskScore}/100
-Risk Level: ${result.riskLevel}
-${result.scamType ? `Scam Type: ${result.scamType}` : ''}
-${result.redFlags.length > 0 ? `Red Flags:\n${result.redFlags.map(f => `• ${f}`).join('\n')}` : ''}
-Recommendation: ${result.recommendation}`;
+      const text = `🔍 Platform: ${result.platform === 'twitter' ? 'X (Twitter)' : result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
+📊 Risk Score: ${(result.riskScore / 10).toFixed(1)}/10 - ${result.riskLevel} RISK ${result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
+
+Red Flags with Scores:
+${result.redFlags.map(f => `• ${f}`).join('\n')}
+
+Behavioral Pattern: ${result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' : result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' : result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' : 'No significant scam patterns identified.'}
+
+📋 Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${result.scanDate ? new Date(result.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`;
       navigator.clipboard.writeText(text);
     }
   };
@@ -377,7 +476,7 @@ Recommendation: ${result.recommendation}`;
               <p className="text-sm text-gray-400">Verify social media profiles for scam detection</p>
             </div>
           </div>
-          
+
           {/* Free scan counter */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
             style={{
@@ -387,10 +486,10 @@ Recommendation: ${result.recommendation}`;
             }}>
             <span>🎁</span>
             <span>
-              {isTestWallet 
-                ? '∞ Unlimited Scans (Test)' 
-                : freeScansRemaining > 0 
-                  ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}` 
+              {isTestWallet
+                ? '∞ Unlimited Scans (Test)'
+                : freeScansRemaining > 0
+                  ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}`
                   : 'No Free Scans'}
             </span>
             {credits > 0 && !isTestWallet && (
@@ -405,14 +504,15 @@ Recommendation: ${result.recommendation}`;
             <label className="block text-sm font-semibold text-gray-300 mb-2">
               Platform
             </label>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
               {([
-                { id: 'twitter', icon: '𝕏', label: 'X' },
+                { id: 'twitter', icon: 'X', label: 'X' },
                 { id: 'telegram', icon: '✈️', label: 'Telegram' },
                 { id: 'instagram', icon: '📷', label: 'Instagram' },
                 { id: 'discord', icon: '💬', label: 'Discord' },
                 { id: 'linkedin', icon: '💼', label: 'LinkedIn' },
                 { id: 'facebook', icon: '📘', label: 'Facebook' },
+              { id: 'tiktok', icon: '🎵', label: 'TikTok' },
               ] as const).map((p) => (
                 <button
                   key={p.id}
@@ -437,7 +537,7 @@ Recommendation: ${result.recommendation}`;
               Username
             </label>
             <div className="flex gap-2">
-              <span 
+              <span
                 className="px-4 py-3 rounded-lg text-gray-400 font-bold"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(139,92,246,0.3)' }}
               >
@@ -461,20 +561,20 @@ Recommendation: ${result.recommendation}`;
             disabled={scanning || !username.trim() || !hasScans}
             className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: hasScans 
+              background: hasScans
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                 : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
               boxShadow: hasScans ? '0 4px 15px rgba(16,185,129,0.3)' : 'none',
             }}
           >
-            {scanning ? '🔄 Scanning...' : hasScans 
+            {scanning ? (scanStatus ? `⏳ ${scanStatus}` : '🔄 Scanning...') : hasScans
               ? `🚀 Verify Profile (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
               : '❌ No Scans - Buy Credits'}
           </button>
-          
+
           {/* Pricing Info - Show login prompt if not authenticated */}
           {!hasScans && (
-            <div 
+            <div
               className="text-center p-4 rounded-lg"
               style={{
                 background: 'rgba(139, 92, 246, 0.1)',
@@ -527,190 +627,168 @@ Recommendation: ${result.recommendation}`;
       {/* ── Results Section ── */}
       {result && (
         <div className="space-y-4">
-          {/* Risk Score Header */}
+          {/* Scan Header */}
           <div
-            className="rounded-xl p-6"
+            className="rounded-xl p-5"
             style={{
               background: getRiskColor(result.riskLevel).bg,
               border: `2px solid ${getRiskColor(result.riskLevel).border}`,
             }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">
-                  {result.riskLevel === 'CRITICAL' ? '🚨' : 
-                   result.riskLevel === 'HIGH' ? '⚠️' : 
-                   result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
-                </span>
-                <div>
-                  <h3 className="text-xl font-bold" style={{ color: getRiskColor(result.riskLevel).color }}>
-                    {result.riskLevel} RISK
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    @{result.username} on {result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
-                  </p>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-400">
+                🔍 Platform: {result.platform === 'twitter' ? 'X (Twitter)' : result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
+              </p>
+              <h3 className="text-xl font-bold" style={{ color: getRiskColor(result.riskLevel).color }}>
+                📊 Risk Score: {(result.riskScore / 10).toFixed(1)}/10 — {result.riskLevel} RISK {result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
+              </h3>
+              {/* Risk Meter */}
+              <div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <div 
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${(result.riskScore / 10) * 100}%`,
+                      background: `linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)`,
+                      backgroundSize: '300% 100%',
+                      backgroundPosition: `${(result.riskScore / 10) * 100}% 0`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0</span><span>3</span><span>5</span><span>7</span><span>10</span>
                 </div>
               </div>
-              
-              <div 
-                className="px-4 py-2 rounded-lg text-2xl font-bold"
-                style={{
-                  background: getRiskColor(result.riskLevel).bg,
-                  border: `1px solid ${getRiskColor(result.riskLevel).border}`,
-                  color: getRiskColor(result.riskLevel).color,
-                }}
-              >
-                {result.riskScore}/100
-              </div>
             </div>
-
-            {/* Risk Meter */}
-            <div className="mb-4">
-              <div className="h-3 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <div 
-                  className="h-full rounded-full transition-all duration-1000"
-                  style={{
-                    width: `${result.riskScore}%`,
-                    background: `linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)`,
-                    backgroundSize: '300% 100%',
-                    backgroundPosition: `${result.riskScore}% 0`,
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Safe</span>
-                <span>Caution</span>
-                <span>Risky</span>
-                <span>Dangerous</span>
-              </div>
-            </div>
-
-            {result.scamType && (
-              <div className="mb-3 p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)' }}>
-                <p className="text-sm font-semibold text-red-400">
-                  🎯 Detected Scam Type: {result.scamType}
-                </p>
-              </div>
-            )}
-
-            <p className="text-gray-300 text-sm leading-relaxed">
-              {result.recommendation}
-            </p>
           </div>
 
-          {/* Profile Data */}
-          {result.profileData && (
-            <div
-              className="rounded-xl p-6"
-              style={{
-                background: 'rgba(59,130,246,0.05)',
-                border: '1px solid rgba(59,130,246,0.15)',
-              }}
-            >
-              <h3 className="text-lg font-bold text-blue-400 mb-4">📊 Profile Data</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Account Info */}
+          <div
+            className="rounded-xl p-5"
+            style={{
+              background: 'rgba(59,130,246,0.05)',
+              border: '1px solid rgba(59,130,246,0.15)',
+            }}
+          >
+            <p className="text-sm text-gray-300">
+              <span className="text-gray-500">Account:</span>{' '}
+              <span className="font-semibold text-white">@{result.username}</span>
+            </p>
+            {result.displayName && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- Display name:</span>{' '}
+                {result.displayName}
+              </p>
+            )}
+            {(result.profileData?.followers !== undefined || result.profileData?.following !== undefined || result.profileData?.posts !== undefined) && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- </span>
                 {result.profileData.followers !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Followers</p>
-                    <p className="text-lg font-bold text-white">
-                      {result.profileData.followers >= 1000000 
-                        ? `${(result.profileData.followers / 1000000).toFixed(1)}M`
-                        : result.profileData.followers >= 1000
-                        ? `${(result.profileData.followers / 1000).toFixed(1)}K`
-                        : result.profileData.followers.toLocaleString()}
-                    </p>
-                  </div>
+                  <>Followers: <span className="text-white font-medium">{result.profileData.followers >= 1000000 ? `${(result.profileData.followers / 1000000).toFixed(1)}M` : result.profileData.followers >= 1000 ? `${(result.profileData.followers / 1000).toFixed(1)}K` : result.profileData.followers.toLocaleString()}</span>{' | '}
+                  </>
                 )}
-                
                 {result.profileData.following !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Following</p>
-                    <p className="text-lg font-bold text-white">{result.profileData.following.toLocaleString()}</p>
-                  </div>
+                  <>Following: <span className="text-white font-medium">{result.profileData.following >= 1000 ? `${(result.profileData.following / 1000).toFixed(1)}K` : result.profileData.following.toLocaleString()}</span>{' | '}
+                  </>
                 )}
-                
                 {result.profileData.posts !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Posts</p>
-                    <p className="text-lg font-bold text-white">{result.profileData.posts.toLocaleString()}</p>
-                  </div>
+                  <>Posts: <span className="text-white font-medium">{result.profileData.posts >= 1000 ? `${(result.profileData.posts / 1000).toFixed(1)}K` : result.profileData.posts.toLocaleString()}</span>
+                  </>
                 )}
-                
-                {result.verified !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Verified</p>
-                    <p className="text-lg font-bold" style={{ color: result.verified ? '#4ade80' : '#f87171' }}>
-                      {result.verified ? '✓ Yes' : '✗ No'}
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              {result.profileData.bio && (
-                <div className="mt-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Bio</p>
-                  <p className="text-sm text-gray-300">{result.profileData.bio}</p>
-                </div>
-              )}
-            </div>
-          )}
+              </p>
+            )}
+            {result.profileData?.joinDate && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- Joined:</span>{' '}
+                {new Date(result.profileData.joinDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
+            )}
+            {result.profileData?.bio && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- Bio:</span>{' '}
+                "{result.profileData.bio}"
+              </p>
+            )}
+            {result.profileData?.website && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- Website:</span>{' '}
+                <a href={result.profileData.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{result.profileData.website}</a>
+              </p>
+            )}
+            {result.profileData?.location && (
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="text-gray-500">- Location:</span>{' '}
+                {result.profileData.location}
+              </p>
+            )}
+          </div>
 
-          {/* Red Flags */}
+          {/* Red Flags with Scores */}
           {result.redFlags.length > 0 && (
             <div
-              className="rounded-xl p-6"
+              className="rounded-xl p-5"
               style={{
                 background: 'rgba(239,68,68,0.05)',
                 border: '1px solid rgba(239,68,68,0.15)',
               }}
             >
-              <h3 className="text-lg font-bold text-red-400 mb-4">
-                🚩 Red Flags ({result.redFlags.length})
+              <h3 className="text-base font-bold text-red-400 mb-3">
+                Red Flags with Scores:
               </h3>
               
-              <div className="space-y-2">
-                {result.redFlags.map((flag, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-start gap-2 p-3 rounded-lg"
-                    style={{ background: 'rgba(239,68,68,0.05)' }}
-                  >
-                    <span className="text-red-500 mt-0.5">⚠️</span>
-                    <span className="text-sm text-gray-300">{flag}</span>
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                {result.redFlags.map((flag, index) => {
+                  const pointMatch = flag.match(/\((\d+)pts?\)/);
+                  const points = pointMatch ? parseInt(pointMatch[1]) : 0;
+                  const hasPoints = pointMatch !== null;
+                  const flagName = flag.replace(/\s*\(\d+pts?\).*/, '').replace(/_/g, ' ');
+                  const descMatch = flag.match(/—\s*(.+)/);
+                  const desc = descMatch ? descMatch[1] : '';
+                  
+                  return (
+                    <div key={index} className="text-sm text-gray-300">
+                      <span className="text-gray-500">•</span>{' '}
+                      <span className="font-medium capitalize">{flagName}</span>
+                      {hasPoints && (
+                        <span className="ml-1 text-xs font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+                          {points}pts
+                        </span>
+                      )}
+                      {desc && (
+                        <span className="text-gray-500"> — {desc}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
+                <p className="text-xs text-gray-600">
+                  Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
+                </p>
               </div>
             </div>
           )}
 
-          {/* Evidence */}
-          {result.evidence.length > 0 && (
-            <div
-              className="rounded-xl p-6"
-              style={{
-                background: 'rgba(139,92,246,0.05)',
-                border: '1px solid rgba(139,92,246,0.15)',
-              }}
-            >
-              <h3 className="text-lg font-bold text-purple-400 mb-4">
-                🔍 Evidence ({result.evidence.length})
-              </h3>
-              
-              <div className="space-y-2">
-                {result.evidence.map((ev, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-start gap-2 p-3 rounded-lg"
-                    style={{ background: 'rgba(139,92,246,0.05)' }}
-                  >
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span className="text-sm text-gray-300">{ev}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Behavioral Pattern */}
+          <div
+            className="rounded-xl p-5"
+            style={{
+              background: 'rgba(251,191,36,0.05)',
+              border: '1px solid rgba(251,191,36,0.15)',
+            }}
+          >
+            <p className="text-sm text-gray-300 leading-relaxed">
+              <span className="text-yellow-400 font-semibold">Behavioral Pattern:</span>{' '}
+              {result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. This account shows patterns consistent with crypto fraud operations including guaranteed returns promises, DM solicitation funnels, and coordinated shill activity. Extreme caution advised.' :
+               result.riskLevel === 'HIGH' ? 'Significant scam indicators present. This account exhibits patterns of paid promotion, unrealistic profit claims, or DM-based solicitation. Verify independently before any engagement.' :
+               result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. The account may have legitimate elements alongside suspicious indicators. Further verification recommended before engaging.' :
+               'No significant scam patterns identified. However, always verify accounts independently before sharing sensitive information or sending funds.'}
+            </p>
+          </div>
+
+          {/* Disclaimer */}
+          <DisclaimerNotice scanDate={result.scanDate} />
 
           {/* Actions */}
           <div className="flex gap-3 flex-wrap">
@@ -741,7 +819,7 @@ Recommendation: ${result.recommendation}`;
             </button>
 
             <button
-              onClick={() => setResult(null)}
+              onClick={() => { setResult(null); setScanStatus(null); }}
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-gray-300 transition-all hover:scale-[1.02]"
               style={{
                 background: 'rgba(255,255,255,0.05)',
@@ -762,7 +840,7 @@ Recommendation: ${result.recommendation}`;
 function generateDemoResult(platform: string, username: string): ProfileScanResult {
   // Detect common scam patterns in username
   const lowerUsername = username.toLowerCase();
-  
+
   const scamPatterns: Record<string, { type: string; riskScore: number; flags: string[] }> = {
     'giveaway': { type: 'Giveaway Scam', riskScore: 90, flags: ['Giveaway scam pattern in username', 'Typical scammer naming convention', 'Likely impersonating legitimate account'] },
     'elon': { type: 'Celebrity Impersonation', riskScore: 85, flags: ['Celebrity name in username', 'Likely impersonation attempt', 'Common scam tactic'] },
@@ -782,7 +860,7 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
   let detectedType: string | undefined;
   let riskScore = 25; // Default low risk
   let redFlags: string[] = ['Profile analyzed with available data'];
-  
+
   for (const [pattern, data] of Object.entries(scamPatterns)) {
     if (lowerUsername.includes(pattern)) {
       detectedType = data.type;
@@ -798,7 +876,7 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
   const postCount = Math.floor(Math.random() * 1000) + 10;
 
   // Determine risk level
-  const riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 
+  const riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' =
     riskScore >= 75 ? 'CRITICAL' :
     riskScore >= 50 ? 'HIGH' :
     riskScore >= 30 ? 'MEDIUM' : 'LOW';
@@ -817,7 +895,7 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
 
   return {
     success: true,
-    platform: platform as 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook',
+    platform: platform as 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok',
     username,
     displayName: `${username}'s Profile`,
     verified: false,
@@ -825,7 +903,7 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
     riskLevel,
     scamType: detectedType,
     redFlags,
-    evidence: riskScore >= 50 
+    evidence: riskScore >= 50
       ? ['Pattern matching indicates potential scam', 'Username contains suspicious elements', 'Recommend manual verification']
       : ['No strong scam indicators detected', 'Standard profile analysis complete'],
     recommendation,

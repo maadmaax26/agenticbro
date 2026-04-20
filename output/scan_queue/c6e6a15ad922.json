@@ -1,0 +1,20 @@
+{
+  "id": "c6e6a15ad922",
+  "username": "potatohead2300",
+  "source": "x_search",
+  "search_term": "legit or scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:57:46.799225",
+  "priority": "normal",
+  "attempts": 3,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:43:04.408523",
+  "completed_at": "2026-04-04T23:43:04.408526",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

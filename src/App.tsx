@@ -2,13 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
-import PortfolioCard from './components/PortfolioCard'
 import MobileMenu from './components/MobileMenu'
 
-import SignalFeed from './components/dashboard/SignalFeed'
-import TradeAnalysis from './components/dashboard/TradeAnalysis'
-import AlertFeed from './components/dashboard/AlertFeed'
-import DailyReport from './components/dashboard/DailyReport'
 import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
@@ -17,10 +12,8 @@ import PhoneNumberVerifier from './components/PhoneNumberVerifier'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
+import AgntcbroBalanceTracker from './components/AgntcbroBalanceTracker'
 import Roadmap from './components/Roadmap'
-import HolderDashboard from './components/dashboard/HolderDashboard'
-import WhaleDashboard from './components/dashboard/WhaleDashboard'
-import MarketSentiment from './components/MarketSentiment'
 import PreConnectScanWidget from './components/PreConnectScanWidget'
 import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
@@ -147,10 +140,10 @@ function App() {
     return `priorityFreeScans_${publicKey.toString()}`;
   };
 
-  const { holderTierUnlocked, whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
+  const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     const saved = localStorage.getItem(getWalletScanKey());
-    const defaultScans = holderTierUnlocked ? 15 : 10; // 15 for holders, 10 for regular users
+    const defaultScans = holderTierUnlocked ? 50 : 5; // 50 monthly for holders, 5 for free users
     return saved ? Math.max(0, parseInt(saved, 10)) : defaultScans;
   });
 
@@ -167,19 +160,20 @@ function App() {
   const [walletInput, setWalletInput]   = useState('')
   const [channelInput, setChannelInput] = useState('')
   const [tokenInput, setTokenInput]     = useState('')
+  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'tiktok' | 'facebook'>('instagram')
+  const [socialUsername, setSocialUsername] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   // Update default scans when holder tier status changes
   useEffect(() => {
     const saved = localStorage.getItem(getWalletScanKey());
     if (!saved) {
-      const defaultScans = holderTierUnlocked ? 15 : 10;
+      const defaultScans = holderTierUnlocked ? 50 : 5;
       setPriorityScansRemaining(defaultScans);
     }
   }, [holderTierUnlocked]);
 
-  // Denial popover state — null = hidden, 'holder' | 'whale' = show message
-  const [denied, setDenied] = useState<'holder' | 'whale' | null>(null)
+  // Tier denial state removed — now scrolls to scan section
 
   // Auth and Payment modals
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -188,15 +182,7 @@ function App() {
 
   // Auth context is available via AuthProvider in main.tsx
 
-  const handleTierClick = useCallback((tier: 'holder' | 'whale') => {
-    const unlocked = tier === 'holder' ? holderTierUnlocked : whaleTierUnlocked
-    if (unlocked) {
-      setShowTierPage(tier)
-    } else {
-      setDenied(tier)
-      setTimeout(() => setDenied(null), 3500)
-    }
-  }, [holderTierUnlocked, whaleTierUnlocked])
+  // Tier click scrolls to priority scan section
 
   // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
@@ -269,6 +255,90 @@ function App() {
   }
 
   const runScan = useCallback(async () => {
+    // Social profile scan uses a different API
+    if (scanMode === 'social') {
+      const uName = socialUsername.trim().replace(/^@/, '')
+      if (!uName) return
+      setIsScanning(true)
+      setShowScanChat(true)
+      setScanMessages([])
+      addMsg({ type: 'system', icon: '🔍', text: `Scanning ${socialPlatform} profile: @${uName}…` })
+
+      try {
+        // Start async scan — get job ID immediately
+        const startRes = await fetch(`${API_BASE}/api/social-scan?async=1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: socialPlatform, username: uName }),
+        })
+        const startData = await startRes.json() as any
+
+        let data: any = null
+        if (startData.status === 'pending' && startData.id) {
+          // Poll for result (max 15 seconds)
+          const jobId = startData.id
+          let attempts = 0
+          const maxAttempts = 30
+          const pollInterval = 500
+
+          while (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, pollInterval))
+            const pollRes = await fetch(`${API_BASE}/api/social-scan/${jobId}`)
+            data = await pollRes.json() as any
+            if (data.status === 'done' || data.status === 'error') break
+            attempts++
+          }
+
+          if (!data || (data.status !== 'done' && data.status !== 'error')) {
+            addMsg({ type: 'error', icon: '⏱️', text: 'Scan timed out. The platform may be slow or blocking requests.' })
+          } else {
+            data = { ...data, ...data.result }
+          }
+        } else {
+          // Fallback: sync scan
+          const syncRes = await fetch(`${API_BASE}/api/social-scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: socialPlatform, username: uName }),
+          })
+          data = await syncRes.json() as any
+        }
+
+        // Process result (same for async and sync)
+        const result = data?.result ?? data
+        if (!result.success || result.error) {
+          if (result.error === 'PROFILE_LOGIN_REQUIRED') {
+            addMsg({ type: 'warning', icon: '🔒', text: `${socialPlatform.charAt(0).toUpperCase() + socialPlatform.slice(1)} requires login to view @${uName}. This profile can't be scanned via web.` })
+            addMsg({ type: 'system', icon: '💡', text: 'For accurate scanning, use the Jeeevs Telegram bot or request a Chrome CDP scan.' })
+          } else {
+            addMsg({ type: 'error', icon: '❌', text: result.error ?? 'Scan failed' })
+          }
+        } else {
+          const emoji = result.riskLevel === 'LOW' ? '✅' : result.riskLevel === 'MEDIUM' ? '🟡' : result.riskLevel === 'HIGH' ? '🔴' : '🚨'
+          addMsg({ type: 'result', icon: '🔍', text: `Platform: ${socialPlatform.charAt(0).toUpperCase() + socialPlatform.slice(1)}` })
+          addMsg({ type: 'result', icon: '📊', text: `Risk Score: ${result.riskScore}/10 — ${result.riskLevel} RISK ${emoji}` })
+          if (result.flagDetails?.length) {
+            for (const flag of result.flagDetails) {
+              const fEmoji = flag.weight >= 15 ? '🚨' : flag.weight >= 10 ? '⚠️' : '📌'
+              addMsg({ type: flag.weight >= 15 ? 'warning' : 'result', icon: fEmoji, text: `• ${flag.flag.replace(/_/g, ' ')} (${flag.weight}pts) — ${flag.description}` })
+            }
+            addMsg({ type: 'system', icon: '📊', text: `Total: ${result.weightsSum}/${result.maxPossibleWeight || 90} pts · Flag values: guaranteed_returns(25) · giveaway_airdrop(20) · dm_solicitation(15) · free_crypto(15) · alpha_dm_scheme(15) · unrealistic_claims(10) · download_install(10) · urgency_tactics(10) · emotional_manipulation(10) · low_credibility(10)` })
+          }
+          const patternText = result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' :
+            result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' :
+            result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' :
+            'No significant scam patterns identified.'
+          addMsg({ type: 'system', icon: '🔍', text: `Behavioral Pattern: ${patternText}` })
+          addMsg({ type: 'system', icon: '📋', text: `Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` })
+        }
+      } catch (err: any) {
+        addMsg({ type: 'error', icon: '❌', text: err?.message ?? 'Scan request failed' })
+      } finally {
+        setIsScanning(false)
+      }
+      return
+    }
+
     const inputValue = scanMode === 'wallet' ? walletInput.trim()
                      : scanMode === 'channels' ? channelInput.trim()
                      : scanMode === 'token' ? tokenInput.trim()
@@ -276,7 +346,7 @@ function App() {
 
     if (!inputValue) return
     if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
-      alert('Scan limit reached. Unlock Holder Tier for unlimited priority scans.')
+      alert('Scan limit reached. Hold $100+ in AGNTCBRO for 50 monthly Priority Scans.')
       return
     }
 
@@ -478,11 +548,7 @@ function App() {
       {/* Subtle purple grid on top */}
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-      {showTierPage === 'holder' ? (
-        <HolderDashboard onBack={() => setShowTierPage(null)} />
-      ) : showTierPage === 'whale' ? (
-        <WhaleDashboard onBack={() => setShowTierPage(null)} />
-      ) : showValueProp ? (
+      {showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
         <Roadmap onBack={() => setShowRoadmap(false)} />
@@ -495,7 +561,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder & Whale tier access reduced to <span className="text-green-400 font-bold">$15</span> during early development. Tier thresholds will increase as we approach production launch.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 5 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -511,7 +577,7 @@ function App() {
                   Agentic Bro
                 </h1>
                 <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
-                  $AGNTCBRO · Your agentic degen advisor
+                  AI-powered scam detection · Scan first, trust later!
                 </p>
               </div>
             </div>
@@ -528,61 +594,22 @@ function App() {
                 onBuyCreditsClick={() => setShowPaymentModal(true)}
               />
 
-              {/* Holder Tier button */}
-              <div className="relative">
-                <button
-                  onClick={() => handleTierClick('holder')}
-                  disabled={gatingLoading}
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
-                  style={holderTierUnlocked
-                    ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
-                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title={holderTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
-                >
-                  {gatingLoading ? (
-                    <span className="animate-pulse">…</span>
-                  ) : holderTierUnlocked ? (
-                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 💰 Holder Tier</>
-                  ) : (
-                    <>🔒 Holder Tier</>
-                  )}
-                </button>
-                {denied === 'holder' && (
-                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
-                    ⛔ You do not meet the access criteria
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
-                  </div>
-                )}
-              </div>
-
-              {/* Whale Tier button */}
-              <div className="relative">
-                <button
-                  onClick={() => handleTierClick('whale')}
-                  disabled={gatingLoading}
-                  className="flex items-center justify-center gap-1 px-3 py-1 rounded-md border text-xs font-semibold transition-all hover:brightness-125 disabled:opacity-50"
-                  style={whaleTierUnlocked
-                    ? {background: 'rgba(6,182,212,0.25)', borderColor: 'rgba(6,182,212,0.7)', color: '#67e8f9'}
-                    : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                  title={whaleTierUnlocked
-                    ? `Unlocked · ${balance.toLocaleString()} AGNTCBRO (~$${usdValue.toFixed(2)} USD)`
-                    : `Requires $15 USD of AGNTCBRO (dev phase)${tokenPriceUsd > 0 ? ` · Current price: $${tokenPriceUsd.toFixed(6)}` : ''}`}
-                >
-                  {gatingLoading ? (
-                    <span className="animate-pulse">…</span>
-                  ) : whaleTierUnlocked ? (
-                    <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🐋 Whale Tier</>
-                  ) : (
-                    <>🔒 Whale Tier</>
-                  )}
-                </button>
-                {denied === 'whale' && (
-                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap rounded-lg border border-red-500/60 bg-red-950/90 px-3 py-2 text-xs text-red-300 shadow-lg backdrop-blur-sm">
-                    ⛔ You do not meet the access criteria
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-red-950 border-t border-l border-red-500/60" />
-                  </div>
+              {/* Scan Credits badge */}
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold"
+                style={holderTierUnlocked
+                  ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
+                  : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
+                title={holderTierUnlocked
+                  ? `Holder Tier · ${balance.toLocaleString()} AGNTCBRO · 50 scans/month`
+                  : `Hold $100+ in AGNTCBRO for 50 monthly scans (currently ${priorityScansRemaining} free scans)`}
+              >
+                {gatingLoading ? (
+                  <span className="animate-pulse">…</span>
+                ) : holderTierUnlocked ? (
+                  <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/50</>
+                ) : (
+                  <>🔍 {priorityScansRemaining}/5</>
                 )}
               </div>
 
@@ -596,26 +623,30 @@ function App() {
 
             {/* Right — nav + wallet (desktop only) */}
             <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-              <a
-                href="/AgenticBro_WhitePaper.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 xl:px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                White Paper
-              </a>
-              <button
-                onClick={() => setShowRoadmap(true)}
-                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                Roadmap
-              </button>
-              <button
-                onClick={() => setShowValueProp(true)}
-                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
-              >
-                Why Agentic Bro?
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setShowValueProp(true)}
+                  className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
+                >
+                  Why Agentic Bro?
+                </button>
+                <div className="absolute left-0 top-full mt-1 z-50 rounded-xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden min-w-[130px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <a
+                    href="/AgenticBro_WhitePaper.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-3 py-2 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    📄 White Paper
+                  </a>
+                  <button
+                    onClick={() => setShowRoadmap(true)}
+                    className="w-full px-3 py-2 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    🗺️ Roadmap
+                  </button>
+                </div>
+              </div>
               <button
                 onClick={() => setShowScamDatabase(true)}
                 className="px-2 xl:px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
@@ -631,7 +662,7 @@ function App() {
                 💰 Buy $AGNTCBRO
               </a>
               <LanguageSelector current={locale} onChange={setLocale} />
-              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-[10px] !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
             </div>
 
             {/* Mobile menu button */}
@@ -691,16 +722,153 @@ function App() {
           )}
 
       <main className="relative z-10 container mx-auto px-4 md:px-6 pb-10">
+        {/* ── AGNTCBRO Balance Tracker — shows after wallet connect ── */}
+        <AgntcbroBalanceTracker />
+
         {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
 
-        {/* ── Priority Token Scanner - Advanced analysis with honeypot detection ── */}
+            {/* ── Priority Scan Section ── */}
+            <div id="priority-scan-section" className="max-w-6xl mx-auto mb-6">
+              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">🔍</div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Priority Scan</h2>
+                      <p className="text-sm text-gray-400">Deep scan your wallet, a Telegram channel, or a specific token</p>
+                    </div>
+                  </div>
+                  {!isTest && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                         style={{
+                           background: priorityScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                           border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
+                           color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
+                         }}>
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Scans{holderTierUnlocked ? ' (Holder — 50/mo)' : ' (Free)'}</span></>
+                                                  : <><span>💎</span><span>Hold $100 AGNTCBRO for 50/mo</span></>}
+                    </div>
+                  )}
+                  {isTest && (
+                    <span className="text-xs px-2 py-1 rounded-full font-semibold"
+                          style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#4ade80' }}>
+                      ✓ Test Wallet — Unlimited
+                    </span>
+                  )}
+                </div>
+
+                {/* ── Scan mode tabs ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+                  {([
+                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
+                    { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
+                    { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
+                    { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
+                    { id: 'phone',    icon: '📞', label: 'Phone Verify', hint: 'Verify phone numbers for scams' },
+                  ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setScanMode(m.id)}
+                      className="rounded-xl p-3 text-left transition-all border"
+                      style={scanMode === m.id
+                        ? { background: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.6)' }
+                        : { background: 'rgba(0,0,0,0.3)',       borderColor: 'rgba(139,92,246,0.2)' }}
+                    >
+                      <p className={`text-sm font-semibold ${scanMode === m.id ? 'text-white' : 'text-gray-400'}`}>
+                        {m.icon} {m.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{m.hint}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Input field (changes per mode) ── */}
+                <div className="mb-4">
+                  {scanMode === 'wallet' && (
+                    <input
+                      type="text"
+                      value={walletInput}
+                      onChange={e => setWalletInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="Solana: 7xKX…Bm3a  ·  EVM: 0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                  {scanMode === 'channels' && (
+                    <input
+                      type="text"
+                      value={channelInput}
+                      onChange={e => setChannelInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. CryptoEdgePro  ·  @alphawhalecalls  ·  t.me/defi_gems"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors"
+                    />
+                  )}
+                  {scanMode === 'token' && (
+                    <input
+                      type="text"
+                      value={tokenInput}
+                      onChange={e => setTokenInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                      placeholder="e.g. $NOVA  ·  SOL  ·  0x4e3a…f29b"
+                      className="w-full bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                    />
+                  )}
+                  {scanMode === 'social' && (
+                    <div className="flex gap-2">
+                      <select
+                        value={socialPlatform}
+                        onChange={e => setSocialPlatform(e.target.value as any)}
+                        className="bg-black/50 border border-purple-500/30 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:border-purple-500/60 transition-colors"
+                      >
+                        <option value="instagram">📸 Instagram</option>
+                        <option value="tiktok">🎵 TikTok</option>
+                        <option value="facebook">📘 Facebook</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={socialUsername}
+                        onChange={e => setSocialUsername(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && !isScanning && runScan()}
+                        placeholder="e.g. crypto_scammer99"
+                        className="flex-1 bg-black/50 border border-purple-500/30 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-colors font-mono"
+                      />
+                    </div>
+                  )}
+                  {scanMode === 'phone' && (
+                    <div>
+                      <PhoneNumberVerifier />
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Launch button (hidden for phone mode — uses its own) ── */}
+                <button
+                  onClick={runScan}
+                  disabled={isScanning ||
+                    scanMode === 'phone' ||
+                    (scanMode === 'wallet'   && !walletInput.trim())  ||
+                    (scanMode === 'channels' && !channelInput.trim()) ||
+                    (scanMode === 'token'    && !tokenInput.trim())    ||
+                    (scanMode === 'social'   && !socialUsername.trim())}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={scanMode === 'phone' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
+                >
+                  {isScanning
+                    ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${holderTierUnlocked ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold $100 AGNTCBRO' : ''}</>
+                  }
+                </button>
+
+              </div>
+            </div>
+
+        {/* ── Token Scanner (consolidated: priority + contract + impersonation) ── */}
         <PriorityTokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-
-        {/* ── Token Scanner - Scan any token by contract address ── */}
         <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-
-        {/* ── Token Impersonation Scanner - Detect fake tokens ── */}
         <TokenImpersonationScanner />
 
         {/* ── Free Scam Protection Tools Info (shown for all users) ── */}
@@ -881,7 +1049,7 @@ function App() {
                 {[
                   { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
                   { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
-                  { icon: '🏆', title: 'Holder Tier Intelligence', desc: 'Unlock unlimited scans, gem advisory, and whale-level insights by holding $AGNTCBRO.' },
+                  { icon: '🏆', title: 'Holder Tier — 50 Scans/mo', desc: 'Hold $100+ in AGNTCBRO to unlock 50 monthly Priority Scans across all scan types.' },
                 ].map((item) => (
                   <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
                     <div className="text-2xl mb-2">{item.icon}</div>
@@ -1027,198 +1195,6 @@ function App() {
                   }
                 </button>
 
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
-              <PortfolioCard />
-
-              {/* ── Priority Scan Results Panel ── */}
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 flex flex-col overflow-hidden" style={{ minHeight: '420px' }}>
-                {/* Panel header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-purple-500/20 flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isScanning ? 'bg-purple-400 animate-pulse' : showScanChat ? 'bg-green-400' : 'bg-gray-600'}`} />
-                    <h3 className="text-base font-bold text-white">Scan Results</h3>
-                    {showScanChat && !isScanning && (() => {
-                      const tokenCount = scanMessages.filter(m => m.result).length
-                      const highCount  = scanMessages.filter(m => m.result?.confidence === 'HIGH').length
-                      return tokenCount > 0 ? (
-                        <span className="text-xs text-gray-500 font-mono">
-                          {tokenCount} token{tokenCount !== 1 ? 's' : ''} · <span className="text-green-400">{highCount} HIGH</span>
-                        </span>
-                      ) : null
-                    })()}
-                  </div>
-                  {showScanChat && (
-                    <button
-                      onClick={() => { setShowScanChat(false); setScanMessages([]) }}
-                      className="text-gray-500 hover:text-white text-xs transition-colors"
-                    >
-                      Clear ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Content */}
-                {!showScanChat ? (
-                  /* Empty state — prompt to run a scan */
-                  <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
-                    <div className="text-5xl opacity-30">🔍</div>
-                    <div>
-                      <p className="text-gray-400 text-sm font-semibold mb-1">No scan results yet</p>
-                      <p className="text-gray-600 text-xs leading-relaxed">
-                        Select a scan mode above, enter your target, and run<br />a Priority Scan to see full token details here.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-xs mt-2">
-                      {[
-                        { icon: '👛', label: 'Wallet', desc: 'Track alpha for a wallet' },
-                        { icon: '📡', label: 'Channel', desc: 'Deep-scan a Telegram channel' },
-                        { icon: '🔍', label: 'Token', desc: 'Find all calls for a token' },
-                      ].map(m => (
-                        <div key={m.label} className="rounded-xl p-2 text-center" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)' }}>
-                          <div className="text-xl mb-1">{m.icon}</div>
-                          <p className="text-xs font-semibold text-gray-400">{m.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  /* Results */
-                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {scanMessages.map(msg => (
-                      <div key={msg.id}>
-                        {msg.scamResult ? (
-                          <ScamResultCard result={msg.scamResult} />
-                        ) : msg.result ? (
-                          <ScanResultCard result={msg.result} icon={msg.icon} defaultExpanded={msg.result.confidence === 'HIGH'} />
-                        ) : (
-                          <div className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs ${
-                            msg.type === 'success' ? 'bg-green-900/20 border border-green-500/20 text-green-300'
-                          : msg.type === 'warning' ? 'bg-yellow-900/20 border border-yellow-500/20 text-yellow-300'
-                          : msg.type === 'error'   ? 'bg-red-900/20 border border-red-500/20 text-red-300'
-                          : 'bg-purple-900/10 border border-purple-500/10 text-gray-500'
-                          }`}>
-                            <span className="flex-shrink-0 mt-0.5">{msg.icon}</span>
-                            <span className="leading-relaxed">{msg.text}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {isScanning && (
-                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500">
-                        <span className="animate-spin inline-block w-3 h-3 border border-purple-500 border-t-transparent rounded-full" />
-                        Scanning…
-                      </div>
-                    )}
-                    <div ref={chatBottomRef} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Market sentiment */}
-            <div className="max-w-6xl mx-auto mb-6">
-              <MarketSentiment />
-            </div>
-
-            {/* Trading Signals Section */}
-            <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto mb-6">
-              <SignalFeed />
-              <TradeAnalysis />
-              <AlertFeed />
-            </div>
-
-            {/* Daily Market Report */}
-            <div className="max-w-7xl mx-auto mb-6">
-              <DailyReport />
-            </div>
-
-            {/* Gem Advise Preview */}
-            <div className="max-w-7xl mx-auto mb-6">
-              <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">💎</div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Gem Advise</h2>
-                      <p className="text-sm text-gray-400">AI-ranked token recommendations (Preview)</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowTierPage('holder')}
-                    disabled={!holderTierUnlocked}
-                    className="px-4 py-2 rounded-lg font-semibold text-sm transition-all disabled:opacity-50"
-                    style={holderTierUnlocked
-                      ? {background: 'rgba(139,92,246,0.2)', borderColor: 'rgba(139,92,246,0.6)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.6)'}
-                      : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af', border: '1px solid rgba(120,120,120,0.4)'}
-                    }
-                  >
-                    {holderTierUnlocked ? 'Open Full Version' : 'Unlock (10K AGNTCBRO)'}
-                  </button>
-                </div>
-
-                {!holderTierUnlocked ? (
-                  <div className="text-center py-8">
-                    <div className="text-6xl mb-4 opacity-50">🔒</div>
-                    <h3 className="text-xl font-bold text-white mb-2">Holder Tier Feature</h3>
-                    <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
-                      Get unlimited AI-ranked gem recommendations with confidence tiers, edge scoring, and quality guards.
-                    </p>
-                    <div className="bg-purple-900/40 rounded-xl p-4 max-w-md mx-auto border border-purple-500/30">
-                      <p className="text-sm text-gray-400 mb-2">Holder Tier includes:</p>
-                      <ul className="text-left text-sm space-y-1">
-                        <li>• 5 free gem advise scans</li>
-                        <li>• AI-ranked token recommendations</li>
-                        <li>• Confidence tiers (HIGH/MEDIUM/LOW)</li>
-                        <li>• Rug rate & liquidity guards</li>
-                        <li>• Real-time Telegram alpha analysis</li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <GemPreviewCard
-                        ticker="$NOVA"
-                        name="NovaProtocol"
-                        edgeScore={0.81}
-                        confidence="HIGH"
-                        winRate={44}
-                        rugRate={8}
-                        liquidity="182K"
-                        change="+12.4%"
-                        maxGain="3.2x"
-                      />
-                      <GemPreviewCard
-                        ticker="$FLUX"
-                        name="FluxLayer"
-                        edgeScore={0.76}
-                        confidence="HIGH"
-                        winRate={39}
-                        rugRate={12}
-                        liquidity="94K"
-                        change="+8.1%"
-                        maxGain="2.7x"
-                      />
-                      <GemPreviewCard
-                        ticker="$KRYPT"
-                        name="KryptVault"
-                        edgeScore={0.71}
-                        confidence="HIGH"
-                        winRate={36}
-                        rugRate={14}
-                        liquidity="126K"
-                        change="+6.7%"
-                        maxGain="2.4x"
-                      />
-                    </div>
-                    <p className="text-center text-xs text-gray-500 mt-4">
-                      * Preview mode — Open full version for unlimited scans and advanced filters
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -1571,88 +1547,6 @@ function ScamResultCard({ result }: { result: {
     </div>
   )
 }
-
-// ─── Gem Preview Card Component (for free page preview) ────────────────────────────────────────────────────────────
-
-function GemPreviewCard({
-  ticker, name, edgeScore, confidence, winRate, rugRate: _rugRate, liquidity, change, maxGain,
-}: {
-  ticker: string;
-  name: string;
-  edgeScore: number;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  winRate: number;
-  rugRate: number;
-  liquidity: string;
-  change: string;
-  maxGain: string;
-}) {
-  const edgePct = Math.round(edgeScore * 100);
-  const isPositive = change.startsWith('+');
-
-  const confidenceStyle: Record<'HIGH' | 'MEDIUM' | 'LOW', { bg: string; border: string; color: string }> = {
-    HIGH:   { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)',  color: '#4ade80' },
-    MEDIUM: { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.35)',  color: '#fbbf24' },
-    LOW:    { bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.35)',   color: '#f87171' },
-  };
-  const cs = confidenceStyle[confidence];
-
-  return (
-    <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/20 p-4 hover:border-purple-500/40 transition-all">
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="font-bold text-white text-sm">{name}</div>
-          <p className="text-xs text-gray-500">{ticker}</p>
-        </div>
-        <span
-          className="text-xs font-bold px-2 py-1 rounded-lg"
-          style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}
-        >
-          {confidence}
-        </span>
-      </div>
-
-      {/* Metrics */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Win Rate</p>
-          <p className="text-sm font-bold text-green-400">{winRate}%</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">1h Change</p>
-          <p className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>{change}</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Liquidity</p>
-          <p className="text-sm font-bold text-white">${liquidity}</p>
-        </div>
-        <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-          <p className="text-xs text-gray-500">Max Gain</p>
-          <p className="text-sm font-bold text-purple-300">{maxGain}</p>
-        </div>
-      </div>
-
-      {/* Edge score bar */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">Edge</span>
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${edgePct}%`,
-                background: 'linear-gradient(90deg, #7c3aed, #00d4ff)',
-              }}
-            />
-          </div>
-          <span className="text-xs font-bold text-purple-300">{edgePct}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default App
 
 // ─── Auth Modal Wrapper ─────────────────────────────────────────────────────────

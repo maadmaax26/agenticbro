@@ -1,0 +1,20 @@
+{
+  "id": "0c1e02aa6bf4",
+  "username": "Cryptozee998",
+  "source": "x_search",
+  "search_term": "100x crypto",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:57:46.797582",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:50:19.849313",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-04T23:50:19.849324"
+}

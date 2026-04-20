@@ -1,0 +1,16 @@
+{
+  "id": "ce02e208",
+  "reply_type": "USER_INQUIRY",
+  "username": "3rader_emerald",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @3rader_emerald:\n\nRisk Level: MEDIUM (3.3/10)\nRed Flags: DM solicitation, Free crypto\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/3rader_emerald\n\n#CryptoSafety",
+  "risk_level": "MEDIUM",
+  "risk_score": 3.333333333333333,
+  "red_flags": [
+    "DM solicitation",
+    "Free crypto"
+  ],
+  "search_term": "what do you think about @",
+  "report_url": "https://agenticbro.app/scan/3rader_emerald",
+  "created_at": "2026-04-03T07:35:51.261850",
+  "status": "pending_approval"
+}

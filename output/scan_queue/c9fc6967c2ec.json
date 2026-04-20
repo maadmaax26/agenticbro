@@ -1,0 +1,20 @@
+{
+  "id": "c9fc6967c2ec",
+  "username": "MiaSardinella",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T15:13:47.238382",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:21:17.834529",
+  "completed_at": "2026-04-04T23:21:17.834532",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

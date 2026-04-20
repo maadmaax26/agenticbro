@@ -1,0 +1,19 @@
+{
+  "id": "0e530b60",
+  "username": "AGENTIC LOBSTER MODE",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.203377",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x5de25CF7bFD60D9bcd929Fa8A3C881eeeb40C8D2",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888302"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

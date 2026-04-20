@@ -1,0 +1,20 @@
+{
+  "id": "a1da33dd",
+  "username": "WFUND",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.205409",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x55FcAa62bA5fa9FE50f48c5508168b253c2312e7",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888337"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

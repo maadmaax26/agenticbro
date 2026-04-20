@@ -1,0 +1,21 @@
+{
+  "id": "555279332d94",
+  "username": "MayaWorldd",
+  "source": "x_search",
+  "search_term": "only few spots left",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:10:35.569851",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T13:11:14.661286",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T13:11:22.673622"
+}

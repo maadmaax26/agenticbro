@@ -1,0 +1,21 @@
+{
+  "id": "49cafb18cb91",
+  "username": "SpaceX",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:51:09.090365",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:51:48.149828",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 0
+  },
+  "completed_at": "2026-04-03T07:51:56.153854"
+}

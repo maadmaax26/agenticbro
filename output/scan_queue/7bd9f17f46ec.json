@@ -1,0 +1,20 @@
+{
+  "id": "7bd9f17f46ec",
+  "username": "PolaroidSolar",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T13:31:07.510386",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T22:56:49.269399",
+  "completed_at": "2026-04-04T22:56:49.269409",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

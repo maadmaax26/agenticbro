@@ -1,0 +1,20 @@
+{
+  "id": "3fc9144b1cc8",
+  "username": "fabiolarroyof",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:22:27.360114",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:02:53.290668",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:02:53.290686"
+}

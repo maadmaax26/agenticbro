@@ -1,0 +1,20 @@
+{
+  "id": "3c7c8931bcee",
+  "username": "zdash12",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:01:01.614094",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:59:25.951279",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-04T23:59:25.951284"
+}

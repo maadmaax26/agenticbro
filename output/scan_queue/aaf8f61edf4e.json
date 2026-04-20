@@ -1,0 +1,20 @@
+{
+  "id": "aaf8f61edf4e",
+  "username": "Cavilover",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:30:37.833233",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:05:47.621424",
+  "completed_at": "2026-04-04T23:05:47.621426",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

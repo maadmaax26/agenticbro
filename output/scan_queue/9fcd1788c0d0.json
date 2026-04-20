@@ -1,0 +1,20 @@
+{
+  "id": "9fcd1788c0d0",
+  "username": "TDI_Ticketing",
+  "source": "x_search",
+  "search_term": "send me DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:01:35.151336",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T22:57:48.117146",
+  "completed_at": "2026-04-04T22:57:48.117154",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

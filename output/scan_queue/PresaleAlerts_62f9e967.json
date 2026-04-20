@@ -1,0 +1,21 @@
+{
+  "id": "62f9e967",
+  "username": "PresaleAlerts",
+  "platform": "Telegram",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-03T17:21:10.217297",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [],
+  "risk_score": 0.0,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:17:35.917864",
+  "completed_at": "2026-04-04T23:17:35.917867",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

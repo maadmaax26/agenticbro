@@ -1,0 +1,24 @@
+{
+  "id": "497b1988c212",
+  "username": "chromuru",
+  "source": "x_search",
+  "search_term": "check my DM",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:51:09.094959",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T07:51:35.132309",
+  "result": {
+    "status": "active",
+    "risk_score": 3.333333333333333,
+    "level": "MEDIUM",
+    "red_flags": [
+      "DM solicitation",
+      "DM solicitation"
+    ],
+    "text_length": 3649
+  },
+  "completed_at": "2026-04-03T07:51:43.142645"
+}

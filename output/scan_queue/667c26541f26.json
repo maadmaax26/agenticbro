@@ -1,0 +1,25 @@
+{
+  "id": "667c26541f26",
+  "username": "TimHawks1983",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:21:00.947618",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T10:21:53.031761",
+  "result": {
+    "status": "active",
+    "risk_score": 5.0,
+    "level": "HIGH",
+    "red_flags": [
+      "DM solicitation",
+      "Free crypto",
+      "DM solicitation"
+    ],
+    "text_length": 3436
+  },
+  "completed_at": "2026-04-03T10:22:01.035437"
+}

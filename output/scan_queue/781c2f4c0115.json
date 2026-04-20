@@ -1,0 +1,21 @@
+{
+  "id": "781c2f4c0115",
+  "username": "SunnyD_FGC",
+  "source": "x_search",
+  "search_term": "has anyone used @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:51:09.094395",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T09:51:38.084693",
+  "result": {
+    "status": "active",
+    "risk_score": 0.0,
+    "level": "LOW",
+    "red_flags": [],
+    "text_length": 3608
+  },
+  "completed_at": "2026-04-03T09:51:46.091971"
+}

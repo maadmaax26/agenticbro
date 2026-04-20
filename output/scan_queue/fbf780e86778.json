@@ -1,0 +1,20 @@
+{
+  "id": "fbf780e86778",
+  "username": "chosewisely99",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:01:01.613531",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:27:11.598299",
+  "completed_at": "2026-04-04T23:27:11.598304",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "scan_id": "SCAN-20260402-KNOWN",
+  "scan_date": "2026-04-02T23:13:00-04:00",
+  "platform": "X (Twitter)",
+  "handle": "@KnownScammer",
+  "handle_url": "https://x.com/KnownScammer",
+  "display_name": "Known Scammer",
+  "verification_status": {
+    "is_verified": false,
+    "verification_type": "none",
+    "blue_checkmark": false
+  },
+  "profile": {
+    "bio": "Sarcasm over smarts",
+    "location": "wouldn't you like to know",
+    "website": null,
+    "join_date": "December 2017",
+    "account_age_years": 8.3,
+    "followers": 13,
+    "following": 315,
+    "posts_count": 18,
+    "profile_image": "Default or custom (not analyzed in detail)"
+  },
+  "risk_analysis": {
+    "risk_score": 2.5,
+    "risk_level": "LOW",
+    "risk_factors": [
+      {
+        "factor": "Account Age",
+        "score": 0,
+        "details": "Account is 8+ years old (December 2017), indicating long-term presence",
+        "weight": 0
+      },
+      {
+        "factor": "Display Name",
+        "score": 1.5,
+        "details": "Display name 'Known Scammer' is self-deprecating/sarcastic, not typical scammer behavior",
+        "weight": 1.5
+      },
+      {
+        "factor": "Follower Ratio",
+        "score": 0,
+        "details": "13 followers / 315 following = low influence account, not typical for scammers",
+        "weight": 0
+      },
+      {
+        "factor": "Bio Content",
+        "score": 0,
+        "details": "Bio 'Sarcasm over smarts' indicates humor/sarcasm, no red flags",
+        "weight": 0
+      },
+      {
+        "factor": "Post Content",
+        "score": 1,
+        "details": "Tweets about Bitcoin/BCH debates from 2018, inactive since then. No promotional content, no DM solicitations",
+        "weight": 1
+      },
+      {
+        "factor": "Verification",
+        "score": 0,
+        "details": "Not verified - typical for small personal accounts",
+        "weight": 0
+      }
+    ]
+  },
+  "red_flags": {
+    "guaranteed_returns": false,
+    "private_alpha": false,
+    "unrealistic_claims": false,
+    "urgency_tactics": false,
+    "no_track_record": false,
+    "requests_crypto": false,
+    "no_verification": true,
+    "fake_followers": false,
+    "new_account": false,
+    "vip_upsell": false
+  },
+  "verification_level": "LEGITIMATE",
+  "classification": "Personal/Satirical Account",
+  "summary": {
+    "title": "LOW RISK - Satirical Personal Account",
+    "recommendation": "NO ACTION NEEDED",
+    "confidence": "HIGH",
+    "key_findings": [
+      "Account appears to be satirical/humorous based on display name 'Known Scammer'",
+      "Account age: 8+ years (December 2017) indicates legitimate personal use",
+      "Low follower count (13) with high following (315) suggests personal account, not promotional",
+      "Bio 'Sarcasm over smarts' and location 'wouldn't you like to know' indicate humor",
+      "Last activity was in 2018 - account is inactive/dormant",
+      "No promotional content, no DM solicitations, no crypto scams detected",
+      "Tweets are about Bitcoin/BCH debates, showing crypto interest but not predatory"
+    ],
+    "notes": "The display name 'Known Scammer' appears to be intentionally ironic/satirical. The account shows no signs of actual scamming behavior - no promotional posts, no DM solicitations, no unrealistic claims. The account has been inactive since 2018 and appears to be a dormant personal account that was used for crypto discussion."
+  },
+  "action_items": [],
+  "evidence_links": [
+    "https://x.com/KnownScammer"
+  ],
+  "scanner": "Jarvis (Chrome CDP + Manual Analysis)",
+  "scan_method": "Chrome DevTools Protocol screenshot + image analysis",
+  "confidence_score": 0.85
+}

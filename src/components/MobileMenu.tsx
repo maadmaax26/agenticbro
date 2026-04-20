@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Shield, Search, Map, Users, LogIn, Wallet, Gem } from 'lucide-react'
+import { Menu, X, Shield, Map, Users, LogIn, Wallet, Gem, ShieldAlert } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 
 interface MobileMenuProps {
@@ -143,11 +143,14 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
             <nav className="flex flex-col p-4 gap-3">
               <button
                 onClick={() => handleNavigate('scanners')}
-                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-purple-500/20 hover:bg-purple-500/40 text-left w-full border border-purple-500/30 transition-colors"
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/40 text-left w-full border border-red-500/30 transition-colors"
                 type="button"
               >
-                <Search className="h-7 w-7 text-purple-400 flex-shrink-0" />
-                <span className="text-white font-semibold text-xl">Scanners</span>
+                <ShieldAlert className="h-7 w-7 text-red-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-xl">Scam Detection</span>
+                  <p className="text-xs text-red-300/80 mt-0.5">Profile • Token • Wallet scans</p>
+                </div>
               </button>
 
               <button

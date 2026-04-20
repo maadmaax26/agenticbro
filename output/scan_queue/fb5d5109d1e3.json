@@ -1,0 +1,20 @@
+{
+  "id": "fb5d5109d1e3",
+  "username": "data_insight_ai",
+  "source": "x_search",
+  "search_term": "only few spots left",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T15:24:03.223926",
+  "priority": "normal",
+  "attempts": 3,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:41:15.287006",
+  "completed_at": "2026-04-04T23:41:15.287010",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

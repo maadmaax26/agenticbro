@@ -1,0 +1,23 @@
+{
+  "id": "0caabbea735c",
+  "username": "AJGreenThaGoat",
+  "source": "x_search",
+  "search_term": "turn on notifications for",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:01:59.311926",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-02T23:02:25.530203",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 3736
+  },
+  "completed_at": "2026-04-02T23:02:33.548646"
+}

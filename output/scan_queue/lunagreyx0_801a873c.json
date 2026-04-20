@@ -1,0 +1,25 @@
+{
+  "id": "801a873c",
+  "username": "lunagreyx0",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "MEDIUM",
+  "risk_score": 8.0,
+  "risk_level": "HIGH",
+  "red_flags": [
+    "Connected to LUNA GREY"
+  ],
+  "source_query": "unknown",
+  "source_category": "network_expansion",
+  "discovered_at": "2026-04-03T19:14:17.040697",
+  "status": "completed",
+  "attempts": 2,
+  "started_at": "2026-04-04T23:19:22.409266",
+  "completed_at": "2026-04-04T23:19:22.409269",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

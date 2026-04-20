@@ -1,0 +1,23 @@
+{
+  "id": "1ea85d8c2837",
+  "username": "makemytrip",
+  "source": "x_search",
+  "search_term": "ending soon airdrop",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:53:15.291689",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T14:53:41.361047",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "Free crypto"
+    ],
+    "text_length": 3939
+  },
+  "completed_at": "2026-04-03T14:53:49.376477"
+}

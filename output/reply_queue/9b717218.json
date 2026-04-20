@@ -1,0 +1,16 @@
+{
+  "id": "9b717218",
+  "reply_type": "USER_INQUIRY",
+  "username": "venbies",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @venbies:\n\nRisk Level: LOW (2.8/10)\nRed Flags: DM solicitation, Airdrop\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/venbies\n\n#CryptoSafety",
+  "risk_level": "LOW",
+  "risk_score": 2.7777777777777777,
+  "red_flags": [
+    "DM solicitation",
+    "Airdrop"
+  ],
+  "search_term": "turn on notifications for",
+  "report_url": "https://agenticbro.app/scan/venbies",
+  "created_at": "2026-04-03T07:35:51.260167",
+  "status": "pending_approval"
+}

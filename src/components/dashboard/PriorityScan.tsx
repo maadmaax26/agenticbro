@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScanLine, Flame, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Wallet, Hash, AlertCircle, Info } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { isTestWallet } from '../../hooks/useTokenGating';
+import PhoneNumberVerifier from '../PhoneNumberVerifier';
 
 // Direct to local backend — works from both localhost:5173 and the deployed Vercel site
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? 'http://localhost:3001';
@@ -9,7 +10,7 @@ const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_U
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ScanStatus = 'idle' | 'scanning' | 'done';
-type ScanTarget = 'all' | 'wallet' | 'channels' | 'token' | 'scam';
+type ScanTarget = 'all' | 'wallet' | 'channels' | 'token' | 'scam' | 'phone';
 
 interface ScanResult {
   id: number;
@@ -138,6 +139,7 @@ const SCAN_TARGETS: { id: ScanTarget; label: string; icon: string; cost: number;
   { id: 'channels', label: 'Channel Scan', icon: '📡', cost: 10000, description: 'Deep-scan a specific channel' },
   { id: 'token',    label: 'Single Token', icon: '🔍', cost: 10000, description: 'Find all calls for a token' },
   { id: 'scam',     label: 'Scam Detection', icon: '🚨', cost: 5000, description: 'Scan X or Telegram user for scam patterns' },
+  { id: 'phone',    label: 'Phone Verify',   icon: '📞', cost: 5000, description: 'Verify phone numbers for scam/virtual/spam' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -163,7 +165,7 @@ export default function PriorityScan() {
   const [isMockData,    setIsMockData]    = useState(false);
   const [scanError,     setScanError]     = useState<string | null>(null);
 
-  const burnCost = scanTarget === 'all' ? 15000 : scanTarget === 'scam' ? 5000 : 10000;
+  const burnCost = scanTarget === 'all' ? 15000 : (scanTarget === 'scam' || scanTarget === 'phone') ? 5000 : 10000;
 
   // Resolve human-readable label for burn modal / history
   const scanLabel = (() => {
@@ -171,6 +173,7 @@ export default function PriorityScan() {
     if (scanTarget === 'channels') return channelInput  ? `📡 ${channelInput}` : 'Channel Scan';
     if (scanTarget === 'token')    return tokenInput     ? `🔍 ${tokenInput}`  : 'Single Token';
     if (scanTarget === 'scam')     return usernameInput ? `🚨 ${platform === 'X' ? 'X' : 'Telegram'}: ${usernameInput}` : 'Scam Detection';
+    if (scanTarget === 'phone')    return '📞 Phone Verify';
     return 'All Channels';
   })();
 
@@ -180,7 +183,8 @@ export default function PriorityScan() {
     (scanTarget === 'wallet'   && !walletInput.trim())  ||
     (scanTarget === 'channels' && !channelInput.trim()) ||
     (scanTarget === 'token'    && !tokenInput.trim()) ||
-    (scanTarget === 'scam'     && !usernameInput.trim());
+    (scanTarget === 'scam'     && !usernameInput.trim()) ||
+    scanTarget === 'phone';
 
   // Test wallet: skip burn confirmation and run immediately
   const startScan = () => { if (isTest) { void confirmScan(); } else { setShowModal(true); } };
@@ -518,6 +522,16 @@ export default function PriorityScan() {
           </div>
         )}
 
+        {/* ── Phone Number Verifier ── */}
+        {scanTarget === 'phone' && (
+          <div className="space-y-4">
+            <PhoneNumberVerifier />
+            <p className="text-xs text-gray-600 mt-1.5">
+              Powered by <span className="text-purple-400 font-semibold">OpenClaw Detection Engine</span> — carrier lookup, virtual/VoIP detection, scam operation database, spam dialer identification.
+            </p>
+          </div>
+        )}
+
         {/* ── Launch button ── */}
         <button
           onClick={startScan}
@@ -654,7 +668,7 @@ export default function PriorityScan() {
                     className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
                     style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}
                   >
-                    Risk Score: {result.riskScore}/10
+                    Risk Score: {result.riskScore.toFixed(1)}/10 — {result.riskScore >= 7 ? 'HIGH' : result.riskScore >= 4 ? 'MEDIUM' : 'LOW'} RISK {result.riskScore >= 7 ? '⚠️' : result.riskScore >= 4 ? '⚡' : '✅'}
                   </span>
 
                   <span
@@ -772,15 +786,34 @@ export default function PriorityScan() {
 
                       <div className="space-y-2">
                         <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags ({result.redFlags.length})</p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Red Flags with Scores ({result.redFlags.length})</p>
                           <ul className="space-y-1">
-                            {result.redFlags.map((flag, idx) => (
-                              <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
-                                <span className="text-red-500 mt-0.5">•</span>
-                                {flag}
-                              </li>
-                            ))}
+                            {result.redFlags.map((flag, idx) => {
+                              const pointMatch = flag.match(/\((\d+)pts?\)/);
+                              const pts = pointMatch ? parseInt(pointMatch[1]) : 0;
+                              const flagName = flag.replace(/\s*\(\d+pts?\).*/, '').replace(/_/g, ' ');
+                              const descMatch = flag.match(/—\s*(.+)/);
+                              const desc = descMatch ? descMatch[1] : '';
+                              return (
+                                <li key={idx} className="text-sm text-red-400 flex items-start gap-2">
+                                  <span className="text-red-500 mt-0.5">•</span>
+                                  <span className="capitalize">{flagName}</span>
+                                  {pointMatch && <span className="text-xs font-mono ml-1 px-1 py-0.5 rounded" style={{background:'rgba(239,68,68,0.15)',color:'#f87171'}}>{pts}pts</span>}
+                                  {desc && <span className="text-gray-500 ml-1">— {desc}</span>}
+                                </li>
+                              );
+                            })}
                           </ul>
+                          <p className="text-xs text-gray-600 mt-2">Flag values: guaranteed_returns(25) · giveaway_airdrop(20) · dm_solicitation(15) · free_crypto(15) · alpha_dm_scheme(15) · unrealistic_claims(10) · download_install(10) · urgency_tactics(10) · emotional_manipulation(10) · low_credibility(10)</p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Behavioral Pattern</p>
+                          <p className="text-sm text-gray-300">
+                            {result.riskScore >= 7 ? 'Multiple high-severity scam indicators detected. This account shows patterns consistent with crypto fraud operations. Extreme caution advised.' :
+                             result.riskScore >= 4 ? 'Significant scam indicators present. Verify independently before any engagement.' :
+                             'No significant scam patterns identified. Always verify independently.'}
+                          </p>
                         </div>
 
                         <div>

@@ -205,13 +205,13 @@ function StatsDashboard({ stats, totalScans }: { stats: Stats; totalScans: numbe
         <div className="text-2xl font-bold mb-1">{((stats.total_scans ?? 0) + totalScans).toLocaleString()}</div>
         <div className="text-blue-200 text-xs">Total Scans</div>
       </div>
-      <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg p-4 text-white">
+      <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">{(stats.total_scammers_detected ?? 0).toLocaleString()}</div>
-        <div className="text-red-200 text-xs">Scammers</div>
+        <div className="text-orange-200 text-xs">Medium/High Risk</div>
       </div>
       <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">{(stats.total_legitimate_accounts ?? 0).toLocaleString()}</div>
-        <div className="text-green-200 text-xs">Legitimate</div>
+        <div className="text-green-200 text-xs">Low Risk</div>
       </div>
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-4 text-white">
         <div className="text-2xl font-bold mb-1">${(stats.total_lost_tracked_usd ?? 0).toLocaleString()}</div>
@@ -715,7 +715,7 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
           total_lost_usd: typeof s.total_lost_usd === 'string' ? parseFloat(s.total_lost_usd?.replace(/[^0-9.]/g, '') || '0') : (s.total_lost_usd || 0),
           verification_level: s.verification_level,
           scam_type: s.scam_type || 'Unknown',
-          risk_score: s.risk_score || 50,
+          risk_score: (s.risk_score || 50) / 10,
           risk_level: s.threat_level || 'MEDIUM',
           last_updated: s.updated_at || s.last_seen,
           display_name: s.display_name,
@@ -773,6 +773,20 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
           </div>
         </div>
 
+        {/* Disclaimer Banner */}
+        <div className="flex-shrink-0 px-6 py-3" style={{ background: 'rgba(251,191,36,0.07)', borderBottom: '1px solid rgba(251,191,36,0.25)' }}>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-bold text-yellow-400">📋 DISCLAIMER</p>
+            <div style={{ borderTop: '1px solid rgba(251,191,36,0.35)', margin: '2px 0' }} />
+            <div className="flex flex-wrap gap-x-5 gap-y-0.5 text-xs font-semibold" style={{ color: 'rgba(253,224,71,0.8)' }}>
+              <span>• EDUCATIONAL PURPOSES ONLY</span>
+              <span>• NOT FINANCIAL ADVICE</span>
+              <span>• NOT AN INVESTMENT RECOMMENDATION</span>
+              <span>• NOT A GUARANTEE OF SAFETY</span>
+              <span>• ALWAYS DO YOUR OWN DUE DILIGENCE</span>
+            </div>
+          </div>
+        </div>
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
 
@@ -800,15 +814,15 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                   <div className="flex space-x-2 mb-4 flex-wrap gap-y-2">
                     <button
                       onClick={() => setActiveTab('scammers')}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'scammers' ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'scammers' ? 'bg-orange-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                     >
-                      🚨 Scammers ({totalScammers})
+                      ⚠️ Medium/High Risk ({totalScammers})
                     </button>
                     <button
                       onClick={() => setActiveTab('legitimate')}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'legitimate' ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                     >
-                      ✅ Legitimate ({totalLegitimate})
+                      ✅ Low Risk ({totalLegitimate})
                     </button>
                     <button
                       onClick={() => setActiveTab('scans')}

@@ -1,0 +1,20 @@
+{
+  "id": "36aa81ece40b",
+  "username": "JanCM1111",
+  "source": "x_search",
+  "search_term": "Help with @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:27:00.032166",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:07:30.400288",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:07:30.400306"
+}

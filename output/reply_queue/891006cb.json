@@ -1,0 +1,13 @@
+{
+  "id": "891006cb",
+  "reply_type": "USER_INQUIRY",
+  "username": "InfoSecSherpa",
+  "reply_text": "\ud83d\udee1\ufe0f AgenticBro Scan Results for @InfoSecSherpa:\n\nRisk Level: UNKNOWN (0.0/10)\nRed Flags: None detected\n\n\u2705 This account appears safe to engage with based on available data.\n\nScan any account yourself: agenticbro.app\nFull analysis: https://agenticbro.app/scan/InfoSecSherpa\n\n#CryptoSafety",
+  "risk_level": "UNKNOWN",
+  "risk_score": 0,
+  "red_flags": [],
+  "search_term": "legit or scam",
+  "report_url": "https://agenticbro.app/scan/InfoSecSherpa",
+  "created_at": "2026-04-03T07:35:51.259338",
+  "status": "pending_approval"
+}

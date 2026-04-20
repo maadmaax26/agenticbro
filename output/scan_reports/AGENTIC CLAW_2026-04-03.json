@@ -1,0 +1,19 @@
+{
+  "id": "d47c6043",
+  "username": "AGENTIC CLAW",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-03T17:17:37.203732",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0xc8c610AFDC33E8274142852dB81769690A150541",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-03T17:17:34.888307"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

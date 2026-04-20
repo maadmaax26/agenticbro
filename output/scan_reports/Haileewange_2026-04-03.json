@@ -1,0 +1,24 @@
+{
+  "id": "8c9246f9aea5",
+  "username": "Haileewange",
+  "source": "x_search",
+  "search_term": "legit or scam",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:57:46.795390",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T00:08:54.488502",
+  "result": {
+    "status": "active",
+    "risk_score": 2.7777777777777777,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation",
+      "Airdrop"
+    ],
+    "text_length": 2898
+  },
+  "completed_at": "2026-04-03T00:09:02.495792"
+}

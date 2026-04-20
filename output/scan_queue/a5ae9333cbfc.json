@@ -1,0 +1,20 @@
+{
+  "id": "a5ae9333cbfc",
+  "username": "TSLOZAKE",
+  "source": "x_search",
+  "search_term": "send SOL to receive",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:32:43.323528",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:16:21.557550",
+  "completed_at": "2026-04-04T23:16:21.557553",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "253fd7e55b50",
+  "username": "JosephMLombardo",
+  "source": "x_search",
+  "search_term": "what do you think about @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T14:42:59.288631",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-05T00:07:47.321219",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  },
+  "completed_at": "2026-04-05T00:07:47.321236"
+}

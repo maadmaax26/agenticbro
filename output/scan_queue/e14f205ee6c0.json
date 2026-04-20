@@ -1,0 +1,20 @@
+{
+  "id": "e14f205ee6c0",
+  "username": "RudyGiuliani",
+  "source": "x_search",
+  "search_term": "wallet drainer",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-02T23:47:31.197113",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:19:39.014947",
+  "completed_at": "2026-04-04T23:19:39.014952",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

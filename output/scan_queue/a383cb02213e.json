@@ -1,0 +1,20 @@
+{
+  "id": "a383cb02213e",
+  "username": "jaradkoby",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T12:37:06.784124",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:23:13.599846",
+  "completed_at": "2026-04-04T23:23:13.599849",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

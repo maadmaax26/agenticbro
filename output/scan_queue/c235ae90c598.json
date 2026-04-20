@@ -1,0 +1,20 @@
+{
+  "id": "c235ae90c598",
+  "username": "adamjohnsonCHI",
+  "source": "x_search",
+  "search_term": "has anyone used @",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T10:21:00.946664",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:28:33.941433",
+  "completed_at": "2026-04-04T23:28:33.941436",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}
