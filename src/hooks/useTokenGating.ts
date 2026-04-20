@@ -56,6 +56,9 @@ const RPC_ENDPOINTS = [
   'https://solana-rpc.publicnode.com',
   'https://rpc.ankr.com/solana',
   'https://api.mainnet-beta.solana.com',
+  'https://solana.api.rpcpool.com',
+  'https://rpc.solana.com',
+  'https://mainnet.helius-rpc.com/?api-key=public',
 ]
 
 // ─── Types ───────────────────────────────────────────────────────────────────
