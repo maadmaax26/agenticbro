@@ -7,7 +7,7 @@
  * Uses the existing useTokenGating hook for data.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTokenGating, isTestWallet } from '../hooks/useTokenGating';
 
