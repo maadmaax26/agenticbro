@@ -2,7 +2,7 @@
  * Token Impersonation Scanner Component
  *
  * Allows users to scan for tokens impersonating a legitimate token by contract address.
- * 3 free scans per user (tracked by wallet address or email)
+ * 5 free scans per user (tracked by wallet address or email)
  * $1 per scan credit via Stripe, USDC, or AGNTCBRO after free scans used
  */
 
