@@ -1,0 +1,20 @@
+{
+  "id": "8dc27f378f5f",
+  "username": "byleridk",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:01:35.152843",
+  "priority": "normal",
+  "attempts": 2,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:16:13.160312",
+  "completed_at": "2026-04-04T23:16:13.160315",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

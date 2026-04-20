@@ -13,8 +13,8 @@
  *   This bypasses @solana/web3.js entirely for maximum reliability.
  *
  * Tier logic (DEV/TESTING PHASE — reduced thresholds):
- *   USD value >= $15   → Holder Tier
- *   USD value >= $15   → Whale Tier
+ *   USD value >= $100   → Holder Tier
+ *   USD value >= $1000   → Whale Tier
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
@@ -48,14 +48,17 @@ const DEXSCREENER_PAIR = 'bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k'
 const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${DEXSCREENER_PAIR}`
 const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
 
-const HOLDER_TIER_USD = 15  // DEV PHASE: reduced from $100
-const WHALE_TIER_USD  = 15  // DEV PHASE: reduced from $1,000
+const HOLDER_TIER_USD = 100  // $100 USD in AGNTCBRO
+const WHALE_TIER_USD  = 1000  // $1000 USD in AGNTCBRO
 
 // Multiple RPC endpoints — tried in order, first success wins
 const RPC_ENDPOINTS = [
   'https://solana-rpc.publicnode.com',
   'https://rpc.ankr.com/solana',
   'https://api.mainnet-beta.solana.com',
+  'https://solana.api.rpcpool.com',
+  'https://rpc.solana.com',
+  'https://mainnet.helius-rpc.com/?api-key=public',
 ]
 
 // ─── Types ───────────────────────────────────────────────────────────────────

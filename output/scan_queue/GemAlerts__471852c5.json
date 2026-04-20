@@ -1,0 +1,21 @@
+{
+  "id": "471852c5",
+  "username": "GemAlerts_",
+  "platform": "Telegram",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-03T17:21:10.217470",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [],
+  "risk_score": 0.0,
+  "attempts": 3,
+  "started_at": "2026-04-04T23:38:11.554837",
+  "completed_at": "2026-04-04T23:38:11.554840",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}
