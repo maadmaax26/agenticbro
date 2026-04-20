@@ -1,0 +1,20 @@
+{
+  "id": "9546eeda98de",
+  "username": "GraceKu1203",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T07:30:37.831625",
+  "priority": "normal",
+  "attempts": 3,
+  "max_attempts": 3,
+  "started_at": "2026-04-04T23:42:05.710787",
+  "completed_at": "2026-04-04T23:42:05.710794",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

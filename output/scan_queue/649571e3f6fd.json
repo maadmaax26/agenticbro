@@ -1,0 +1,23 @@
+{
+  "id": "649571e3f6fd",
+  "username": "Lil_cubbie",
+  "source": "x_search",
+  "search_term": "seed phrase",
+  "mentioned_in": null,
+  "status": "completed",
+  "created_at": "2026-04-03T17:01:53.333335",
+  "priority": "normal",
+  "attempts": 1,
+  "max_attempts": 3,
+  "started_at": "2026-04-03T17:02:45.418117",
+  "result": {
+    "status": "active",
+    "risk_score": 1.6666666666666665,
+    "level": "LOW",
+    "red_flags": [
+      "DM solicitation"
+    ],
+    "text_length": 2358
+  },
+  "completed_at": "2026-04-03T17:02:53.427046"
+}
