@@ -130,6 +130,13 @@ async function validateWithAbstract(phone: string): Promise<Record<string, any> 
 // ── FTC DNC Complaints API ──────────────────────────────────────────────────
 // https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
 // Free API key from api.data.gov
+// NOTE: FTC API does not support phone number filtering directly.
+// For production use, download bulk CSV from:
+// https://www.ftc.gov/policy-notices/open-government/data-sets/do-not-call-data
+// and build a local index.
+//
+// Current implementation: queries recent complaints and filters client-side.
+// This is NOT efficient for production - use the CSV approach.
 interface FTCComplaint {
   id: string;
   attributes: {
@@ -144,33 +151,50 @@ interface FTCComplaint {
   };
 }
 
+// Cache for FTC complaint lookups (in-memory, per-request)
+let ftcComplaintCache: Map<string, FTCComplaint[]> = new Map();
+
 async function queryFTCDNC(phone: string): Promise<{ complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null }> {
   const apiKey = process.env.FTC_API_KEY;
   if (!apiKey) {
-    // No API key - return empty
     return { complaints: [], total: 0, lastComplaintDate: null };
   }
   
   const stripped = phone.replace(/[^0-9]/g, '');
   
+  // Check cache first
+  if (ftcComplaintCache.has(stripped)) {
+    const cached = ftcComplaintCache.get(stripped)!;
+    const lastDate = cached.length > 0 ? cached[0].attributes['created-date']?.split(' ')[0] || null : null;
+    return { complaints: cached, total: cached.length, lastComplaintDate: lastDate };
+  }
+  
   try {
-    // FTC DNC API: search by company-phone-number
-    // Note: The API doesn't support direct phone number filtering, so we query recent
-    // complaints and filter locally. For production, use their CSV bulk downloads.
-    const url = `https://api.ftc.gov/v0/dnc-complaints?api_key=${apiKey}&items_per_page=50`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    // Query recent complaints - this is inefficient but FTC API lacks phone filter
+    // Production solution: use bulk CSV downloads and local database
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    
+    const url = `https://api.ftc.gov/v0/dnc-complaints?api_key=${apiKey}&created_date_from="${thirtyDaysAgo}"&items_per_page=50`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
     
     if (!res.ok) {
       return { complaints: [], total: 0, lastComplaintDate: null };
     }
     
-    const data = await res.json() as { data?: FTCComplaint[]; meta?: { 'record-total'?: number } };
-    const complaints = (data.data || []).filter((c: FTCComplaint) => 
+    const data = await res.json() as { data?: FTCComplaint[] };
+    const allComplaints = data.data || [];
+    
+    // Filter for this phone number
+    const complaints = allComplaints.filter((c: FTCComplaint) => 
       c.attributes?.['company-phone-number'] === stripped
     );
     
+    // Cache the result
+    ftcComplaintCache.set(stripped, complaints);
+    
     const lastDate = complaints.length > 0
-      ? complaints[0].attributes?.['created-date']?.split(' ')[0] || null
+      ? complaints[0].attributes['created-date']?.split(' ')[0] || null
       : null;
     
     return {
