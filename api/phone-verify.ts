@@ -127,6 +127,62 @@ async function validateWithAbstract(phone: string): Promise<Record<string, any> 
   }
 }
 
+// ── FTC DNC Complaints API ──────────────────────────────────────────────────
+// https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
+// Free API key from api.data.gov
+interface FTCComplaint {
+  id: string;
+  attributes: {
+    'company-phone-number': string;
+    'created-date': string;
+    'violation-date': string;
+    'consumer-city': string;
+    'consumer-state': string;
+    'consumer-area-code': string;
+    'subject': string;
+    'recorded-message-or-robocall': 'Y' | 'N';
+  };
+}
+
+async function queryFTCDNC(phone: string): Promise<{ complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null }> {
+  const apiKey = process.env.FTC_API_KEY;
+  if (!apiKey) {
+    // No API key - return empty
+    return { complaints: [], total: 0, lastComplaintDate: null };
+  }
+  
+  const stripped = phone.replace(/[^0-9]/g, '');
+  
+  try {
+    // FTC DNC API: search by company-phone-number
+    // Note: The API doesn't support direct phone number filtering, so we query recent
+    // complaints and filter locally. For production, use their CSV bulk downloads.
+    const url = `https://api.ftc.gov/v0/dnc-complaints?api_key=${apiKey}&items_per_page=50`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    
+    if (!res.ok) {
+      return { complaints: [], total: 0, lastComplaintDate: null };
+    }
+    
+    const data = await res.json() as { data?: FTCComplaint[]; meta?: { 'record-total'?: number } };
+    const complaints = (data.data || []).filter((c: FTCComplaint) => 
+      c.attributes?.['company-phone-number'] === stripped
+    );
+    
+    const lastDate = complaints.length > 0
+      ? complaints[0].attributes?.['created-date']?.split(' ')[0] || null
+      : null;
+    
+    return {
+      complaints,
+      total: complaints.length,
+      lastComplaintDate: lastDate
+    };
+  } catch {
+    return { complaints: [], total: 0, lastComplaintDate: null };
+  }
+}
+
 // ── Heuristic Phone Analysis (no API key needed) ──────────────────────────
 function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any> | null, abstractData: Record<string, any> | null): PhoneRiskResult {
   const redFlags: string[] = [];
@@ -440,12 +496,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   // Try external APIs in parallel
-  const [numverifyData, abstractData] = await Promise.all([
+  const [numverifyData, abstractData, ftcData] = await Promise.all([
     validateWithNumverify(phone),
     validateWithAbstract(phone),
+    queryFTCDNC(phone),
   ]);
   
   const result = analyzePhoneHeuristics(phone, numverifyData, abstractData);
+  
+  // Merge FTC DNC data into threat intel
+  if (ftcData && ftcData.total > 0) {
+    result.threatIntel.knownScamNumber = {
+      flagged: true,
+      source: 'FTC DNC Complaints Database',
+      reports: ftcData.total + (result.threatIntel.knownScamNumber.reports || 0),
+    };
+    if (ftcData.lastComplaintDate) {
+      result.threatIntel.communityReports.lastReport = ftcData.lastComplaintDate;
+    }
+    // Add FTC complaint subjects to red flags
+    const subjects = [...new Set(ftcData.complaints
+      .map((c: any) => c.attributes?.subject)
+      .filter(Boolean))];
+    if (subjects.length > 0) {
+      result.redFlags.unshift(`ftc_complaints (${ftcData.total}) — FTC DNC complaints for: ${subjects.join(', ')}`);
+    }
+  }
   
   res.status(200).json({ success: true, result });
 }
