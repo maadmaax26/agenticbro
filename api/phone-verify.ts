@@ -501,7 +501,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
   
-  const phone = (req.body as Record<string, unknown>)?.phone as string;
+  const body = req.body as Record<string, unknown>;
+  const phone = body?.phone as string;
+  const useQueue = body?.useQueue === true; // If true, queue CDP scan instead of sync
+  
   if (!phone || typeof phone !== 'string') {
     res.status(400).json({ error: 'Missing required field: phone' });
     return;
@@ -511,6 +514,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const stripped = phone.replace(/[^0-9+]/g, '');
   if (stripped.length < 7 || stripped.length > 16) {
     res.status(400).json({ error: 'Invalid phone number format. Include country code, e.g. +1234567890' });
+    return;
+  }
+  
+  // If useQueue is true, return a job ID for async CDP scan
+  if (useQueue) {
+    // Import Supabase client
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    const { data: job, error } = await supabase
+      .from('scan_jobs')
+      .insert({
+        scan_type: 'phone_community',
+        payload: { phone: stripped, sources: ['800notes', 'whocalledme'] },
+        status: 'pending',
+        priority: 5,
+      })
+      .select('id, status, created_at')
+      .single();
+    
+    if (error) {
+      res.status(500).json({ error: 'Failed to queue scan job' });
+      return;
+    }
+    
+    res.status(202).json({
+      success: true,
+      job_id: job.id,
+      status: 'queued',
+      poll_url: `/api/phone-scan/${job.id}`,
+      message: 'CDP scan queued. Poll poll_url for results.',
+    });
     return;
   }
   
