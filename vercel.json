@@ -25,6 +25,9 @@
     "api/phone-verify.ts": {
       "maxDuration": 15
     },
+    "api/phone-scan.ts": {
+      "maxDuration": 15
+    },
     "api/scan/[job_id].ts": {
       "maxDuration": 10
     }
@@ -32,6 +35,8 @@
   "rewrites": [
     { "source": "/api/scan/:job_id", "destination": "/api/scan/[job_id].ts" },
     { "source": "/api/scan", "destination": "/api/scan.ts" },
+    { "source": "/api/phone-scan/:job_id", "destination": "/api/phone-scan/[job_id].ts" },
+    { "source": "/api/phone-scan", "destination": "/api/phone-scan.ts" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
