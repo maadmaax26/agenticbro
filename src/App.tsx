@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
+import { useCredits } from './lib/payments'
 import MobileMenu from './components/MobileMenu'
 
 import ValueProposition from './components/ValueProposition'
@@ -134,35 +135,14 @@ function App() {
   const [showScamDatabase, setShowScamDatabase] = useState(false)
   const [locale, setLocale] = useState<Locale>('en')
 
-  // Get wallet-specific scan count - memoized to ensure consistent key
-  const getWalletScanKey = useCallback(() => {
-    if (!publicKey) return 'priorityFreeScans';
-    return `priorityFreeScans_${publicKey.toString()}`;
-  }, [publicKey]);
-
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   
-  // Track if we've initialized the scan count for the current wallet
-  const scanKeyRef = useRef<string | null>(null);
-  
-  const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
-    // Use a stable key based on wallet
-    const key = publicKey ? `priorityFreeScans_${publicKey.toString()}` : 'priorityFreeScans';
-    scanKeyRef.current = key;
-    const saved = localStorage.getItem(key);
-    // Default to 5 - will be updated by useEffect when holderTierUnlocked is known
-    return saved ? Math.max(0, parseInt(saved, 10)) : 5;
-  });
-
-  // Update scan count - uses functional update to avoid stale closure
-  const updateScanCount = useCallback((newCount: number) => {
-    const key = getWalletScanKey();
-    const storedKey = localStorage.getItem(key);
-    console.log('[updateScanCount] Key:', key, 'New count:', newCount, 'Stored:', storedKey);
-    setPriorityScansRemaining(newCount);
-    localStorage.setItem(key, String(newCount));
-    console.log('[updateScanCount] Saved. Verify:', localStorage.getItem(key));
-  }, [getWalletScanKey]);
+  // Use the same credits system as Profile Verifier
+  const {
+    freeScansRemaining: priorityScansRemaining,
+    hasScans,
+    useCredit
+  } = useCredits(null, null, publicKey?.toString() || null);
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -173,34 +153,6 @@ function App() {
   const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'tiktok' | 'facebook'>('instagram')
   const [socialUsername, setSocialUsername] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
-
-  // Update scan count when wallet connects or holder tier status changes
-  // IMPORTANT: Only initialize ONCE per wallet, don't reset after decrement
-  useEffect(() => {
-    const key = getWalletScanKey();
-    
-    // Skip if this is the same wallet we already initialized
-    if (scanKeyRef.current === key) {
-      return;
-    }
-    
-    // Update the ref to track current wallet
-    scanKeyRef.current = key;
-    
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      // Use saved value if it exists
-      const savedCount = Math.max(0, parseInt(saved, 10));
-      console.log('[useEffect] Restoring saved count:', savedCount, 'for key:', key);
-      setPriorityScansRemaining(savedCount);
-    } else {
-      // Only set default if no saved value exists
-      const defaultScans = holderTierUnlocked ? 50 : 5;
-      console.log('[useEffect] Setting default count:', defaultScans, 'for key:', key);
-      setPriorityScansRemaining(defaultScans);
-      localStorage.setItem(key, String(defaultScans));
-    }
-  }, [publicKey, holderTierUnlocked, getWalletScanKey]);
 
   // Tier denial state removed — now scrolls to scan section
 
@@ -374,9 +326,9 @@ function App() {
 
     if (!inputValue) return
     
-    console.log('[runScan] Starting scan. isTest:', isTest, 'priorityScansRemaining:', priorityScansRemaining, 'holderTierUnlocked:', holderTierUnlocked);
+    console.log('[runScan] Starting scan. hasScans:', hasScans, 'priorityScansRemaining:', priorityScansRemaining, 'holderTierUnlocked:', holderTierUnlocked);
     
-    if (!isTest && priorityScansRemaining <= 0) {
+    if (!hasScans) {
       if (holderTierUnlocked) {
         alert('Monthly scan limit reached (50 scans). Resets each month.')
       } else {
@@ -385,12 +337,9 @@ function App() {
       return
     }
 
-    // Decrement scan count for all users
-    if (!isTest) {
-      const newCount = priorityScansRemaining - 1;
-      console.log('[runScan] Decrementing:', priorityScansRemaining, '>', newCount);
-      updateScanCount(newCount);
-    }
+    // Use credit from the shared credits system
+    const creditResult = useCredit();
+    console.log('[runScan] Credit used:', creditResult, 'Remaining:', creditResult.remaining);
 
     setIsScanning(true)
     setScanMessages([])
@@ -571,8 +520,8 @@ function App() {
     } finally {
       setIsScanning(false)
     }
-  }, [scanMode, walletInput, channelInput, tokenInput, isTest, priorityScansRemaining,
-      holderTierUnlocked, updateScanCount, addMsg])
+  }, [scanMode, walletInput, channelInput, tokenInput, hasScans, priorityScansRemaining,
+      holderTierUnlocked, useCredit, addMsg])
 
   return (
     <div className="min-h-screen" style={{
