@@ -134,27 +134,36 @@ function App() {
   const [showScamDatabase, setShowScamDatabase] = useState(false)
   const [locale, setLocale] = useState<Locale>('en')
 
-  // Get wallet-specific scan count
-  const getWalletScanKey = () => {
+  // Get wallet-specific scan count - memoized to ensure consistent key
+  const getWalletScanKey = useCallback(() => {
     if (!publicKey) return 'priorityFreeScans';
     return `priorityFreeScans_${publicKey.toString()}`;
-  };
+  }, [publicKey]);
 
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
+  
+  // Track if we've initialized the scan count for the current wallet
+  const scanKeyRef = useRef<string | null>(null);
+  
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
     // Use a stable key based on wallet
     const key = publicKey ? `priorityFreeScans_${publicKey.toString()}` : 'priorityFreeScans';
+    scanKeyRef.current = key;
     const saved = localStorage.getItem(key);
     // Default to 5 - will be updated by useEffect when holderTierUnlocked is known
     return saved ? Math.max(0, parseInt(saved, 10)) : 5;
   });
 
-  // Update scan count when wallet changes or holder tier status changes
+  // Update scan count - uses functional update to avoid stale closure
   const updateScanCount = useCallback((newCount: number) => {
     const key = getWalletScanKey();
-    setPriorityScansRemaining(newCount);
+    console.log('[updateScanCount] Decrementing scan count. Key:', key, 'New count:', newCount);
+    setPriorityScansRemaining(prev => {
+      console.log('[updateScanCount] Previous count:', prev, 'Setting to:', newCount);
+      return newCount;
+    });
     localStorage.setItem(key, String(newCount));
-  }, [publicKey]);
+  }, [getWalletScanKey]);
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -167,19 +176,32 @@ function App() {
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   // Update scan count when wallet connects or holder tier status changes
+  // IMPORTANT: Only initialize ONCE per wallet, don't reset after decrement
   useEffect(() => {
     const key = getWalletScanKey();
+    
+    // Skip if this is the same wallet we already initialized
+    if (scanKeyRef.current === key) {
+      return;
+    }
+    
+    // Update the ref to track current wallet
+    scanKeyRef.current = key;
+    
     const saved = localStorage.getItem(key);
     if (saved) {
       // Use saved value if it exists
-      setPriorityScansRemaining(Math.max(0, parseInt(saved, 10)));
+      const savedCount = Math.max(0, parseInt(saved, 10));
+      console.log('[useEffect] Restoring saved count:', savedCount, 'for key:', key);
+      setPriorityScansRemaining(savedCount);
     } else {
       // Only set default if no saved value exists
       const defaultScans = holderTierUnlocked ? 50 : 5;
+      console.log('[useEffect] Setting default count:', defaultScans, 'for key:', key);
       setPriorityScansRemaining(defaultScans);
       localStorage.setItem(key, String(defaultScans));
     }
-  }, [publicKey, holderTierUnlocked]);
+  }, [publicKey, holderTierUnlocked, getWalletScanKey]);
 
   // Tier denial state removed — now scrolls to scan section
 
