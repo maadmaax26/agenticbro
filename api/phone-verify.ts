@@ -35,7 +35,7 @@ interface PhoneEntry {
   description: string;
 }
 
-const KNOWN_PATTERNS: PhoneEntry[] = [
+const _KNOWN_PATTERNS: PhoneEntry[] = [
   // Virtual phone / VoIP services commonly used for scams
   { pattern: '^\\+1(800|833|844|855|866|877|888)', type: 'toll_free_scam', label: 'Toll-Free Number', points: 5, description: 'Toll-free numbers are frequently used by scam call centers and cannot be traced to individuals' },
   { pattern: '^\\+1(900)', type: 'scam_operation', label: 'Premium Rate Number', points: 20, description: 'Premium-rate numbers are almost exclusively associated with phone scams and fraud' },
@@ -172,7 +172,6 @@ async function queryFTCDNC(phone: string): Promise<{ complaints: FTCComplaint[];
   try {
     // Query recent complaints - this is inefficient but FTC API lacks phone filter
     // Production solution: use bulk CSV downloads and local database
-    const today = new Date().toISOString().split('T')[0];
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     
     const url = `https://api.ftc.gov/v0/dnc-complaints?api_key=${apiKey}&created_date_from="${thirtyDaysAgo}"&items_per_page=50`;
@@ -354,11 +353,6 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
   };
 }
 
-// ── Threat Intel Analysis ──────────────────────────────────────────────────
-
-import { execSync } from 'child_process';
-import path from 'path';
-
 function analyzeThreatIntel(
   phone: string,
   carrier: string,
@@ -414,7 +408,8 @@ function analyzeThreatIntel(
       lastReport: null
     };
   }
-  const hasReports = communityData.total > 5 || scamFlagged;
+  // hasReports is used to determine if community reports are meaningful
+  // const _hasReports = communityData.total > 5 || scamFlagged;
 
   // 4. Breach Exposure — LIVE via HackCheck.io or HaveIBeenPwned
   // TODO: Add HackCheck.io API integration when key available
