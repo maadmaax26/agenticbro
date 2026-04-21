@@ -142,9 +142,11 @@ function App() {
 
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
   const [priorityScansRemaining, setPriorityScansRemaining] = useState(() => {
-    const saved = localStorage.getItem(getWalletScanKey());
-    const defaultScans = holderTierUnlocked ? 50 : 5; // 50 monthly for holders, 5 for free users
-    return saved ? Math.max(0, parseInt(saved, 10)) : defaultScans;
+    // Use a stable key based on wallet
+    const key = publicKey ? `priorityFreeScans_${publicKey.toString()}` : 'priorityFreeScans';
+    const saved = localStorage.getItem(key);
+    // Default to 5 - will be updated by useEffect when holderTierUnlocked is known
+    return saved ? Math.max(0, parseInt(saved, 10)) : 5;
   });
 
   // Update scan count when wallet changes or holder tier status changes
@@ -163,14 +165,20 @@ function App() {
   const [socialUsername, setSocialUsername] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
-  // Update default scans when holder tier status changes
+  // Update scan count when wallet connects or holder tier status changes
   useEffect(() => {
-    const saved = localStorage.getItem(getWalletScanKey());
-    if (!saved) {
+    const key = getWalletScanKey();
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      // Use saved value if it exists
+      setPriorityScansRemaining(Math.max(0, parseInt(saved, 10)));
+    } else {
+      // Only set default if no saved value exists
       const defaultScans = holderTierUnlocked ? 50 : 5;
       setPriorityScansRemaining(defaultScans);
+      localStorage.setItem(key, String(defaultScans));
     }
-  }, [holderTierUnlocked]);
+  }, [publicKey, holderTierUnlocked]);
 
   // Tier denial state removed — now scrolls to scan section
 
