@@ -374,12 +374,17 @@ function App() {
                      : ''
 
     if (!inputValue) return
-    if (!isTest && priorityScansRemaining <= 0 && !holderTierUnlocked) {
-      alert('Scan limit reached. Hold $100+ in AGNTCBRO for 50 monthly Priority Scans.')
+    if (!isTest && priorityScansRemaining <= 0) {
+      if (holderTierUnlocked) {
+        alert('Monthly scan limit reached (50 scans). Resets each month.')
+      } else {
+        alert('Scan limit reached. Hold $100+ in AGNTCBRO for 50 monthly Priority Scans.')
+      }
       return
     }
 
-    if (!isTest && priorityScansRemaining > 0) updateScanCount(priorityScansRemaining - 1)
+    // Decrement scan count for all users
+    if (!isTest) updateScanCount(priorityScansRemaining - 1)
 
     setIsScanning(true)
     setScanMessages([])
