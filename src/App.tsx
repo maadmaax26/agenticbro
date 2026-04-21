@@ -151,9 +151,10 @@ function App() {
 
   // Update scan count when wallet changes or holder tier status changes
   const updateScanCount = useCallback((newCount: number) => {
+    const key = getWalletScanKey();
     setPriorityScansRemaining(newCount);
-    localStorage.setItem(getWalletScanKey(), String(newCount));
-  }, []);
+    localStorage.setItem(key, String(newCount));
+  }, [publicKey]);
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
