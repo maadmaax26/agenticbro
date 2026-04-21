@@ -157,12 +157,11 @@ function App() {
   // Update scan count - uses functional update to avoid stale closure
   const updateScanCount = useCallback((newCount: number) => {
     const key = getWalletScanKey();
-    console.log('[updateScanCount] Decrementing scan count. Key:', key, 'New count:', newCount);
-    setPriorityScansRemaining(prev => {
-      console.log('[updateScanCount] Previous count:', prev, 'Setting to:', newCount);
-      return newCount;
-    });
+    const storedKey = localStorage.getItem(key);
+    console.log('[updateScanCount] Key:', key, 'New count:', newCount, 'Stored:', storedKey);
+    setPriorityScansRemaining(newCount);
     localStorage.setItem(key, String(newCount));
+    console.log('[updateScanCount] Saved. Verify:', localStorage.getItem(key));
   }, [getWalletScanKey]);
 
   const [isScanning, setIsScanning]     = useState(false)
@@ -374,6 +373,9 @@ function App() {
                      : ''
 
     if (!inputValue) return
+    
+    console.log('[runScan] Starting scan. isTest:', isTest, 'priorityScansRemaining:', priorityScansRemaining, 'holderTierUnlocked:', holderTierUnlocked);
+    
     if (!isTest && priorityScansRemaining <= 0) {
       if (holderTierUnlocked) {
         alert('Monthly scan limit reached (50 scans). Resets each month.')
@@ -384,7 +386,11 @@ function App() {
     }
 
     // Decrement scan count for all users
-    if (!isTest) updateScanCount(priorityScansRemaining - 1)
+    if (!isTest) {
+      const newCount = priorityScansRemaining - 1;
+      console.log('[runScan] Decrementing:', priorityScansRemaining, '>', newCount);
+      updateScanCount(newCount);
+    }
 
     setIsScanning(true)
     setScanMessages([])
