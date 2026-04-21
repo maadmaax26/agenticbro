@@ -523,7 +523,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const result = analyzePhoneHeuristics(phone, numverifyData, abstractData);
   
-  // Merge FTC DNC data into threat intel
+  // Merge FTC DNC data into threat intel and adjust risk score
   if (ftcData && ftcData.total > 0) {
     result.threatIntel.knownScamNumber = {
       flagged: true,
@@ -540,6 +540,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (subjects.length > 0) {
       result.redFlags.unshift(`ftc_complaints (${ftcData.total}) — FTC DNC complaints for: ${subjects.join(', ')}`);
     }
+    // Boost risk score based on FTC complaints
+    // Each complaint adds ~0.2 points, capped at +3 for 15+ complaints
+    const ftcBoost = Math.min(3, Math.round(ftcData.total * 0.2) / 10);
+    result.riskScore = Math.min(10, parseFloat((result.riskScore + ftcBoost).toFixed(1)));
+    result.riskLevel = getRiskLevel(result.riskScore);
+  }
+  
+  // Boost risk score based on community reports (CDP scraper)
+  if (result.threatIntel.communityReports.count > 0) {
+    const communityBoost = Math.min(2, Math.round(result.threatIntel.communityReports.count * 0.1) / 10);
+    result.riskScore = Math.min(10, parseFloat((result.riskScore + communityBoost).toFixed(1)));
+    result.riskLevel = getRiskLevel(result.riskScore);
+    
+    // Add community reports to red flags if significant
+    if (result.threatIntel.communityReports.count >= 10) {
+      result.redFlags.unshift(`community_reports (${result.threatIntel.communityReports.count}) — Multiple community complaints reported`);
+    }
+  }
+  
+  // Update recommendation based on final risk level
+  if (result.riskLevel === 'CRITICAL') {
+    result.recommendation = '🚨 DO NOT engage with this number. Strong indicators of scam/fraud operation. Block immediately and report to FTC (reportfraud.ftc.gov) or FCC (fcc.gov/complaints).';
+  } else if (result.riskLevel === 'HIGH') {
+    result.recommendation = '⚠️ High risk — do not share personal information, send money, or follow instructions from this number. Verify the caller through official channels before engaging.';
+  } else if (result.riskLevel === 'MEDIUM') {
+    result.recommendation = '⚡ Exercise caution. Verify the caller\'s identity through official channels. Do not share personal or financial information unless independently verified.';
   }
   
   res.status(200).json({ success: true, result });
