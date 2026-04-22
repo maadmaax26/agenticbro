@@ -19,15 +19,16 @@ export default function AgntcbroBalanceTracker() {
   const [retrying, setRetrying] = useState(false);
   const walletAddr = publicKey?.toBase58() ?? '';
 
-  // Force a fresh balance check by clearing session cache
+  // Force a fresh balance check by clearing session cache and triggering reload
   const forceRefresh = useCallback(() => {
     if (!walletAddr) return;
     setRetrying(true);
     const key = `agntcbro_gating_${walletAddr}`;
     try { sessionStorage.removeItem(key); } catch {}
-    // useTokenGating will re-fetch since cache is cleared
-    // We need a small delay then reset the hook state
-    setTimeout(() => setRetrying(false), 2000);
+    // Small delay to show retrying state, then reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   }, [walletAddr]);
 
   // Mark last successful update
@@ -129,9 +130,9 @@ export default function AgntcbroBalanceTracker() {
                 style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
               >
                 {retrying ? (
-                  <><div className="w-3 h-3 border-2 border-red-500/40 border-t-red-400 rounded-full animate-spin" /> Retrying…</>
+                  <><div className="w-3 h-3 border-2 border-red-500/40 border-t-red-400 rounded-full animate-spin" /> Reloading…</>
                 ) : (
-                  <>⚠️ RPC Error — Tap to retry</>
+                  <>⚠️ Connection Error — Tap to retry</>
                 )}
               </button>
             ) : (
