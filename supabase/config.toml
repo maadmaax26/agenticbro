@@ -1,0 +1,11 @@
+# Supabase Edge Functions Configuration
+# https://supabase.com/docs/guides/functions
+
+[functions.phone-verify]
+verify_jwt = false  # Allow public access for phone verification
+
+[functions.social-scan]
+verify_jwt = false  # Allow public access for social scanning
+
+[functions.profile-verify]
+verify_jwt = false  # Allow public access for profile verification
