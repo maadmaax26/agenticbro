@@ -52,13 +52,15 @@ const HOLDER_TIER_USD = 100  // $100 USD in AGNTCBRO
 const WHALE_TIER_USD  = 1000  // $1000 USD in AGNTCBRO
 
 // Multiple RPC endpoints — tried in order, first success wins
+// Mobile-optimized: prioritize endpoints with good CORS support
 const RPC_ENDPOINTS = [
   'https://solana-rpc.publicnode.com',
   'https://rpc.ankr.com/solana',
   'https://api.mainnet-beta.solana.com',
   'https://solana.api.rpcpool.com',
-  'https://rpc.solana.com',
   'https://mainnet.helius-rpc.com/?api-key=public',
+  'https://rpc.solana.com',
+  'https://solana-api.projectserum.com',
 ]
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -175,6 +177,9 @@ async function fetchBalanceFromRpc(
   ownerAddress: string,
 ): Promise<number | null> {
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+    
     const res = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -188,7 +193,10 @@ async function fetchBalanceFromRpc(
           { encoding: 'jsonParsed' },
         ],
       }),
+      signal: controller.signal,
     })
+    
+    clearTimeout(timeoutId)
 
     if (!res.ok) {
       console.warn(`[TokenGating] ${rpcUrl} HTTP ${res.status}`)
