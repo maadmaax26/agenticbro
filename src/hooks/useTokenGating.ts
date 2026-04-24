@@ -178,11 +178,15 @@ async function fetchBalanceFromRpc(
 ): Promise<number | null> {
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout for mobile
     
     const res = await fetch(rpcUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        // Add CORS headers for mobile
+        'Access-Control-Request-Method': 'POST',
+      },
       body: JSON.stringify({
         jsonrpc: '2.0',
         id: 1,
@@ -194,6 +198,8 @@ async function fetchBalanceFromRpc(
         ],
       }),
       signal: controller.signal,
+      // Include credentials for mobile CORS
+      credentials: 'omit',
     })
     
     clearTimeout(timeoutId)
@@ -226,8 +232,15 @@ async function fetchBalanceFromRpc(
     }
 
     return balance
-  } catch (err) {
-    console.warn(`[TokenGating] ${rpcUrl} fetch failed:`, err)
+  } catch (err: any) {
+    // More detailed error logging for mobile debugging
+    if (err?.name === 'AbortError') {
+      console.warn(`[TokenGating] ${rpcUrl} timeout (15s)`)
+    } else if (err?.message?.includes('Failed to fetch') || err?.message?.includes('NetworkError')) {
+      console.warn(`[TokenGating] ${rpcUrl} network error - likely CORS or connectivity issue on mobile`)
+    } else {
+      console.warn(`[TokenGating] ${rpcUrl} fetch failed:`, err?.message || err)
+    }
     return null
   }
 }

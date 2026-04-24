@@ -135,6 +135,15 @@ export default function AgntcbroBalanceTracker() {
                   <>⚠️ Connection Error — Tap to retry</>
                 )}
               </button>
+            ) : balance === 0 ? (
+              // Zero balance - show buy prompt instead of error
+              <button
+                onClick={() => window.open('https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump', '_blank')}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
+                style={{ background: 'rgba(57,255,20,0.12)', border: '1px solid rgba(57,255,20,0.35)', color: '#39ff14' }}
+              >
+                💰 No AGNTCBRO — Tap to buy
+              </button>
             ) : (
               <>
                 <p className="text-white font-bold text-lg leading-tight">
