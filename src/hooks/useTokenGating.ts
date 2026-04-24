@@ -182,10 +182,8 @@ async function fetchBalanceFromRpc(
     
     const res = await fetch(rpcUrl, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        // Add CORS headers for mobile
-        'Access-Control-Request-Method': 'POST',
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -198,8 +196,6 @@ async function fetchBalanceFromRpc(
         ],
       }),
       signal: controller.signal,
-      // Include credentials for mobile CORS
-      credentials: 'omit',
     })
     
     clearTimeout(timeoutId)
@@ -279,47 +275,54 @@ async function fetchLivePriceOrNull(): Promise<number | null> {
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function useTokenGating(): TokenGatingState {
+export function useTokenGating(): TokenGatingState & { refresh: () => void } {
   const { publicKey } = useWallet()
   const [state, setState] = useState<TokenGatingState>(DEFAULT_STATE)
   const walletAddr = publicKey?.toBase58() ?? ''
   const runId  = useRef(0)
   const lastAddr = useRef('') // survives publicKey → null on disconnect
+  const refreshing = useRef(false) // prevent concurrent refreshes
 
   // Core fetch logic — returns true on success, false on failure.
   const runCheck = useCallback(async (addr: string, currentRun: number): Promise<boolean> => {
     try {
-      const [balance, livePrice] = await Promise.all([
+      // Use Promise.allSettled so one failure doesn't cancel the other
+      const [balanceResult, priceResult] = await Promise.allSettled([
         fetchBalance(addr),
         fetchLivePriceOrNull(),
       ])
 
       if (currentRun !== runId.current) return false
 
-      // If either fetch totally failed, don't cache — allow retry
-      if (balance === null || livePrice === null) {
-        console.warn('[TokenGating] Fetch incomplete — balance:', balance, 'price:', livePrice)
+      const balance = balanceResult.status === 'fulfilled' ? balanceResult.value : null
+      const livePrice = priceResult.status === 'fulfilled' ? priceResult.value : null
+
+      // If balance fetch failed entirely, that's an error
+      if (balance === null) {
+        console.warn('[TokenGating] Balance fetch failed')
         setState(prev => ({
           ...prev,
           loading: false,
-          error: balance === null
-            ? 'Could not read wallet balance — RPCs may be rate-limited.'
-            : 'Could not fetch token price — price feeds unavailable.',
+          error: 'Could not read wallet balance. Check your connection and try again.',
         }))
         return false
       }
 
-      const usdValue           = balance * livePrice
-      const holderTierUnlocked = usdValue >= HOLDER_TIER_USD
-      const whaleTierUnlocked  = usdValue >= WHALE_TIER_USD
+      // If price is unavailable, still show balance with $0 value rather than error
+      const effectivePrice = livePrice ?? 0
+      const usdValue = balance * effectivePrice
+      const holderTierUnlocked = livePrice !== null && usdValue >= HOLDER_TIER_USD
+      const whaleTierUnlocked = livePrice !== null && usdValue >= WHALE_TIER_USD
 
-      console.log(`[TokenGating] ${balance} AGNTCBRO × $${livePrice} = $${usdValue.toFixed(4)} USD`)
+      console.log(`[TokenGating] ${balance} AGNTCBRO × $${effectivePrice} = $${usdValue.toFixed(4)} USD`)
       console.log(`[TokenGating] Holder: ${holderTierUnlocked ? 'UNLOCKED' : 'locked'} | Whale: ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
 
-      // Only cache successful results — never cache failures
-      writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
+      // Only cache if both succeeded
+      if (livePrice !== null) {
+        writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
+      }
 
-      setState({ balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked, loading: false, error: null })
+      setState({ balance, usdValue, tokenPriceUsd: effectivePrice, holderTierUnlocked, whaleTierUnlocked, loading: false, error: null })
       return true
     } catch (err) {
       if (currentRun !== runId.current) return false
@@ -329,7 +332,7 @@ export function useTokenGating(): TokenGatingState {
     }
   }, [])
 
-  // Stable check function — reads cache first, then fetches with one retry.
+  // Stable check function — reads cache first, then fetches with retries.
   const doCheck = useCallback(async (addr: string) => {
     // Return cached result immediately if already checked this session
     const cached = readCache(addr)
@@ -345,38 +348,54 @@ export function useTokenGating(): TokenGatingState {
 
     const ok = await runCheck(addr, currentRun)
 
-    // If first attempt failed, retry once after 2 seconds
+    // If first attempt failed, retry up to 2 more times with increasing delay
     if (!ok && currentRun === runId.current) {
-      console.log('[TokenGating] First attempt failed — retrying in 2s…')
-      await new Promise(r => setTimeout(r, 2000))
-      if (currentRun !== runId.current) return // wallet changed during wait
-      setState(prev => ({ ...prev, loading: true, error: null }))
-      await runCheck(addr, currentRun)
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const delay = attempt * 3000 // 3s, 6s — generous for mobile
+        console.log(`[TokenGating] Retry #${attempt} in ${delay / 1000}s…`)
+        await new Promise(r => setTimeout(r, delay))
+        if (currentRun !== runId.current) return // wallet changed during wait
+        setState(prev => ({ ...prev, loading: true, error: null }))
+        const retryOk = await runCheck(addr, currentRun)
+        if (retryOk) break
+      }
     }
   }, [runCheck])
 
-  // Single effect: fires exactly when the wallet address appears or disappears.
-  // Using walletAddr (derived from publicKey) as the sole trigger avoids the
-  // race condition where `connected` and `publicKey` update in separate renders.
+  // Debounce wallet address changes to avoid reacting to brief nulls during
+  // mobile wallet reconnection. Mobile adapters can momentarily set publicKey
+  // to null before setting it back, causing unnecessary cache clears.
   useEffect(() => {
-    if (walletAddr) {
-      lastAddr.current = walletAddr
-      // ── Test wallet: skip all API calls and unlock everything immediately ──
-      if (isTestWallet(walletAddr)) {
-        setState(TEST_WALLET_STATE)
-        return
-      }
-      doCheck(walletAddr)
-    } else {
-      // publicKey became null — wallet disconnected or changed.
-      // Use lastAddr to clear the cache even though publicKey is now null.
-      if (lastAddr.current) {
-        clearCache(lastAddr.current)
-        lastAddr.current = ''
-      }
-      setState(DEFAULT_STATE)
+    // If wallet disconnected, wait briefly before clearing state (mobile reconnect race)
+    if (!walletAddr) {
+      const timer = setTimeout(() => {
+        if (lastAddr.current) {
+          clearCache(lastAddr.current)
+          lastAddr.current = ''
+        }
+        setState(DEFAULT_STATE)
+      }, 500) // 500ms debounce for disconnect
+      return () => clearTimeout(timer)
     }
+
+    lastAddr.current = walletAddr
+
+    // ── Test wallet: skip all API calls and unlock everything immediately ──
+    if (isTestWallet(walletAddr)) {
+      setState(TEST_WALLET_STATE)
+      return
+    }
+
+    doCheck(walletAddr)
   }, [walletAddr, doCheck])
 
-  return state
+  // Expose a manual refresh function that clears cache and re-fetches
+  const refresh = useCallback(() => {
+    if (!walletAddr || refreshing.current) return
+    refreshing.current = true
+    clearCache(walletAddr)
+    doCheck(walletAddr).finally(() => { refreshing.current = false })
+  }, [walletAddr, doCheck])
+
+  return { ...state, refresh }
 }
