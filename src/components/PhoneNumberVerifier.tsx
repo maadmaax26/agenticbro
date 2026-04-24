@@ -314,7 +314,7 @@ export default function PhoneNumberVerifier() {
                 </div>
                 <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
                   <p className="text-xs text-gray-600">
-                    Flag values: premium_rate_number(25) · known_scam_operation(20) · spoofed_caller_id(15) · voip_virtual_number(15) · spam_dialer_service(15) · toll_free_untraceable(10) · burner_disposable(10) · high_risk_country(10) · no_carrier_info(10) · mass_call_pattern(5)
+                    Flag values: invalid_number(25) · premium_rate_number(25) · voip_number(20) · spoofed_caller_id(15) · disposable_number(15) · spam_dialer_service(15) · high_risk_country(15) · toll_free_untraceable(10) · landline_text(10) · no_carrier_info(10) · medium_risk_country(8) · unknown_carrier(5)
                   </p>
                 </div>
               </div>
