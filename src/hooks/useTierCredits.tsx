@@ -3,8 +3,9 @@
  *
  * Manages monthly scan credits for Holder and Whale tier users.
  * 
- * Holder Tier (10K+ AGNTCBRO): 20 free scans per month
- * Whale Tier (100K+ AGNTCBRO): 20 free scans per month
+ * Free Tier: 5 free scans
+ * Holder Tier ($100+ AGNTCBRO): 50 ALL scans/month (Profile, Phone, Token, Channel, Priority)
+ * Whale Tier ($1,000+ AGNTCBRO): Unlimited scans
  * 
  * After monthly allowance is used, users can purchase credits at $1/scan.
  */
@@ -13,7 +14,8 @@ import { useState, useEffect, useCallback } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const TIER_MONTHLY_SCANS = 20; // 20 free scans per month for both tiers
+export const FREE_TIER_SCANS = 5; // Free scans for everyone
+export const HOLDER_TIER_SCANS = 50; // 50 ALL scans/month for Holder Tier
 export const SCAN_PRICE_USD = 1; // $1 per scan after allowance
 
 // Test wallets get unlimited scans
@@ -24,10 +26,10 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TierCreditsState {
-  tierMonthlyScans: number;       // Total monthly allowance (20)
+  tierMonthlyScans: number;       // Total monthly allowance (50 for Holder)
   tierScansUsed: number;          // Scans used this month
-  tierScansRemaining: number;     // Scans remaining this month
-  paidCredits: number;            // Purchased credits (don't expire)
+  tierScansRemaining: number;    // Scans remaining this month
+  paidCredits: number;           // Purchased credits (don't expire)
   totalAvailable: number;         // tierScansRemaining + paidCredits
   hasScans: boolean;              // Can scan?
   loading: boolean;
@@ -64,13 +66,13 @@ function getStorageKey(walletAddress: string): string {
 
 export function useTierCredits(walletAddress: string | null): TierCreditsState {
   const [data, setData] = useState<TierCreditsData>({
-    tierMonthlyScans: TIER_MONTHLY_SCANS,
+    tierMonthlyScans: HOLDER_TIER_SCANS,
     tierScansUsed: 0,
-    tierScansRemaining: TIER_MONTHLY_SCANS,
+    tierScansRemaining: HOLDER_TIER_SCANS,
     paidCredits: 0,
-    totalAvailable: TIER_MONTHLY_SCANS,
+    totalAvailable: HOLDER_TIER_SCANS,
     hasScans: true,
-    loading: true,
+    loading: false,
     isTestWallet: false,
   });
 
@@ -122,14 +124,14 @@ export function useTierCredits(walletAddress: string | null): TierCreditsState {
     }
     
     const paidCredits = storedPaidCredits ? parseInt(storedPaidCredits, 10) || 0 : 0;
-    const remaining = Math.max(0, TIER_MONTHLY_SCANS - used);
+    const remaining = Math.max(0, HOLDER_TIER_SCANS - used);
     const total = remaining + paidCredits;
     
     // Save updated data if month changed
     localStorage.setItem(storageKey, JSON.stringify({ month, used }));
     
     setData({
-      tierMonthlyScans: TIER_MONTHLY_SCANS,
+      tierMonthlyScans: HOLDER_TIER_SCANS,
       tierScansUsed: used,
       tierScansRemaining: remaining,
       paidCredits,
