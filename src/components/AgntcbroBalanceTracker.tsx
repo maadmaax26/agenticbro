@@ -197,17 +197,18 @@ export default function AgntcbroBalanceTracker() {
               className="rounded-lg p-3"
               style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2"
+                >
                 <span className="text-xs text-gray-400">Holder Tier Progress</span>
                 <span className="text-xs font-semibold" style={{ color: holderTierUnlocked ? '#4ade80' : '#fbbf24' }}>
-                  {holderTierUnlocked ? '✅ Unlocked' : `$${(15 - usdValue).toFixed(2)} away`}
+                  {holderTierUnlocked ? '✅ 50 scans/month' : `$${(100 - usdValue).toFixed(0)} away`}
                 </span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-1000"
                   style={{
-                    width: `${Math.min((usdValue / 15) * 100, 100)}%`,
+                    width: `${Math.min((usdValue / 100) * 100, 100)}%`,
                     background: holderTierUnlocked
                       ? 'linear-gradient(90deg, #10b981, #34d399)'
                       : 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
@@ -215,8 +216,13 @@ export default function AgntcbroBalanceTracker() {
                 />
               </div>
               <p className="text-[10px] text-gray-600 mt-1">
-                Hold $15+ USD of $AGNTCBRO to unlock unlimited scans, gem advisory & whale insights
+                Hold $100+ USD of $AGNTCBRO to unlock 50 ALL scans/month (Profile, Phone, Token, Channel)
               </p>
+              {whaleTierUnlocked && (
+                <p className="text-[10px] text-emerald-400 mt-1">
+                  🐋 Whale Tier: Unlimited scans unlocked!
+                </p>
+              )}
             </div>
           )}
 
