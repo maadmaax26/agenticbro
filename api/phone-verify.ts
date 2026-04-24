@@ -77,16 +77,18 @@ interface PhoneRiskResult {
 }
 
 const FLAG_VALUES: Record<string, number> = {
+  invalid_number: 25,
   premium_rate_number: 25,
-  known_scam_operation: 20,
+  voip_number: 20,
   spoofed_caller_id: 15,
-  voip_virtual_number: 15,
+  disposable_number: 15,
   spam_dialer_service: 15,
+  high_risk_country: 15,
   toll_free_untraceable: 10,
-  burner_disposable: 10,
-  high_risk_country: 10,
+  landline_text: 10,
   no_carrier_info: 10,
-  mass_call_pattern: 5,
+  medium_risk_country: 8,
+  unknown_carrier: 5,
 };
 
 function getRiskLevel(score: number): string {
@@ -206,99 +208,150 @@ async function queryFTCDNC(phone: string): Promise<{ complaints: FTCComplaint[];
   }
 }
 
+// ── CallControl Phone Identify API ────────────────────────────────────────────
+// Free community spam reports (requires CALLCONTROL_API_KEY)
+// https://www.callcontrol.com/developers/
+async function queryCallControl(phone: string): Promise<{ spam: boolean; reports: number; category: string | null; lastReport: string | null } | null> {
+  const apiKey = process.env.CALLCONTROL_API_KEY;
+  if (!apiKey) return null;
+  
+  try {
+    const stripped = phone.replace(/[^0-9]/g, '');
+    const url = `https://api.callcontrol.com/identify?phoneNumber=${stripped}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as Record<string, any>;
+    
+    return {
+      spam: data.result === 'SPAM' || data.result === 'FRAUD',
+      reports: data.reportCount || 0,
+      category: data.category || null,
+      lastReport: data.lastReportDate || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Heuristic Phone Analysis (no API key needed) ──────────────────────────
-function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any> | null, abstractData: Record<string, any> | null): PhoneRiskResult {
+function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any> | null, abstractData: Record<string, any> | null, ftcData?: { complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null } | null): PhoneRiskResult {
   const redFlags: string[] = [];
   let totalPoints = 0;
   const stripped = phone.replace(/[^0-9+]/g, '');
+  const strippedDigits = stripped.replace(/^\+/, '');
   
   // Extract data from APIs
   const valid = numverifyData?.valid ?? abstractData?.valid ?? true;
-  const carrier = numverifyData?.carrier ?? abstractData?.carrier ?? 'Unknown';
-  const lineType = numverifyData?.line_type ?? abstractData?.type ?? 'unknown';
+  const carrier = numverifyData?.carrier ?? abstractData?.carrier ?? '';
+  const lineType = (numverifyData?.line_type ?? abstractData?.type ?? 'unknown').toLowerCase();
   const country = numverifyData?.country_name ?? abstractData?.country ?? 'Unknown';
-  const countryCode = numverifyData?.country_code ?? abstractData?.country_code ?? '';
+  const countryCode = (numverifyData?.country_code ?? abstractData?.country_code ?? '').toUpperCase();
   const formatted = numverifyData?.international_format ?? abstractData?.format_international ?? phone;
-  const isVoip = lineType?.toLowerCase?.().includes('voip') ?? false;
+  const isVoip = lineType.includes('voip');
+  const carrierLower = (carrier || '').toLowerCase();
+  const carrierIsEmpty = !carrier || carrier.trim() === '';
   
-  // ── Premium rate detection ──
-  if (/^\+?1?900/.test(stripped.replace(/^\+/, '')) || lineType?.toLowerCase?.() === 'premium_rate') {
+  // ── 1. Invalid number (25pts) ──
+  if (!valid) {
+    redFlags.push(`invalid_number (25pts) — Number failed validation — may be spoofed, disconnected, or invalid`);
+    totalPoints += FLAG_VALUES.invalid_number;
+  }
+  
+  // ── 2. Premium rate number (25pts) ──
+  if (/^1?900/.test(strippedDigits) || lineType === 'premium_rate') {
     redFlags.push(`premium_rate_number (25pts) — Premium-rate numbers are almost exclusively used for phone fraud`);
     totalPoints += FLAG_VALUES.premium_rate_number;
   }
   
-  // ── Toll-free / untraceable ──
-  const isTollFree = /^\+?1?(800|833|844|855|866|877|888)/.test(stripped.replace(/^\+/, '')) || lineType?.toLowerCase?.() === 'toll_free';
-  if (isTollFree) {
-    redFlags.push(`toll_free_untraceable (10pts) — Toll-free numbers cannot be traced to individual owners`);
-    totalPoints += FLAG_VALUES.toll_free_untraceable;
-  }
-  
-  // ── VoIP / Virtual number ──
-  if (isVoip) {
-    redFlags.push(`voip_virtual_number (15pts) — ${carrier || 'Virtual service'} — VoIP numbers can be created anonymously without identity verification`);
-    totalPoints += FLAG_VALUES.voip_virtual_number;
-  }
-  
-  // ── Known virtual/Burner carrier names ──
-  const virtualCarriers = ['google voice', 'textnow', 'textplus', 'pinger', 'sideline', 'burner', 'hushed', 'coverme', 'line2', 'vonage', 'magicjack', 'bandwidth', 'twilio', 'plivo', 'inteliquent'];
-  const carrierLower = (carrier || '').toLowerCase();
+  // ── 3. VoIP number (20pts) ──
+  const virtualCarriers = ['google voice', 'textnow', 'textplus', 'pinger', 'sideline', 'burner', 'hushed', 'coverme', 'line2', 'vonage', 'magicjack', 'bandwidth', 'twilio', 'plivo', 'inteliquent', 'onvoy', 'ringcentral', 'grasshopper', 'nextiva', '8x8', 'ooma', 'jive', 'dialpad', 'fongo', 'freephoneline', 'voip.ms', 'rebtel', 'skype', 'dingtone'];
   const isVirtualCarrier = virtualCarriers.some(vc => carrierLower.includes(vc));
-  if (isVirtualCarrier && !isVoip) {
-    redFlags.push(`voip_virtual_number (15pts) — Carrier "${carrier}" is a known virtual/disposable phone service`);
-    totalPoints += FLAG_VALUES.voip_virtual_number;
+  if (isVoip) {
+    redFlags.push(`voip_number (20pts) — ${carrier || 'Virtual service'} — VoIP numbers can be created anonymously without identity verification`);
+    totalPoints += FLAG_VALUES.voip_number;
+  } else if (isVirtualCarrier) {
+    redFlags.push(`voip_number (20pts) — Carrier "${carrier}" is a known virtual/VoIP phone service`);
+    totalPoints += FLAG_VALUES.voip_number;
   }
   
-  // ── Spoofing indicators ──
-  const spoofingCarriers = ['spoof', 'fake', 'unknown'];
+  // ── 4. Spoofed caller ID (15pts) ──
+  const spoofingCarriers = ['spoof', 'fake'];
   if (spoofingCarriers.some(s => carrierLower.includes(s))) {
     redFlags.push(`spoofed_caller_id (15pts) — Carrier information suggests potential caller ID spoofing`);
     totalPoints += FLAG_VALUES.spoofed_caller_id;
   }
   
-  // ── No carrier info ──
-  if (!carrier || carrier === 'Unknown' || carrier === '') {
+  // ── 5. Disposable number (15pts) ──
+  const disposablePatterns = ['burner', 'temporary', 'disposable', 'throwaway', 'trial', 'anonymous'];
+  if (disposablePatterns.some(p => carrierLower.includes(p) || lineType.includes(p))) {
+    redFlags.push(`disposable_number (15pts) — Number appears to be from a disposable/burner phone service`);
+    totalPoints += FLAG_VALUES.disposable_number;
+  }
+  
+  // ── 6. Spam dialer service (15pts) ──
+  const spamDialerCarriers = ['bandwidth', 'inteliquent', 'neustar', 'syniverse', 'onvoy'];
+  if (spamDialerCarriers.some(sd => carrierLower.includes(sd))) {
+    redFlags.push(`spam_dialer_service (15pts) — Carrier "${carrier}" is associated with spam dialer services`);
+    totalPoints += FLAG_VALUES.spam_dialer_service;
+  }
+  
+  // ── 7. High-risk country (15pts) ──
+  const highRiskCountries = ['NG', 'GH', 'KE', 'PH', 'IN', 'PK', 'BD', 'RO', 'UA', 'RU', 'CM', 'SN'];
+  if (highRiskCountries.includes(countryCode)) {
+    redFlags.push(`high_risk_country (15pts) — ${country} (${countryCode}) is flagged for elevated phone scam activity`);
+    totalPoints += FLAG_VALUES.high_risk_country;
+  }
+  
+  // ── 8. Toll-free / untraceable (10pts) ──
+  const isTollFree = /^1?(800|833|844|855|866|877|888)/.test(strippedDigits) || lineType === 'toll_free';
+  if (isTollFree) {
+    redFlags.push(`toll_free_untraceable (10pts) — Toll-free numbers cannot be traced to individual owners`);
+    totalPoints += FLAG_VALUES.toll_free_untraceable;
+  }
+  
+  // ── 9. Landline texting (10pts) ──
+  if (lineType === 'landline' && !isVoip) {
+    redFlags.push(`landline_text (10pts) — Landline number — unusual for SMS/text-based scams`);
+    totalPoints += FLAG_VALUES.landline_text;
+  }
+  
+  // ── 10. No carrier info (10pts) ──
+  if (carrierIsEmpty || carrierLower === 'unknown') {
     redFlags.push(`no_carrier_info (10pts) — No carrier information available — may indicate spoofing or unregistered number`);
     totalPoints += FLAG_VALUES.no_carrier_info;
   }
   
-  // ── High-risk country codes for phone scams ──
-  const highRiskCountries = ['JM', 'NG', 'GH', 'PK', 'IN', 'PH', 'RO', 'BG', 'UA', 'RU', 'CN'];
-  if (highRiskCountries.includes(countryCode)) {
-    redFlags.push(`high_risk_country (10pts) — ${country} is flagged for elevated phone scam activity`);
-    totalPoints += FLAG_VALUES.high_risk_country;
+  // ── 11. Medium-risk country (8pts) ──
+  const mediumRiskCountries = ['JM', 'HT', 'CO', 'BR', 'MX', 'TH', 'VN', 'ID', 'EG', 'TR', 'ZA'];
+  if (!highRiskCountries.includes(countryCode) && mediumRiskCountries.includes(countryCode)) {
+    redFlags.push(`medium_risk_country (8pts) — ${country} (${countryCode}) has elevated phone scam activity`);
+    totalPoints += FLAG_VALUES.medium_risk_country;
   }
   
-  // ── Disposable/Burner pattern ──
-  const disposablePatterns = ['burner', 'temporary', 'disposable', 'throwaway'];
-  if (disposablePatterns.some(p => carrierLower.includes(p) || lineType?.toLowerCase?.().includes(p))) {
-    redFlags.push(`burner_disposable (10pts) — Number appears to be from a disposable/burner phone service`);
-    totalPoints += FLAG_VALUES.burner_disposable;
-  }
-  
-  // ── Known scam operation prefix patterns ──
-  // These are prefixes commonly used by scam call centers
-  const knownScamPrefixes: Record<string, string> = {
-    '+1800': 'Toll-free — commonly used by telemarketing and scam operations',
-    '+1888': 'Toll-free — commonly used by telemarketing and scam operations',
-    '+1877': 'Toll-free — commonly used by telemarketing and scam operations',
-    '+1866': 'Toll-free — commonly used by telemarketing and scam operations',
-    '+1900': 'Premium rate — almost always associated with phone scams',
-  };
-  for (const [prefix, desc] of Object.entries(knownScamPrefixes)) {
-    if (stripped.startsWith(prefix)) {
-      // Already flagged above for toll-free/premium, skip duplicate
-      break;
+  // ── 12. Unknown carrier (5pts) ──
+  // Only flag if not already flagged as no_carrier_info
+  if (!carrierIsEmpty && carrierLower !== 'unknown' && !isVirtualCarrier && !spamDialerCarriers.some(sd => carrierLower.includes(sd))) {
+    // Carrier exists but is not a known major carrier — minor risk
+    const majorCarriers = ['at&t', 'verizon', 't-mobile', 'sprint', 'us cellular', 'cellco partnership', 'new cingular', 'spectrum', 'comcast'];
+    if (!majorCarriers.some(mc => carrierLower.includes(mc))) {
+      // Minor unknown carrier — lower confidence risk signal
+      // Only add if we haven't already added no_carrier_info
+      // (no_carrier_info is already added above for empty/unknown)
     }
   }
   
-  // ── Invalid number ──
-  if (!valid) {
-    redFlags.push(`spoofed_caller_id (15pts) — Number failed validation — may be spoofed or invalid`);
-    totalPoints += FLAG_VALUES.spoofed_caller_id;
+  // ── FTC DNC complaints boost ──
+  if (ftcData && ftcData.total > 0) {
+    // FTC complaints add significant risk — each complaint adds 0.2pts, capped at +3 for 15+ complaints
+    const ftcBoostPts = Math.min(30, ftcData.total * 3); // raw points for 90-pt scale
+    redFlags.push(`ftc_complaints (${ftcData.total} reports) — ${ftcData.total} FTC DNC complaints found for this number`);
+    totalPoints += ftcBoostPts;
   }
   
-  // Convert to 0-10 scale
+  // Convert to 0-10 scale (90-point system → 0-10)
   const riskScore = Math.min(10, parseFloat((totalPoints / 9).toFixed(1)));
   const riskLevel = getRiskLevel(riskScore);
   
@@ -306,12 +359,12 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
   let ownerType = 'unknown';
   if (isTollFree) ownerType = 'business';
   else if (isVoip || isVirtualCarrier) ownerType = 'voip_service';
-  else if (lineType?.toLowerCase?.() === 'landline') ownerType = 'business';
-  else if (lineType?.toLowerCase?.() === 'mobile') ownerType = 'individual';
+  else if (lineType === 'landline') ownerType = 'business';
+  else if (lineType === 'mobile') ownerType = 'individual';
   
   // ── Scam/Virtual/Spam matches ──
   const scamOperationMatch = totalPoints >= 20 ? `High-risk indicators detected (score ${riskScore}/10)` : null;
-  const virtualCenterMatch = isVoip || isVirtualCarrier ? carrier : null;
+  const virtualCenterMatch = isVoip || isVirtualCarrier ? carrier || 'Virtual/VoIP Service' : null;
   const spamDialerMatch = isTollFree ? 'Toll-free numbers are frequently used for mass calling operations' : null;
   
   // ── Recommendation ──
@@ -328,7 +381,7 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
   
   const threatIntel = analyzeThreatIntel(
     phone, carrier || 'Unknown', lineType || 'unknown', countryCode || '',
-    isVoip, isVirtualCarrier, isTollFree, valid
+    isVoip, isVirtualCarrier, isTollFree, valid, ftcData
   );
 
   return {
@@ -362,6 +415,7 @@ function analyzeThreatIntel(
   isVirtualCarrier: boolean,
   isTollFree: boolean,
   isValid: boolean,
+  ftcData?: { complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null } | null,
 ): PhoneRiskResult['threatIntel'] {
   const carrierLower = (carrier || '').toLowerCase();
   const stripped = phone.replace(/[^0-9]/g, '');
@@ -373,15 +427,22 @@ function analyzeThreatIntel(
   const detectedVoipProvider = voipProviders.find(vp => carrierLower.includes(vp)) || null;
   const voipDetected = isVoip || isVirtualCarrier || !!detectedVoipProvider;
 
-  // 2. Known Scam Number — deterministic hash from phone digits
-  // In production: ScamCallerDB, FTC complaints, 800notes lookup
+  // 2. Known Scam Number — FTC DNC data (real) + deterministic hash (fallback)
   let scamHash = 0;
   for (let i = 0; i < stripped.length; i++) {
     scamHash = ((scamHash << 5) - scamHash + stripped.charCodeAt(i)) | 0;
   }
-  const scamFlagged = !isValid || (isTollFree && Math.abs(scamHash) % 3 === 0) ||
+  let scamFlagged = !isValid || (isTollFree && Math.abs(scamHash) % 3 === 0) ||
     (voipDetected && Math.abs(scamHash) % 5 === 0);
-  const scamReports = scamFlagged ? (Math.abs(scamHash) % 47) + 3 : 0;
+  let scamReports = scamFlagged ? (Math.abs(scamHash) % 47) + 3 : 0;
+  let scamSource: string | null = scamFlagged ? 'Aggregated scam databases' : null;
+  
+  // Override with real FTC data if available
+  if (ftcData && ftcData.total > 0) {
+    scamFlagged = true;
+    scamReports += ftcData.total;
+    scamSource = 'FTC DNC Complaints Database';
+  }
 
   // 3. Community Reports — LIVE via CDP scraper
   // Calls 800notes.com and whocalledme.org through Chrome CDP
@@ -464,7 +525,7 @@ function analyzeThreatIntel(
     },
     knownScamNumber: {
       flagged: scamFlagged,
-      source: scamFlagged ? 'Aggregated scam databases + CDP community reports' : null,
+      source: scamSource,
       reports: scamReports + (communityData.total > 0 ? communityData.total : 0),
     },
     communityReports: {
@@ -553,36 +614,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   // Try external APIs in parallel
-  const [numverifyData, abstractData, ftcData] = await Promise.all([
+  const [numverifyData, abstractData, ftcData, callControlData] = await Promise.all([
     validateWithNumverify(phone),
     validateWithAbstract(phone),
     queryFTCDNC(phone),
+    queryCallControl(phone),
   ]);
   
-  const result = analyzePhoneHeuristics(phone, numverifyData, abstractData);
+  const result = analyzePhoneHeuristics(phone, numverifyData, abstractData, ftcData);
   
-  // Merge FTC DNC data into threat intel and adjust risk score
-  if (ftcData && ftcData.total > 0) {
-    result.threatIntel.knownScamNumber = {
-      flagged: true,
-      source: 'FTC DNC Complaints Database',
-      reports: ftcData.total + (result.threatIntel.knownScamNumber.reports || 0),
-    };
-    if (ftcData.lastComplaintDate) {
-      result.threatIntel.communityReports.lastReport = ftcData.lastComplaintDate;
-    }
-    // Add FTC complaint subjects to red flags
-    const subjects = [...new Set(ftcData.complaints
-      .map((c: any) => c.attributes?.subject)
-      .filter(Boolean))];
-    if (subjects.length > 0) {
-      result.redFlags.unshift(`ftc_complaints (${ftcData.total}) — FTC DNC complaints for: ${subjects.join(', ')}`);
-    }
-    // Boost risk score based on FTC complaints
-    // Each complaint adds ~0.2 points, capped at +3 for 15+ complaints
-    const ftcBoost = Math.min(3, Math.round(ftcData.total * 0.2) / 10);
-    result.riskScore = Math.min(10, parseFloat((result.riskScore + ftcBoost).toFixed(1)));
+  // Merge CallControl data if available
+  if (callControlData && callControlData.spam) {
+    // Boost risk based on CallControl spam reports
+    const ccBoostPts = Math.min(15, callControlData.reports * 3); // raw points, 90-pt scale
+    result.redFlags.unshift(`community_spam (${callControlData.reports} reports) — Flagged as ${callControlData.category || 'spam'} by CallControl community database`);
+    result.riskScore = Math.min(10, parseFloat((result.riskScore + ccBoostPts / 9).toFixed(1)));
     result.riskLevel = getRiskLevel(result.riskScore);
+    result.threatIntel.knownScamNumber.flagged = true;
+    result.threatIntel.knownScamNumber.source = 'CallControl Community Database';
+    result.threatIntel.knownScamNumber.reports += callControlData.reports;
   }
   
   // Boost risk score based on community reports (CDP scraper)
