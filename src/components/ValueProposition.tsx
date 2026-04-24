@@ -187,7 +187,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                   with full situational awareness.
                 </p>
                 <ul className="space-y-3">
-                  {['Identify signal channels by actual win/loss record, not hype', 'Detect early whale accumulation before price moves', 'Spot bot activity and coordinated pump-and-dump setups', 'Get risk-adjusted trade recommendations based on real data', 'Prioritise your scans -- Whale Tier users get unlimited access'].map((item, i) => (
+                  {['Identify signal channels by actual win/loss record, not hype', 'Detect early whale accumulation before price moves', 'Spot bot activity and coordinated pump-and-dump setups', 'Get risk-adjusted trade recommendations based on real data', 'Holder Tier: 50 ALL scans/month (Profile, Phone, Token, Channel)', 'Whale Tier: Unlimited scans'].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-gray-300">
                       <span className="text-purple-400 mt-0.5 flex-shrink-0">✔</span>
                       {item}
