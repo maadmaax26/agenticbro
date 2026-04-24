@@ -44,9 +44,11 @@ const TEST_WALLET_STATE: TokenGatingState = {
 
 const AGNTCBRO_MINT = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
 
-const DEXSCREENER_PAIR = 'bwapiak2d43zt443x6wczj4rdeamdcba5mdrzz3rqd9k'
-const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/pairs/solana/${DEXSCREENER_PAIR}`
+// Use token-based endpoint (more resilient than pair-based — pair IDs can change)
+const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/tokens/${AGNTCBRO_MINT}`
 const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
+// Additional fallbacks
+const JUPITER_PRICE_API = `https://api.jup.ag/price/v2?ids=${AGNTCBRO_MINT}`
 
 const HOLDER_TIER_USD = 100  // $100 USD in AGNTCBRO
 const WHALE_TIER_USD  = 1000  // $1000 USD in AGNTCBRO
@@ -132,9 +134,21 @@ async function fetchPriceFromDexScreener(): Promise<number | null> {
       return null
     }
     const data = await res.json()
-    const raw = data?.pair?.priceUsd ?? data?.pairs?.[0]?.priceUsd ?? null
+    // Token-based endpoint returns { pairs: [...] } — find best pair (highest liquidity)
+    const pairs = data?.pairs
+    if (!Array.isArray(pairs) || pairs.length === 0) {
+      console.warn('[TokenGating] DexScreener returned no pairs for token')
+      return null
+    }
+    // Sort by liquidity to pick the most reliable pair
+    const sorted = [...pairs].sort((a: any, b: any) =>
+      (b?.liquidity?.usd ?? 0) - (a?.liquidity?.usd ?? 0)
+    )
+    const best = sorted[0]
+    const raw = best?.priceUsd ?? null
     if (raw === null) return null
     const price = parseFloat(raw)
+    console.log(`[TokenGating] DexScreener price: $${price} (pair: ${best?.pairAddress ?? 'unknown'}, liq: $${best?.liquidity?.usd ?? 0})`)
     return isNaN(price) || price <= 0 ? null : price
   } catch (err) {
     console.warn('[TokenGating] DexScreener fetch error:', err)
@@ -255,18 +269,49 @@ async function fetchBalance(ownerAddress: string): Promise<number | null> {
   return null // null = total failure (distinct from genuine 0 balance)
 }
 
+async function fetchPriceFromJupiter(): Promise<number | null> {
+  try {
+    const res = await fetch(JUPITER_PRICE_API, { headers: { Accept: 'application/json' } })
+    if (!res.ok) {
+      console.warn('[TokenGating] Jupiter returned', res.status)
+      return null
+    }
+    const data = await res.json()
+    const priceStr = data?.data?.[AGNTCBRO_MINT]?.price ?? null
+    if (priceStr === null) return null
+    const price = parseFloat(priceStr)
+    return isNaN(price) || price <= 0 ? null : price
+  } catch (err) {
+    console.warn('[TokenGating] Jupiter fetch error:', err)
+    return null
+  }
+}
+
 async function fetchLivePriceOrNull(): Promise<number | null> {
-  const dex = await fetchPriceFromDexScreener()
+  // Try all price sources in parallel for speed
+  const [dexResult, pumpResult, jupiterResult] = await Promise.allSettled([
+    fetchPriceFromDexScreener(),
+    fetchPriceFromPumpFun(),
+    fetchPriceFromJupiter(),
+  ])
+
+  const dex = dexResult.status === 'fulfilled' ? dexResult.value : null
+  const pump = pumpResult.status === 'fulfilled' ? pumpResult.value : null
+  const jupiter = jupiterResult.status === 'fulfilled' ? jupiterResult.value : null
+
   if (dex !== null) {
     console.log('[TokenGating] Price (DexScreener):', dex)
     return dex
   }
 
-  console.warn('[TokenGating] DexScreener unavailable, trying pump.fun...')
-  const pump = await fetchPriceFromPumpFun()
   if (pump !== null) {
     console.log('[TokenGating] Price (pump.fun):', pump)
     return pump
+  }
+
+  if (jupiter !== null) {
+    console.log('[TokenGating] Price (Jupiter):', jupiter)
+    return jupiter
   }
 
   console.error('[TokenGating] All price feeds failed')
