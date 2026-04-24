@@ -326,6 +326,11 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
           </div>
         </div>
 
+        {/* Tier scan counts */}
+        <div className="text-xs text-gray-500 mb-4">
+          <span>Free: 5 | Holder: 50/mo | Whale: Unlimited</span>
+        </div>
+
         {/* No scans remaining */}
         {!hasScans ? (
           <div
