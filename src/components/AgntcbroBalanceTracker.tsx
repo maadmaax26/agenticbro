@@ -13,23 +13,20 @@ import { useTokenGating, isTestWallet } from '../hooks/useTokenGating';
 
 export default function AgntcbroBalanceTracker() {
   const { publicKey, connected } = useWallet();
-  const { balance, usdValue, tokenPriceUsd, holderTierUnlocked, whaleTierUnlocked, loading, error } = useTokenGating();
+  const { balance, usdValue, tokenPriceUsd, holderTierUnlocked, whaleTierUnlocked, loading, error, refresh } = useTokenGating();
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const walletAddr = publicKey?.toBase58() ?? '';
 
-  // Force a fresh balance check by clearing session cache and triggering reload
+  // Force a fresh balance check without full page reload
   const forceRefresh = useCallback(() => {
     if (!walletAddr) return;
     setRetrying(true);
-    const key = `agntcbro_gating_${walletAddr}`;
-    try { sessionStorage.removeItem(key); } catch {}
-    // Small delay to show retrying state, then reload
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
-  }, [walletAddr]);
+    refresh();
+    // Clear retrying state after a reasonable delay
+    setTimeout(() => setRetrying(false), 5000);
+  }, [walletAddr, refresh]);
 
   // Mark last successful update
   useEffect(() => {
@@ -38,17 +35,14 @@ export default function AgntcbroBalanceTracker() {
     }
   }, [loading, balance, error]);
 
-  // Auto-refresh every 60s while connected
+  // Auto-refresh every 60s while connected (uses hook's refresh, not cache-clear hack)
   useEffect(() => {
-    if (!connected) return;
+    if (!connected || !walletAddr) return;
     const interval = setInterval(() => {
-      if (walletAddr) {
-        const key = `agntcbro_gating_${walletAddr}`;
-        try { sessionStorage.removeItem(key); } catch {}
-      }
+      refresh();
     }, 60000);
     return () => clearInterval(interval);
-  }, [connected, walletAddr]);
+  }, [connected, walletAddr, refresh]);
 
   if (!connected) return null;
 
