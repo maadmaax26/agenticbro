@@ -432,7 +432,9 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
               <span className="text-purple-400 ml-2">+ {credits} Paid</span>
             )}
           </div>
-          <span className="text-gray-500">Priority scan includes honeypot & holder analysis</span>
+          <div className="flex items-center gap-3 text-gray-400">
+            <span>Free: 5 | Holder: 50/mo | Whale: Unlimited</span>
+          </div>
         </div>
 
         {/* Error */}
