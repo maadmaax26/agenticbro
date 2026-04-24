@@ -51,18 +51,17 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
           <div className="text-sm text-gray-500">
             <p className="mb-2">Holder Tier includes:</p>
             <ul className="text-left max-w-sm mx-auto space-y-1">
-              <li>• 20 free scans per month</li>
-              <li>• Profile Verifier with all platforms</li>
-              <li>• Token Scanner (multi-chain)</li>
+              <li>• <span className="text-green-400 font-bold">50 ALL scans/month</span> (Profile, Phone, Token, Channel, Priority)</li>
+              <li>• Profile Verifier — X, IG, TikTok, FB, Telegram</li>
+              <li>• Phone Identifier — FTC data + community reports</li>
+              <li>• Token Scanner — Honeypot + contract analysis</li>
+              <li>• Channel Analysis — Alpha group credibility</li>
               <li>• Priority Token Scanner</li>
               <li>• Fake Token Detector</li>
-              <li>• $1/scan after free allowance</li>
-              <li>• 25 monthly trading signals</li>
-              <li>• 5 AI-powered market insights</li>
-              <li>• 10 market analysis requests</li>
+              <li>• $1/scan after monthly allowance</li>
               <li>• 💎 Gem Advise — AI-ranked token recommendations</li>
-              <li>• 🎰 Meme Coin Analyzer — Emerging meme coin opportunities</li>
-              <li>• 📡 Alpha Feed — real-time Telegram alpha calls</li>
+              <li>• 🎰 Meme Coin Analyzer</li>
+              <li>• 📡 Alpha Feed — real-time Telegram calls</li>
             </ul>
           </div>
         </div>
