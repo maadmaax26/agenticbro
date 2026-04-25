@@ -54,6 +54,7 @@ interface ProfileVerifyResult {
     confidence: 'HIGH' | 'MEDIUM' | 'LOW';
     scanDate: string;
     dataSource: 'supabase_queue' | 'pattern_analysis' | 'fallback';
+    botDetection?: { botScore: number; classification: string; flags: BotFlagLite[]; engagementAnalysis?: EngagementAnalysisLite };
 }
 
 // ─── Supabase Queue-Based Scanner ────────────────────────────────────────────────
@@ -298,6 +299,247 @@ function formatAccountAge(days: number): string {
     return `${Math.floor(days / 365)}+ years`;
 }
 
+// ── Inline: Bot Detection (lightweight, for serverless) ──────────────────────
+// Full version lives in src/lib/bot-detection.ts (used by frontend)
+
+interface BotFlagLite {
+  id: string; name: string; points: number; description: string; detail?: string;
+}
+
+// ── Inline: Engagement Analysis (lightweight, for serverless) ────────────────
+// Full version lives in src/lib/engagement-analysis.ts (used by frontend)
+
+interface EngagementPatternsLite {
+  ghostComments: { detected: boolean; replyCount: number; visibleReplies: number; hiddenRatio: number };
+  viewInflation: { detected: boolean; views: number; followers: number; ratio: number };
+  engagementPods: { detected: boolean; podAccounts: string[]; overlapScore: number; firstCommenters: string[] };
+  coordinatedTiming: { detected: boolean; waves: number; avgInterval: number; burstScore: number };
+  activityPattern: { detected: boolean; activeHours: number[]; sleepGapHours: number; botScore: number };
+}
+
+interface EngagementAnalysisLite {
+  patterns: EngagementPatternsLite;
+  flags: { id: string; name: string; severity: string; points: number; maxPoints: number; description: string; detail: string }[];
+  overallScore: number;
+  summary: string;
+}
+
+function analyzeEngagementLite(workerData: WorkerEngagementDataLite): EngagementAnalysisLite | null {
+  if (!workerData.recentTweets || workerData.recentTweets.length === 0) return null;
+
+  const tweets = workerData.recentTweets;
+  const followers = workerData.followers || 0;
+
+  // Ghost Comments
+  let totalReply = 0, totalVisible = 0;
+  for (const t of tweets) { totalReply += t.replyCount; totalVisible += t.visibleReplies; }
+  const hidden = totalReply - totalVisible;
+  const hiddenRatio = totalReply > 0 ? hidden / totalReply : 0;
+  const ghostComments: EngagementPatternsLite['ghostComments'] = {
+    detected: hiddenRatio > 0.5 && totalReply > 5,
+    replyCount: totalReply, visibleReplies: totalVisible,
+    hiddenRatio: Math.round(hiddenRatio * 100) / 100,
+  };
+
+  // View Inflation
+  const avgViews = tweets.reduce((s, t) => s + t.views, 0) / tweets.length;
+  const viewRatio = followers > 0 ? avgViews / followers : 0;
+  const viewInflation: EngagementPatternsLite['viewInflation'] = {
+    detected: viewRatio > 10 && avgViews > 1000,
+    views: Math.round(avgViews), followers,
+    ratio: Math.round(viewRatio * 10) / 10,
+  };
+
+  // Engagement Pods
+  const commenterCounts = new Map<string, number>();
+  let tweetsWithComments = 0;
+  for (const t of tweets) {
+    if (t.firstCommenters.length > 0) {
+      tweetsWithComments++;
+      for (const c of t.firstCommenters) commenterCounts.set(c, (commenterCounts.get(c) || 0) + 1);
+    }
+  }
+  const podThreshold = Math.max(2, tweetsWithComments * 0.4);
+  const podAccounts = [...commenterCounts.entries()].filter(([, c]) => c >= podThreshold).map(([a]) => a);
+  const firstCommenters = [...commenterCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([a]) => a);
+  const overlapScore = tweetsWithComments > 0
+    ? Math.min(1, [...commenterCounts.values()].filter(c => c >= 2).length / (tweetsWithComments * 0.5)) : 0;
+  const engagementPods: EngagementPatternsLite['engagementPods'] = {
+    detected: podAccounts.length >= 3, podAccounts,
+    overlapScore: Math.round(overlapScore * 100) / 100, firstCommenters,
+  };
+
+  // Coordinated Timing
+  const allTimes = tweets.flatMap(t => t.commentTimes).sort((a, b) => a - b);
+  const BURST_WINDOW = 5;
+  let bursts = 0, inBurst = false, clustered = 0;
+  for (let i = 1; i < allTimes.length; i++) {
+    if (allTimes[i] - allTimes[i - 1] <= BURST_WINDOW) {
+      if (!inBurst) { bursts++; inBurst = true; }
+      clustered++;
+    } else { inBurst = false; }
+  }
+  const avgInterval = allTimes.length > 1 ? Math.round(allTimes.reduce((s, _, i) => i > 0 ? s + (allTimes[i] - allTimes[i - 1]) : s, 0) / (allTimes.length - 1)) : 0;
+  const burstScore = allTimes.length > 0 ? clustered / allTimes.length : 0;
+  const coordinatedTiming: EngagementPatternsLite['coordinatedTiming'] = {
+    detected: burstScore > 0.5 && bursts >= 2, waves: bursts,
+    avgInterval, burstScore: Math.round(burstScore * 100) / 100,
+  };
+
+  // 24/7 Activity
+  const hours = tweets.filter(t => t.postedAt).map(t => new Date(t.postedAt).getHours());
+  const uniqueHours = [...new Set(hours)].sort((a, b) => a - b);
+  let maxGap = 0;
+  for (let i = 1; i < uniqueHours.length; i++) maxGap = Math.max(maxGap, uniqueHours[i] - uniqueHours[i - 1]);
+  if (uniqueHours.length > 1) maxGap = Math.max(maxGap, (24 - uniqueHours[uniqueHours.length - 1]) + uniqueHours[0]);
+  let botScore = 0;
+  if (uniqueHours.length >= 20) botScore = 1.0;
+  else if (uniqueHours.length >= 16) botScore = 0.8;
+  else if (uniqueHours.length >= 14 || maxGap < 4) botScore = 0.6;
+  else if (maxGap < 6) botScore = 0.4;
+  else botScore = 0.1;
+  const activityPattern: EngagementPatternsLite['activityPattern'] = {
+    detected: botScore > 0.5, activeHours: uniqueHours,
+    sleepGapHours: maxGap, botScore: Math.round(botScore * 100) / 100,
+  };
+
+  // Build flags
+  const flags: EngagementAnalysisLite['flags'] = [];
+  if (ghostComments.detected) {
+    const pts = hiddenRatio > 0.9 ? 20 : hiddenRatio > 0.7 ? 15 : 10;
+    flags.push({ id: 'engagement_ghost_comments', name: 'Ghost Comments', severity: hiddenRatio > 0.9 ? 'critical' : hiddenRatio > 0.7 ? 'high' : 'medium', points: pts, maxPoints: 20, description: 'Reply count far exceeds visible replies', detail: `${totalReply} shown, ${totalVisible} visible (${Math.round(hiddenRatio * 100)}% hidden)` });
+  }
+  if (viewInflation.detected) {
+    const pts = viewRatio > 50 ? 15 : viewRatio > 20 ? 12 : 7;
+    flags.push({ id: 'engagement_view_inflation', name: 'View Inflation', severity: viewRatio > 50 ? 'critical' : viewRatio > 20 ? 'high' : 'medium', points: pts, maxPoints: 15, description: 'View count disproportionate to follower count', detail: `${avgViews >= 1000 ? `${(avgViews / 1000).toFixed(1)}K` : Math.round(avgViews)} views / ${followers.toLocaleString()} followers (${viewInflation.ratio}x ratio)` });
+  }
+  if (engagementPods.detected) {
+    const pts = podAccounts.length >= 5 ? 15 : 12;
+    flags.push({ id: 'engagement_pod', name: 'Engagement Pod', severity: podAccounts.length >= 5 ? 'critical' : 'high', points: pts, maxPoints: 15, description: 'Same accounts consistently appear in first comments', detail: `${podAccounts.length} accounts appear in first comments consistently` });
+  }
+  if (coordinatedTiming.detected) {
+    const pts = burstScore > 0.8 ? 10 : 6;
+    flags.push({ id: 'engagement_coordinated_timing', name: 'Coordinated Timing', severity: burstScore > 0.8 ? 'high' : 'medium', points: pts, maxPoints: 10, description: 'Comments arrive in coordinated waves', detail: `Comments arrive in ${bursts} burst(s), avg ${avgInterval}s apart` });
+  }
+  if (activityPattern.detected) {
+    const pts = botScore > 0.8 ? 10 : 7;
+    flags.push({ id: 'engagement_all_hours', name: '24/7 Activity', severity: botScore > 0.8 ? 'critical' : 'high', points: pts, maxPoints: 10, description: 'Posts at all hours with no sleep cycle', detail: `Posts ${uniqueHours.length}/24 hrs/day, longest sleep gap: ${maxGap}hrs` });
+  }
+
+  const totalPts = flags.reduce((s, f) => s + f.points, 0);
+  const overallScore = Math.min(100, Math.round((totalPts / 70) * 100));
+  const flagNames = flags.map(f => f.name).join(', ');
+  let summary = 'No engagement anomalies detected.';
+  if (flags.length > 0) {
+    if (overallScore <= 20) summary = `Minor engagement anomalies (${flagNames}), but overall patterns appear organic.`;
+    else if (overallScore <= 40) summary = `Some engagement irregularities (${flagNames}). Mixed organic and potentially artificial activity.`;
+    else if (overallScore <= 60) summary = `Notable engagement anomalies (${flagNames}). Likely artificial engagement boosting.`;
+    else if (overallScore <= 80) summary = `Strong indicators of engagement manipulation (${flagNames}). Metrics are likely artificially inflated.`;
+    else summary = `Overwhelming evidence of engagement manipulation (${flagNames}). This profile's engagement is heavily bot-driven.`;
+  }
+
+  return { patterns: { ghostComments, viewInflation, engagementPods, coordinatedTiming, activityPattern }, flags, overallScore, summary };
+}
+
+interface WorkerEngagementDataLite {
+  recentTweets: { id: string; views: number; replyCount: number; visibleReplies: number; firstCommenters: string[]; commentTimes: number[]; postedAt?: string }[];
+  followers?: number;
+}
+
+function calculateBotScoreLite(input: {
+  followers?: number; following?: number; posts?: number; bio?: string;
+  username?: string; isDefaultAvatar?: boolean; joinDate?: string;
+  location?: string; website?: string; verified?: boolean;
+  // Engagement data from CDP scan
+  replyCount?: number; visibleReplies?: number; views?: number;
+  replyRatio?: number; recentPosts?: string[]; postingHours?: number[];
+  engagementPodAccounts?: string[];
+}, workerEngagement?: WorkerEngagementDataLite): { botScore: number; classification: string; flags: BotFlagLite[]; engagementAnalysis?: EngagementAnalysisLite } {
+  const flags: BotFlagLite[] = [];
+
+  // Suspicious Follow Ratio (15pts)
+  if (input.following != null && input.followers != null && input.followers > 0) {
+    const ratio = input.following / input.followers;
+    if (input.following > 5000 && input.followers < 50) {
+      flags.push({ id: 'suspicious_follow_ratio', name: 'Suspicious Follow Ratio', points: 15, description: 'Following far exceeds followers', detail: `Following ${input.following.toLocaleString()} vs ${input.followers.toLocaleString()} followers` });
+    } else if (ratio > 3) {
+      flags.push({ id: 'suspicious_follow_ratio', name: 'Suspicious Follow Ratio', points: 8, description: 'Follow ratio > 3:1', detail: `Ratio: ${ratio.toFixed(1)}:1` });
+    }
+  }
+
+  // No Profile Image (10pts)
+  if (input.isDefaultAvatar) {
+    flags.push({ id: 'no_profile_image', name: 'No Profile Image', points: 10, description: 'Default avatar detected' });
+  }
+
+  // No Bio (5pts)
+  if (!input.bio || input.bio.trim().length === 0) {
+    flags.push({ id: 'no_bio', name: 'No Bio', points: 5, description: 'Empty profile description' });
+  }
+
+  // New Account (10pts)
+  if (input.joinDate) {
+    const ageDays = (Date.now() - new Date(input.joinDate).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays < 30) flags.push({ id: 'new_account', name: 'New Account', points: 10, description: 'Account < 30 days old', detail: `${Math.floor(ageDays)} days old` });
+    else if (ageDays < 90) flags.push({ id: 'new_account', name: 'New Account', points: 3, description: 'Relatively new account', detail: `~${Math.floor(ageDays / 30)} months old` });
+  }
+
+  // Low Post Count (5pts)
+  if (input.posts != null && input.posts < 50) {
+    flags.push({ id: 'low_tweet_count', name: 'Low Post Count', points: input.posts < 10 ? 5 : 3, description: `Only ${input.posts} posts` });
+  }
+
+  // Generic Username (5pts)
+  if (input.username && (/_\d{4,}$/.test(input.username) || /\d{6,}$/.test(input.username))) {
+    flags.push({ id: 'generic_username', name: 'Generic Username Pattern', points: 5, description: 'Auto-generated username pattern', detail: `Username: ${input.username}` });
+  }
+
+  // No Location or URL (5pts)
+  if (!(input.location && input.location.trim()) && !(input.website && input.website.trim())) {
+    flags.push({ id: 'no_location_url', name: 'No Location or URL', points: 5, description: 'Both location and website empty' });
+  }
+
+  // High Reply Ratio (10pts)
+  if (input.replyRatio != null && input.replyRatio > 0.7) {
+    flags.push({ id: 'high_reply_ratio', name: 'High Reply Ratio', points: input.replyRatio > 0.9 ? 10 : 7, description: 'Mostly replies, not original content', detail: `${(input.replyRatio * 100).toFixed(0)}% replies` });
+  }
+
+  // Ghost Comments (20pts)
+  if (input.replyCount != null && input.visibleReplies != null) {
+    if (input.replyCount > 10 && input.visibleReplies < 3) {
+      flags.push({ id: 'ghost_comments', name: 'Ghost Comments', points: 20, description: 'Reply count >> visible replies (X spam filter)', detail: `${input.replyCount} replies, ${input.visibleReplies} visible` });
+    } else if (input.replyCount > input.visibleReplies * 3) {
+      flags.push({ id: 'ghost_comments', name: 'Ghost Comments', points: 15, description: 'Reply count exceeds visible replies', detail: `${input.replyCount} vs ${input.visibleReplies} visible` });
+    }
+  }
+
+  // View Inflation (15pts)
+  if (input.views != null && input.followers != null && input.followers > 0) {
+    if (input.views > 10000 && input.followers < 1000) {
+      flags.push({ id: 'view_inflation', name: 'View Inflation', points: 15, description: 'Views disproportionate to followers', detail: `${(input.views / 1000).toFixed(1)}K views, ${input.followers.toLocaleString()} followers` });
+    } else if (input.views / input.followers > 20) {
+      flags.push({ id: 'view_inflation', name: 'View Inflation', points: 7, description: 'View count high relative to followers' });
+    }
+  }
+
+  // Engagement Pod (15pts)
+  if (input.engagementPodAccounts && input.engagementPodAccounts.length >= 3) {
+    flags.push({ id: 'engagement_pod_pattern', name: 'Engagement Pod Pattern', points: input.engagementPodAccounts.length >= 5 ? 15 : 10, description: 'Same accounts repeatedly engage', detail: `${input.engagementPodAccounts.length} pod accounts detected` });
+  }
+
+  const totalPoints = flags.reduce((s, f) => s + f.points, 0);
+  const botScore = Math.min(100, totalPoints);
+  const classification = botScore <= 20 ? 'Likely Authentic' : botScore <= 40 ? 'Mild Bot Activity' : botScore <= 60 ? 'Moderate Bot Inflation' : botScore <= 80 ? 'High Bot Inflation' : 'Highly Bot-Inflated';
+
+  // Run engagement analysis if worker data provided
+  let engagementAnalysis: EngagementAnalysisLite | undefined;
+  if (workerEngagement) {
+    engagementAnalysis = analyzeEngagementLite(workerEngagement) ?? undefined;
+  }
+
+  return { botScore, classification, flags, engagementAnalysis };
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -396,6 +638,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                           promotedTokens: data.promoted_tokens, recentPosts: data.recent_posts,
                             },
                             confidence: 'HIGH', scanDate: new Date().toISOString(), dataSource: 'supabase_queue',
+                            botDetection: calculateBotScoreLite({
+                              followers: data.followers, following: data.following,
+                              posts: data.posts_count || data.posts, bio: data.bio,
+                              username: cleanUsername, joinDate: data.join_date,
+                              location: data.location, website: data.website,
+                              verified: data.verified, isDefaultAvatar: data.default_profile_image,
+                              replyCount: data.reply_count, visibleReplies: data.visible_replies,
+                              views: data.views, replyRatio: data.reply_ratio,
+                              recentPosts: data.recent_posts,
+                              postingHours: data.posting_hours,
+                              engagementPodAccounts: data.engagement_pod_accounts,
+                            }, data.recent_tweets ? {
+                              recentTweets: (data.recent_tweets || []).map((t: any) => ({
+                                id: t.id || '',
+                                views: t.views || 0,
+                                replyCount: t.reply_count || t.replyCount || 0,
+                                visibleReplies: t.visible_replies || t.visibleReplies || 0,
+                                firstCommenters: t.first_commenters || t.firstCommenters || [],
+                                commentTimes: t.comment_times || t.commentTimes || [],
+                                postedAt: t.posted_at || t.postedAt,
+                              })),
+                              followers: data.followers,
+                            } : undefined),
                 };
                     return res.status(200).json(result);
           }
@@ -423,6 +688,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               confidence: riskScore >= 50 ? 'MEDIUM' : 'LOW',
               scanDate: new Date().toISOString(),
               dataSource: 'pattern_analysis',
+              botDetection: calculateBotScoreLite({ username: cleanUsername }),
       };
         return res.status(200).json(result);
 
