@@ -12,6 +12,19 @@ import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
 import { createClient } from '@supabase/supabase-js';
 import { useScanResult } from '../hooks/useScanResult';
+import {
+  type BotDetectionInput,
+  type BotDetectionResult,
+  calculateBotScore,
+  formatBotClassification,
+  formatBotResultText,
+  mapScanResultToBotInput,
+} from '../lib/bot-detection';
+import {
+  type EngagementAnalysisResult,
+  formatEngagementResultText,
+  formatEngagementClassification,
+} from '../lib/engagement-analysis';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
@@ -107,6 +120,8 @@ interface ProfileScanResult {
   };
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   scanDate: string;
+  botDetection?: BotDetectionResult;
+  engagementAnalysis?: EngagementAnalysisResult;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -302,6 +317,22 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             const scanData = await scanRes.json();
             if (scanData.success) {
               const d = scanData;
+
+              // Compute bot detection from the scan data
+              let botDetection: BotDetectionResult | undefined;
+              let engagementAnalysis: EngagementAnalysisResult | undefined;
+              try {
+                const { input: botInput, engagementData: workerEngagement } = mapScanResultToBotInput({
+                  ...d,
+                  profileData: {
+                    ...d,
+                    followers: d.followers,
+                  },
+                });
+                botDetection = calculateBotScore(botInput, platform, workerEngagement);
+                engagementAnalysis = botDetection.engagementAnalysis;
+              } catch (_) { /* skip if insufficient data */ }
+
               const apiResult: ProfileScanResult = {
                 success: true,
                 platform: platform as any,
@@ -318,6 +349,8 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
                 },
                 confidence: d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM',
                 scanDate: d.scanTimestamp || new Date().toISOString(),
+                botDetection,
+                engagementAnalysis,
               };
               setResult(apiResult);
               uploadScanToSupabase(apiResult).catch(() => {});
@@ -381,6 +414,17 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
   // Normalize backend response to frontend format
   const normalizeResult = (data: any, platform: string, username: string): ProfileScanResult => {
+    // Compute bot detection from available data
+    let botDetection: BotDetectionResult | undefined;
+    let engagementAnalysis: EngagementAnalysisResult | undefined;
+    try {
+      const { input: botInput, engagementData: workerEngagement } = mapScanResultToBotInput(data);
+      botDetection = calculateBotScore(botInput, platform, workerEngagement);
+      engagementAnalysis = botDetection.engagementAnalysis;
+    } catch (e) {
+      console.warn('[BotDetection] Failed to compute bot score:', e);
+    }
+
     return {
       success: data.success ?? true,
       platform: data.platform || platform,
@@ -405,6 +449,8 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       },
       confidence: data.confidence || 'MEDIUM',
       scanDate: data.scanDate || new Date().toISOString(),
+      botDetection,
+      engagementAnalysis,
     };
   };
 
@@ -436,15 +482,22 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
   const copyResult = () => {
     if (result) {
-      const text = `🔍 Platform: ${result.platform === 'twitter' ? 'X (Twitter)' : result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
-📊 Risk Score: ${(result.riskScore / 10).toFixed(1)}/10 - ${result.riskLevel} RISK ${result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}
+      let text = `🔍 Platform: ${result.platform === 'twitter' ? 'X (Twitter)' : result.platform.charAt(0).toUpperCase() + result.platform.slice(1)}
+📊 Risk Score: ${(result.riskScore / 10).toFixed(1)}/10 - ${result.riskLevel} RISK ${result.riskLevel === 'CRITICAL' ? '🚨' : result.riskLevel === 'HIGH' ? '⚠️' : result.riskLevel === 'MEDIUM' ? '⚡' : '✅'}`;
 
-Red Flags with Scores:
-${result.redFlags.map(f => `• ${f}`).join('\n')}
+      // Add bot detection section
+      if (result.botDetection) {
+        text += '\n\n' + formatBotResultText(result.botDetection);
+      }
 
-Behavioral Pattern: ${result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' : result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' : result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' : 'No significant scam patterns identified.'}
+      // Add engagement analysis section
+      if (result.engagementAnalysis) {
+        text += '\n\n' + formatEngagementResultText(result.engagementAnalysis);
+      }
 
-📋 Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${result.scanDate ? new Date(result.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`;
+      text += `\n\nRed Flags with Scores:
+${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${result.riskLevel === 'CRITICAL' ? 'Multiple high-severity scam indicators detected. Extreme caution advised.' : result.riskLevel === 'HIGH' ? 'Significant scam indicators present. Verify independently before any engagement.' : result.riskLevel === 'MEDIUM' ? 'Some concerning patterns detected. Further verification recommended.' : 'No significant scam patterns identified.'}\n\n📋 Disclaimer: Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: ${result.scanDate ? new Date(result.scanDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`;
+
       navigator.clipboard.writeText(text);
     }
   };
@@ -771,6 +824,247 @@ Behavioral Pattern: ${result.riskLevel === 'CRITICAL' ? 'Multiple high-severity 
           )}
 
           {/* Behavioral Pattern */}
+
+          {/* ── Bot Activity Assessment ── */}
+          {result.botDetection && (
+            <div
+              className="rounded-xl p-5"
+              style={{
+                background: result.botDetection.botScore > 60
+                  ? 'rgba(239,68,68,0.05)'
+                  : result.botDetection.botScore > 40
+                  ? 'rgba(251,191,36,0.05)'
+                  : 'rgba(16,185,129,0.05)',
+                border: result.botDetection.botScore > 60
+                  ? '1px solid rgba(239,68,68,0.2)'
+                  : result.botDetection.botScore > 40
+                  ? '1px solid rgba(251,191,36,0.2)'
+                  : '1px solid rgba(16,185,129,0.2)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-bold" style={{ color: formatBotClassification(result.botDetection.classification).color }}>
+                  🤖 BOT ACTIVITY ASSESSMENT
+                </h3>
+                <span
+                  className="text-xs font-mono px-2 py-1 rounded"
+                  style={{
+                    background: result.botDetection.botScore > 60
+                      ? 'rgba(239,68,68,0.15)'
+                      : result.botDetection.botScore > 40
+                      ? 'rgba(251,191,36,0.15)'
+                      : 'rgba(16,185,129,0.15)',
+                    color: formatBotClassification(result.botDetection.classification).color,
+                  }}
+                >
+                  {formatBotClassification(result.botDetection.classification).emoji} {formatBotClassification(result.botDetection.classification).label}
+                </span>
+              </div>
+
+              {/* Bot Score Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">Bot Score</span>
+                  <span className="font-mono" style={{ color: formatBotClassification(result.botDetection.classification).color }}>
+                    {result.botDetection.botScore}/100
+                  </span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${result.botDetection.botScore}%`,
+                      background: result.botDetection.botScore > 60
+                        ? 'linear-gradient(90deg, #fb923c, #f87171)'
+                        : result.botDetection.botScore > 40
+                        ? 'linear-gradient(90deg, #fbbf24, #fb923c)'
+                        : 'linear-gradient(90deg, #4ade80, #fbbf24)',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                  <span>Authentic</span><span>Mild</span><span>Moderate</span><span>High</span><span>Extreme</span>
+                </div>
+              </div>
+
+              {/* Bot Flags */}
+              {result.botDetection.flags.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  {result.botDetection.flags.map((flag, idx) => (
+                    <div key={idx} className="text-sm text-gray-300">
+                      <span className="text-gray-500">•</span>{' '}
+                      <span className="font-medium">{flag.name}</span>
+                      <span className="ml-1 text-xs font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>
+                        +{flag.points}pts
+                      </span>
+                      {flag.detail && (
+                        <span className="text-gray-500"> — {flag.detail}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary */}
+              <p className="text-xs text-gray-400 leading-relaxed mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                {result.botDetection.summary}
+              </p>
+            </div>
+          )}
+
+          {/* ── Engagement Analysis ── */}
+          {result.engagementAnalysis && (
+            <div
+              className="rounded-xl p-5"
+              style={{
+                background: result.engagementAnalysis.overallScore > 60
+                  ? 'rgba(239,68,68,0.05)'
+                  : result.engagementAnalysis.overallScore > 40
+                  ? 'rgba(251,191,36,0.05)'
+                  : 'rgba(59,130,246,0.05)',
+                border: result.engagementAnalysis.overallScore > 60
+                  ? '1px solid rgba(239,68,68,0.2)'
+                  : result.engagementAnalysis.overallScore > 40
+                  ? '1px solid rgba(251,191,36,0.2)'
+                  : '1px solid rgba(59,130,246,0.2)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-bold" style={{ color: formatEngagementClassification(result.engagementAnalysis.overallScore).color }}>
+                  📊 ENGAGEMENT ANALYSIS
+                </h3>
+                <span
+                  className="text-xs font-mono px-2 py-1 rounded"
+                  style={{
+                    background: result.engagementAnalysis.overallScore > 60
+                      ? 'rgba(239,68,68,0.15)'
+                      : result.engagementAnalysis.overallScore > 40
+                      ? 'rgba(251,191,36,0.15)'
+                      : 'rgba(59,130,246,0.15)',
+                    color: formatEngagementClassification(result.engagementAnalysis.overallScore).color,
+                  }}
+                >
+                  {formatEngagementClassification(result.engagementAnalysis.overallScore).emoji} {formatEngagementClassification(result.engagementAnalysis.overallScore).label}
+                </span>
+              </div>
+
+              {/* Engagement Score Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">Engagement Score</span>
+                  <span className="font-mono" style={{ color: formatEngagementClassification(result.engagementAnalysis.overallScore).color }}>
+                    {result.engagementAnalysis.overallScore}/100
+                  </span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${result.engagementAnalysis.overallScore}%`,
+                      background: result.engagementAnalysis.overallScore > 60
+                        ? 'linear-gradient(90deg, #fb923c, #f87171)'
+                        : result.engagementAnalysis.overallScore > 40
+                        ? 'linear-gradient(90deg, #fbbf24, #fb923c)'
+                        : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+                  <span>Organic</span><span>Minor</span><span>Moderate</span><span>High</span><span>Severe</span>
+                </div>
+              </div>
+
+              {/* Pattern Rows */}
+              <div className="space-y-2 mb-3">
+                {/* Ghost Comments */}
+                {result.engagementAnalysis.patterns.ghostComments.detected && (
+                  <div className="text-sm text-gray-300">
+                    <span className="text-red-400">👻</span>{' '}
+                    <span className="font-medium">Ghost Comments:</span>{' '}
+                    {result.engagementAnalysis.patterns.ghostComments.replyCount} shown, {result.engagementAnalysis.patterns.ghostComments.visibleReplies} visible ({Math.round(result.engagementAnalysis.patterns.ghostComments.hiddenRatio * 100)}% hidden)
+                  </div>
+                )}
+
+                {/* View Inflation */}
+                {result.engagementAnalysis.patterns.viewInflation.detected && (
+                  <div className="text-sm text-gray-300">
+                    <span className="text-orange-400">👁️</span>{' '}
+                    <span className="font-medium">View Inflation:</span>{' '}
+                    {result.engagementAnalysis.patterns.viewInflation.views >= 1000
+                      ? `${(result.engagementAnalysis.patterns.viewInflation.views / 1000).toFixed(1)}K`
+                      : result.engagementAnalysis.patterns.viewInflation.views} views / {result.engagementAnalysis.patterns.viewInflation.followers.toLocaleString()} followers ({result.engagementAnalysis.patterns.viewInflation.ratio}x ratio)
+                  </div>
+                )}
+
+                {/* Engagement Pods */}
+                {result.engagementAnalysis.patterns.engagementPods.detected && (
+                  <div className="text-sm text-gray-300">
+                    <span className="text-yellow-400">👥</span>{' '}
+                    <span className="font-medium">Engagement Pod:</span>{' '}
+                    {result.engagementAnalysis.patterns.engagementPods.podAccounts.length} accounts appear in first comments consistently
+                    {result.engagementAnalysis.patterns.engagementPods.podAccounts.length <= 5 && (
+                      <span className="text-gray-500"> ({result.engagementAnalysis.patterns.engagementPods.podAccounts.join(', ')})</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Coordinated Timing */}
+                {result.engagementAnalysis.patterns.coordinatedTiming.detected && (
+                  <div className="text-sm text-gray-300">
+                    <span className="text-purple-400">⚡</span>{' '}
+                    <span className="font-medium">Coordinated Timing:</span>{' '}
+                    Comments arrive in {result.engagementAnalysis.patterns.coordinatedTiming.waves} burst(s), avg {result.engagementAnalysis.patterns.coordinatedTiming.avgInterval}s apart
+                  </div>
+                )}
+
+                {/* 24/7 Activity */}
+                {result.engagementAnalysis.patterns.activityPattern.detected && (
+                  <div className="text-sm text-gray-300">
+                    <span className="text-blue-400">🕐</span>{' '}
+                    <span className="font-medium">24/7 Activity:</span>{' '}
+                    Posts {result.engagementAnalysis.patterns.activityPattern.activeHours.length}/24 hrs/day, longest sleep gap: {result.engagementAnalysis.patterns.activityPattern.sleepGapHours}hrs
+                  </div>
+                )}
+              </div>
+
+              {/* Engagement Flags */}
+              {result.engagementAnalysis.flags.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  {result.engagementAnalysis.flags.map((flag, idx) => (
+                    <div key={idx} className="text-sm text-gray-300">
+                      <span className="text-gray-500">•</span>{' '}
+                      <span className="font-medium">{flag.name}</span>
+                      <span className="ml-1 text-xs font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>
+                        +{flag.points}pts
+                      </span>
+                      <span className="text-xs px-1 py-0.5 rounded ml-1" style={{
+                        background: flag.severity === 'critical' ? 'rgba(239,68,68,0.15)'
+                          : flag.severity === 'high' ? 'rgba(251,146,60,0.15)'
+                          : flag.severity === 'medium' ? 'rgba(251,191,36,0.15)'
+                          : 'rgba(74,222,128,0.15)',
+                        color: flag.severity === 'critical' ? '#f87171'
+                          : flag.severity === 'high' ? '#fb923c'
+                          : flag.severity === 'medium' ? '#fbbf24'
+                          : '#4ade80',
+                      }}>
+                        {flag.severity.toUpperCase()}
+                      </span>
+                      {flag.detail && (
+                        <span className="text-gray-500"> — {flag.detail}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary */}
+              <p className="text-xs text-gray-400 leading-relaxed mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                {result.engagementAnalysis.summary}
+              </p>
+            </div>
+          )}
+
+          {/* Behavioral Pattern */}
           <div
             className="rounded-xl p-5"
             style={{
@@ -893,6 +1187,17 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
     recommendation = `✅ No major scam indicators detected. However, always verify accounts independently before sharing sensitive information or sending funds.`;
   }
 
+  // Generate bot detection for demo
+  const botInput: BotDetectionInput = {
+    followers: followerCount,
+    following: followingCount,
+    posts: postCount,
+    username: username,
+    bio: `${username} - Official account (Demo scan result)`,
+    joinDate: new Date().toISOString().split('T')[0],
+  };
+  const botDetection = calculateBotScore(botInput, platform);
+
   return {
     success: true,
     platform: platform as 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok',
@@ -916,5 +1221,6 @@ function generateDemoResult(platform: string, username: string): ProfileScanResu
     },
     confidence: riskScore >= 50 ? 'HIGH' : 'MEDIUM',
     scanDate: new Date().toISOString(),
+    botDetection,
   };
 }

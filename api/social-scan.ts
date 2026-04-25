@@ -211,14 +211,105 @@ async function performScan(platform: string, username: string): Promise<Record<s
   // Score VISIBLE TEXT only
   const result = calculateRiskScore(scoringText, platform, metadata);
 
+  // Bot detection (lightweight, profile-level only)
+  const bio = ogDesc?.[1] || metaDesc?.[1] || '';
+  const botDetection = calculateBotScoreLite({
+    followers: metadata.followers,
+    username,
+    bio,
+  }, platform);
+
   return {
     success: true, platform, username, url,
     riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
     redFlagsDetected: result.redFlagsDetected, flagDetails: result.flagDetails,
     weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
     scanTimestamp: result.scanTimestamp,
+    botDetection,
     disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
   };
+}
+
+// ── Inline: calculateBotScore (lightweight, for serverless) ───────────────────
+// Full version lives in src/lib/bot-detection.ts (used by frontend)
+// This is a simplified version for the serverless API
+
+interface BotFlagLite {
+  id: string;
+  name: string;
+  points: number;
+  description: string;
+  detail?: string;
+}
+
+function calculateBotScoreLite(
+  input: {
+    followers?: number;
+    following?: number;
+    posts?: number;
+    bio?: string;
+    username?: string;
+    isDefaultAvatar?: boolean;
+    joinDate?: string;
+    location?: string;
+    website?: string;
+    verified?: boolean;
+  },
+  platform: string,
+): { botScore: number; classification: string; flags: BotFlagLite[] } {
+  const flags: BotFlagLite[] = [];
+
+  // Suspicious Follow Ratio
+  if (input.following != null && input.followers != null && input.followers > 0) {
+    const ratio = input.followers > 0 ? input.following / input.followers : Infinity;
+    if (input.following > 5000 && input.followers < 50) {
+      flags.push({ id: 'suspicious_follow_ratio', name: 'Suspicious Follow Ratio', points: 15, description: 'Following far exceeds followers', detail: `Following ${input.following.toLocaleString()} vs ${input.followers.toLocaleString()} followers` });
+    } else if (ratio > 3) {
+      flags.push({ id: 'suspicious_follow_ratio', name: 'Suspicious Follow Ratio', points: 8, description: 'Follow ratio > 3:1', detail: `Ratio: ${ratio.toFixed(1)}:1` });
+    }
+  }
+
+  // No Profile Image
+  if (input.isDefaultAvatar) {
+    flags.push({ id: 'no_profile_image', name: 'No Profile Image', points: 10, description: 'Default avatar detected' });
+  }
+
+  // No Bio
+  if (!input.bio || input.bio.trim().length === 0) {
+    flags.push({ id: 'no_bio', name: 'No Bio', points: 5, description: 'Empty profile description' });
+  }
+
+  // New Account
+  if (input.joinDate) {
+    const ageDays = (Date.now() - new Date(input.joinDate).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays < 30) flags.push({ id: 'new_account', name: 'New Account', points: 10, description: 'Account < 30 days old', detail: `${Math.floor(ageDays)} days old` });
+    else if (ageDays < 90) flags.push({ id: 'new_account', name: 'New Account', points: 3, description: 'Relatively new account', detail: `~${Math.floor(ageDays / 30)} months old` });
+  }
+
+  // Low Post Count
+  if (input.posts != null && input.posts < 50) {
+    flags.push({ id: 'low_tweet_count', name: 'Low Post Count', points: input.posts < 10 ? 5 : 3, description: `Only ${input.posts} posts` });
+  }
+
+  // Generic Username
+  if (input.username) {
+    if (/_\d{4,}$/.test(input.username) || /\d{6,}$/.test(input.username)) {
+      flags.push({ id: 'generic_username', name: 'Generic Username Pattern', points: 5, description: 'Username matches auto-generated pattern', detail: `Username: ${input.username}` });
+    }
+  }
+
+  // No Location or URL
+  const hasLocation = !!(input.location && input.location.trim());
+  const hasWebsite = !!(input.website && input.website.trim());
+  if (!hasLocation && !hasWebsite) {
+    flags.push({ id: 'no_location_url', name: 'No Location or URL', points: 5, description: 'Both location and website empty' });
+  }
+
+  const totalPoints = flags.reduce((sum, f) => sum + f.points, 0);
+  const botScore = Math.min(100, totalPoints);
+  const classification = botScore <= 20 ? 'Likely Authentic' : botScore <= 40 ? 'Mild Bot Activity' : botScore <= 60 ? 'Moderate Bot Inflation' : botScore <= 80 ? 'High Bot Inflation' : 'Highly Bot-Inflated';
+
+  return { botScore, classification, flags };
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────
