@@ -77,6 +77,7 @@ interface PhoneRiskResult {
 }
 
 const FLAG_VALUES: Record<string, number> = {
+  // Existing flags
   invalid_number: 25,
   premium_rate_number: 25,
   voip_number: 20,
@@ -89,6 +90,15 @@ const FLAG_VALUES: Record<string, number> = {
   no_carrier_info: 10,
   medium_risk_country: 8,
   unknown_carrier: 5,
+  
+  // NEW ZERO-COST FLAGS (April 2026)
+  non_fixed_voip: 20,           // Google Voice, TextNow, Burner (anonymous)
+  recently_disconnected: 15,    // Was active, now dead (scammer rotation)
+  recent_abuse_activity: 20,    // Active in spam campaigns recently
+  impersonation_pattern: 25,    // "Account security" / "suspicious activity" script
+  stir_shaken_c: 15,            // C-level attestation (unverified caller)
+  community_reports_high: 15,   // 10+ community reports
+  community_reports_critical: 25, // 50+ community reports
 };
 
 function getRiskLevel(score: number): string {
@@ -351,8 +361,16 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
     totalPoints += ftcBoostPts;
   }
   
+  // ── Community Reports Scoring (NEW - April 2026) ──
+  // Will be populated by CDP scraper in analyzeThreatIntel
+  // This is a placeholder that gets updated after community data is fetched
+  
+  // ── STIR-SHAKEN C-Level Flag (NEW - April 2026) ──
+  // C-attestation = high risk, likely spoofed
+  // This is calculated in analyzeThreatIntel below
+  
   // Convert to 0-10 scale (90-point system → 0-10)
-  const riskScore = Math.min(10, parseFloat((totalPoints / 9).toFixed(1)));
+  let riskScore = Math.min(10, parseFloat((totalPoints / 9).toFixed(1)));
   const riskLevel = getRiskLevel(riskScore);
   
   // ── Owner type determination ──
@@ -383,6 +401,24 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
     phone, carrier || 'Unknown', lineType || 'unknown', countryCode || '',
     isVoip, isVirtualCarrier, isTollFree, valid, ftcData
   );
+  
+  // ── Post-threatIntel: Add community report scoring (NEW - April 2026) ──
+  if (threatIntel.communityReports.count >= 50) {
+    redFlags.push(`community_reports_critical (25pts) — ${threatIntel.communityReports.count} community reports — widespread scam campaign`);
+    totalPoints += FLAG_VALUES.community_reports_critical;
+  } else if (threatIntel.communityReports.count >= 10) {
+    redFlags.push(`community_reports_high (15pts) — ${threatIntel.communityReports.count} community reports — repeated scam activity`);
+    totalPoints += FLAG_VALUES.community_reports_high;
+  }
+  
+  // ── STIR-SHAKEN C-Level Flag (NEW - April 2026) ──
+  if (threatIntel.stirShaken.attestation === 'C') {
+    redFlags.push(`stir_shaken_c (15pts) — C-level attestation — caller ID cannot be authenticated, likely spoofed`);
+    totalPoints += FLAG_VALUES.stir_shaken_c;
+  }
+  
+  // Recalculate risk score with new flags
+  riskScore = Math.min(10, parseFloat((totalPoints / 9).toFixed(1)));
 
   return {
     valid,
@@ -662,3 +698,109 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 export const config = {
   maxDuration: 15,
 };
+
+// ── Impersonation Pattern Detection (NEW - April 2026) ──────────────────────────
+// Detects common scam scripts in voicemail transcripts or community reports
+// ZERO COST - Pure heuristic analysis
+
+const SCAM_PATTERNS = {
+  account_security: {
+    patterns: [
+      'account security department',
+      'suspicious login attempt',
+      'unusual activity detected',
+      'your account has been compromised',
+      'press 1 to block',
+      'press 1 to speak to representative',
+      'verify your identity',
+      'security alert'
+    ],
+    companies: ['google', 'apple', 'microsoft', 'amazon', 'facebook', 'instagram'],
+    risk: 'HIGH',
+    points: 25
+  },
+  tech_support: {
+    patterns: [
+      'your computer has been infected',
+      'microsoft support',
+      'apple security',
+      'windows license expired',
+      'virus detected on your device',
+      'remote access required'
+    ],
+    companies: ['microsoft', 'apple', 'windows'],
+    risk: 'HIGH',
+    points: 25
+  },
+  government: {
+    patterns: [
+      'social security administration',
+      'irs',
+      'tax fraud',
+      'arrest warrant',
+      'deportation',
+      'legal action',
+      'law enforcement'
+    ],
+    companies: [],
+    risk: 'HIGH',
+    points: 20
+  },
+  prize_scam: {
+    patterns: [
+      'you have won',
+      'lottery winner',
+      'prize claim',
+      'free vacation',
+      'congratulations you have been selected'
+    ],
+    companies: [],
+    risk: 'MEDIUM',
+    points: 15
+  }
+};
+
+function detectImpersonationPattern(text: string): {
+  detected: boolean;
+  type: string;
+  patterns: string[];
+  companies: string[];
+  points: number;
+  risk: string;
+} {
+  const lower = text.toLowerCase();
+  const matches: string[] = [];
+  const companies: string[] = [];
+  let detectedType = '';
+  let points = 0;
+  let risk = 'LOW';
+  
+  for (const [type, config] of Object.entries(SCAM_PATTERNS)) {
+    for (const pattern of config.patterns) {
+      if (lower.includes(pattern)) {
+        matches.push(pattern);
+        detectedType = type;
+        points = config.points;
+        risk = config.risk;
+      }
+    }
+    // Check for company impersonation
+    for (const company of config.companies) {
+      if (lower.includes(company)) {
+        companies.push(company);
+      }
+    }
+  }
+  
+  return {
+    detected: matches.length > 0,
+    type: detectedType,
+    patterns: matches,
+    companies: [...new Set(companies)],
+    points,
+    risk
+  };
+}
+
+// Export for use in other modules
+export { detectImpersonationPattern, SCAM_PATTERNS };
