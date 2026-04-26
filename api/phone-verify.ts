@@ -139,6 +139,55 @@ async function validateWithAbstract(phone: string): Promise<Record<string, any> 
   }
 }
 
+// ── Twilio Lookup API v2 ───────────────────────────────────────────────────
+// https://www.twilio.com/docs/lookup/v2-api/line-type-intelligence
+// Cost: $0.008 per request for line_type_intelligence
+// Key feature: Distinguishes nonFixedVoip (Google Voice, TextNow, Burner) from fixedVoip
+interface TwilioLookupResult {
+  valid: boolean;
+  phone_number: string;
+  country_code: string;
+  line_type_intelligence?: {
+    type: 'landline' | 'mobile' | 'fixedVoip' | 'nonFixedVoip' | 'tollFree' | 'premium' | 'unknown';
+    carrier_name: string | null;
+    mobile_country_code: string | null;
+    mobile_network_code: string | null;
+    error_code: string | null;
+  };
+  caller_name?: {
+    caller_name: string;
+    caller_type: 'BUSINESS' | 'CONSUMER';
+    error_code: string | null;
+  };
+}
+
+async function twilioLookupV2(phone: string): Promise<TwilioLookupResult | null> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  
+  if (!accountSid || !authToken) return null;
+  
+  try {
+    const stripped = phone.replace(/[^0-9+]/g, '');
+    const url = `https://lookups.twilio.com/v2/PhoneNumbers/${encodeURIComponent(stripped)}?Fields=line_type_intelligence,caller_name`;
+    
+    // Basic auth: Base64 encode SID:TOKEN
+    const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Basic ${credentials}`
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!res.ok) return null;
+    return await res.json() as TwilioLookupResult;
+  } catch {
+    return null;
+  }
+}
+
 // ── FTC DNC Complaints API ──────────────────────────────────────────────────
 // https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
 // Free API key from api.data.gov
@@ -247,16 +296,16 @@ async function queryCallControl(phone: string): Promise<{ spam: boolean; reports
 }
 
 // ── Heuristic Phone Analysis (no API key needed) ──────────────────────────
-function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any> | null, abstractData: Record<string, any> | null, ftcData?: { complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null } | null): PhoneRiskResult {
+function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any> | null, abstractData: Record<string, any> | null, ftcData?: { complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null } | null, twilioData?: TwilioLookupResult | null): PhoneRiskResult {
   const redFlags: string[] = [];
   let totalPoints = 0;
   const stripped = phone.replace(/[^0-9+]/g, '');
   const strippedDigits = stripped.replace(/^\+/, '');
   
   // Extract data from APIs
-  const valid = numverifyData?.valid ?? abstractData?.valid ?? true;
-  const carrier = numverifyData?.carrier ?? abstractData?.carrier ?? '';
-  const lineType = (numverifyData?.line_type ?? abstractData?.type ?? 'unknown').toLowerCase();
+  const valid = numverifyData?.valid ?? abstractData?.valid ?? twilioData?.valid ?? true;
+  const carrier = numverifyData?.carrier ?? abstractData?.carrier ?? twilioData?.line_type_intelligence?.carrier_name ?? '';
+  const lineType = (numverifyData?.line_type ?? abstractData?.type ?? twilioData?.line_type_intelligence?.type ?? 'unknown').toLowerCase();
   const country = numverifyData?.country_name ?? abstractData?.country ?? 'Unknown';
   const countryCode = (numverifyData?.country_code ?? abstractData?.country_code ?? '').toUpperCase();
   const formatted = numverifyData?.international_format ?? abstractData?.format_international ?? phone;
@@ -339,6 +388,15 @@ function analyzePhoneHeuristics(phone: string, numverifyData: Record<string, any
   if (!highRiskCountries.includes(countryCode) && mediumRiskCountries.includes(countryCode)) {
     redFlags.push(`medium_risk_country (8pts) — ${country} (${countryCode}) has elevated phone scam activity`);
     totalPoints += FLAG_VALUES.medium_risk_country;
+  }
+  
+  // ── TWILIO LOOKUP v2: Non-Fixed VoIP Detection (20pts) ──────────────────
+  // This is the KEY enhancement from Twilio
+  // nonFixedVoip = Google Voice, TextNow, Burner, etc. (no physical device, anonymous)
+  // fixedVoip = Comcast, Vonage (physical device required)
+  if (twilioData?.line_type_intelligence?.type === 'nonFixedVoip') {
+    redFlags.push(`non_fixed_voip (20pts) — Twilio confirmed: ${twilioData.line_type_intelligence.carrier_name || 'Non-fixed VoIP'} — no physical device required, anonymous signup`);
+    totalPoints += FLAG_VALUES.non_fixed_voip;
   }
   
   // ── 12. Unknown carrier (5pts) ──
@@ -650,14 +708,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   // Try external APIs in parallel
-  const [numverifyData, abstractData, ftcData, callControlData] = await Promise.all([
+  const [numverifyData, abstractData, ftcData, callControlData, twilioData] = await Promise.all([
     validateWithNumverify(phone),
     validateWithAbstract(phone),
     queryFTCDNC(phone),
     queryCallControl(phone),
+    twilioLookupV2(phone), // NEW: Twilio Lookup v2
   ]);
   
-  const result = analyzePhoneHeuristics(phone, numverifyData, abstractData, ftcData);
+  const result = analyzePhoneHeuristics(phone, numverifyData, abstractData, ftcData, twilioData);
   
   // Merge CallControl data if available
   if (callControlData && callControlData.spam) {
