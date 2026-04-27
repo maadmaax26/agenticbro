@@ -69,6 +69,11 @@ const LEGITIMATE_DOMAINS = [
   'binance.com', 'coinbase.com', 'kraken.com', 'bybit.com',
   'okx.com', 'kucoin.com', 'crypto.com', 'gate.io',
   'bitget.com', 'mexc.com', 'bingx.com', 'htx.com',
+  // Legitimate brokerage platforms
+  'robinhood.com', 'webull.com', 'etrade.com', 'fidelity.com',
+  'charles-schwab.com', 'schwab.com', 'vanguard.com',
+  'interactivebrokers.com', 'tdameritrade.com', 'merrill.com',
+  'sofi.com', 'public.com', 'e*trade.com', 'trade.com',
 ];
 
 // ─── Known Fake Crypto Exchanges (Community Reports + Research) ────────
@@ -100,6 +105,98 @@ const FAKE_EXCHANGE_DOMAINS = [
   'kucoin-support.org', 'kucoin-login.net',
   'gate-support.com', 'gate-login.net',
   'mexc-support.com', 'mexc-login.net',
+];
+
+// ─── Known Fake Brokerage Websites (Community Reports + Research) ─────
+
+const FAKE_BROKERAGE_DOMAINS = [
+  // Robinhood impersonators
+  'robinhood-support', 'robinhood-help', 'robinhood-login', 'robinhood-verify',
+  'robinhood-wallet', 'robinhood-secure', 'robinhood-recovery',
+  'robinhood-auth', 'robinhood-reset', 'robinhood-cust',
+  
+  // Fidelity impersonators
+  'fidelity-support', 'fidelity-help', 'fidelity-login', 'fidelity-verify',
+  'fidelity-secure', 'fidelity-recovery', 'fidelity-auth',
+  
+  // Charles Schwab impersonators
+  'schwab-support', 'schwab-help', 'schwab-login', 'schwab-verify',
+  'charles-schwab-support', 'charles-schwab-help',
+  'schwab-secure', 'schwab-recovery',
+  
+  // Vanguard impersonators
+  'vanguard-support', 'vanguard-help', 'vanguard-login', 'vanguard-verify',
+  'vanguard-secure', 'vanguard-recovery',
+  
+  // E*Trade impersonators
+  'etrade-support', 'etrade-help', 'etrade-login', 'etrade-verify',
+  'e-trade-support', 'etrade-secure', 'etrade-recovery',
+  
+  // Webull impersonators
+  'webull-support', 'webull-help', 'webull-login', 'webull-verify',
+  'webull-secure', 'webull-recovery',
+  
+  // TD Ameritrade impersonators
+  'tdameritrade-support', 'tdameritrade-help', 'tdameritrade-login',
+  'td-ameritrade-support', 'tdameritrade-secure',
+  
+  // Interactive Brokers impersonators
+  'interactivebrokers-support', 'interactivebrokers-help',
+  'ibkr-support', 'ibkr-help', 'ibkr-login',
+  
+  // SoFi impersonators
+  'sofi-support', 'sofi-help', 'sofi-login', 'sofi-verify',
+  'sofi-invest-support', 'sofi-secure',
+  
+  // Public.com impersonators
+  'public-support', 'public-help', 'public-login', 'public-verify',
+  'public-secure', 'public-recovery',
+  
+  // Merrill impersonators
+  'merrill-support', 'merrill-help', 'merrill-login', 'merrill-verify',
+  'merrill-edge-support', 'merrill-secure',
+  
+  // Generic fake brokerage patterns
+  'brokerage-account', 'stock-trading', 'investment-account',
+  'trading-account', 'broker-support', 'broker-help',
+  'account-recovery', 'fund-recovery', 'withdraw-help',
+  
+  // Known fake brokerage domains
+  'robinhood-login.net', 'robinhood-support.org',
+  'fidelity-login.net', 'fidelity-support.com',
+  'schwab-login.net', 'schwab-support.org',
+  'vanguard-login.net', 'vanguard-support.org',
+  'etrade-support.com', 'webull-support.org',
+  'webull-login.net', 'tdameritrade-support.net',
+];
+
+// ─── Investment Fraud Keywords ───────────────────────────────────────────
+
+const INVESTMENT_FRAUD_KEYWORDS = [
+  // Recovery scams
+  { pattern: 'recover your investment', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'recover your funds', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' },
+  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'investment recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'claim your funds', type: 'investment_fraud', weight: 20, severity: 'HIGH' },
+  { pattern: 'unclaimed funds', type: 'investment_fraud', weight: 15, severity: 'HIGH' },
+  
+  // Fake account verification
+  { pattern: 'verify your brokerage', type: 'brokerage_phishing', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'verify your account', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'account suspended', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'account locked', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'verify identity', type: 'brokerage_phishing', weight: 10, severity: 'MEDIUM' },
+  
+  // Wire fraud indicators
+  { pattern: 'wire transfer', type: 'wire_fraud', weight: 15, severity: 'HIGH' },
+  { pattern: 'urgent wire', type: 'wire_fraud', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'international wire', type: 'wire_fraud', weight: 15, severity: 'HIGH' },
+  
+  // Brokerage impersonation
+  { pattern: 'official broker', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'authorized representative', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'account manager will', type: 'brokerage_phishing', weight: 10, severity: 'MEDIUM' },
 ];
 
 function isFakeExchange(domain: string): { isFake: boolean; match?: string } {
@@ -140,6 +237,42 @@ function isFakeExchange(domain: string): { isFake: boolean; match?: string } {
   return { isFake: false };
 }
 
+function isFakeBrokerage(domain: string): { isFake: boolean; match?: string } {
+  const lowerDomain = domain.toLowerCase();
+  
+  // Check exact fake brokerage domain matches
+  for (const fakeDomain of FAKE_BROKERAGE_DOMAINS) {
+    if (lowerDomain === fakeDomain || lowerDomain.endsWith('.' + fakeDomain)) {
+      return { isFake: true, match: fakeDomain };
+    }
+    if (lowerDomain.includes(fakeDomain)) {
+      return { isFake: true, match: fakeDomain };
+    }
+  }
+  
+  // Brokerage impersonation patterns
+  const brokerageImpersonationPatterns = [
+    /^robinhood[a-z-]*\.(com|net|org|io|co)/i,
+    /^fidelity[a-z-]*\.(com|net|org|io|co)/i,
+    /^schwab[a-z-]*\.(com|net|org|io|co)/i,
+    /^vanguard[a-z-]*\.(com|net|org|io|co)/i,
+    /^etrade[a-z-]*\.(com|net|org|io|co)/i,
+    /^webull[a-z-]*\.(com|net|org|io|co)/i,
+    /^sofi[a-z-]*\.(com|net|org|io|co)/i,
+    /^merrill[a-z-]*\.(com|net|org|io|co)/i,
+    /-recovery\.(com|net|org|io)/i,
+    /-brokerage\.(com|net|org|io)/i,
+  ];
+  
+  for (const pattern of brokerageImpersonationPatterns) {
+    if (pattern.test(lowerDomain)) {
+      return { isFake: true, match: `Brokerage impersonation: ${pattern.source}` };
+    }
+  }
+  
+  return { isFake: false };
+}
+
 // ─── Helper Functions ────────────────────────────────────────────────────────
 
 function extractDomain(url: string): string {
@@ -161,17 +294,30 @@ function analyzeContent(html: string, url: string, domain: string): ThreatDetect
   const lowerHtml = html.toLowerCase();
   
   // Check for fake exchange domain
-  const fakeCheck = isFakeExchange(domain);
-  if (fakeCheck.isFake) {
+  const fakeExchangeCheck = isFakeExchange(domain);
+  if (fakeExchangeCheck.isFake) {
     threats.push({
       type: 'fake_exchange',
       severity: 'CRITICAL',
       description: 'Fake cryptocurrency exchange - impersonating legitimate platform',
-      evidence: fakeCheck.match,
+      evidence: fakeExchangeCheck.match,
       weight: 25,
     });
   }
   
+  // Check for fake brokerage domain
+  const fakeBrokerageCheck = isFakeBrokerage(domain);
+  if (fakeBrokerageCheck.isFake) {
+    threats.push({
+      type: 'fake_brokerage',
+      severity: 'CRITICAL',
+      description: 'Fake brokerage website - impersonating legitimate investment platform',
+      evidence: fakeBrokerageCheck.match,
+      weight: 25,
+    });
+  }
+  
+  // Check for wallet drainer patterns
   for (const sig of WALLET_DRAINER_SIGNATURES) {
     if (lowerHtml.includes(sig.pattern)) {
       threats.push({
@@ -180,6 +326,19 @@ function analyzeContent(html: string, url: string, domain: string): ThreatDetect
         description: getThreatDescription(sig.type),
         evidence: `Pattern: "${sig.pattern}"`,
         weight: sig.weight,
+      });
+    }
+  }
+  
+  // Check for investment fraud keywords
+  for (const keyword of INVESTMENT_FRAUD_KEYWORDS) {
+    if (lowerHtml.includes(keyword.pattern)) {
+      threats.push({
+        type: keyword.type,
+        severity: keyword.severity,
+        description: getThreatDescription(keyword.type),
+        evidence: `Keyword: "${keyword.pattern}"`,
+        weight: keyword.weight,
       });
     }
   }
@@ -214,6 +373,10 @@ function getThreatDescription(type: string): string {
     key_harvesting: 'Private key theft - NEVER share your private key',
     fake_airdrop: 'Fake airdrop scam - drains wallet',
     fake_exchange: 'Fake crypto exchange - impersonating legitimate platform',
+    fake_brokerage: 'Fake brokerage website - impersonating investment platform',
+    investment_fraud: 'Investment fraud - recovery/claim scam',
+    brokerage_phishing: 'Brokerage phishing - attempts to steal login credentials',
+    wire_fraud: 'Wire fraud indicators - requests urgent transfers',
     phishing: 'Phishing attempt - steals credentials',
     urgency: 'Urgency tactics - forces quick decisions',
     wallet_connect: 'Wallet connection - verify site first',
@@ -246,7 +409,31 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean): 
     recs.push('🚨 CRITICAL: Fake crypto exchange detected');
     recs.push('❌ Do NOT deposit funds or connect wallet');
     recs.push('🔍 Verify URL matches official exchange website');
-    recs.push('📋 Report to: support@legitimate-exchange.com');
+  }
+  
+  if (threats.some(t => t.type === 'fake_brokerage')) {
+    recs.push('🚨 CRITICAL: Fake brokerage website detected');
+    recs.push('❌ Do NOT provide personal info or transfer funds');
+    recs.push('🔍 Verify URL matches official brokerage website');
+    recs.push('📋 Report to SEC: https://www.sec.gov/oiea/ActionForm.htm');
+  }
+  
+  if (threats.some(t => t.type === 'investment_fraud')) {
+    recs.push('🚨 CRITICAL: Investment fraud/recovery scam detected');
+    recs.push('❌ Do NOT send money or provide banking info');
+    recs.push('📋 Report to FTC: https://reportfraud.ftc.gov');
+  }
+  
+  if (threats.some(t => t.type === 'brokerage_phishing')) {
+    recs.push('⚠️ Brokerage phishing attempt detected');
+    recs.push('❌ Do NOT enter your login credentials');
+    recs.push('🔍 Log in directly from official app or website');
+  }
+  
+  if (threats.some(t => t.type === 'wire_fraud')) {
+    recs.push('🚨 Wire fraud indicators detected');
+    recs.push('❌ Do NOT send wire transfers');
+    recs.push('📞 Call your bank immediately if already contacted');
   }
   
   if (threats.some(t => t.type === 'seed_harvesting' || t.type === 'key_harvesting')) {
