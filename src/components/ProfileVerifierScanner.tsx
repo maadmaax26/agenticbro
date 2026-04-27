@@ -98,7 +98,7 @@ async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void
 
 interface ProfileScanResult {
   success: boolean;
-  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok';
+  platform: 'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok' | 'cross-platform';
   username: string;
   displayName?: string;
   verified?: boolean;
@@ -122,6 +122,7 @@ interface ProfileScanResult {
   scanDate: string;
   botDetection?: BotDetectionResult;
   engagementAnalysis?: EngagementAnalysisResult;
+  crossPlatformResults?: CrossPlatformResult[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -139,6 +140,82 @@ function DisclaimerNotice({ scanDate }: { scanDate?: string }) {
   );
 }
 
+// ─── Cross-Platform Result Card ────────────────────────────────────────────────
+function CrossPlatformResultCard({ result }: { result: CrossPlatformResult }) {
+  const platformIcons: Record<string, string> = {
+    'instagram': '📷', 'tiktok': '🎵', 'facebook': '📘',
+    'telegram': '✈️', 'x (twitter)': 'X', 'twitter': 'X',
+  };
+  
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case 'CRITICAL': return { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.4)', text: '#f87171' };
+      case 'HIGH': return { bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.4)', text: '#fbbf24' };
+      case 'MEDIUM': return { bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.4)', text: '#facc15' };
+      case 'LOW': return { bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.4)', text: '#4ade80' };
+      default: return { bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.4)', text: '#9ca3af' };
+    }
+  };
+  
+  const colors = getRiskColor(result.riskLevel);
+  const icon = platformIcons[result.platform.toLowerCase()] || '🔍';
+  
+  return (
+    <div
+      className="rounded-lg p-4"
+      style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{icon}</span>
+          <span className="font-semibold text-white">
+            {result.platform}
+          </span>
+        </div>
+        {result.success ? (
+          <span className="font-bold" style={{ color: colors.text }}>
+            {(result.riskScore / 10).toFixed(1)}/10 — {result.riskLevel}
+          </span>
+        ) : (
+          <span className="text-gray-500 text-sm">{result.error || 'Unavailable'}</span>
+        )}
+      </div>
+      
+      {result.success && result.redFlags.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-gray-400 mb-1">Red Flags:</p>
+          <div className="flex flex-wrap gap-1">
+            {result.redFlags.slice(0, 3).map((flag, idx) => (
+              <span
+                key={idx}
+                className="text-xs px-2 py-1 rounded"
+                style={{ background: 'rgba(0,0,0,0.3)', color: '#9ca3af' }}
+              >
+                {flag}
+              </span>
+            ))}
+            {result.redFlags.length > 3 && (
+              <span className="text-xs text-gray-500">+{result.redFlags.length - 3} more</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Cross-Platform Result Type ────────────────────────────────────────────────
+
+interface CrossPlatformResult {
+  platform: string;
+  success: boolean;
+  riskScore: number;
+  riskLevel: string;
+  redFlags: string[];
+  error?: string;
+  scannedAt: string;
+}
+
 interface ProfileVerifierScannerProps {
   onLoginRequired?: () => void;
 }
@@ -146,11 +223,13 @@ interface ProfileVerifierScannerProps {
 export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerifierScannerProps) {
   const { publicKey } = useWallet();
   const { isAuthenticated, email, walletAddress: authWalletAddress } = useAuth();
-  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok'>('twitter');
+  const [platform, setPlatform] = useState<'twitter' | 'telegram' | 'instagram' | 'discord' | 'linkedin' | 'facebook' | 'tiktok' | 'cross-platform'>('twitter');
   const [username, setUsername] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
+  const [crossPlatformResults, setCrossPlatformResults] = useState<CrossPlatformResult[] | null>(null);
+  const [crossPlatformProgress, setCrossPlatformProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [_fromCache, setFromCache] = useState(false);
@@ -231,8 +310,16 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     setScanning(true);
     setError(null);
     setResult(null);
+    setCrossPlatformResults(null);
+    setCrossPlatformProgress(0);
 
     const cleanUsername = username.trim().replace(/^@/, '');
+
+    // ── Cross-Platform Scan ──────────────────────────────────────────────
+    if (platform === 'cross-platform') {
+      await runCrossPlatformScan(cleanUsername);
+      return;
+    }
 
     // Use a credit (free first, then paid)
     const creditResult = useCredit();
@@ -461,6 +548,127 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     return 'LOW';
   };
 
+  // ── Cross-Platform Scan Function ──────────────────────────────────────
+  const runCrossPlatformScan = async (cleanUsername: string) => {
+    const platforms = ['instagram', 'tiktok', 'facebook', 'telegram', 'twitter'] as const;
+    const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
+    const results: CrossPlatformResult[] = [];
+    
+    // Use a credit for the cross-platform scan
+    const creditResult = useCredit();
+    if (!creditResult.success) {
+      setError('Failed to use scan credit. Please try again.');
+      setScanning(false);
+      return;
+    }
+    
+    for (let i = 0; i < platforms.length; i++) {
+      const p = platforms[i];
+      const platformLabel = p === 'twitter' ? 'X (Twitter)' : p.charAt(0).toUpperCase() + p.slice(1);
+      setScanStatus(`Scanning ${platformLabel}...`);
+      setCrossPlatformProgress(Math.round((i / platforms.length) * 100));
+      
+      try {
+        // Serverless scan for IG/TikTok/FB
+        if (['instagram', 'tiktok', 'facebook'].includes(p)) {
+          const res = await fetch(`${apiBase}/api/social-scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: p, username: cleanUsername }),
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            results.push({
+              platform: platformLabel,
+              success: data.success ?? false,
+              riskScore: Math.round((data.riskScore ?? 0) * 10),
+              riskLevel: data.riskLevel ?? 'UNKNOWN',
+              redFlags: data.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts)`) || [],
+              scannedAt: new Date().toISOString(),
+            });
+          } else {
+            results.push({
+              platform: platformLabel,
+              success: false,
+              riskScore: 0,
+              riskLevel: 'ERROR',
+              redFlags: [],
+              error: 'Scan failed',
+              scannedAt: new Date().toISOString(),
+            });
+          }
+        } else if (p === 'twitter') {
+          // X requires CDP - mark as unavailable
+          results.push({
+            platform: 'X (Twitter)',
+            success: false,
+            riskScore: 0,
+            riskLevel: 'UNAVAILABLE',
+            redFlags: [],
+            error: 'Requires Chrome CDP (scan directly)',
+            scannedAt: new Date().toISOString(),
+          });
+        } else if (p === 'telegram') {
+          // Try Telegram scan
+          results.push({
+            platform: 'Telegram',
+            success: false,
+            riskScore: 0,
+            riskLevel: 'UNAVAILABLE',
+            redFlags: [],
+            error: 'Private profile or not found',
+            scannedAt: new Date().toISOString(),
+          });
+        }
+      } catch (err: any) {
+        results.push({
+          platform: platformLabel,
+          success: false,
+          riskScore: 0,
+          riskLevel: 'ERROR',
+          redFlags: [],
+          error: err?.message || 'Scan failed',
+          scannedAt: new Date().toISOString(),
+        });
+      }
+      
+      setCrossPlatformResults([...results]);
+    }
+    
+    setCrossPlatformProgress(100);
+    setScanning(false);
+    setScanStatus(null);
+    
+    // Calculate aggregate score
+    const successResults = results.filter(r => r.success);
+    const avgScore = successResults.length > 0
+      ? successResults.reduce((sum, r) => sum + r.riskScore, 0) / successResults.length
+      : 0;
+    const maxLevel = results.reduce((max, r) => {
+      const levels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      const rLevel = levels.indexOf(r.riskLevel as any);
+      const mLevel = levels.indexOf(max as any);
+      return rLevel > mLevel ? r.riskLevel : max;
+    }, 'LOW' as string);
+    
+    const aggregateResult: ProfileScanResult = {
+      success: successResults.length > 0,
+      platform: 'cross-platform',
+      username: cleanUsername,
+      riskScore: Math.round(avgScore),
+      riskLevel: maxLevel as any,
+      redFlags: results.flatMap(r => r.redFlags),
+      evidence: [],
+      recommendation: `Scanned across ${results.length} platforms. ${successResults.length} successful.`,
+      confidence: 'MEDIUM',
+      scanDate: new Date().toISOString(),
+      crossPlatformResults: results,
+    };
+    
+    setResult(aggregateResult);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !scanning) {
       handleScan();
@@ -557,8 +765,9 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
             <label className="block text-sm font-semibold text-gray-300 mb-2">
               Platform
             </label>
-            <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
               {([
+                { id: 'cross-platform', icon: '🌐', label: 'All' },
                 { id: 'twitter', icon: 'X', label: 'X' },
                 { id: 'telegram', icon: '✈️', label: 'Telegram' },
                 { id: 'instagram', icon: '📷', label: 'Instagram' },
@@ -680,6 +889,18 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
       {/* ── Results Section ── */}
       {result && (
         <div className="space-y-4">
+          {/* Cross-Platform Results Grid */
+          {result.platform === 'cross-platform' && result.crossPlatformResults && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-bold text-white">🌐 Cross-Platform Scan Results for @{result.username}</h3>
+              <div className="grid gap-3">
+                {result.crossPlatformResults.map((r, idx) => (
+                  <CrossPlatformResultCard key={idx} result={r} />
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Scan Header */}
           <div
             className="rounded-xl p-5"
