@@ -189,10 +189,10 @@ async function fetchPriceFromPumpFun(): Promise<number | null> {
 async function fetchBalanceFromRpc(
   rpcUrl: string,
   ownerAddress: string,
-): Promise<number | null> {
+): Promise<{ balance: number | null; rpc: string }> {
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout for mobile
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout for mobile
     
     const res = await fetch(rpcUrl, {
       method: 'POST',
@@ -216,18 +216,17 @@ async function fetchBalanceFromRpc(
 
     if (!res.ok) {
       console.warn(`[TokenGating] ${rpcUrl} HTTP ${res.status}`)
-      return null
+      return { balance: null, rpc: rpcUrl }
     }
 
     const json = await res.json()
 
     if (json.error) {
       console.warn(`[TokenGating] ${rpcUrl} RPC error:`, json.error.message ?? json.error)
-      return null
+      return { balance: null, rpc: rpcUrl }
     }
 
     const accounts = json?.result?.value ?? []
-    console.log(`[TokenGating] ${rpcUrl} → ${accounts.length} account(s)`)
 
     let balance = 0
     for (const acct of accounts) {
@@ -235,38 +234,35 @@ async function fetchBalanceFromRpc(
       if (tokenAmount) {
         const amt = Number(tokenAmount.uiAmount ?? tokenAmount.uiAmountString ?? 0)
         if (!isNaN(amt)) {
-          console.log(`[TokenGating]   account balance: ${amt}`)
           balance += amt
         }
       }
     }
 
-    return balance
+    return { balance, rpc: rpcUrl }
   } catch (err: any) {
-    // More detailed error logging for mobile debugging
-    if (err?.name === 'AbortError') {
-      console.warn(`[TokenGating] ${rpcUrl} timeout (15s)`)
-    } else if (err?.message?.includes('Failed to fetch') || err?.message?.includes('NetworkError')) {
-      console.warn(`[TokenGating] ${rpcUrl} network error - likely CORS or connectivity issue on mobile`)
-    } else {
-      console.warn(`[TokenGating] ${rpcUrl} fetch failed:`, err?.message || err)
-    }
-    return null
+    return { balance: null, rpc: rpcUrl }
   }
 }
 
 async function fetchBalance(ownerAddress: string): Promise<number | null> {
-  for (const rpc of RPC_ENDPOINTS) {
-    console.log(`[TokenGating] Trying RPC: ${rpc}`)
-    const result = await fetchBalanceFromRpc(rpc, ownerAddress)
-    if (result !== null) {
-      console.log(`[TokenGating] Balance from ${rpc}: ${result}`)
-      return result
+  // Try ALL RPCs in PARALLEL - first success wins (much faster on mobile)
+  console.log('[TokenGating] Trying all RPCs in parallel...')
+  
+  const results = await Promise.all(
+    RPC_ENDPOINTS.map(rpc => fetchBalanceFromRpc(rpc, ownerAddress))
+  )
+  
+  // Find first successful result
+  for (const { balance, rpc } of results) {
+    if (balance !== null) {
+      console.log(`[TokenGating] Success from ${rpc}: ${balance} AGNTCBRO`)
+      return balance
     }
   }
 
   console.error('[TokenGating] ALL RPCs failed — could not read balance')
-  return null // null = total failure (distinct from genuine 0 balance)
+  return null
 }
 
 async function fetchPriceFromJupiter(): Promise<number | null> {
