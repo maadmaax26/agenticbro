@@ -16,6 +16,41 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { execSync } from 'child_process';
 import path from 'path';
+import { createClient } from '@supabase/supabase-js';
+
+// ── Supabase Client for scan tracking ───────────────────────────────────────
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
+
+// ── Record phone scan to Supabase ───────────────────────────────────────────
+async function recordPhoneScan(data: {
+  phone: string;
+  risk_score: number;
+  risk_level: string;
+  red_flags: string[];
+  source: string;
+}) {
+  if (!supabase) return;
+  
+  try {
+    await supabase.from('phone_scan_results').insert({
+      phone: data.phone,
+      risk_score: data.risk_score,
+      risk_level: data.risk_level,
+      red_flags: data.red_flags,
+      source: data.source,
+      scanned_at: new Date().toISOString(),
+    });
+    
+    // Update stats counter
+    await supabase.rpc('increment_phone_scan_count');
+  } catch (err) {
+    console.error('[Supabase] recordPhoneScan error:', err);
+  }
+}
 
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
 type VercelResponse = ServerResponse & {
@@ -750,6 +785,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } else if (result.riskLevel === 'MEDIUM') {
     result.recommendation = '⚡ Exercise caution. Verify the caller\'s identity through official channels. Do not share personal or financial information unless independently verified.';
   }
+  
+  // Record phone scan to Supabase for tracking
+  await recordPhoneScan({
+    phone: result.phone,
+    risk_score: result.riskScore,
+    risk_level: result.riskLevel,
+    red_flags: result.redFlags || [],
+    source: 'website',
+  });
   
   res.status(200).json({ success: true, result });
 }

@@ -11,6 +11,45 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
+import { createClient } from '@supabase/supabase-js';
+
+// ── Supabase Client for scan tracking ───────────────────────────────────────
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
+
+// ── Record scan to Supabase ────────────────────────────────────────────────
+async function recordScan(data: {
+  platform: string;
+  username: string;
+  risk_score: number;
+  risk_level: string;
+  red_flags: string[];
+  wallet_address?: string;
+  source: string;
+}) {
+  if (!supabase) return;
+  
+  try {
+    await supabase.from('scan_results').insert({
+      username: data.username,
+      platform: data.platform,
+      risk_score: data.risk_score,
+      risk_level: data.risk_level,
+      red_flags: data.red_flags,
+      wallet_address: data.wallet_address || null,
+      data_source: data.source,
+      scanned_at: new Date().toISOString(),
+    });
+    
+    // Update stats counter
+    await supabase.rpc('increment_scan_count');
+  } catch (err) {
+    console.error('[Supabase] recordScan error:', err);
+  }
+}
 
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
 type VercelResponse = ServerResponse & {
@@ -378,6 +417,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // ── Sync mode: scan and return immediately ──────────────────────────────
   try {
     const result = await performScan(platform, username);
+    
+    // Record scan to Supabase for tracking
+    if (result.success) {
+      await recordScan({
+        platform: result.platform,
+        username: result.username,
+        risk_score: result.riskScore,
+        risk_level: result.riskLevel,
+        red_flags: result.flagDetails?.map((f: any) => f.name || f.id) || [],
+        source: 'website',
+      });
+    }
+    
     res.status(200).json(result);
   } catch (err: any) {
     const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
