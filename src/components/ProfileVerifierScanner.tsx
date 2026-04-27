@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
 import { useAuth } from '../lib/AuthContext';
+import { useTokenGating } from '../hooks/useTokenGating';
 import { createClient } from '@supabase/supabase-js';
 import { useScanResult } from '../hooks/useScanResult';
 import {
@@ -241,6 +242,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
   const effectiveEmail = email || null;
 
+  // Get tier status from useTokenGating (Holder: $100+ = 50 scans/month, Whale: $1000+ = unlimited)
+  const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
+
   // Use the credits system ($1/scan, tracked by wallet/email)
   const {
     credits,
@@ -249,6 +253,12 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     useCredit,
     isTestWallet
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
+
+  // Calculate display text based on tier
+  // Free: 5 scans
+  // Holder ($100+): 50 ALL scans/month
+  // Whale ($1000+): Unlimited
+  const displayScans = isTestWallet ? '∞ Unlimited' : whaleTierUnlocked ? '∞ Unlimited' : holderTierUnlocked ? '50 ALL' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`;
 
   // ── Watch Realtime job updates ─────────────────────────────────────────────
   useEffect(() => {
@@ -827,19 +837,23 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
           {/* Free scan counter */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
             style={{
-              background: freeScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-              border: freeScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
-              color: freeScansRemaining > 0 ? '#4ade80' : '#fbbf24',
+              background: (holderTierUnlocked || whaleTierUnlocked || freeScansRemaining > 0) ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+              border: (holderTierUnlocked || whaleTierUnlocked || freeScansRemaining > 0) ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
+              color: (holderTierUnlocked || whaleTierUnlocked || freeScansRemaining > 0) ? '#4ade80' : '#fbbf24',
             }}>
             <span>🎁</span>
             <span>
               {isTestWallet
                 ? '∞ Unlimited Scans (Test)'
-                : freeScansRemaining > 0
-                  ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}`
-                  : 'No Free Scans'}
+                : whaleTierUnlocked
+                  ? '∞ Unlimited (Whale)'
+                  : holderTierUnlocked
+                    ? '50 ALL Scans (Holder)'
+                    : freeScansRemaining > 0
+                      ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}`
+                      : 'No Free Scans'}
             </span>
-            {credits > 0 && !isTestWallet && (
+            {credits > 0 && !isTestWallet && !holderTierUnlocked && !whaleTierUnlocked && (
               <span className="text-purple-400 ml-2">+ {credits} Paid Credits</span>
             )}
           </div>
@@ -916,7 +930,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
             }}
           >
             {scanning ? (scanStatus ? `⏳ ${scanStatus}` : '🔄 Scanning...') : hasScans
-              ? `🚀 Verify Profile (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
+              ? `🚀 Verify Profile (${displayScans})`
               : '❌ No Scans - Buy Credits'}
           </button>
           
