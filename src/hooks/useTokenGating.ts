@@ -7,18 +7,19 @@
  * Price sources (tried in order):
  *   1. DexScreener API
  *   2. pump.fun API (fallback)
+ *   3. Jupiter API (fallback)
  *
  * Balance source:
- *   Raw JSON-RPC POST via fetch() to multiple RPC endpoints.
- *   This bypasses @solana/web3.js entirely for maximum reliability.
+ *   Uses @solana/web3.js Connection for proper CORS handling on mobile.
  *
- * Tier logic (DEV/TESTING PHASE — reduced thresholds):
+ * Tier logic:
  *   USD value >= $100   → Holder Tier
  *   USD value >= $1000   → Whale Tier
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useWallet } from '@solana/wallet-adapter-react'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+import { PublicKey } from '@solana/web3.js'
 
 // ─── Test wallets (unrestricted access — no token check, no burns) ────────────
 
@@ -44,26 +45,13 @@ const TEST_WALLET_STATE: TokenGatingState = {
 
 const AGNTCBRO_MINT = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'
 
-// Use token-based endpoint (more resilient than pair-based — pair IDs can change)
+// Price APIs
 const DEXSCREENER_API = `https://api.dexscreener.com/latest/dex/tokens/${AGNTCBRO_MINT}`
 const PUMPFUN_API = `https://frontend-api.pump.fun/coins/${AGNTCBRO_MINT}`
-// Additional fallbacks
 const JUPITER_PRICE_API = `https://api.jup.ag/price/v2?ids=${AGNTCBRO_MINT}`
 
 const HOLDER_TIER_USD = 100  // $100 USD in AGNTCBRO
 const WHALE_TIER_USD  = 1000  // $1000 USD in AGNTCBRO
-
-// Multiple RPC endpoints — tried in order, first success wins
-// Mobile-optimized: prioritize endpoints with good CORS support
-const RPC_ENDPOINTS = [
-  'https://solana-rpc.publicnode.com',
-  'https://rpc.ankr.com/solana',
-  'https://api.mainnet-beta.solana.com',
-  'https://solana.api.rpcpool.com',
-  'https://mainnet.helius-rpc.com/?api-key=public',
-  'https://rpc.solana.com',
-  'https://solana-api.projectserum.com',
-]
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -88,7 +76,6 @@ const DEFAULT_STATE: TokenGatingState = {
 }
 
 // ─── Session cache ────────────────────────────────────────────────────────────
-// One balance+tier check per wallet per browser session. Clears on tab close.
 
 interface GatingCache {
   balance: number
@@ -129,18 +116,10 @@ function clearCache(addr: string) {
 async function fetchPriceFromDexScreener(): Promise<number | null> {
   try {
     const res = await fetch(DEXSCREENER_API, { headers: { Accept: 'application/json' } })
-    if (!res.ok) {
-      console.warn('[TokenGating] DexScreener returned', res.status)
-      return null
-    }
+    if (!res.ok) return null
     const data = await res.json()
-    // Token-based endpoint returns { pairs: [...] } — find best pair (highest liquidity)
     const pairs = data?.pairs
-    if (!Array.isArray(pairs) || pairs.length === 0) {
-      console.warn('[TokenGating] DexScreener returned no pairs for token')
-      return null
-    }
-    // Sort by liquidity to pick the most reliable pair
+    if (!Array.isArray(pairs) || pairs.length === 0) return null
     const sorted = [...pairs].sort((a: any, b: any) =>
       (b?.liquidity?.usd ?? 0) - (a?.liquidity?.usd ?? 0)
     )
@@ -148,10 +127,8 @@ async function fetchPriceFromDexScreener(): Promise<number | null> {
     const raw = best?.priceUsd ?? null
     if (raw === null) return null
     const price = parseFloat(raw)
-    console.log(`[TokenGating] DexScreener price: $${price} (pair: ${best?.pairAddress ?? 'unknown'}, liq: $${best?.liquidity?.usd ?? 0})`)
     return isNaN(price) || price <= 0 ? null : price
-  } catch (err) {
-    console.warn('[TokenGating] DexScreener fetch error:', err)
+  } catch {
     return null
   }
 }
@@ -161,137 +138,33 @@ async function fetchPriceFromPumpFun(): Promise<number | null> {
     const res = await fetch(PUMPFUN_API, { headers: { Accept: 'application/json' } })
     if (!res.ok) return null
     const data = await res.json()
-
     const marketCap: number = data?.usd_market_cap ?? 0
     const totalSupply: number = data?.total_supply ?? 0
     if (marketCap > 0 && totalSupply > 0) {
       const price = marketCap / (totalSupply / 1_000_000)
       if (price > 0) return price
     }
-
-    const solReserves: number = data?.virtual_sol_reserves ?? 0
-    const tokenReserves: number = data?.virtual_token_reserves ?? 0
-    const solPriceUsd: number = data?.sol_price_usd ?? 0
-    if (solReserves > 0 && tokenReserves > 0 && solPriceUsd > 0) {
-      const price = (solReserves / 1e9) / (tokenReserves / 1e6) * solPriceUsd
-      if (price > 0) return price
-    }
-
     return null
   } catch {
     return null
   }
 }
 
-
-// ─── Balance fetching (raw JSON-RPC only — no web3.js dependency) ────────────
-
-async function fetchBalanceFromRpc(
-  rpcUrl: string,
-  ownerAddress: string,
-): Promise<{ balance: number | null; rpc: string }> {
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout for mobile
-    
-    const res = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'getTokenAccountsByOwner',
-        params: [
-          ownerAddress,
-          { mint: AGNTCBRO_MINT },
-          { encoding: 'jsonParsed' },
-        ],
-      }),
-      signal: controller.signal,
-    })
-    
-    clearTimeout(timeoutId)
-
-    if (!res.ok) {
-      console.warn(`[TokenGating] ${rpcUrl} HTTP ${res.status}`)
-      return { balance: null, rpc: rpcUrl }
-    }
-
-    const json = await res.json()
-
-    if (json.error) {
-      console.warn(`[TokenGating] ${rpcUrl} RPC error:`, json.error.message ?? json.error)
-      return { balance: null, rpc: rpcUrl }
-    }
-
-    const accounts = json?.result?.value ?? []
-
-    let balance = 0
-    for (const acct of accounts) {
-      const tokenAmount = acct?.account?.data?.parsed?.info?.tokenAmount
-      if (tokenAmount) {
-        const amt = Number(tokenAmount.uiAmount ?? tokenAmount.uiAmountString ?? 0)
-        if (!isNaN(amt)) {
-          balance += amt
-        }
-      }
-    }
-
-    return { balance, rpc: rpcUrl }
-  } catch (err: any) {
-    return { balance: null, rpc: rpcUrl }
-  }
-}
-
-async function fetchBalance(ownerAddress: string): Promise<number | null> {
-  // Race ALL RPCs in PARALLEL - first success wins immediately
-  console.log('[TokenGating] Racing all RPCs in parallel...')
-  
-  // Use Promise.any() - resolves as soon as any promise succeeds
-  // Falls back to Promise.all if any() not available
-  const promises = RPC_ENDPOINTS.map(rpc => fetchBalanceFromRpc(rpc, ownerAddress))
-  
-  try {
-    // Promise.any returns first successful result
-    const results = await Promise.all(promises)
-    
-    // Find first successful result
-    for (const { balance, rpc } of results) {
-      if (balance !== null) {
-        console.log(`[TokenGating] Success from ${rpc}: ${balance} AGNTCBRO`)
-        return balance
-      }
-    }
-  } catch (err) {
-    console.error('[TokenGating] RPC race error:', err)
-  }
-
-  console.error('[TokenGating] ALL RPCs failed — could not read balance')
-  return null
-}
-
 async function fetchPriceFromJupiter(): Promise<number | null> {
   try {
     const res = await fetch(JUPITER_PRICE_API, { headers: { Accept: 'application/json' } })
-    if (!res.ok) {
-      console.warn('[TokenGating] Jupiter returned', res.status)
-      return null
-    }
+    if (!res.ok) return null
     const data = await res.json()
     const priceStr = data?.data?.[AGNTCBRO_MINT]?.price ?? null
     if (priceStr === null) return null
     const price = parseFloat(priceStr)
     return isNaN(price) || price <= 0 ? null : price
-  } catch (err) {
-    console.warn('[TokenGating] Jupiter fetch error:', err)
+  } catch {
     return null
   }
 }
 
 async function fetchLivePriceOrNull(): Promise<number | null> {
-  // Try all price sources in parallel for speed
   const [dexResult, pumpResult, jupiterResult] = await Promise.allSettled([
     fetchPriceFromDexScreener(),
     fetchPriceFromPumpFun(),
@@ -302,22 +175,10 @@ async function fetchLivePriceOrNull(): Promise<number | null> {
   const pump = pumpResult.status === 'fulfilled' ? pumpResult.value : null
   const jupiter = jupiterResult.status === 'fulfilled' ? jupiterResult.value : null
 
-  if (dex !== null) {
-    console.log('[TokenGating] Price (DexScreener):', dex)
-    return dex
-  }
-
-  if (pump !== null) {
-    console.log('[TokenGating] Price (pump.fun):', pump)
-    return pump
-  }
-
-  if (jupiter !== null) {
-    console.log('[TokenGating] Price (Jupiter):', jupiter)
-    return jupiter
-  }
-
-  console.error('[TokenGating] All price feeds failed')
+  if (dex !== null) return dex
+  if (pump !== null) return pump
+  if (jupiter !== null) return jupiter
+  
   return null
 }
 
@@ -325,47 +186,58 @@ async function fetchLivePriceOrNull(): Promise<number | null> {
 
 export function useTokenGating(): TokenGatingState & { refresh: () => void } {
   const { publicKey } = useWallet()
+  const { connection } = useConnection()
   const [state, setState] = useState<TokenGatingState>(DEFAULT_STATE)
   const walletAddr = publicKey?.toBase58() ?? ''
   const runId  = useRef(0)
-  const lastAddr = useRef('') // survives publicKey → null on disconnect
-  const refreshing = useRef(false) // prevent concurrent refreshes
+  const lastAddr = useRef('')
+  const refreshing = useRef(false)
 
-  // Core fetch logic — returns true on success, false on failure.
   const runCheck = useCallback(async (addr: string, currentRun: number): Promise<boolean> => {
     try {
-      // Use Promise.allSettled so one failure doesn't cancel the other
-      const [balanceResult, priceResult] = await Promise.allSettled([
-        fetchBalance(addr),
-        fetchLivePriceOrNull(),
-      ])
-
-      if (currentRun !== runId.current) return false
-
-      const balance = balanceResult.status === 'fulfilled' ? balanceResult.value : null
-      const livePrice = priceResult.status === 'fulfilled' ? priceResult.value : null
-
-      // If balance fetch failed entirely, that's an error
-      if (balance === null) {
-        console.warn('[TokenGating] Balance fetch failed')
+      // Use web3.js connection (properly handles CORS on mobile)
+      let balance: number = 0
+      
+      console.log(`[TokenGating] Fetching balance via web3.js for ${addr.slice(0,8)}...`)
+      
+      try {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+          new PublicKey(addr),
+          { mint: new PublicKey(AGNTCBRO_MINT) }
+        )
+        
+        for (const { account } of tokenAccounts.value) {
+          const tokenAmount = account.data.parsed.info.tokenAmount
+          const amt = Number(tokenAmount.uiAmount ?? tokenAmount.uiAmountString ?? 0)
+          if (!isNaN(amt)) {
+            balance += amt
+          }
+        }
+        console.log(`[TokenGating] Balance: ${balance} AGNTCBRO`)
+      } catch (web3Err: any) {
+        console.error('[TokenGating] web3.js error:', web3Err?.message)
         setState(prev => ({
           ...prev,
           loading: false,
-          error: 'Could not read wallet balance. Check your connection and try again.',
+          error: 'Connection failed. Check your network and try again.',
         }))
         return false
       }
 
-      // If price is unavailable, still show balance with $0 value rather than error
+      if (currentRun !== runId.current) return false
+
+      // Fetch price
+      const livePrice = await fetchLivePriceOrNull()
+      
+      if (currentRun !== runId.current) return false
+
       const effectivePrice = livePrice ?? 0
       const usdValue = balance * effectivePrice
       const holderTierUnlocked = livePrice !== null && usdValue >= HOLDER_TIER_USD
       const whaleTierUnlocked = livePrice !== null && usdValue >= WHALE_TIER_USD
 
-      console.log(`[TokenGating] ${balance} AGNTCBRO × $${effectivePrice} = $${usdValue.toFixed(4)} USD`)
-      console.log(`[TokenGating] Holder: ${holderTierUnlocked ? 'UNLOCKED' : 'locked'} | Whale: ${whaleTierUnlocked ? 'UNLOCKED' : 'locked'}`)
+      console.log(`[TokenGating] ${balance} AGNTCBRO × $${effectivePrice} = $${usdValue.toFixed(4)}`)
 
-      // Only cache if both succeeded
       if (livePrice !== null) {
         writeCache(addr, { balance, usdValue, tokenPriceUsd: livePrice, holderTierUnlocked, whaleTierUnlocked })
       }
@@ -375,43 +247,36 @@ export function useTokenGating(): TokenGatingState & { refresh: () => void } {
     } catch (err) {
       if (currentRun !== runId.current) return false
       console.error('[TokenGating] Error:', err)
-      setState(prev => ({ ...prev, loading: false, error: 'Could not verify AGNTCBRO balance. Please try again.' }))
+      setState(prev => ({ ...prev, loading: false, error: 'Could not verify balance. Please try again.' }))
       return false
     }
-  }, [])
+  }, [connection])
 
-  // Stable check function — reads cache first, then fetches with retries.
   const doCheck = useCallback(async (addr: string) => {
-    // Return cached result immediately if already checked this session
     const cached = readCache(addr)
     if (cached) {
-      console.log(`[TokenGating] Session cache hit for ${addr}`)
+      console.log(`[TokenGating] Cache hit for ${addr.slice(0,8)}...`)
       setState({ ...cached, loading: false, error: null })
       return
     }
 
     const currentRun = ++runId.current
     setState(prev => ({ ...prev, loading: true, error: null }))
-    console.log(`[TokenGating] ── Checking balance for ${addr} ──`)
+    console.log(`[TokenGating] Checking balance for ${addr.slice(0,8)}...`)
 
     const ok = await runCheck(addr, currentRun)
 
-    // If first attempt failed, retry once more after short delay
+    // Single retry after 1.5s if failed
     if (!ok && currentRun === runId.current) {
-      const delay = 1500 // 1.5s delay for mobile
-      console.log(`[TokenGating] Retry in ${delay / 1000}s…`)
-      await new Promise(r => setTimeout(r, delay))
-      if (currentRun !== runId.current) return // wallet changed during wait
+      console.log('[TokenGating] Retrying in 1.5s...')
+      await new Promise(r => setTimeout(r, 1500))
+      if (currentRun !== runId.current) return
       setState(prev => ({ ...prev, loading: true, error: null }))
       await runCheck(addr, currentRun)
     }
   }, [runCheck])
 
-  // Debounce wallet address changes to avoid reacting to brief nulls during
-  // mobile wallet reconnection. Mobile adapters can momentarily set publicKey
-  // to null before setting it back, causing unnecessary cache clears.
   useEffect(() => {
-    // If wallet disconnected, wait briefly before clearing state (mobile reconnect race)
     if (!walletAddr) {
       const timer = setTimeout(() => {
         if (lastAddr.current) {
@@ -419,13 +284,12 @@ export function useTokenGating(): TokenGatingState & { refresh: () => void } {
           lastAddr.current = ''
         }
         setState(DEFAULT_STATE)
-      }, 500) // 500ms debounce for disconnect
+      }, 500)
       return () => clearTimeout(timer)
     }
 
     lastAddr.current = walletAddr
 
-    // ── Test wallet: skip all API calls and unlock everything immediately ──
     if (isTestWallet(walletAddr)) {
       setState(TEST_WALLET_STATE)
       return
@@ -434,7 +298,6 @@ export function useTokenGating(): TokenGatingState & { refresh: () => void } {
     doCheck(walletAddr)
   }, [walletAddr, doCheck])
 
-  // Expose a manual refresh function that clears cache and re-fetches
   const refresh = useCallback(() => {
     if (!walletAddr || refreshing.current) return
     refreshing.current = true
