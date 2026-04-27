@@ -66,7 +66,79 @@ const LEGITIMATE_DOMAINS = [
   'phantom.app', 'metamask.io', 'uniswap.org', 'jupiter.ag',
   'raydium.io', 'pump.fun', 'magiceden.io', 'opensea.io',
   'dexscreener.com', 'coingecko.com', 'coinmarketcap.com',
+  'binance.com', 'coinbase.com', 'kraken.com', 'bybit.com',
+  'okx.com', 'kucoin.com', 'crypto.com', 'gate.io',
+  'bitget.com', 'mexc.com', 'bingx.com', 'htx.com',
 ];
+
+// ─── Known Fake Crypto Exchanges (Community Reports + Research) ────────
+
+const FAKE_EXCHANGE_DOMAINS = [
+  // Binance impersonators
+  'binance-support', 'binance-help', 'binance-cust', 'binance-web3',
+  'binance-login', 'binance-verify', 'binance-secure', 'binance-auth',
+  'binance-recovery', 'binance-reset', 'binance-live', 'binance-chat',
+  
+  // Coinbase impersonators
+  'coinbase-support', 'coinbase-help', 'coinbase-login', 'coinbase-verify',
+  'coinbase-wallet', 'coinbase-secure', 'coinbase-recovery', 'coinbase-auth',
+  
+  // Kraken impersonators
+  'kraken-support', 'kraken-help', 'kraken-login', 'kraken-verify',
+  'kraken-wallet', 'kraken-secure',
+  
+  // Generic fake exchange patterns
+  'crypto-exchange', 'crypto-trade', 'crypto-swap', 'crypto-buy',
+  'buy-crypto', 'trade-crypto', 'swap-crypto', 'instant-exchange',
+  'fast-exchange', 'secure-exchange', 'trusted-exchange',
+  
+  // Known scam domains (from community reports)
+  'falsubinance.com', 'binance-kuwait.com', 'binancesg.com',
+  'coinbase-france.com', 'coinbasesupport.org',
+  'kraken-login.net', 'kraken-support.org',
+  'bybit-support.com', 'bybit-login.net',
+  'kucoin-support.org', 'kucoin-login.net',
+  'gate-support.com', 'gate-login.net',
+  'mexc-support.com', 'mexc-login.net',
+];
+
+function isFakeExchange(domain: string): { isFake: boolean; match?: string } {
+  const lowerDomain = domain.toLowerCase();
+  
+  // Check exact fake domain matches
+  for (const fakeDomain of FAKE_EXCHANGE_DOMAINS) {
+    if (lowerDomain === fakeDomain || lowerDomain.endsWith('.' + fakeDomain)) {
+      return { isFake: true, match: fakeDomain };
+    }
+    // Check if domain contains fake pattern (e.g., binance-support123.com)
+    if (lowerDomain.includes(fakeDomain)) {
+      return { isFake: true, match: fakeDomain };
+    }
+  }
+  
+  // Check for impersonation patterns
+  const impersonationPatterns = [
+    /^binance[a-z-]*\.(com|net|org|io|co)/i,
+    /^coinbase[a-z-]*\.(com|net|org|io|co)/i,
+    /^kraken[a-z-]*\.(com|net|org|io|co)/i,
+    /^bybit[a-z-]*\.(com|net|org|io|co)/i,
+    /^kucoin[a-z-]*\.(com|net|org|io|co)/i,
+    /^gate[a-z-]*\.(com|net|org|io|co)/i,
+    /-support\.(com|net|org|io)/i,
+    /-help\.(com|net|org|io)/i,
+    /-login\.(com|net|org|io)/i,
+    /-verify\.(com|net|org|io)/i,
+    /-wallet\.(com|net|org|io)/i,
+  ];
+  
+  for (const pattern of impersonationPatterns) {
+    if (pattern.test(lowerDomain)) {
+      return { isFake: true, match: `Impersonation pattern: ${pattern.source}` };
+    }
+  }
+  
+  return { isFake: false };
+}
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
 
@@ -84,9 +156,21 @@ function isLegitimateDomain(domain: string): boolean {
   );
 }
 
-function analyzeContent(html: string, url: string): ThreatDetection[] {
+function analyzeContent(html: string, url: string, domain: string): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
   const lowerHtml = html.toLowerCase();
+  
+  // Check for fake exchange domain
+  const fakeCheck = isFakeExchange(domain);
+  if (fakeCheck.isFake) {
+    threats.push({
+      type: 'fake_exchange',
+      severity: 'CRITICAL',
+      description: 'Fake cryptocurrency exchange - impersonating legitimate platform',
+      evidence: fakeCheck.match,
+      weight: 25,
+    });
+  }
   
   for (const sig of WALLET_DRAINER_SIGNATURES) {
     if (lowerHtml.includes(sig.pattern)) {
@@ -129,6 +213,7 @@ function getThreatDescription(type: string): string {
     seed_harvesting: 'Seed phrase harvesting - NEVER enter your seed phrase',
     key_harvesting: 'Private key theft - NEVER share your private key',
     fake_airdrop: 'Fake airdrop scam - drains wallet',
+    fake_exchange: 'Fake crypto exchange - impersonating legitimate platform',
     phishing: 'Phishing attempt - steals credentials',
     urgency: 'Urgency tactics - forces quick decisions',
     wallet_connect: 'Wallet connection - verify site first',
@@ -156,6 +241,13 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean): 
   }
   
   const recs: string[] = [];
+  
+  if (threats.some(t => t.type === 'fake_exchange')) {
+    recs.push('🚨 CRITICAL: Fake crypto exchange detected');
+    recs.push('❌ Do NOT deposit funds or connect wallet');
+    recs.push('🔍 Verify URL matches official exchange website');
+    recs.push('📋 Report to: support@legitimate-exchange.com');
+  }
   
   if (threats.some(t => t.type === 'seed_harvesting' || t.type === 'key_harvesting')) {
     recs.push('🚨 CRITICAL: Site asks for seed phrase/private key - NEVER share');
@@ -231,7 +323,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     
     const html = await response.text();
-    const threats = analyzeContent(html, validUrl);
+    const threats = analyzeContent(html, validUrl, domain);
     const riskScore = calculateRiskScore(threats);
     const riskLevel = getRiskLevel(riskScore);
     const recommendations = generateRecommendations(threats, isLegit);
