@@ -10,6 +10,7 @@ import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
 import ProfileVerifierScanner from './components/ProfileVerifierScanner'
 import PhoneNumberVerifier from './components/PhoneNumberVerifier'
+import WebsiteSecurityScanner from './components/WebsiteSecurityScanner'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
@@ -69,7 +70,7 @@ const knownChannels: Record<string, any> = {
 
 // ─── Priority Scan types ──────────────────────────────────────────────────────
 
-type ScanMode = 'wallet' | 'channels' | 'token' | 'social' | 'phone'
+type ScanMode = 'wallet' | 'channels' | 'token' | 'social' | 'phone' | 'website'
 
 type ScamVerdict = 'SCAM' | 'RISKY' | 'CLEAN' | 'UNKNOWN'
 
@@ -749,13 +750,14 @@ function App() {
                 </div>
 
                 {/* ── Scan mode tabs ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
                   {([
                     { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
                     { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
                     { id: 'phone',    icon: '📞', label: 'Phone Verify', hint: 'Verify phone numbers for scams' },
+                    { id: 'website',  icon: '🌐', label: 'Website Scan', hint: 'Detect wallet drainers & phishing' },
                   ] as { id: ScanMode; icon: string; label: string; hint: string }[]).map(m => (
                     <button
                       key={m.id}
@@ -831,6 +833,11 @@ function App() {
                       <PhoneNumberVerifier />
                     </div>
                   )}
+                  {scanMode === 'website' && (
+                    <div>
+                      <WebsiteSecurityScanner />
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Launch button (hidden for phone mode — uses its own) ── */}
@@ -838,12 +845,13 @@ function App() {
                   onClick={runScan}
                   disabled={isScanning ||
                     scanMode === 'phone' ||
+                    scanMode === 'website' ||
                     (scanMode === 'wallet'   && !walletInput.trim())  ||
                     (scanMode === 'channels' && !channelInput.trim()) ||
                     (scanMode === 'token'    && !tokenInput.trim())    ||
                     (scanMode === 'social'   && !socialUsername.trim())}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={scanMode === 'phone' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
+                  style={scanMode === 'phone' || scanMode === 'website' ? { display: 'none' } : { background: 'rgba(139,92,246,0.25)', border: '1px solid rgba(139,92,246,0.6)', color: '#c4b5fd' }}
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
