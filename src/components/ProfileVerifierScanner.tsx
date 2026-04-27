@@ -228,7 +228,6 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ProfileScanResult | null>(null);
-  const [crossPlatformResults, setCrossPlatformResults] = useState<CrossPlatformResult[] | null>(null);
   const [crossPlatformProgress, setCrossPlatformProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -310,7 +309,6 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     setScanning(true);
     setError(null);
     setResult(null);
-    setCrossPlatformResults(null);
     setCrossPlatformProgress(0);
 
     const cleanUsername = username.trim().replace(/^@/, '');
@@ -632,8 +630,6 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
           scannedAt: new Date().toISOString(),
         });
       }
-      
-      setCrossPlatformResults([...results]);
     }
     
     setCrossPlatformProgress(100);
@@ -833,6 +829,19 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
               ? `🚀 Verify Profile (${freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
               : '❌ No Scans - Buy Credits'}
           </button>
+          
+          {/* Cross-Platform Progress */}
+          {scanning && platform === 'cross-platform' && (
+            <div className="p-3 rounded-lg" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)' }}>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${crossPlatformProgress}%`, background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)' }}
+                />
+              </div>
+              <p className="text-xs text-purple-400 mt-2">{crossPlatformProgress}% complete - {scanStatus}</p>
+            </div>
+          )}
 
           {/* Pricing Info - Show login prompt if not authenticated */}
           {!hasScans && (
@@ -889,7 +898,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
       {/* ── Results Section ── */}
       {result && (
         <div className="space-y-4">
-          {/* Cross-Platform Results Grid */
+          {/* Cross-Platform Results Grid */}
           {result.platform === 'cross-platform' && result.crossPlatformResults && (
             <div className="space-y-3">
               <h3 className="text-lg font-bold text-white">🌐 Cross-Platform Scan Results for @{result.username}</h3>
