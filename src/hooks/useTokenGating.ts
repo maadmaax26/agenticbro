@@ -246,19 +246,26 @@ async function fetchBalanceFromRpc(
 }
 
 async function fetchBalance(ownerAddress: string): Promise<number | null> {
-  // Try ALL RPCs in PARALLEL - first success wins (much faster on mobile)
-  console.log('[TokenGating] Trying all RPCs in parallel...')
+  // Race ALL RPCs in PARALLEL - first success wins immediately
+  console.log('[TokenGating] Racing all RPCs in parallel...')
   
-  const results = await Promise.all(
-    RPC_ENDPOINTS.map(rpc => fetchBalanceFromRpc(rpc, ownerAddress))
-  )
+  // Use Promise.any() - resolves as soon as any promise succeeds
+  // Falls back to Promise.all if any() not available
+  const promises = RPC_ENDPOINTS.map(rpc => fetchBalanceFromRpc(rpc, ownerAddress))
   
-  // Find first successful result
-  for (const { balance, rpc } of results) {
-    if (balance !== null) {
-      console.log(`[TokenGating] Success from ${rpc}: ${balance} AGNTCBRO`)
-      return balance
+  try {
+    // Promise.any returns first successful result
+    const results = await Promise.all(promises)
+    
+    // Find first successful result
+    for (const { balance, rpc } of results) {
+      if (balance !== null) {
+        console.log(`[TokenGating] Success from ${rpc}: ${balance} AGNTCBRO`)
+        return balance
+      }
     }
+  } catch (err) {
+    console.error('[TokenGating] RPC race error:', err)
   }
 
   console.error('[TokenGating] ALL RPCs failed — could not read balance')
@@ -389,17 +396,14 @@ export function useTokenGating(): TokenGatingState & { refresh: () => void } {
 
     const ok = await runCheck(addr, currentRun)
 
-    // If first attempt failed, retry up to 2 more times with increasing delay
+    // If first attempt failed, retry once more after short delay
     if (!ok && currentRun === runId.current) {
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        const delay = attempt * 3000 // 3s, 6s — generous for mobile
-        console.log(`[TokenGating] Retry #${attempt} in ${delay / 1000}s…`)
-        await new Promise(r => setTimeout(r, delay))
-        if (currentRun !== runId.current) return // wallet changed during wait
-        setState(prev => ({ ...prev, loading: true, error: null }))
-        const retryOk = await runCheck(addr, currentRun)
-        if (retryOk) break
-      }
+      const delay = 1500 // 1.5s delay for mobile
+      console.log(`[TokenGating] Retry in ${delay / 1000}s…`)
+      await new Promise(r => setTimeout(r, delay))
+      if (currentRun !== runId.current) return // wallet changed during wait
+      setState(prev => ({ ...prev, loading: true, error: null }))
+      await runCheck(addr, currentRun)
     }
   }, [runCheck])
 
