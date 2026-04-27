@@ -103,7 +103,7 @@ interface ProfileScanResult {
   displayName?: string;
   verified?: boolean;
   riskScore: number;
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'UNAVAILABLE' | 'ERROR' | 'PENDING';
   scamType?: string;
   redFlags: string[];
   evidence: string[];
@@ -450,7 +450,63 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
         }
       }
 
-      // ── STEP 3: Supabase queue → Mac Studio CDP worker (primary for Twitter) ──
+      // ── STEP 3: X/Twitter requires CDP - queue with specific scan_type ──
+      if (platform === 'twitter') {
+        // X requires Chrome CDP which can't run serverlessly
+        // Queue for backend CDP worker
+        if (_supabaseAnonKey) {
+          try {
+            const client = createClient(_supabaseUrl, _supabaseAnonKey);
+
+            setScanStatus('Queuing X scan for CDP processing...');
+
+            const { data: jobData, error: insertError } = await client
+              .from('scan_jobs')
+              .insert({
+                scan_type: 'x_cdp',
+                status: 'pending',
+                target: cleanUsername,
+                platform: 'twitter',
+                payload: {
+                  platform: 'twitter',
+                  username: cleanUsername,
+                  url: `https://x.com/${cleanUsername}`,
+                  requestedAt: new Date().toISOString(),
+                },
+              })
+              .select('id')
+              .single();
+
+            if (!insertError && jobData?.id) {
+              setScanStatus('X scan queued - results in 1-2 min');
+              setActiveJobId(jobData.id);
+              console.log('[X-Scan] Job queued:', jobData.id);
+              return;
+            }
+          } catch (queueErr) {
+            console.warn('[X-Scan] Queue error:', queueErr);
+          }
+        }
+        
+        // Fallback: Show instruction message
+        const xResult: ProfileScanResult = {
+          success: false,
+          platform: 'twitter',
+          username: cleanUsername,
+          riskScore: 0,
+          riskLevel: 'UNAVAILABLE',
+          redFlags: [],
+          evidence: [],
+          recommendation: 'X (Twitter) scans require Chrome CDP processing. Try the Jeeevs Telegram bot for instant X scans, or use the mobile app.',
+          confidence: 'LOW',
+          scanDate: new Date().toISOString(),
+        };
+        setResult(xResult);
+        setScanning(false);
+        return;
+      }
+
+      // ── STEP 4: Supabase queue → Mac Studio CDP worker (other platforms) ──
       if (_supabaseAnonKey) {
         try {
           const client = createClient(_supabaseUrl, _supabaseAnonKey);
@@ -597,16 +653,47 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             });
           }
         } else if (p === 'twitter') {
-          // X requires CDP - mark as unavailable
-          results.push({
-            platform: 'X (Twitter)',
-            success: false,
-            riskScore: 0,
-            riskLevel: 'UNAVAILABLE',
-            redFlags: [],
-            error: 'Requires Chrome CDP (scan directly)',
-            scannedAt: new Date().toISOString(),
-          });
+          // X requires CDP - queue for backend processing
+          try {
+            const res = await fetch(`${apiBase}/api/x-scan`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: cleanUsername }),
+            });
+            
+            if (res.ok) {
+              await res.json();
+              results.push({
+                platform: 'X (Twitter)',
+                success: true,
+                riskScore: 0,
+                riskLevel: 'PENDING',
+                redFlags: [],
+                error: 'X scan queued - results in 1-2 min',
+                scannedAt: new Date().toISOString(),
+              });
+            } else {
+              results.push({
+                platform: 'X (Twitter)',
+                success: false,
+                riskScore: 0,
+                riskLevel: 'UNAVAILABLE',
+                redFlags: [],
+                error: 'X scan unavailable - try Telegram bot',
+                scannedAt: new Date().toISOString(),
+              });
+            }
+          } catch {
+            results.push({
+              platform: 'X (Twitter)',
+              success: false,
+              riskScore: 0,
+              riskLevel: 'ERROR',
+              redFlags: [],
+              error: 'X scan failed',
+              scannedAt: new Date().toISOString(),
+            });
+          }
         } else if (p === 'telegram') {
           // Try Telegram scan
           results.push({
@@ -711,6 +798,9 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
       case 'CRITICAL': return { color: '#f87171', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)' };
       case 'HIGH': return { color: '#fb923c', bg: 'rgba(251,146,60,0.15)', border: 'rgba(251,146,60,0.4)' };
       case 'MEDIUM': return { color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.4)' };
+      case 'PENDING': return { color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.4)' };
+      case 'UNAVAILABLE': return { color: '#9ca3af', bg: 'rgba(156,163,175,0.15)', border: 'rgba(156,163,175,0.4)' };
+      case 'ERROR': return { color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)' };
       default: return { color: '#4ade80', bg: 'rgba(74,222,128,0.15)', border: 'rgba(74,222,128,0.4)' };
     }
   };
