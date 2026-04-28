@@ -62,10 +62,16 @@ const RPC_URL: string = RPC_ENDPOINTS[0]
 console.log('[RPC] Using endpoint:', RPC_URL)
 console.log('[RPC] Fallbacks available:', RPC_ENDPOINTS.length - 1)
 
+// Connection timeout to prevent hanging
+const CONNECTION_CONFIG = {
+  commitment: 'confirmed' as const,
+  confirmTransactionInitialTimeout: 30000, // 30s timeout
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConnectionProvider endpoint={RPC_URL}>
-      <WalletProvider wallets={wallets} autoConnect>
+    <ConnectionProvider endpoint={RPC_URL} config={CONNECTION_CONFIG}>
+      <WalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider>
           <AuthProvider>
             <App />
