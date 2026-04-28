@@ -94,9 +94,32 @@ export function useScanResult(jobId: string | null) {
       )
       .subscribe();
 
+    // ── 3. Polling fallback — check job status every 5s if Realtime fails ────
+    const pollInterval = setInterval(() => {
+      if (!jobId) return;
+
+      client
+        .from('scan_jobs')
+        .select('id, status, scan_type, result, error, created_at, started_at, completed_at, retry_count')
+        .eq('id', jobId)
+        .single()
+        .then(({ data, error: pollErr }) => {
+          if (!pollErr && data) {
+            // Only update if there's a meaningful change
+            setJob(prev => {
+              if (!prev || prev.status !== (data as ScanJob).status) {
+                return data as ScanJob;
+              }
+              return prev;
+            });
+          }
+        });
+    }, 5000);
+
     return () => {
       // FIX: TypeScript knows 'client' is non-null here
       client.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [jobId]);
 
