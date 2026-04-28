@@ -45,16 +45,21 @@ const wallets = mobileWalletAdapter ? [...desktopWallets, mobileWalletAdapter] :
 
 console.log('[Wallet] Initialized wallets:', { isMobile, walletCount: wallets.length })
 
-// Use Helius RPC if configured, otherwise fall back to publicnode (more reliable than Solana public RPC)
-// Mobile-optimized: multiple fallbacks for reliability
+// Use Helius RPC if configured, otherwise use publicnode (Solana public RPC blocks browser CORS)
 const _heliusKey: string = (import.meta as any).env.VITE_HELIUS_API_KEY ?? ''
 const _heliusUrl: string = (import.meta as any).env.VITE_HELIUS_RPC_URL ?? ''
 
-const RPC_ENDPOINTS = [
-  _heliusUrl || (_heliusKey ? `https://mainnet.helius-rpc.com/?api-key=${_heliusKey}` : null),
-  'https://api.mainnet-beta.solana.com',
-  'https://solana-rpc.publicnode.com',
-].filter(Boolean) as string[]
+// Build endpoint list - publicnode first if no Helius (Solana public RPC blocks browser CORS)
+const RPC_ENDPOINTS: string[] = []
+
+if (_heliusUrl) {
+  RPC_ENDPOINTS.push(_heliusUrl)
+} else if (_heliusKey) {
+  RPC_ENDPOINTS.push(`https://mainnet.helius-rpc.com/?api-key=${_heliusKey}`)
+}
+
+// publicnode allows browser CORS - use as fallback
+RPC_ENDPOINTS.push('https://solana-rpc.publicnode.com')
 
 // Use first available endpoint
 const RPC_URL: string = RPC_ENDPOINTS[0]
@@ -71,7 +76,7 @@ const CONNECTION_CONFIG = {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConnectionProvider endpoint={RPC_URL} config={CONNECTION_CONFIG}>
-      <WalletProvider wallets={wallets} autoConnect={false}>
+      <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <AuthProvider>
             <App />
