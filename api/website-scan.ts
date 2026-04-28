@@ -62,6 +62,28 @@ const WALLET_DRAINER_SIGNATURES = [
   { pattern: 'expires in', type: 'urgency', weight: 10, severity: 'MEDIUM' },
 ];
 
+// ─── Known Scam Domains (Regulatory Warnings, Community Reports) ─────────
+
+const KNOWN_SCAM_DOMAINS = [
+  // FCA Warned - Trade Vector AI variants
+  'trade-vectorai.net', 'tradevectorai.net', 'tradevectorai-app.org', 'tradevectorai-official.com',
+  'trade.errors-app.org', 'trade-errors-app.org',
+  'vectorai-app.org', 'vector-ai-app.org',
+  
+  // Common scam patterns
+  'trade-ai.net', 'trading-ai.net', 'profit-ai.net',
+  'crypto-ai.net', 'bitcoin-ai.net', 'ethereum-ai.net',
+];
+
+// ─── Regulatory Warning Domains ───────────────────────────────────────────
+
+const REGULATORY_WARNING_DOMAINS = [
+  // FCA warned entities
+  { pattern: 'tradevectorai', regulator: 'FCA', warning: 'UK Financial Conduct Authority warning - unauthorised firm' },
+  { pattern: 'trade-vectorai', regulator: 'FCA', warning: 'UK Financial Conduct Authority warning - unauthorised firm' },
+  { pattern: 'errors-app', regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern detected' },
+];
+
 const LEGITIMATE_DOMAINS = [
   'phantom.app', 'metamask.io', 'uniswap.org', 'jupiter.ag',
   'raydium.io', 'pump.fun', 'magiceden.io', 'opensea.io',
@@ -317,6 +339,34 @@ function analyzeContent(html: string, url: string, domain: string): ThreatDetect
     });
   }
   
+  // Check for known scam domains (FCA warned, community reported)
+  const lowerDomain = domain.toLowerCase();
+  for (const scamDomain of KNOWN_SCAM_DOMAINS) {
+    if (lowerDomain === scamDomain || lowerDomain.includes(scamDomain)) {
+      threats.push({
+        type: 'known_scam_domain',
+        severity: 'CRITICAL',
+        description: 'Known scam domain - regulatory warning or community report',
+        evidence: scamDomain,
+        weight: 30,
+      });
+      break;
+    }
+  }
+  
+  // Check for regulatory warning patterns
+  for (const warning of REGULATORY_WARNING_DOMAINS) {
+    if (lowerDomain.includes(warning.pattern)) {
+      threats.push({
+        type: 'regulatory_warning',
+        severity: 'CRITICAL',
+        description: `${warning.regulator} WARNING: ${warning.warning}`,
+        evidence: warning.pattern,
+        weight: 30,
+      });
+    }
+  }
+  
   // Check for wallet drainer patterns
   for (const sig of WALLET_DRAINER_SIGNATURES) {
     if (lowerHtml.includes(sig.pattern)) {
@@ -382,6 +432,8 @@ function getThreatDescription(type: string): string {
     wallet_connect: 'Wallet connection - verify site first',
     obfuscated_code: 'Hidden malicious code',
     approval_abuse: 'Token approval abuse - grants spending rights',
+    known_scam_domain: 'Known scam domain - flagged by regulators or community',
+    regulatory_warning: 'Regulatory warning - official authority has flagged this domain',
   };
   return descriptions[type] || 'Suspicious activity';
 }
@@ -498,6 +550,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const domain = extractDomain(validUrl);
   const isLegit = isLegitimateDomain(domain);
+  
+  // Check known scam domains BEFORE content fetch (handles Cloudflare blocks)
+  const lowerDomain = domain.toLowerCase();
+  let threats: ThreatDetection[] = [];
+  
+  // Check for known scam domains
+  for (const scamDomain of KNOWN_SCAM_DOMAINS) {
+    if (lowerDomain === scamDomain || lowerDomain.includes(scamDomain)) {
+      threats.push({
+        type: 'known_scam_domain',
+        severity: 'CRITICAL',
+        description: 'Known scam domain - regulatory warning or community report',
+        evidence: scamDomain,
+        weight: 30,
+      });
+      break;
+    }
+  }
+  
+  // Check for regulatory warning patterns
+  for (const warning of REGULATORY_WARNING_DOMAINS) {
+    if (lowerDomain.includes(warning.pattern)) {
+      threats.push({
+        type: 'regulatory_warning',
+        severity: 'CRITICAL',
+        description: `${warning.regulator} WARNING: ${warning.warning}`,
+        evidence: warning.pattern,
+        weight: 30,
+      });
+    }
+  }
+  
+  // If already CRITICAL from domain checks, return early
+  if (threats.some(t => t.severity === 'CRITICAL')) {
+    const riskScore = calculateRiskScore(threats);
+    const riskLevel = getRiskLevel(riskScore);
+    const recommendations = generateRecommendations(threats, isLegit);
+    
+    return res.status(200).json({
+      success: true,
+      url: validUrl,
+      domain,
+      riskScore,
+      riskLevel,
+      threats,
+      recommendations,
+      scanDate: new Date().toISOString(),
+    });
+  }
   
   try {
     // Fetch page content
