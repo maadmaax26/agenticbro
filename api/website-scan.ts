@@ -224,7 +224,11 @@ function calculateRiskScore(threats: ThreatDetection[]): number {
   return Math.min(Math.round((totalWeight / 100) * 100) / 10, 10);
 }
 
-function getRiskLevel(score: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+function getRiskLevel(score: number, threats: ThreatDetection[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  // Any CRITICAL threat automatically elevates to CRITICAL level
+  if (threats.some(t => t.severity === 'CRITICAL')) {
+    return 'CRITICAL';
+  }
   if (score >= 7) return 'CRITICAL';
   if (score >= 5) return 'HIGH';
   if (score >= 3) return 'MEDIUM';
@@ -343,7 +347,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   const riskScore = calculateRiskScore(threats);
-  const riskLevel = getRiskLevel(riskScore);
+  const riskLevel = getRiskLevel(riskScore, threats);
   const recommendations = generateRecommendations(threats, isLegit);
   
   const result: WebsiteScanResult = {
