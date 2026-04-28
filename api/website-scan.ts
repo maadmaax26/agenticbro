@@ -221,7 +221,11 @@ function getThreatDescription(type: string): string {
 
 function calculateRiskScore(threats: ThreatDetection[]): number {
   const totalWeight = threats.reduce((sum, t) => sum + t.weight, 0);
-  return Math.min(Math.round((totalWeight / 100) * 100) / 10, 10);
+  // 30+ points = CRITICAL (10), 20+ = HIGH (7), 10+ = MEDIUM (5)
+  if (totalWeight >= 30) return Math.min(10, Math.round(totalWeight / 5));
+  if (totalWeight >= 20) return Math.min(8, Math.round(totalWeight / 4));
+  if (totalWeight >= 10) return Math.min(5, Math.round(totalWeight / 3));
+  return Math.min(Math.round((totalWeight / 10) * 10) / 10, 10);
 }
 
 function getRiskLevel(score: number, threats: ThreatDetection[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
