@@ -249,10 +249,14 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const {
     credits,
     freeScansRemaining,
-    hasScans,
+    hasScans: hasScansFromCredits,
     useCredit,
     isTestWallet
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
+
+  // Override hasScans to include holder/whale tier status
+  // Holder ($100+ AGNTCBRO) and Whale ($1000+ AGNTCBRO) get free scans
+  const hasScans = isTestWallet || whaleTierUnlocked || holderTierUnlocked || hasScansFromCredits;
 
   // Calculate display text based on tier
   // Free: 5 scans
@@ -288,21 +292,76 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
   }, [job?.status, isComplete, isFailed]);
 
-  // ── Timeout fallback: if Realtime never fires, fall back to demo after 90s ──
+  // ── Polling fallback for X scans ────────────────────────────────────────
+  // If Realtime subscription fails, poll the job status directly
   useEffect(() => {
-    if (!scanning || !activeJobId) return;
+    if (!scanning || !activeJobId || platform !== 'twitter') return;
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let timeoutReached = false;
+
+    // Poll every 5 seconds for X scan job status
+    pollInterval = setInterval(async () => {
+      if (!_supabaseAnonKey || timeoutReached) return;
+
+      try {
+        const client = createClient(_supabaseUrl, _supabaseAnonKey);
+        const { data: jobStatus, error: pollErr } = await client
+          .from('scan_jobs')
+          .select('id, status, result, error')
+          .eq('id', activeJobId)
+          .single();
+
+        if (pollErr) {
+          console.warn('[Poll] Error checking job status:', pollErr);
+          return;
+        }
+
+        if (jobStatus?.status === 'completed' && jobStatus.result) {
+          console.log('[Poll] Job completed via polling');
+          const scanResult = normalizeResult(jobStatus.result, platform, username.replace(/^@/, ''));
+          setResult(scanResult);
+          setScanStatus(null);
+          setScanning(false);
+          setActiveJobId(null);
+          if (pollInterval) clearInterval(pollInterval);
+        } else if (jobStatus?.status === 'failed') {
+          console.warn('[Poll] Job failed:', jobStatus.error);
+          setError(jobStatus.error || 'X scan failed. The CDP worker encountered an error.');
+          setScanStatus(null);
+          setScanning(false);
+          setActiveJobId(null);
+          if (pollInterval) clearInterval(pollInterval);
+        }
+      } catch (err) {
+        console.warn('[Poll] Polling error:', err);
+      }
+    }, 5000);
+
+    // After 30 seconds, show a queued message if still pending
+    const queueTimer = setTimeout(() => {
+      if (!scanning || !activeJobId) return;
+      setScanStatus('X scan queued - the CDP agent will process this shortly. Results will appear here when ready.');
+    }, 30000);
+
+    // After 90 seconds, show a check-back message instead of demo
     scanTimeoutRef.current = setTimeout(() => {
-      console.warn('[Realtime] Timed out waiting for job result, falling back to demo');
-      const demo = generateDemoResult(platform, username.replace(/^@/, ''));
-      setResult(demo);
+      timeoutReached = true;
+      if (!scanning || !activeJobId) return;
+      console.warn('[Poll] Timed out waiting for job result');
+      setError('Your X scan is still in the queue. The CDP worker may be busy. Please check back in a few minutes or try again later.');
       setScanStatus(null);
       setScanning(false);
       setActiveJobId(null);
+      if (pollInterval) clearInterval(pollInterval);
     }, 90000);
+
     return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      clearTimeout(queueTimer);
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
-  }, [scanning, activeJobId]);
+  }, [scanning, activeJobId, platform]);
 
   const handleScan = async () => {
     if (!username.trim()) {
@@ -329,12 +388,16 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       return;
     }
 
-    // Use a credit (free first, then paid)
-    const creditResult = useCredit();
-    if (!creditResult.success) {
-      setError('Failed to use scan credit. Please try again.');
-      setScanning(false);
-      return;
+    // Only use a credit if not in a holder/whale tier
+    // Holder tier: 50 free scans/month (no credit deduction)
+    // Whale tier: Unlimited free scans (no credit deduction)
+    if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
+      const creditResult = useCredit();
+      if (!creditResult.success) {
+        setError('Failed to use scan credit. Please try again.');
+        setScanning(false);
+        return;
+      }
     }
 
     try {
@@ -618,12 +681,14 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
     const results: CrossPlatformResult[] = [];
     
-    // Use a credit for the cross-platform scan
-    const creditResult = useCredit();
-    if (!creditResult.success) {
-      setError('Failed to use scan credit. Please try again.');
-      setScanning(false);
-      return;
+    // Only use a credit for cross-platform scan if not in holder/whale tier
+    if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
+      const creditResult = useCredit();
+      if (!creditResult.success) {
+        setError('Failed to use scan credit. Please try again.');
+        setScanning(false);
+        return;
+      }
     }
     
     for (let i = 0; i < platforms.length; i++) {
