@@ -52,9 +52,8 @@ const _heliusUrl: string = (import.meta as any).env.VITE_HELIUS_RPC_URL ?? ''
 
 const RPC_ENDPOINTS = [
   _heliusUrl || (_heliusKey ? `https://mainnet.helius-rpc.com/?api-key=${_heliusKey}` : null),
-  'https://solana-rpc.publicnode.com',
-  'https://rpc.ankr.com/solana',
   'https://api.mainnet-beta.solana.com',
+  'https://solana-rpc.publicnode.com',
 ].filter(Boolean) as string[]
 
 // Use first available endpoint
