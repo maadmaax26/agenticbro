@@ -523,10 +523,25 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
         }
       }
 
-      // ── STEP 3: X/Twitter requires CDP - queue with specific scan_type ──
+      // ── STEP 3: X/Twitter - try web scan first, then CDP queue ──
       if (platform === 'twitter') {
-        // X requires Chrome CDP which can't run serverlessly
-        // Queue for backend CDP worker
+        // First attempt: web-based scan via Nitter (public mirror)
+        try {
+          setScanStatus('Scanning X profile via web...');
+          const webResult = await scanXProfileWeb(cleanUsername);
+          if (webResult.success) {
+            setResult(webResult);
+            uploadScanToSupabase(webResult).catch(() => {});
+            setScanStatus(null);
+            setScanning(false);
+            return;
+          }
+          console.warn('[X-Scan] Web scan failed, falling back to CDP queue');
+        } catch (webErr) {
+          console.warn('[X-Scan] Web scan error:', webErr);
+        }
+
+        // Second attempt: queue for CDP worker
         if (_supabaseAnonKey) {
           try {
             const client = createClient(_supabaseUrl, _supabaseAnonKey);
@@ -538,8 +553,6 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
               .insert({
                 scan_type: 'x_cdp',
                 status: 'pending',
-                target: cleanUsername,
-                platform: 'twitter',
                 payload: {
                   platform: 'twitter',
                   username: cleanUsername,
@@ -561,16 +574,16 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
           }
         }
         
-        // Fallback: Show instruction message
+        // Final fallback: Show instruction message
         const xResult: ProfileScanResult = {
           success: false,
           platform: 'twitter',
           username: cleanUsername,
           riskScore: 0,
-          riskLevel: 'UNAVAILABLE',
+          riskLevel: 'ERROR',
           redFlags: [],
           evidence: [],
-          recommendation: 'X (Twitter) scans require Chrome CDP processing. Try the Jeeevs Telegram bot for instant X scans, or use the mobile app.',
+          recommendation: 'X (Twitter) scan couldn\'t retrieve data automatically. For instant X scans, try our Telegram bot @Jeeevs222_bot or scan again later.',
           confidence: 'LOW',
           scanDate: new Date().toISOString(),
         };
@@ -1526,6 +1539,145 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
       )}
     </div>
   );
+}
+
+// ─── Helper: Scan X profile via web (Nitter) ──────────────────────────────────────────
+async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
+  // Nitter instances to try (public X mirrors)
+  const nitterInstances = [
+    'https://nitter.net',
+    'https://nitter.privacydev.net',
+    'https://nitter.poast.org',
+    'https://nitter.1d4.us',
+  ];
+
+  for (const instance of nitterInstances) {
+    try {
+      const url = `${instance}/${username}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+
+      if (!res.ok) continue;
+
+      const html = await res.text();
+      
+      // Parse profile data from Nitter HTML
+      const bioMatch = html.match(/<div[^>]*class="profile-bio"[^>]*>([\s\S]*?)<\/div>/i);
+      const followersMatch = html.match(/Followers<\/span[^>]*>[\s\S]*?<span[^>]*>([\d,]+)<\/span>/i);
+      const followingMatch = html.match(/Following<\/span[^>]*>[\s\S]*?<span[^>]*>([\d,]+)<\/span>/i);
+      const joinDateMatch = html.match(/Joined\s*([\w\s]+\d{4})/i);
+      const displayNameMatch = html.match(/<div[^>]*class="profile-fullname"[^>]*>([\s\S]*?)<\/div>/i);
+      const verifiedMatch = html.match(/verified-icon|blue-check/i);
+
+      const bio = bioMatch ? bioMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+      const followers = followersMatch ? parseInt(followersMatch[1].replace(/,/g, '')) : undefined;
+      const following = followingMatch ? parseInt(followingMatch[1].replace(/,/g, '')) : undefined;
+      const joinDate = joinDateMatch ? joinDateMatch[1].trim() : undefined;
+      const displayName = displayNameMatch ? displayNameMatch[1].replace(/<[^>]+>/g, '').trim() : username;
+      const verified = !!verifiedMatch;
+
+      // Calculate risk score based on bio content
+      const bioText = bio.toLowerCase();
+      const flags: { flag: string; weight: number; description: string }[] = [];
+      let riskScore = 0;
+
+      // 90-point scoring patterns
+      if (/guaranteed.*returns?|100%.*profit|risk.free/i.test(bioText)) {
+        flags.push({ flag: 'guaranteed_returns', weight: 25, description: 'Promises guaranteed returns' });
+        riskScore += 25;
+      }
+      if (/giveaway|airdrop|free.*(crypto|token|nft)/i.test(bioText)) {
+        flags.push({ flag: 'giveaway_airdrop', weight: 20, description: 'Promotes giveaways or airdrops' });
+        riskScore += 20;
+      }
+      if (/dm.*me|dm.*for|check.*dm|slide.*into.*dm/i.test(bioText)) {
+        flags.push({ flag: 'dm_solicitation', weight: 15, description: 'Asks users to DM' });
+        riskScore += 15;
+      }
+      if (/free.*(btc|eth|sol|crypto)/i.test(bioText)) {
+        flags.push({ flag: 'free_crypto', weight: 15, description: 'Offers free cryptocurrency' });
+        riskScore += 15;
+      }
+      if (/alpha|gem|signal|whale|early/i.test(bioText) && /dm|join|subscribe/i.test(bioText)) {
+        flags.push({ flag: 'alpha_dm_scheme', weight: 15, description: 'Alpha/DM scheme pattern' });
+        riskScore += 15;
+      }
+      if (/(10x|100x|1000x|moon|lambo)/i.test(bioText)) {
+        flags.push({ flag: 'unrealistic_claims', weight: 10, description: 'Unrealistic profit claims' });
+        riskScore += 10;
+      }
+      if (/download|install|app\.link/i.test(bioText)) {
+        flags.push({ flag: 'download_install', weight: 10, description: 'Promotes downloads/installs' });
+        riskScore += 10;
+      }
+      if (/urgent|limited.*time|act.*now|last.*chance/i.test(bioText)) {
+        flags.push({ flag: 'urgency_tactics', weight: 10, description: 'Uses urgency tactics' });
+        riskScore += 10;
+      }
+      if (/friend.*scammed|help.*recover|lost.*funds/i.test(bioText)) {
+        flags.push({ flag: 'emotional_manipulation', weight: 10, description: 'Emotional manipulation' });
+        riskScore += 10;
+      }
+
+      // Low credibility indicators
+      if (followers && followers < 100 && /crypto|nft|trading/i.test(bioText)) {
+        flags.push({ flag: 'low_credibility', weight: 10, description: 'Low followers with crypto content' });
+        riskScore += 10;
+      }
+
+      // Cap at 90
+      riskScore = Math.min(riskScore, 90);
+
+      // Determine risk level
+      const riskLevel: ProfileScanResult['riskLevel'] =
+        riskScore >= 75 ? 'CRITICAL' :
+        riskScore >= 50 ? 'HIGH' :
+        riskScore >= 30 ? 'MEDIUM' : 'LOW';
+
+      return {
+        success: true,
+        platform: 'twitter',
+        username,
+        displayName,
+        verified,
+        riskScore,
+        riskLevel,
+        redFlags: flags.map(f => `${f.flag} (${f.weight}pts) — ${f.description}`),
+        evidence: [],
+        recommendation: flags.length > 0
+          ? `Profile analyzed via web scan. ${flags.length} risk indicator(s) detected.`
+          : 'Profile analyzed via web scan. No significant scam indicators found.',
+        profileData: {
+          followers,
+          following,
+          bio,
+          joinDate,
+        },
+        confidence: 'MEDIUM',
+        scanDate: new Date().toISOString(),
+      };
+    } catch (err) {
+      console.warn(`[X-Web] Failed to fetch from ${instance}:`, err);
+      continue;
+    }
+  }
+
+  // All Nitter instances failed
+  return {
+    success: false,
+    platform: 'twitter',
+    username,
+    riskScore: 0,
+    riskLevel: 'ERROR',
+    redFlags: [],
+    evidence: [],
+    recommendation: 'Unable to fetch profile data from public sources.',
+    confidence: 'LOW',
+    scanDate: new Date().toISOString(),
+  };
 }
 
 // ─── Helper: Generate Demo Result ──────────────────────────────────────────────
