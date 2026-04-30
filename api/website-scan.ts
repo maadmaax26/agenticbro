@@ -487,17 +487,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     (riskLevel === 'LOW' && threats.length === 0);
   
   if (shouldQueueDeepScan) {
-    // Queue deep scan asynchronously (don't wait for result)
+    // Trigger OpenClaw agent directly via webhook for immediate processing
     const scanId = `deep-${domain}-${Date.now()}`;
     deepScanId = scanId;
     
-    // Fire and forget - queue the deep scan
-    fetch('https://agenticbro.app/api/website-deep-scan', {
+    // Fire webhook to trigger agent deep scan immediately
+    const gatewayUrl = process.env.OPENCLAW_GATEWAY_URL || 'https://gateway.openclaw.ai';
+    
+    fetch(`${gatewayUrl}/api/webhook/trigger`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: validUrl }),
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENCLAW_AGENT_TOKEN || ''}`,
+      },
+      body: JSON.stringify({
+        agentId: 'main',
+        event: 'website_deep_scan',
+        payload: {
+          url: validUrl,
+          domain,
+          scanId,
+          callbackUrl: 'https://agenticbro.app/api/website-deep-scan',
+        },
+      }),
     }).catch(() => {
-      // Ignore errors - best effort queue
+      // Ignore errors - best effort
     });
   }
   
