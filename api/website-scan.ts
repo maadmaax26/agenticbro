@@ -34,6 +34,7 @@ interface WebsiteScanResult {
   threats: ThreatDetection[];
   recommendations: string[];
   reputation?: ReputationResult[];
+  scamIndicators?: string[];
   scanDate: string;
 }
 
@@ -248,38 +249,100 @@ function getRiskLevel(score: number, threats: ThreatDetection[] = []): 'LOW' | '
   return 'LOW';
 }
 
-// ─── External Reputation Check ──────────────────────────────────────────────
+// ─── External Reputation Check via Brave Search API ─────────────────────────
+
+interface SearchResult {
+  title: string;
+  url: string;
+  description: string;
+}
+
+async function searchScamReports(domain: string): Promise<{ results: SearchResult[]; scamIndicators: string[] }> {
+  const BRAVE_API_KEY = process.env.BRAVE_SEARCH_API_KEY;
+  
+  if (!BRAVE_API_KEY) {
+    // Fallback to static reputation links if no API key
+    return {
+      results: [],
+      scamIndicators: [],
+    };
+  }
+  
+  try {
+    const searchQuery = `${domain} scam legit review warning`;
+    const response = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=10`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X-Subscription-Token': BRAVE_API_KEY,
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      return { results: [], scamIndicators: [] };
+    }
+    
+    const data = await response.json();
+    const results: SearchResult[] = (data.web?.results || []).map((r: any) => ({
+      title: r.title,
+      url: r.url,
+      description: r.description,
+    }));
+    
+    // Extract scam indicators from descriptions
+    const scamIndicators: string[] = [];
+    const scamPatterns = [
+      /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
+      /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
+    ];
+    
+    for (const result of results) {
+      const text = `${result.title} ${result.description}`.toLowerCase();
+      for (const pattern of scamPatterns) {
+        if (pattern.test(text)) {
+          scamIndicators.push(result.title);
+          break;
+        }
+      }
+    }
+    
+    return { results, scamIndicators: [...new Set(scamIndicators)] };
+  } catch {
+    return { results: [], scamIndicators: [] };
+  }
+}
 
 async function checkReputation(domain: string): Promise<ReputationResult[]> {
   const results: ReputationResult[] = [];
   
-  try {
-    // Check ScamAdviser via web fetch
-    const scamAdviserUrl = `https://www.scamadviser.com/check-website/${domain}`;
-    // Note: ScamAdviser may block automated requests, so this is best-effort
-    // In production, we'd use their API or a proxy service
+  // Always add static reputation links
+  results.push({
+    source: 'ScamAdviser',
+    verdict: 'Check recommended',
+    details: `https://www.scamadviser.com/check-website/${domain}`,
+  });
+  results.push({
+    source: 'Scam Detector',
+    verdict: 'Check recommended',
+    details: `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/`,
+  });
+  results.push({
+    source: 'Trustpilot',
+    verdict: 'Check reviews',
+    details: `https://www.trustpilot.com/review/${domain}`,
+  });
+  
+  // Try to get live search results if API key is available
+  const { results: searchResults, scamIndicators } = await searchScamReports(domain);
+  
+  if (searchResults.length > 0) {
     results.push({
-      source: 'ScamAdviser',
-      verdict: 'Check recommended',
-      details: `Visit: ${scamAdviserUrl}`,
+      source: 'Web Search',
+      verdict: scamIndicators.length > 0 ? `${scamIndicators.length} potential scam indicators found` : 'No obvious scam indicators',
+      details: scamIndicators.slice(0, 3).join('; ') || 'Search completed',
     });
-    
-    // Check Scam Detector
-    const scamDetectorUrl = `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/`;
-    results.push({
-      source: 'Scam Detector',
-      verdict: 'Check recommended',
-      details: `Visit: ${scamDetectorUrl}`,
-    });
-    
-    // Trustpilot reviews
-    results.push({
-      source: 'Trustpilot',
-      verdict: 'Check reviews',
-      details: `https://www.trustpilot.com/review/${domain}`,
-    });
-  } catch {
-    // Best-effort, don't fail on reputation check errors
   }
   
   return results;
@@ -375,12 +438,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   // Run reputation check in parallel with content fetch
+  let scamIndicators: string[] = [];
   const [reputationResults] = await Promise.allSettled([
     checkReputation(domain),
   ]);
   
   if (reputationResults.status === 'fulfilled') {
     reputation = reputationResults.value;
+    // Extract scam indicators from reputation results
+    const webSearchResult = reputation.find(r => r.source === 'Web Search');
+    if (webSearchResult && webSearchResult.details) {
+      scamIndicators = webSearchResult.details.split('; ').filter(s => s && s !== 'Search completed');
+    }
   }
   
   try {
@@ -419,6 +488,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     threats,
     recommendations,
     reputation,
+    scamIndicators,
     scanDate: new Date().toISOString(),
   };
   
