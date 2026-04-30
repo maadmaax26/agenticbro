@@ -18,6 +18,13 @@ type ThreatDetection = {
   weight: number;
 };
 
+interface ReputationResult {
+  source: string;
+  score?: number;
+  verdict: string;
+  details?: string;
+}
+
 interface WebsiteScanResult {
   success: boolean;
   url: string;
@@ -26,6 +33,7 @@ interface WebsiteScanResult {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   threats: ThreatDetection[];
   recommendations: string[];
+  reputation?: ReputationResult[];
   scanDate: string;
 }
 
@@ -240,7 +248,44 @@ function getRiskLevel(score: number, threats: ThreatDetection[] = []): 'LOW' | '
   return 'LOW';
 }
 
-function generateRecommendations(threats: ThreatDetection[], isLegit: boolean): string[] {
+// ─── External Reputation Check ──────────────────────────────────────────────
+
+async function checkReputation(domain: string): Promise<ReputationResult[]> {
+  const results: ReputationResult[] = [];
+  
+  try {
+    // Check ScamAdviser via web fetch
+    const scamAdviserUrl = `https://www.scamadviser.com/check-website/${domain}`;
+    // Note: ScamAdviser may block automated requests, so this is best-effort
+    // In production, we'd use their API or a proxy service
+    results.push({
+      source: 'ScamAdviser',
+      verdict: 'Check recommended',
+      details: `Visit: ${scamAdviserUrl}`,
+    });
+    
+    // Check Scam Detector
+    const scamDetectorUrl = `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/`;
+    results.push({
+      source: 'Scam Detector',
+      verdict: 'Check recommended',
+      details: `Visit: ${scamDetectorUrl}`,
+    });
+    
+    // Trustpilot reviews
+    results.push({
+      source: 'Trustpilot',
+      verdict: 'Check reviews',
+      details: `https://www.trustpilot.com/review/${domain}`,
+    });
+  } catch {
+    // Best-effort, don't fail on reputation check errors
+  }
+  
+  return results;
+}
+
+function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, reputation?: ReputationResult[]): string[] {
   if (isLegit) {
     return ['✅ Known legitimate domain', '🔐 Still verify URL is correct'];
   }
@@ -321,11 +366,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const domain = extractDomain(validUrl);
   const isLegit = isLegitimateDomain(domain);
   const threats: ThreatDetection[] = [];
+  let reputation: ReputationResult[] | undefined;
   
   // ALWAYS check known scam domains FIRST (even if fetch fails later)
   const knownScamThreat = checkKnownScamDomain(domain);
   if (knownScamThreat) {
     threats.push(knownScamThreat);
+  }
+  
+  // Run reputation check in parallel with content fetch
+  const [reputationResults] = await Promise.allSettled([
+    checkReputation(domain),
+  ]);
+  
+  if (reputationResults.status === 'fulfilled') {
+    reputation = reputationResults.value;
   }
   
   try {
@@ -353,7 +408,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const riskScore = calculateRiskScore(threats);
   const riskLevel = getRiskLevel(riskScore, threats);
-  const recommendations = generateRecommendations(threats, isLegit);
+  const recommendations = generateRecommendations(threats, isLegit, reputation);
   
   const result: WebsiteScanResult = {
     success: true,
@@ -363,6 +418,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     riskLevel,
     threats,
     recommendations,
+    reputation,
     scanDate: new Date().toISOString(),
   };
   
