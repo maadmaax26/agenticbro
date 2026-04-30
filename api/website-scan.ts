@@ -231,20 +231,31 @@ function getThreatDescription(type: string): string {
   return descriptions[type] || 'Suspicious activity';
 }
 
-function calculateRiskScore(threats: ThreatDetection[]): number {
+function calculateRiskScore(threats: ThreatDetection[], scamIndicators: string[] = []): number {
   const totalWeight = threats.reduce((sum, t) => sum + t.weight, 0);
+  
+  // Add weight for scam indicators from web search (2 points each, max 10)
+  const indicatorWeight = Math.min(scamIndicators.length * 2, 10);
+  
+  const combinedWeight = totalWeight + indicatorWeight;
+  
   // 30+ points = CRITICAL (10), 20+ = HIGH (7), 10+ = MEDIUM (5)
-  if (totalWeight >= 30) return Math.min(10, Math.round(totalWeight / 5));
-  if (totalWeight >= 20) return Math.min(8, Math.round(totalWeight / 4));
-  if (totalWeight >= 10) return Math.min(5, Math.round(totalWeight / 3));
-  return Math.min(Math.round((totalWeight / 10) * 10) / 10, 10);
+  if (combinedWeight >= 30) return Math.min(10, Math.round(combinedWeight / 5));
+  if (combinedWeight >= 20) return Math.min(8, Math.round(combinedWeight / 4));
+  if (combinedWeight >= 10) return Math.min(5, Math.round(combinedWeight / 3));
+  if (combinedWeight >= 5) return Math.min(4, Math.round(combinedWeight / 2));
+  return Math.min(Math.round((combinedWeight / 10) * 10) / 10, 10);
 }
 
-function getRiskLevel(score: number, threats: ThreatDetection[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+function getRiskLevel(score: number, threats: ThreatDetection[] = [], scamIndicators: string[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
   // Any CRITICAL threat automatically elevates to CRITICAL level
   if (threats.some(t => t.severity === 'CRITICAL')) {
     return 'CRITICAL';
   }
+  // Multiple scam indicators from web search elevates risk
+  if (scamIndicators.length >= 5) return 'HIGH';
+  if (scamIndicators.length >= 3) return 'MEDIUM';
+  
   if (score >= 7) return 'CRITICAL';
   if (score >= 5) return 'HIGH';
   if (score >= 3) return 'MEDIUM';
@@ -477,8 +488,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
   
-  const riskScore = calculateRiskScore(threats);
-  const riskLevel = getRiskLevel(riskScore, threats);
+  const riskScore = calculateRiskScore(threats, scamIndicators);
+  const riskLevel = getRiskLevel(riskScore, threats, scamIndicators);
   const recommendations = generateRecommendations(threats, isLegit, reputation);
   
   // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
