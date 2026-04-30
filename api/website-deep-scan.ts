@@ -4,36 +4,115 @@
  * Triggers OpenClaw agent for detailed external reputation research
  * 
  * POST /api/website-deep-scan
- * Body: { url: string, callbackUrl?: string }
- * Returns: { success: boolean, message: string, scanId: string }
+ * Body: { url: string }
+ * Returns: { success: boolean, scanId: string }
+ * 
+ * GET /api/website-deep-scan?scanId=xxx - Get scan result
+ * GET /api/website-deep-scan?pending=true - List pending scans
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface DeepScanRequest {
   url: string;
-  callbackUrl?: string;
 }
 
-interface DeepScanResponse {
-  success: boolean;
-  message: string;
+interface DeepScanResult {
   scanId: string;
-  estimatedTime: string;
+  url: string;
+  domain: string;
+  riskScore: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  scamReports: {
+    source: string;
+    title: string;
+    verdict: string;
+    isScam: boolean;
+  }[];
+  scamIndicators: string[];
+  recommendations: string[];
+  scanDate: string;
+}
+
+interface ScanStatus {
+  scanId: string;
+  domain: string;
+  url: string;
+  status: 'pending' | 'processing' | 'complete' | 'failed';
+  result?: DeepScanResult;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// Use Vercel KV if available, otherwise in-memory fallback
+const kv = (globalThis as any).vercelKV;
+const memoryStore = new Map<string, ScanStatus>();
+
+async function getStore() {
+  return kv || {
+    get: async (key: string) => memoryStore.get(key),
+    set: async (key: string, value: any) => memoryStore.set(key, value),
+    keys: async (pattern: string) => {
+      const prefix = pattern.replace('*', '');
+      return Array.from(memoryStore.keys()).filter(k => k.startsWith(prefix));
+    },
+  };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const store = await getStore();
+
+  // GET - Check scan status/results or list pending scans
+  if (req.method === 'GET') {
+    const { scanId, pending } = req.query;
+    
+    // List pending scans
+    if (pending === 'true' || pending === '1') {
+      const keys = await store.keys('scan:*');
+      const pendingScans: ScanStatus[] = [];
+      
+      for (const key of keys) {
+        const scan = await store.get(key);
+        if (scan && (scan.status === 'pending' || scan.status === 'processing')) {
+          pendingScans.push(scan);
+        }
+      }
+      
+      return res.status(200).json({
+        success: true,
+        pending: pendingScans,
+        count: pendingScans.length,
+      });
+    }
+    
+    if (!scanId || typeof scanId !== 'string') {
+      return res.status(400).json({ error: 'scanId is required (or use ?pending=true)' });
+    }
+    
+    const scan = await store.get(`scan:${scanId}`);
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      ...scan,
+    });
+  }
+
+  // POST - Initiate new scan
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url, callbackUrl } = req.body as DeepScanRequest;
+  const { url } = req.body as DeepScanRequest;
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'URL is required' });
@@ -55,52 +134,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Generate scan ID
   const scanId = `deep-${domain}-${Date.now()}`;
-
-  // Trigger OpenClaw agent via webhook
-  // This sends a system event to the agentic-bro agent for detailed scanning
-  const agentWebhook = process.env.OPENCLAW_WEBHOOK_URL || 'https://gateway.openclaw.ai/webhook';
   
-  try {
-    const webhookPayload = {
-      event: 'website_deep_scan',
-      url: validUrl,
-      domain,
-      scanId,
-      callbackUrl,
-      requestedAt: new Date().toISOString(),
-    };
+  // Store scan status
+  const scanStatus: ScanStatus = {
+    scanId,
+    domain,
+    url: validUrl,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  
+  await store.set(`scan:${scanId}`, scanStatus);
 
-    // Fire and forget - agent will process asynchronously
-    await fetch(agentWebhook, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENCLAW_AGENT_TOKEN || ''}`,
-      },
-      body: JSON.stringify(webhookPayload),
-    }).catch(() => {
-      // Webhook failed - but we still return success
-      // Agent will pick up from event queue
-    });
-
-    const response: DeepScanResponse = {
-      success: true,
-      message: `Deep scan initiated for ${domain}. Agent is performing detailed reputation research.`,
-      scanId,
-      estimatedTime: '30-60 seconds',
-    };
-
-    return res.status(202).json(response);
-
-  } catch (error: any) {
-    // Fallback - still return success, agent will process from scan queue
-    const response: DeepScanResponse = {
-      success: true,
-      message: `Deep scan queued for ${domain}. Check back in 30-60 seconds.`,
-      scanId,
-      estimatedTime: '30-60 seconds',
-    };
-
-    return res.status(202).json(response);
-  }
+  // OpenClaw agent will pick this up via cron job checking /pending
+  return res.status(202).json({
+    success: true,
+    message: `Deep scan queued for ${domain}`,
+    scanId,
+    pollUrl: `/api/website-deep-scan?scanId=${scanId}`,
+    estimatedTime: '30-60 seconds',
+  });
 }
