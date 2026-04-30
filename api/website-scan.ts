@@ -35,6 +35,8 @@ interface WebsiteScanResult {
   recommendations: string[];
   reputation?: ReputationResult[];
   scamIndicators?: string[];
+  deepScanId?: string;
+  deepScanPollUrl?: string;
   scanDate: string;
 }
 
@@ -479,6 +481,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const riskLevel = getRiskLevel(riskScore, threats);
   const recommendations = generateRecommendations(threats, isLegit, reputation);
   
+  // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
+  let deepScanId: string | undefined;
+  const shouldQueueDeepScan = threats.some(t => t.type === 'fetch_error') || 
+    (riskLevel === 'LOW' && threats.length === 0);
+  
+  if (shouldQueueDeepScan) {
+    // Queue deep scan asynchronously (don't wait for result)
+    const scanId = `deep-${domain}-${Date.now()}`;
+    deepScanId = scanId;
+    
+    // Fire and forget - queue the deep scan
+    fetch('https://agenticbro.app/api/website-deep-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: validUrl }),
+    }).catch(() => {
+      // Ignore errors - best effort queue
+    });
+  }
+  
   const result: WebsiteScanResult = {
     success: true,
     url: validUrl,
@@ -489,6 +511,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     recommendations,
     reputation,
     scamIndicators,
+    deepScanId,
+    deepScanPollUrl: deepScanId ? `/api/website-deep-scan?scanId=${deepScanId}` : undefined,
     scanDate: new Date().toISOString(),
   };
   
