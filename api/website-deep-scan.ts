@@ -107,12 +107,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // POST - Initiate new scan
+  // POST - Initiate new scan OR update existing scan with results
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body as DeepScanRequest;
+  const body = req.body as DeepScanRequest | DeepScanResult;
+  
+  // Check if this is a result update (has scanId)
+  if ('scanId' in body && body.scanId) {
+    // This is a result update from the agent
+    const { scanId, domain, riskScore, riskLevel, scamReports, scamIndicators, recommendations } = body as DeepScanResult;
+    
+    const existingScan = await store.get(`scan:${scanId}`) as ScanStatus | null;
+    if (!existingScan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+    
+    // Update with results
+    const updatedScan: ScanStatus = {
+      ...existingScan,
+      status: 'complete',
+      result: {
+        scanId,
+        url: existingScan.url,
+        domain,
+        riskScore,
+        riskLevel,
+        scamReports,
+        scamIndicators,
+        recommendations,
+        scanDate: new Date().toISOString(),
+      },
+      completedAt: new Date().toISOString(),
+    };
+    
+    await store.set(`scan:${scanId}`, updatedScan);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Scan result updated',
+      scanId,
+    });
+  }
+
+  const { url } = body as DeepScanRequest;
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'URL is required' });
