@@ -487,28 +487,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     (riskLevel === 'LOW' && threats.length === 0);
   
   if (shouldQueueDeepScan) {
-    // Trigger OpenClaw agent directly via webhook for immediate processing
     const scanId = `deep-${domain}-${Date.now()}`;
     deepScanId = scanId;
     
-    // Fire webhook to trigger agent deep scan immediately
-    const gatewayUrl = process.env.OPENCLAW_GATEWAY_URL || 'https://gateway.openclaw.ai';
-    
-    fetch(`${gatewayUrl}/api/webhook/trigger`, {
+    // Trigger immediate wake event to OpenClaw agent
+    // Agent will process with web_search and store results in session
+    fetch('https://gateway.openclaw.ai/api/cron/wake', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENCLAW_AGENT_TOKEN || ''}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        agentId: 'main',
-        event: 'website_deep_scan',
-        payload: {
-          url: validUrl,
-          domain,
-          scanId,
-          callbackUrl: 'https://agenticbro.app/api/website-deep-scan',
-        },
+        mode: 'now',
+        text: `DEEP SCAN REQUEST: ${validUrl}
+
+Scan ID: ${scanId}
+Domain: ${domain}
+
+Use web_search to research this domain for scam reports, regulatory warnings, user reviews. 
+Then respond with detailed findings including risk level, scam indicators, and recommendations.
+
+Format response as JSON for the user to see.`,
       }),
     }).catch(() => {
       // Ignore errors - best effort
