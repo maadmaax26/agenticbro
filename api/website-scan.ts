@@ -34,6 +34,7 @@ interface WebsiteScanResult {
 const KNOWN_SCAM_DOMAINS: Record<string, { regulator: string; warning: string }> = {
   // FCA Warned - Trade Vector AI variants
   'tradevectorai-app.org': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
+  'fastinvest.com': { regulator: 'MULTIPLE', warning: 'Multiple scam reports - investment fraud, no withdrawals, regulatory warning from Hellenic Commission' },
   'trade-vectorai.net': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
   'tradevectorai.net': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
   'tradevectorai-official.com': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
