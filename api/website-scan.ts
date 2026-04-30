@@ -35,6 +35,7 @@ interface WebsiteScanResult {
   recommendations: string[];
   reputation?: ReputationResult[];
   scamIndicators?: string[];
+  webSearchResults?: SearchResult[];
   deepScanId?: string;
   deepScanPollUrl?: string;
   scanDate: string;
@@ -327,21 +328,21 @@ async function searchScamReports(domain: string): Promise<{ results: SearchResul
   }
 }
 
-async function checkReputation(domain: string): Promise<ReputationResult[]> {
-  const results: ReputationResult[] = [];
+async function checkReputation(domain: string): Promise<{ results: ReputationResult[]; webSearchResults?: SearchResult[] }> {
+  const reputationResults: ReputationResult[] = [];
   
   // Always add static reputation links
-  results.push({
+  reputationResults.push({
     source: 'ScamAdviser',
     verdict: 'Check recommended',
     details: `https://www.scamadviser.com/check-website/${domain}`,
   });
-  results.push({
+  reputationResults.push({
     source: 'Scam Detector',
     verdict: 'Check recommended',
     details: `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/`,
   });
-  results.push({
+  reputationResults.push({
     source: 'Trustpilot',
     verdict: 'Check reviews',
     details: `https://www.trustpilot.com/review/${domain}`,
@@ -351,14 +352,15 @@ async function checkReputation(domain: string): Promise<ReputationResult[]> {
   const { results: searchResults, scamIndicators } = await searchScamReports(domain);
   
   if (searchResults.length > 0) {
-    results.push({
+    reputationResults.push({
       source: 'Web Search',
       verdict: scamIndicators.length > 0 ? `${scamIndicators.length} potential scam indicators found` : 'No obvious scam indicators',
       details: scamIndicators.slice(0, 3).join('; ') || 'Search completed',
     });
+    return { results: reputationResults, webSearchResults: searchResults };
   }
   
-  return results;
+  return { results: reputationResults };
 }
 
 function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, reputation?: ReputationResult[]): string[] {
@@ -443,6 +445,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isLegit = isLegitimateDomain(domain);
   const threats: ThreatDetection[] = [];
   let reputation: ReputationResult[] | undefined;
+  let webSearchResults: SearchResult[] | undefined;
   
   // ALWAYS check known scam domains FIRST (even if fetch fails later)
   const knownScamThreat = checkKnownScamDomain(domain);
@@ -457,11 +460,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   ]);
   
   if (reputationResults.status === 'fulfilled') {
-    reputation = reputationResults.value;
-    // Extract scam indicators from reputation results
-    const webSearchResult = reputation.find(r => r.source === 'Web Search');
-    if (webSearchResult && webSearchResult.details) {
-      scamIndicators = webSearchResult.details.split('; ').filter(s => s && s !== 'Search completed');
+    reputation = reputationResults.value.results;
+    webSearchResults = reputationResults.value.webSearchResults;
+    // Extract scam indicators from web search results
+    if (reputationResults.value.webSearchResults) {
+      const scamPatterns = [
+        /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
+        /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
+      ];
+      
+      for (const result of reputationResults.value.webSearchResults) {
+        const text = `${result.title} ${result.description}`.toLowerCase();
+        for (const pattern of scamPatterns) {
+          if (pattern.test(text)) {
+            scamIndicators.push(result.title);
+            break;
+          }
+        }
+      }
+      scamIndicators = [...new Set(scamIndicators)];
     }
   }
   
@@ -533,6 +550,7 @@ Format response as JSON for the user to see.`,
     recommendations,
     reputation,
     scamIndicators,
+    webSearchResults,
     deepScanId,
     deepScanPollUrl: deepScanId ? `/api/website-deep-scan?scanId=${deepScanId}` : undefined,
     scanDate: new Date().toISOString(),
