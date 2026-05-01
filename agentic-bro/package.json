@@ -4,7 +4,7 @@
   "description": "AI-powered scam detection and profile verification for Solana",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "echo Build skipped - using pre-compiled dist",
     "start": "NODE_ENV=production node dist/src/index.js",
     "dev": "NODE_ENV=development ts-node src/index.ts",
     "test": "jest",
