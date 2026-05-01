@@ -34,6 +34,30 @@ export function SimulatorBrowser({
   const [loadingState, setLoadingState] = useState<LoadingState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [iframeHtml, setIframeHtml] = useState<string | null>(null);
+
+  // Fetch proxied HTML when URL changes
+  useEffect(() => {
+    if (!url) return;
+    
+    setIframeHtml(null);
+    setLoadingState('loading');
+    setError(null);
+    
+    fetch(`/api/wallet-proxy?url=${encodeURIComponent(url)}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+        return res.text();
+      })
+      .then(html => {
+        setIframeHtml(html);
+        setLoadingState('loaded');
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoadingState('error');
+      });
+  }, [url]);
 
   // ── Handle postMessage from iframe ──────────────────────────────────────────────
 
@@ -118,9 +142,6 @@ export function SimulatorBrowser({
   const containerHeight = isExpanded ? '90vh' : '70vh';
   const minHeight = '500px';
 
-  // Use our wallet proxy to bypass CSP/X-Frame-Options
-  const proxyUrl = `/api/wallet-proxy?url=${encodeURIComponent(url)}`;
-
   return (
     <div 
       className="relative w-full rounded-lg overflow-hidden border border-white/10 bg-black transition-all duration-300"
@@ -186,10 +207,10 @@ export function SimulatorBrowser({
       {/* Sandboxed iFrame */}
       <iframe
         ref={iframeRef}
-        src={proxyUrl}
+        srcDoc={iframeHtml || ''}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-top-navigation-by-user-activation"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
         className="w-full h-full border-0 pt-10"
         title="dApp Browser"
         allow="clipboard-read; clipboard-write"
