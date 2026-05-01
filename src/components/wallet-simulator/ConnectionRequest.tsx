@@ -29,7 +29,7 @@ interface ConnectionRequestProps {
 
 export function ConnectionRequest({
   origin,
-  request,
+  request: _request,
   onApprove,
   onReject,
 }: ConnectionRequestProps) {
