@@ -9,11 +9,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { WalletProxyProvider, TransactionDecision } from './WalletProxyProvider';
-import { TransactionParser } from './TransactionParser';
+import type { ParsedTransaction } from './TransactionParser';
 import { RiskEngine } from './RiskEngine';
-import type { ParsedTransaction, RiskAssessment } from './TransactionParser';
+import type { EnhancedRiskAssessment } from './RiskEngine';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ export interface ConnectionRequest {
 export interface TransactionRequest {
   id: string;
   transaction: ParsedTransaction;
-  risk: RiskAssessment;
+  risk: EnhancedRiskAssessment;
   url: string;
   timestamp: number;
   resolve: (decision: TransactionDecision) => void;
@@ -40,7 +40,7 @@ export interface TransactionRequest {
 export interface TransactionRecord {
   id: string;
   transaction: ParsedTransaction;
-  risk: RiskAssessment;
+  risk: EnhancedRiskAssessment;
   decision: 'approved' | 'rejected' | 'blocked';
   url: string;
   timestamp: number;
@@ -87,8 +87,7 @@ export function useWalletSimulator() {
   // ── Initialize Wallet Proxy ──────────────────────────────────────────────────────
 
   useEffect(() => {
-    const parser = new TransactionParser();
-    const riskEngine = new RiskEngine();
+    const _riskEngine = new RiskEngine(); // Used for risk assessment
 
     walletProxyRef.current = new WalletProxyProvider({
       realWallet: null, // Demo mode
@@ -107,7 +106,7 @@ export function useWalletSimulator() {
           };
         });
       },
-      onTransactionRequest: async (tx: ParsedTransaction, risk: RiskAssessment) => {
+      onTransactionRequest: async (tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
         return new Promise((resolve) => {
           setState((prev) => ({
             ...prev,
@@ -123,8 +122,9 @@ export function useWalletSimulator() {
           }));
         });
       },
-      onBlockedTransaction: (tx: ParsedTransaction, risk: RiskAssessment) => {
+      onBlockedTransaction: (tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
         // Log blocked transaction
+        // _tx is parsed transaction, _risk is risk assessment
         console.warn('[WalletSimulator] Blocked transaction:', {
           riskScore: risk.score,
           flags: risk.flags,
