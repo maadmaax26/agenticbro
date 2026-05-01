@@ -8,9 +8,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Allowed origins for proxying
+// Note: Complex dApps (Jupiter, Raydium) won't work due to CSP/CORS
+// But simpler sites and many phishing sites WILL work
 const ALLOWED_DOMAINS = [
   'jupiter.ag',
-  'raydium.io',
   'raydium.io',
   'orca.so',
   'marinade.finance',
