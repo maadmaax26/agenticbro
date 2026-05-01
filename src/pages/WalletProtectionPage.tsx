@@ -10,24 +10,27 @@ import {
   Shield,
   History,
   CheckCircle,
-  AlertTriangle,
   Zap,
   Settings,
+  ArrowLeft,
 } from 'lucide-react';
-import { WalletSimulator } from '../wallet-simulator';
-import { ApprovalManager } from '../WalletProtector';
-import { QuickCheck } from '../WalletProtector';
-import type { TransactionRecord } from '../../lib/wallet-proxy/useWalletSimulator';
+import { WalletSimulator } from '../components/wallet-simulator';
+import { ApprovalManager, QuickCheck } from '../components/WalletProtector';
+import type { TransactionRecord } from '../lib/wallet-proxy/useWalletSimulator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = 'simulator' | 'approvals' | 'history' | 'quick-check';
 
+interface WalletProtectionPageProps {
+  onBack?: () => void;
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function WalletProtectionPage() {
+export function WalletProtectionPage({ onBack }: WalletProtectionPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>('simulator');
-  const [transactionHistory, setTransactionHistory] = useState<TransactionRecord[]>([]);
+  const [transactionHistory] = useState<TransactionRecord[]>([]);
 
   // ── Tab Configuration ────────────────────────────────────────────────────────────
 
@@ -47,6 +50,15 @@ export function WalletProtectionPage() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors md:hidden"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
               <Shield className="w-8 h-8 text-purple-400" />
               <div>
                 <h1 className="text-xl font-bold text-white">Wallet Protection</h1>

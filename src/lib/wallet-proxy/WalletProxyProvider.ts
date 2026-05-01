@@ -45,6 +45,7 @@ export interface PendingRequest {
 
 // ─── Wallet Proxy Provider ──────────────────────────────────────────────────────
 
+// @ts-expect-error - WalletAdapter types have incompatible EventEmitter signatures
 export class WalletProxyProvider implements WalletAdapter {
   // WalletAdapter properties
   public name: WalletName = 'Agentic Bro Wallet Guard' as WalletName;
