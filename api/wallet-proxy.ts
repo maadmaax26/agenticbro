@@ -224,14 +224,17 @@ export default async function handler(
 </script>
 `;
 
-    // Insert script at the beginning of head
+    // Add base tag so relative URLs resolve correctly
+    const baseTag = `<base href="${targetUrl.origin}/" />`;
+    
+    // Insert script and base tag at the beginning of head
     if (html.includes('<head>')) {
-      html = html.replace('<head>', `<head>${walletProxyScript}`);
+      html = html.replace('<head>', `<head>${baseTag}${walletProxyScript}`);
     } else if (html.includes('<HEAD>')) {
-      html = html.replace('<HEAD>', `<HEAD>${walletProxyScript}`);
+      html = html.replace('<HEAD>', `<HEAD>${baseTag}${walletProxyScript}`);
     } else {
       // No head tag, prepend
-      html = walletProxyScript + html;
+      html = baseTag + walletProxyScript + html;
     }
 
     // Strip security headers that block iframe embedding
