@@ -189,9 +189,10 @@ export function SimulatorBrowser({
         src={proxyUrl}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-top-navigation-by-user-activation"
         className="w-full h-full border-0 pt-10"
         title="dApp Browser"
+        allow="clipboard-read; clipboard-write"
       />
 
       {/* Security Notice */}
