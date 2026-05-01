@@ -878,7 +878,7 @@ function App() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-2xl font-bold text-white mb-2">🔐 Wallet Protection</h3>
-                <p className="text-gray-400">Interact with dApps safely — analyze transactions before signing</p>
+                <p className="text-gray-400">Analyze transactions before signing — protect your wallet from drains</p>
               </div>
               <button
                 onClick={() => setShowWalletProtection(true)}
@@ -892,42 +892,48 @@ function App() {
               <div className="bg-black/30 rounded-xl p-4 border border-green-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">🔍</span>
-                  <h4 className="font-bold text-white text-sm">Transaction Analysis</h4>
+                  <h4 className="font-bold text-white text-sm">Quick Check</h4>
                 </div>
                 <p className="text-xs text-gray-400">
-                  Decode any Solana transaction before signing. See exactly what each instruction does.
+                  Paste any base58/base64 transaction to decode and analyze it.
                 </p>
               </div>
 
               <div className="bg-black/30 rounded-xl p-4 border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">⚠️</span>
-                  <h4 className="font-bold text-white text-sm">Risk Detection</h4>
+                  <h4 className="font-bold text-white text-sm">Risk Scoring</h4>
                 </div>
                 <p className="text-xs text-gray-400">
-                  25+ drain patterns detected. Token-2022 dangerous extensions flagged automatically.
+                  0-10 risk score with 25+ drain pattern detection.
                 </p>
               </div>
 
               <div className="bg-black/30 rounded-xl p-4 border border-purple-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xl">🌐</span>
-                  <h4 className="font-bold text-white text-sm">dApp Simulator</h4>
+                  <span className="text-xl">🪙</span>
+                  <h4 className="font-bold text-white text-sm">Token-2022 Scan</h4>
                 </div>
                 <p className="text-xs text-gray-400">
-                  Load any dApp in a protected iframe. Connect safely with our mock wallet.
+                  Detect dangerous extensions like permanent delegate.
                 </p>
               </div>
 
               <div className="bg-black/30 rounded-xl p-4 border border-red-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">🚫</span>
-                  <h4 className="font-bold text-white text-sm">Known Drainers</h4>
+                  <h4 className="font-bold text-white text-sm">Drainer Database</h4>
                 </div>
                 <p className="text-xs text-gray-400">
-                  Block known malicious addresses and contracts from draining your wallet.
+                  Block known malicious addresses and contracts.
                 </p>
               </div>
+            </div>
+            
+            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <p className="text-xs text-yellow-300">
+                <strong>Note:</strong> The dApp Simulator feature is currently in development. For now, use Quick Check to analyze transactions before signing.
+              </p>
             </div>
           </div>
         </div>
