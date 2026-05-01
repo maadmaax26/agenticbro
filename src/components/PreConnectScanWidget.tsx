@@ -5,7 +5,7 @@
  * Supports EN, ZH, JA, DE, FR, ES languages.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 const SCAN_STORAGE_KEY = 'preconnect_scan_count'
