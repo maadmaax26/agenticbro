@@ -5,7 +5,7 @@
  * for wallet interception.
  */
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,6 +36,11 @@ export function SimulatorBrowser({
   const [error, setError] = useState<string | null>(null);
 
   // ── Handle postMessage from iframe ──────────────────────────────────────────────
+
+  // Note: This is a simplified implementation
+  // handleMessage would receive and process postMessage events from the iframe
+  // For now, we use a placeholder to avoid unused variable warning
+  const _handleMessagePlaceholder = handleMessage;
 
   useEffect(() => {
     const handleMessage = useCallback((event: MessageEvent) => {

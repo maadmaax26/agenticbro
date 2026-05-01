@@ -7,17 +7,15 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  Copy,
   Loader2,
 } from 'lucide-react';
-import type { ParsedTransaction, ParsedInstruction, RiskAssessment } from '../../lib/wallet-proxy/TransactionParser';
+import type { ParsedTransaction, ParsedInstruction } from '../../lib/wallet-proxy/TransactionParser';
+import type { EnhancedRiskAssessment } from '../../lib/wallet-proxy/RiskEngine';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +30,7 @@ type InstructionVisibility = Record<string, boolean>;
 
 // ─── Helper Functions ──────────────────────────────────────────────────────────
 
-function getRiskColor(level: RiskAssessment['level']): string {
+function getRiskColor(level: EnhancedRiskAssessment['level']): string {
   switch (level) {
     case 'SAFE':
       return '#22c55e'; // green
@@ -49,7 +47,7 @@ function getRiskColor(level: RiskAssessment['level']): string {
   }
 }
 
-function getRiskBg(level: RiskAssessment['level']): string {
+function getRiskBg(level: EnhancedRiskAssessment['level']): string {
   switch (level) {
     case 'SAFE':
       return 'bg-green-900/30 border-green-500/30';
@@ -66,7 +64,7 @@ function getRiskBg(level: RiskAssessment['level']): string {
   }
 }
 
-function getRecommendationIcon(recommendation: RiskAssessment['recommendation']) {
+function getRecommendationIcon(recommendation: EnhancedRiskAssessment['recommendation']) {
   switch (recommendation) {
     case 'APPROVE':
       return <CheckCircle className="w-5 h-5 text-green-400" />;

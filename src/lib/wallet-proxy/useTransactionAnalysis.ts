@@ -10,16 +10,19 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Transaction, VersionedTransaction } from '@solana/web3.js';
-import { TransactionParser, ParsedTransaction, ParsedInstruction } from './TransactionParser';
-import { RiskEngine, RiskAssessment } from './RiskEngine';
-import { Token2022Detector, TokenExtensionResult } from './Token2022Detector';
+import { parseTransaction, parseTransactionFromBase58 } from './TransactionParser';
+import type { ParsedTransaction, ParsedInstruction } from './TransactionParser';
+import { RiskEngine } from './RiskEngine';
+import type { EnhancedRiskAssessment } from './RiskEngine';
+import { Token2022Detector, getToken2022Detector } from './Token2022Detector';
+import type { Token2022Analysis } from './Token2022Detector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AnalysisResult {
   transaction: ParsedTransaction;
-  risk: RiskAssessment;
-  tokenExtensions: TokenExtensionResult[];
+  risk: EnhancedRiskAssessment;
+  tokenExtensions: Token2022Analysis[];
   analysisTime: number;
   status: 'pending' | 'analyzing' | 'complete' | 'error';
   error?: string;
@@ -45,7 +48,6 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
   const [results, setResults] = useState<Map<string, AnalysisResult>>(new Map());
   const [currentAnalysis, setCurrentAnalysis] = useState<AnalysisResult | null>(null);
 
-  const parserRef = useRef<TransactionParser | null>(null);
   const riskEngineRef = useRef<RiskEngine | null>(null);
   const tokenDetectorRef = useRef<Token2022Detector | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -53,9 +55,8 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
   // ── Initialize ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    parserRef.current = new TransactionParser();
     riskEngineRef.current = new RiskEngine();
-    tokenDetectorRef.current = new Token2022Detector();
+    tokenDetectorRef.current = getToken2022Detector();
 
     return () => {
       if (abortControllerRef.current) {
@@ -94,6 +95,7 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
             explanation: 'Analyzing...',
           },
           timestamp: new Date().toISOString(),
+          signerKeys: [],
         },
         risk: {
           score: 0,
@@ -101,6 +103,14 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
           flags: [],
           recommendation: 'APPROVE',
           explanation: 'Analyzing...',
+          instructionRisks: [],
+          combinedPatterns: [],
+          addressFlags: [],
+          walletImpact: {
+            estimatedLoss: '0',
+            affectedTokens: [],
+            riskLevel: 'SAFE',
+          },
         },
         tokenExtensions: [],
         analysisTime: 0,
@@ -117,11 +127,9 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
         }
 
         // Parse transaction
-        if (!parserRef.current) {
-          throw new Error('Parser not initialized');
-        }
-
-        const parsed = await parserRef.current.parseTransaction(tx);
+        const parsed = typeof tx === 'string' 
+          ? parseTransactionFromBase58(tx)
+          : parseTransaction(tx as Transaction);
 
         // Update with parsed data
         setCurrentAnalysis((prev) =>
@@ -146,7 +154,7 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
         );
 
         // Check for token extensions
-        let tokenExtensions: TokenExtensionResult[] = [];
+        let tokenExtensions: Token2022Analysis[] = [];
         if (includeTokenExtensions && tokenDetectorRef.current) {
           // Find token accounts in instructions
           const tokenAddresses = parsed.instructions
@@ -157,9 +165,11 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
           if (tokenAddresses.length > 0) {
             // Check each token for extensions
             const extensionChecks = await Promise.all(
-              Array.from(new Set(tokenAddresses)).map(async (address) => {
+              Array.from(new Set(tokenAddresses)).map(async (address: string) => {
                 try {
-                  return await tokenDetectorRef.current!.checkTokenExtensions(address);
+                  // Use getTokenExtensions method
+                  const result = await getToken2022Detector();
+                  return await result.analyzeTokenExtensions(address);
                 } catch {
                   return null;
                 }
@@ -167,7 +177,7 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
             );
 
             tokenExtensions = extensionChecks.filter(
-              (r): r is TokenExtensionResult => r !== null
+              (r): r is Token2022Analysis => r !== null
             );
           }
         }
@@ -218,10 +228,7 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
 
   const analyzeFromBase58 = useCallback(
     async (base58: string, txId?: string): Promise<AnalysisResult> => {
-      // Import bs58 dynamically
-      const bs58 = await import('bs58');
-      const buffer = bs58.default.decode(base58);
-      const tx = Transaction.from(buffer);
+      const tx = parseTransactionFromBase58(base58);
       return analyzeTransaction(tx, txId);
     },
     [analyzeTransaction]
@@ -230,16 +237,14 @@ export function useTransactionAnalysis(options: AnalysisOptions = {}) {
   // ── Quick Risk Check ──────────────────────────────────────────────────────────────
 
   const quickRiskCheck = useCallback(
-    (tx: Transaction | VersionedTransaction): RiskAssessment | null => {
-      if (!parserRef.current || !riskEngineRef.current) {
+    (tx: Transaction | VersionedTransaction): EnhancedRiskAssessment | null => {
+      if (!riskEngineRef.current) {
         return null;
       }
 
       try {
-        // Synchronous quick check (doesn't do full parsing)
-        const instructions = parserRef.current.quickParse(tx);
-        const risk = riskEngineRef.current.quickAssess(instructions);
-        return risk;
+        const parsed = parseTransaction(tx as Transaction);
+        return riskEngineRef.current.assessRisk(parsed);
       } catch {
         return null;
       }
