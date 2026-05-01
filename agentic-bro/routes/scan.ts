@@ -19,7 +19,7 @@ const cache = new Cache(redisUrl);
 const scanner = new TokenScanner({ cache, db });
 
 // Chrome CDP endpoint
-const CHROME_CDP_URL = process.env.CHROME_CDP_URL || 'http://localhost:18800';
+const CHROME_CDP_URL = process.env.CHROME_CDP_URL || 'http://localhost:18801';
 
 // Initialize Chrome profile fetcher
 const chromeFetcher = new ChromeProfileFetcher(CHROME_CDP_URL);
@@ -117,6 +117,7 @@ async function scanTwitterProfile(username: string): Promise<any> {
             website: profileData.website,
             profileImage: profileData.profileImage,
             createdAt: profileData.createdAt,
+            recentTweets: (profileData as any).recentTweets || [],
             ...riskAnalysis,
           },
           source: 'chrome_cdp',
@@ -255,60 +256,64 @@ function analyzeProfileRisk(profileData: any): any {
   
   const bio = (profileData.bio || '').toLowerCase();
   const displayName = (profileData.displayName || '').toLowerCase();
+  const recentTweets: string[] = (profileData.recentTweets || []).map((t: string) => (t || '').toLowerCase());
   const combined = `${bio} ${displayName}`.toLowerCase();
+  // Also analyze tweet content for engagement bait/scam patterns
+  const tweetsText = recentTweets.join(' ').toLowerCase();
+  const allText = `${combined} ${tweetsText}`.toLowerCase();
   const followers = profileData.followers || 0;
   const following = profileData.following || 0;
   
   // guaranteed_returns (25pts) — promises of guaranteed profits, risk-free returns
-  if (/guarantee|100%|risk.?free|can'?t lose|sure.?thing|guaranteed.?return|safe.?bet/i.test(combined)) {
+  if (/guarantee|100%|risk.?free|can'?t lose|sure.?thing|guaranteed.?return|safe.?bet/i.test(allText)) {
     redFlags.push({ flag: 'Guaranteed returns language', points: 25 });
     totalPoints += 25;
   }
   
-  // giveaway_airdrop (20pts) — giveaways, airdrops, free token promotions
-  if (/giveaway|airdrop|free.*token|free.*crypto|claim.*now|give.?away|raffle/i.test(combined)) {
+  // giveaway_airdrop (20pts) — giveaways, airdrops, free token promotions, engagement bait
+  if (/giveaway|airdrop|free.*token|free.*crypto|claim.*now|give.?away|raffle|pay.*rent|i'?ll pay|drop acct|drop.*details|pick one with|retweet.*win/i.test(allText)) {
     redFlags.push({ flag: 'Giveaway/airdrop promotion', points: 20 });
     totalPoints += 20;
   }
   
-  // dm_solicitation (15pts) — "DM me", "DM for", sliding into DMs requested
-  if (/dm.?for|dm.?me|slide.?into|slide.?dm|dm.?to.?join|dm.?lfg|dm.?now|message.?me|hit.?my.?dm/i.test(combined)) {
+  // dm_solicitation (15pts) — "DM me", "DM for", engagement harvesting
+  if (/dm.?for|dm.?me|slide.?into|slide.?dm|dm.?to.?join|dm.?lfg|dm.?now|message.?me|hit.?my.?dm|drop.*acct.*details|retweet.*dm/i.test(allText)) {
     redFlags.push({ flag: 'DM solicitation in bio', points: 15 });
     totalPoints += 15;
   }
   
-  // free_crypto (15pts) — offering free crypto, mining, staking rewards
-  if (/free.*crypto|free.*sol|free.*btc|free.*eth|mining.*reward|passive.*income|stake.*earn|earn.*free/i.test(combined)) {
+  // free_crypto (15pts) — offering free crypto, paying for people, staking rewards
+  if (/free.*crypto|free.*sol|free.*btc|free.*eth|mining.*reward|passive.*income|stake.*earn|earn.*free|pay.*for.*you|pay.*your.*rent|pay.*now/i.test(allText)) {
     redFlags.push({ flag: 'Free crypto/money offers', points: 15 });
     totalPoints += 15;
   }
   
   // alpha_dm_scheme (15pts) — private alpha, VIP groups, exclusive signals
-  if (/private.*alpha|vip.*group|exclusive.*signal|signal.*group|premium.*group|inner.?circle|secret.?group|t\.me\//i.test(combined)) {
+  if (/private.*alpha|vip.*group|exclusive.*signal|signal.*group|premium.*group|inner.?circle|secret.?group|t\.me\//i.test(allText)) {
     redFlags.push({ flag: 'Alpha/DM scheme — private group funnel', points: 15 });
     totalPoints += 15;
   }
   
   // unrealistic_claims (10pts) — 10x, 100x, moonshot, get rich
-  if (/\d+x(?!.*size)|100x|1000x|moonshot|to.?the.?moon|get.?rich|lamborghini|financial.?freedom|10x.?100x/i.test(combined)) {
+  if (/\d+x(?!.*size)|100x|1000x|moonshot|to.?the.?moon|get.?rich|lamborghini|financial.?freedom|10x.?100x/i.test(allText)) {
     redFlags.push({ flag: 'Unrealistic profit claims', points: 10 });
     totalPoints += 10;
   }
   
   // download_install (10pts) — requests to download apps or install software
-  if (/download|install.*app|get.*app|app.?store|play.?store|download.*now/i.test(combined)) {
+  if (/download|install.*app|get.*app|app.?store|play.?store|download.*now/i.test(allText)) {
     redFlags.push({ flag: 'Download/install request', points: 10 });
     totalPoints += 10;
   }
   
-  // urgency_tactics (10pts) — act now, limited time, last chance
-  if (/limited.*spot|act.?now|last.?chance|hurry|time.?sensitive|ending.?soon|closing.?soon|few.?left|don'?t.?wait|fomo/i.test(combined)) {
+  // urgency_tactics (10pts) — act now, limited time, last chance, time-bound offers
+  if (/limited.*spot|act.?now|last.?chance|hurry|time.?sensitive|ending.?soon|closing.?soon|few.?left|don'?t.?wait|fomo|pay.*from.*now.*till|till.*\d+(am|pm)|until.*\d+(am|pm)/i.test(allText)) {
     redFlags.push({ flag: 'Urgency tactics', points: 10 });
     totalPoints += 10;
   }
   
   // emotional_manipulation (10pts) — fear of missing out, emotional appeals
-  if (/you'?ll.?regret|don'?t.?miss.?out|life.?changing|once.?in.?lifetime|never.?again|must.?have|opportunity.?of/i.test(combined)) {
+  if (/you'?ll.?regret|don'?t.?miss.?out|life.?changing|once.?in.?lifetime|never.?again|must.?have|opportunity.?of/i.test(allText)) {
     redFlags.push({ flag: 'Emotional manipulation', points: 10 });
     totalPoints += 10;
   }
@@ -327,7 +332,7 @@ function analyzeProfileRisk(profileData: any): any {
   }
   
   // Additional: Telegram link (common scam vector)
-  if (/t\.me\/|telegram\.me\//i.test(combined)) {
+  if (/t\.me\/|telegram\.me\//i.test(allText)) {
     // Only add if not already caught by alpha_dm_scheme
     if (!redFlags.some(f => f.flag.includes('Alpha/DM scheme'))) {
       redFlags.push({ flag: 'Telegram link in bio (common scam vector)', points: 5 });
@@ -336,7 +341,7 @@ function analyzeProfileRisk(profileData: any): any {
   }
   
   // Additional: Marketing/advertising in bio
-  if (/advertis|market.*agency|promo.*service|shill|paid.*promo|sponsored.*post/i.test(combined)) {
+  if (/advertis|market.*agency|promo.*service|shill|paid.*promo|sponsored.*post/i.test(allText)) {
     redFlags.push({ flag: 'Marketing/advertising service (paid shill account)', points: 5 });
     totalPoints += 5;
   }

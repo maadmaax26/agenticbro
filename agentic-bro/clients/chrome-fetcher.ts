@@ -18,12 +18,13 @@ interface ProfileData {
   website?: string;
   profileImage?: string;
   createdAt?: string;
+  recentTweets?: string[];
 }
 
 export class ChromeProfileFetcher {
   private cdpUrl: string;
 
-  constructor(cdpUrl: string = 'http://localhost:18800') {
+  constructor(cdpUrl: string = 'http://localhost:18801') {
     this.cdpUrl = cdpUrl;
   }
 
@@ -134,19 +135,20 @@ export class ChromeProfileFetcher {
                   profileImage: null
                 };
 
-                // Username - try multiple selectors
-                var usernameEl = document.querySelector('[data-testid="UserScreenName"] span') ||
-                                 document.querySelector('span[css-1jxf68p]') ||
-                                 document.querySelector('[data-testid="UserName"] + div span');
-                if (usernameEl) {
-                  data.username = usernameEl.textContent.replace('@', '').trim();
-                }
-
-                // Display name - try multiple selectors
-                var nameEl = document.querySelector('[data-testid="UserName"]') ||
-                            document.querySelector('div[data-testid="UserName"] span');
-                if (nameEl) {
-                  data.displayName = nameEl.textContent.trim();
+                // Username + Display name from UserName component
+                var userEl = document.querySelector('[data-testid="UserName"]');
+                if (userEl) {
+                  var spans = userEl.querySelectorAll('span');
+                  var texts = [];
+                  spans.forEach(function(s) { if (s.textContent) texts.push(s.textContent); });
+                  // Display name is first significant text
+                  if (texts.length > 0) data.displayName = texts[0].trim();
+                  // Find @username
+                  for (var i = 0; i < texts.length; i++) {
+                    if (texts[i].startsWith('@')) {
+                      data.username = texts[i].replace('@', '').trim();
+                    }
+                  }
                 }
 
                 // Verified badge
@@ -156,35 +158,39 @@ export class ChromeProfileFetcher {
                 data.verified = !!verifiedEl;
                 data.verifiedType = verifiedEl ? 'blue' : null;
 
-                // Bio
-                var bioEl = document.querySelector('[data-testid="UserDescription"] div[dir="ltr"]') ||
-                           document.querySelector('[data-testid="UserDescription"]') ||
-                           document.querySelector('div[data-testid="UserDescription"] span');
-                if (bioEl) data.bio = bioEl.textContent.trim();
+                // Bio - use innerText for proper whitespace handling
+                var bioEl = document.querySelector('[data-testid="UserDescription"]');
+                if (bioEl) data.bio = bioEl.innerText.trim();
 
                 // Follow stats - X uses links in the profile header
-                var links = document.querySelectorAll('a[href*="/followers"], a[href*="/following"]');
-                links.forEach(function(link) {
+                var allLinks = document.querySelectorAll('a[href*="/verified_followers"], a[href*="/followers"], a[href*="/following"]');
+                allLinks.forEach(function(link) {
                   var href = link.getAttribute('href') || '';
                   var text = link.textContent || '';
                   // Try to extract numbers from the link text
                   var match = text.match(/([\d,\.]+[KMk]?)\s*(Followers?|Following)/i);
                   if (match) {
                     if (match[2].toLowerCase().startsWith('follower')) {
-                      data.followers = parseNum(match[1]);
+                      if (data.followers === 0) data.followers = parseNum(match[1]);
                     } else if (match[2].toLowerCase() === 'following') {
-                      data.following = parseNum(match[1]);
+                      if (data.following === 0) data.following = parseNum(match[1]);
                     }
                   }
                 });
 
                 // Alternative: look for span elements with follower/following text
-                if (data.followers === 0) {
+                if (data.followers === 0 || data.following === 0) {
                   var allSpans = document.querySelectorAll('span');
                   allSpans.forEach(function(span) {
                     var text = span.textContent || '';
-                    var match = text.match(/([\d,\.]+[KMk]?)\s*Followers?/i);
-                    if (match) data.followers = parseNum(match[1]);
+                    if (data.followers === 0) {
+                      var match = text.match(/([\d,\.]+[KMk]?)\s*Followers?/i);
+                      if (match) data.followers = parseNum(match[1]);
+                    }
+                    if (data.following === 0) {
+                      var match2 = text.match(/([\d,\.]+[KMk]?)\s*Following/i);
+                      if (match2) data.following = parseNum(match2[1]);
+                    }
                   });
                 }
 
@@ -195,14 +201,45 @@ export class ChromeProfileFetcher {
                 if (imgEl) data.profileImage = imgEl.src;
 
                 // Location
-                var locationEl = document.querySelector('[data-testid="UserLocation"] span') ||
-                                document.querySelector('[data-testid="UserLocation"]');
-                if (locationEl) data.location = locationEl.textContent.trim();
+                var locationEl = document.querySelector('[data-testid="UserLocation"]');
+                if (locationEl) {
+                  data.location = locationEl.textContent.trim();
+                } else {
+                  // Try UserProfileHeader_Items as fallback
+                  var headerItems = document.querySelector('[data-testid="UserProfileHeader_Items"]');
+                  if (headerItems) {
+                    var itemSpans = headerItems.querySelectorAll('span');
+                    itemSpans.forEach(function(s) {
+                      var t = s.textContent.trim();
+                      if (t.includes(',') || /\b(NY|CA|TX|FL|UK|USA|United States)\b/i.test(t)) {
+                        if (!data.location) data.location = t;
+                      }
+                    });
+                  }
+                }
 
                 // Website
-                var urlEl = document.querySelector('[data-testid="UserUrl"] span') ||
-                           document.querySelector('[data-testid="UserUrl"]');
-                if (urlEl) data.website = urlEl.textContent.trim();
+                var urlEl = document.querySelector('[data-testid="UserUrl"]');
+                if (urlEl) {
+                  data.website = urlEl.textContent.trim();
+                } else if (headerItems) {
+                  var headerLinks = headerItems.querySelectorAll('a[href]');
+                  headerLinks.forEach(function(a) {
+                    var href = a.getAttribute('href') || '';
+                    if (href.startsWith('http') && !href.includes('x.com') && !href.includes('twitter.com')) {
+                      if (!data.website) data.website = href;
+                    }
+                  });
+                }
+
+                // Recent tweets (up to 10) — important for engagement bait detection
+                data.recentTweets = [];
+                var tweetEls = document.querySelectorAll('[data-testid="tweetText"]');
+                tweetEls.forEach(function(el, i) {
+                  if (i < 10) {
+                    data.recentTweets.push(el.innerText.substring(0, 300));
+                  }
+                });
 
                 return JSON.stringify(data);
               })();
@@ -245,6 +282,7 @@ export class ChromeProfileFetcher {
                 website: parsed.website,
                 profileImage: parsed.profileImage,
                 createdAt: new Date().toISOString(),
+                recentTweets: parsed.recentTweets || [],
               });
             } catch (e) {
               console.log(`Failed to parse CDP result: ${e}`);

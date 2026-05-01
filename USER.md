@@ -2,11 +2,11 @@
 
 _Learn about the person you're helping. Update this as you go._
 
-- **Name:**
-- **What to call them:**
+- **Name:** Madmax
+- **What to call them:** Madmax
 - **Pronouns:** _(optional)_
-- **Timezone:**
-- **Notes:**
+- **Timezone:** America/New_York
+- **Notes:** Dev for $AGNTCBRO / Agentic Bro project. Posts anonymously via GroupAnonymousBot in the Telegram group.
 
 ## Context
 
