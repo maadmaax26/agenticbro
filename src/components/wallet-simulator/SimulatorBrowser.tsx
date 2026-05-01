@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import type { ParsedTransaction } from '../../lib/wallet-proxy/TransactionParser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,8 +18,6 @@ interface SimulatorBrowserProps {
   isConnected: boolean;
   connectedAddress: string | null;
 }
-
-import type { ParsedTransaction } from '../../lib/wallet-proxy/TransactionParser';
 
 type LoadingState = 'loading' | 'loaded' | 'error';
 
@@ -37,13 +36,8 @@ export function SimulatorBrowser({
 
   // ── Handle postMessage from iframe ──────────────────────────────────────────────
 
-  // Note: This is a simplified implementation
-  // handleMessage would receive and process postMessage events from the iframe
-  // For now, we use a placeholder to avoid unused variable warning
-  const _handleMessagePlaceholder = handleMessage;
-
   useEffect(() => {
-    const handleMessage = useCallback((event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent) => {
       // Security: Only accept messages from the iframe
       if (!event.origin || !url.startsWith(event.origin)) {
         return;
@@ -58,14 +52,12 @@ export function SimulatorBrowser({
 
         case 'WALLET_SIGN_REQUEST':
           if (payload?.transaction) {
-            // Transaction will be parsed by TransactionParser
             onTransactionRequest(payload.transaction as ParsedTransaction);
           }
           break;
 
         case 'WALLET_SIGN_ALL_REQUEST':
           if (payload?.transactions && Array.isArray(payload.transactions)) {
-            // Handle batch signing - for now, just process first one
             if (payload.transactions[0]) {
               onTransactionRequest(payload.transactions[0] as ParsedTransaction);
             }
@@ -81,14 +73,12 @@ export function SimulatorBrowser({
           setLoadingState('error');
           break;
       }
-    }, [url, onConnectionRequest, onTransactionRequest]);
+    };
 
-    // Note: This is a simplified implementation
-    // In production, you'd need to inject a wallet adapter script into the iframe
-    // that bridges window.solana calls to postMessage
-
+    window.addEventListener('message', handleMessage);
+    
     return () => {
-      // Cleanup listener
+      window.removeEventListener('message', handleMessage);
     };
   }, [url, onConnectionRequest, onTransactionRequest]);
 
@@ -98,7 +88,6 @@ export function SimulatorBrowser({
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentWindow) return;
 
-    // Send wallet state updates to iframe
     iframe.contentWindow.postMessage(
       {
         type: 'WALLET_STATE_UPDATE',
@@ -150,7 +139,6 @@ export function SimulatorBrowser({
               onClick={() => {
                 setLoadingState('loading');
                 setError(null);
-                // Force reload
                 if (iframeRef.current) {
                   iframeRef.current.src = iframeRef.current.src;
                 }
@@ -173,8 +161,6 @@ export function SimulatorBrowser({
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
         className="w-full h-full border-0"
         title="dApp Browser"
-        // Note: In production, you'd inject a wallet adapter script here
-        // that bridges window.solana calls to postMessage
       />
 
       {/* Security Notice */}
