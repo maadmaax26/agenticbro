@@ -189,6 +189,26 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [error, setError] = useState('')
+  const [scanStep, setScanStep] = useState(0)
+
+  const scanSteps = [
+    { emoji: '🔍', text: 'Checking database...' },
+    { emoji: '📊', text: 'Analyzing profile...' },
+    { emoji: '🚩', text: 'Detecting red flags...' },
+    { emoji: '✅', text: 'Finalizing report...' },
+  ]
+
+  // Animate through scan steps while scanning
+  useEffect(() => {
+    if (!scanning) {
+      setScanStep(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setScanStep(s => (s + 1) % scanSteps.length)
+    }, 1500)
+    return () => clearInterval(interval)
+  }, [scanning])
   const [scansUsed, setScansUsed] = useState<number>(() => {
     try {
       return parseInt(localStorage.getItem(SCAN_STORAGE_KEY) || '0', 10)
@@ -294,6 +314,41 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
           )}
         </button>
       </div>
+
+      {/* Scan Progress Indicator */}
+      {scanning && (
+        <div className="mb-4 p-3 rounded-lg bg-purple-900/20 border border-purple-500/30">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 text-2xl animate-pulse">
+              {scanSteps[scanStep].emoji}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-purple-300">Scanning @{username.replace('@', '')}</span>
+              </div>
+              <div className="text-xs text-gray-400">{scanSteps[scanStep].text}</div>
+              {/* Progress bar */}
+              <div className="mt-2 h-1.5 rounded-full bg-gray-700 overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-purple-500 to-purple-400"
+                  style={{ width: `${((scanStep + 1) / scanSteps.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          {/* Step dots */}
+          <div className="flex justify-center gap-1.5 mt-3">
+            {scanSteps.map((_, i) => (
+              <div 
+                key={i}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  i <= scanStep ? 'bg-purple-400' : 'bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
