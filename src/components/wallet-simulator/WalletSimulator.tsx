@@ -11,11 +11,18 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Shield, Globe, AlertTriangle, CheckCircle, XCircle, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  Shield,
+  AlertTriangle,
+  Globe,
+  CheckCircle,
+  XCircle,
+  ExternalLink,
+} from 'lucide-react';
 import { SimulatorBrowser } from './SimulatorBrowser';
 import { TransactionReview } from './TransactionReview';
 import { ConnectionRequest } from './ConnectionRequest';
-import type { ParsedTransaction, RiskAssessment } from '../../lib/wallet-proxy/TransactionParser';
+import type { ParsedTransaction } from '../../lib/wallet-proxy/TransactionParser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
