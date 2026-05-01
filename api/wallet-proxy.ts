@@ -224,8 +224,12 @@ export default async function handler(
 </script>
 `;
 
+    // Proxy HTML and rewrite inline scripts/styles
+    // Note: We don't rewrite URLs - the base tag handles relative URLs
+    // and the dApp's API calls will work with allow-same-origin
+    
     // Add base tag so relative URLs resolve correctly
-    const baseTag = `<base href="${targetUrl.origin}/" />`;
+    const baseTag = `<base href="${origin}/" />`;
     
     // Insert script and base tag at the beginning of head
     if (html.includes('<head>')) {
@@ -237,20 +241,13 @@ export default async function handler(
       html = baseTag + walletProxyScript + html;
     }
 
-    // Strip security headers that block iframe embedding
-    const headersToRemove = [
-      'x-frame-options',
-      'content-security-policy',
-      'x-content-type-options',
-      'x-xss-protection',
-    ];
-
     // Return modified HTML
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    // Allow iframe embedding from our domain
-    res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://agenticbro.app http://localhost:3000;");
+    // Allow iframe embedding from our domain and allow the dApp to load its resources
+    res.removeHeader('Content-Security-Policy');
+    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors 'self' https://agenticbro.app http://localhost:3000;");
     
     return res.send(html);
 
