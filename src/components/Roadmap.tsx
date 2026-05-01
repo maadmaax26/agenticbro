@@ -55,7 +55,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           items: [
             { done: true, text: 'Website: agenticbro.app live' },
             { done: true, text: 'Payment System: Stripe + USDC + AGNTCBRO' },
-            { done: true, text: 'Credit System: 3 free scans per user' },
+            { done: true, text: 'Credit System: 5 free scans per user' },
             { done: true, text: 'Tier System: Holder (10K) and Whale (100K) tiers' },
             { done: true, text: 'DePIN Infrastructure: Mac Studio nodes for local inference' },
             { done: false, text: 'Browser Extension: Chrome/Firefox scam warnings' },
