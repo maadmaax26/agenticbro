@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanCredits, setScanCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(3);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
 
   // Get storage key for current user
   const getStorageKey = useCallback(() => {
@@ -80,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedFree) {
       setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
     } else {
-      // New user gets 10 free scans
-      setFreeScansRemaining(3);
+      // New user gets 5 free scans
+      setFreeScansRemaining(5);
       localStorage.setItem(`agenticbro_free_${key}`, '5');
     }
   }, [getStorageKey]);
