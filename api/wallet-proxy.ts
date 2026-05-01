@@ -228,6 +228,8 @@ export default async function handler(
     // Note: We don't rewrite URLs - the base tag handles relative URLs
     // and the dApp's API calls will work with allow-same-origin
     
+    const origin = targetUrl.origin;
+    
     // Add base tag so relative URLs resolve correctly
     const baseTag = `<base href="${origin}/" />`;
     
