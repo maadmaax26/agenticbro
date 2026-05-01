@@ -118,6 +118,9 @@ export function SimulatorBrowser({
   const containerHeight = isExpanded ? '90vh' : '70vh';
   const minHeight = '500px';
 
+  // Use our wallet proxy to bypass CSP/X-Frame-Options
+  const proxyUrl = `/api/wallet-proxy?url=${encodeURIComponent(url)}`;
+
   return (
     <div 
       className="relative w-full rounded-lg overflow-hidden border border-white/10 bg-black transition-all duration-300"
@@ -183,10 +186,10 @@ export function SimulatorBrowser({
       {/* Sandboxed iFrame */}
       <iframe
         ref={iframeRef}
-        src={url}
+        src={proxyUrl}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation"
         className="w-full h-full border-0 pt-10"
         title="dApp Browser"
       />
