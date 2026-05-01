@@ -1,6 +1,27 @@
 #!/bin/bash
 # Token Impersonation Scanner - Quick Start Script
 
+echo "━━━ 🔍 TOKEN IMPERSONATION SCAN — AI POWERED THREAT ASSESSMENT ━━━"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "⚠️  DISCLAIMER NOTICE"
+echo ""
+echo "This scan is an AI-powered threat assessment of token contracts and impersonation patterns."
+echo "For complete accuracy, verify information through multiple sources."
+echo ""
+echo "LIMITATIONS:"
+echo "• Only scans publicly available data from search APIs")
+echo("• Does NOT verify contract ownership or developer identity")
+echo("• May miss sophisticated, well-hidden impersonators")
+echo("• Subject to DexScreener API rate limits")
+echo("\nINDEPENDENT VERIFICATION REQUIRED:")
+echo("• Cross-check contract addresses on official platforms")
+echo("• Never transfer tokens based on AI assessment alone")
+echo("• Verify official communication channels")
+echo("\n" + "="*70)
+echo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+echo ""
 echo "🔍 Token Impersonation Scanner"
 echo "================================"
 echo ""

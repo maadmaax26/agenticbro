@@ -697,7 +697,12 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
       }
 
       const [scammersRes, legitimateRes, scanResultsRes, statsRes] = await Promise.all([
-        supabase.from('known_scammers').select('*').order('risk_score', { ascending: false }).limit(50),
+        supabase
+          .from('known_scammers')
+          .select('*')
+          .not('verification_level', 'in', '("LEGITIMATE","VERIFIED","PAID PROMOTER","RESOLVED")')
+          .order('risk_score', { ascending: false })
+          .limit(50),
         supabase.from('legitimate_accounts').select('*').order('followers', { ascending: false }).limit(20),
         supabase.from('scan_results').select('*').order('scan_date', { ascending: false }).limit(100),
         supabase.from('stats').select('*').single(),
