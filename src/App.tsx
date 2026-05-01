@@ -872,6 +872,66 @@ function App() {
         <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
         <TokenImpersonationScanner />
 
+        {/* ── Wallet Protection — Safe dApp Interaction ── */}
+        <div className="max-w-6xl mx-auto mb-10">
+          <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 backdrop-blur-md rounded-2xl border border-green-500/20 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-2">🔐 Wallet Protection</h3>
+                <p className="text-gray-400">Interact with dApps safely — analyze transactions before signing</p>
+              </div>
+              <button
+                onClick={() => setShowWalletProtection(true)}
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-green-500/20"
+              >
+                Open Wallet Guard
+              </button>
+            </div>
+            
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="bg-black/30 rounded-xl p-4 border border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🔍</span>
+                  <h4 className="font-bold text-white text-sm">Transaction Analysis</h4>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Decode any Solana transaction before signing. See exactly what each instruction does.
+                </p>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-4 border border-blue-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">⚠️</span>
+                  <h4 className="font-bold text-white text-sm">Risk Detection</h4>
+                </div>
+                <p className="text-xs text-gray-400">
+                  25+ drain patterns detected. Token-2022 dangerous extensions flagged automatically.
+                </p>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-4 border border-purple-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🌐</span>
+                  <h4 className="font-bold text-white text-sm">dApp Simulator</h4>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Load any dApp in a protected iframe. Connect safely with our mock wallet.
+                </p>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-4 border border-red-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🚫</span>
+                  <h4 className="font-bold text-white text-sm">Known Drainers</h4>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Block known malicious addresses and contracts from draining your wallet.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ── Free Scam Protection Tools Info (shown for all users) ── */}
         <div className="max-w-6xl mx-auto mb-10">
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
