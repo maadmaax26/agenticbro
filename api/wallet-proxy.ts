@@ -95,6 +95,9 @@ export default async function handler(
     let html = await response.text();
 
     // Inject wallet proxy script BEFORE any other scripts
+    // We need to inject the dApp URL into the script for the router fix
+    const dappUrl = url;
+    
     const walletProxyScript = `
 <script>
 // Agentic Bro Wallet Proxy Injection
@@ -102,6 +105,51 @@ export default async function handler(
   // Check if already injected
   if (window.__AGENTIC_BRO_PROXY__) return;
   window.__AGENTIC_BRO_PROXY__ = true;
+
+  // ── ROUTER FIX: Patch history + URL + changeState so Next.js can hydrate ──
+  var _nRS = History.prototype.replaceState.bind(history);
+  var _nPS = History.prototype.pushState.bind(history);
+  var _proxyBase = 'https://agenticbro.app';
+  var _dappUrl = '${dappUrl}';
+
+  function _mapUrl(u) {
+    if (!u || typeof u !== 'string') return u;
+    var m = u.match(/^https?:\/\/(?:www\.)?raydium\.io(\/.*)?$/);
+    return m ? _proxyBase + '/api/wallet-proxy?url=' +
+      encodeURIComponent('https://raydium.io' + (m[1] || '/')) : u;
+  }
+
+  history.replaceState = function(s,t,u){ try{ _nRS(s,t,_mapUrl(u)); }catch(e){} };
+  history.pushState = function(s,t,u){ try{ _nPS(s,t,_mapUrl(u)); }catch(e){} };
+
+  var _ph = window.location.href;
+  var _OU = window.URL;
+  window.URL = function(u,b){
+    if(u===_ph) u=_dappUrl;
+    if(b===_ph) b=_dappUrl;
+    return new _OU(u,b);
+  };
+  window.URL.prototype = _OU.prototype;
+  ['createObjectURL','revokeObjectURL','canParse'].forEach(function(m){
+    if(_OU[m]) window.URL[m]=_OU[m].bind(_OU);
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var t = setInterval(function() {
+      var nr = window['__next_require__'];
+      if (!nr) return;
+      clearInterval(t);
+      try {
+        var nm = nr('77339');
+        var proto = Object.getPrototypeOf(nm.router);
+        proto.changeState = function(method, state, url, as) {
+          try { (method==='replaceState'?_nRS:_nPS)(state,'',_mapUrl(url||as)); }catch(e){}
+        };
+        nm.hydrate().catch(function(){});
+      } catch(e) {}
+    }, 100);
+  });
+  // ── END ROUTER FIX ──
 
   // Mock wallet that communicates with parent window
   const mockWallet = {
