@@ -67,18 +67,18 @@ const SCAM_DOMAIN_PATTERNS = [
 
 const WALLET_DRAINER_SIGNATURES = [
   { pattern: 'seed phrase', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'recovery phrase', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' },
-  { pattern: 'mnemonic', type: 'seed_harvesting', weight: 20, severity: 'CRITICAL' },
-  { pattern: 'private key', type: 'key_harvesting', weight: 25, severity: 'CRITICAL' },
-  { pattern: 'enter your seed', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' },
+  { pattern: 'recovery phrase', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'mnemonic', type: 'seed_harvesting', weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'private key', type: 'key_harvesting', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'enter your seed', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
   { pattern: 'import wallet', type: 'wallet_import', weight: 15, severity: 'HIGH' as const },
   { pattern: 'drainer', type: 'drainer_script', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'sign drain', type: 'drainer_script', weight: 25, severity: 'CRITICAL' },
+  { pattern: 'sign drain', type: 'drainer_script', weight: 25, severity: 'CRITICAL' as const },
   { pattern: 'claim free', type: 'fake_airdrop', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'free airdrop', type: 'fake_airdrop', weight: 15, severity: 'HIGH' },
-  { pattern: 'connect to claim', type: 'fake_airdrop', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'free airdrop', type: 'fake_airdrop', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'connect to claim', type: 'fake_airdrop', weight: 20, severity: 'CRITICAL' as const },
   { pattern: 'verify your wallet', type: 'phishing', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'wallet verification', type: 'phishing', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'wallet verification', type: 'phishing', weight: 20, severity: 'CRITICAL' as const },
   { pattern: 'suspicious activity', type: 'phishing', weight: 15, severity: 'HIGH' as const },
 ];
 
@@ -86,10 +86,10 @@ const WALLET_DRAINER_SIGNATURES = [
 
 const INVESTMENT_FRAUD_KEYWORDS = [
   { pattern: 'recover your investment', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'recover your funds', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' },
-  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' },
+  { pattern: 'recover your funds', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' as const },
   { pattern: 'account suspended', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'account locked', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' },
+  { pattern: 'account locked', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
 ];
 
 // ─── Legitimate Domains ─────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ function checkKnownScamDomain(domain: string): ThreatDetection | null {
   return null;
 }
 
-function analyzeContent(html: string, domain: string): ThreatDetection[] {
+function analyzeContent(html: string, _domain: string): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
   const lowerHtml = html.toLowerCase();
   
@@ -363,7 +363,7 @@ async function checkReputation(domain: string): Promise<{ results: ReputationRes
   return { results: reputationResults };
 }
 
-function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, reputation?: ReputationResult[]): string[] {
+function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, _reputation?: ReputationResult[]): string[] {
   if (isLegit) {
     return ['✅ Known legitimate domain', '🔐 Still verify URL is correct'];
   }

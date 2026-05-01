@@ -11,9 +11,9 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 
 interface VercelResponse extends ServerResponse {
-  status: (code: number) => VercelResponse
+  status: (code: number) => this
   json: (data: unknown) => void
-  setHeader: (name: string, value: string) => VercelResponse
+  setHeader: (name: string, value: string) => this
   end: () => void
 }
 
