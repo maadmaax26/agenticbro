@@ -224,23 +224,27 @@ export default async function handler(
 </script>
 `;
 
-    // Proxy HTML and rewrite inline scripts/styles
-    // Note: We don't rewrite URLs - the base tag handles relative URLs
-    // and the dApp's API calls will work with allow-same-origin
+    // Remove any existing CSP meta tags that might block our scripts
+    html = html.replace(/<meta[^>]*http-equiv=['"]Content-Security-Policy['"][^>]*>/gi, '');
+    html = html.replace(/<meta[^>]*content=['"][^'"]*Content-Security-Policy[^'"]*['"][^>]*>/gi, '');
+    
+    // Remove X-Frame-Options meta tag if present
+    html = html.replace(/<meta[^>]*http-equiv=['"]X-Frame-Options['"][^>]*>/gi, '');
     
     const origin = targetUrl.origin;
     
     // Add base tag so relative URLs resolve correctly
     const baseTag = `<base href="${origin}/" />`;
     
-    // Insert script and base tag at the beginning of head
+    // Insert base tag and wallet script at the beginning of head
+    // Base tag MUST be first for URLs to resolve correctly
     if (html.includes('<head>')) {
       html = html.replace('<head>', `<head>${baseTag}${walletProxyScript}`);
     } else if (html.includes('<HEAD>')) {
       html = html.replace('<HEAD>', `<HEAD>${baseTag}${walletProxyScript}`);
     } else {
-      // No head tag, prepend
-      html = baseTag + walletProxyScript + html;
+      // No head tag, prepend after DOCTYPE
+      html = html.replace(/<!DOCTYPE[^>]*>/i, `$&${baseTag}${walletProxyScript}`);
     }
 
     // Return modified HTML
