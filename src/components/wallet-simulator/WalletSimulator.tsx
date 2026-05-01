@@ -210,7 +210,7 @@ export function WalletSimulator() {
       {/* ── URL Bar ───────────────────────────────────────────────────────────────── */}
       {state.mode === 'enter_url' && (
         <div className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 relative">
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -219,14 +219,15 @@ export function WalletSimulator() {
                 onChange={(e) => setInputUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
                 placeholder="Enter dApp URL (e.g., jupiter.ag, raydium.io)"
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-4 rounded-lg bg-black/40 border border-white/10 text-white text-lg placeholder-gray-500 focus:outline-none focus:border-purple-500"
               />
             </div>
             <button
               onClick={handleNavigate}
               disabled={!inputUrl.trim()}
-              className="px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-8 py-4 rounded-lg font-bold text-lg text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-w-[120px]"
             >
+              <Globe className="w-5 h-5" />
               Launch
             </button>
           </div>
