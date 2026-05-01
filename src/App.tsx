@@ -719,7 +719,7 @@ function App() {
         {/* ── AGNTCBRO Balance Tracker — shows after wallet connect ── */}
         <AgntcbroBalanceTracker />
 
-        {/* ── Profile Verifier Scanner - TOP OF PAGE (3 FREE SCANS) ── */}
+        {/* ── Profile Verifier Scanner - TOP OF PAGE (5 FREE SCANS) ── */}
         <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
 
             {/* ── Priority Scan Section ── */}
@@ -964,7 +964,7 @@ function App() {
               {[
                 { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '10 Free', label: 'Priority Scans',       color: '#a78bfa' },
+                { value: '5 Free', label: 'Priority Scans',       color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
