@@ -37,14 +37,36 @@ export type {
   ApprovalStats,
 } from './useApprovalManager';
 
-// Re-export from Phase 1
-export { TransactionParser } from './TransactionParser';
-export type { 
-  ParsedTransaction, 
-  ParsedInstruction, 
-  RiskAssessment,
+// Re-export from Phase 1 (functions, not classes)
+export {
+  parseTransaction,
+  parseInstruction,
+  parseTransactionFromBase58,
+  PROGRAMS,
+} from './TransactionParser';
+export type {
+  ParsedTransaction,
+  ParsedInstruction,
+  RiskAssessment as TransactionRiskAssessment,
 } from './TransactionParser';
 
-export { RiskEngine } from './RiskEngine';
-export { InstructionLibrary } from './InstructionLibrary';
-export { Token2022Detector } from './Token2022Detector';
+export { RiskEngine, getRiskEngine, analyzeTransactionRisk } from './RiskEngine';
+export type {
+  RiskRule,
+  RiskModifier,
+  EnhancedRiskAssessment,
+} from './RiskEngine';
+
+export {
+  Token2022Detector,
+  getToken2022Detector,
+  hasPermanentDelegate,
+  getTransferFee,
+} from './Token2022Detector';
+export type {
+  TokenExtension,
+  Token2022Analysis,
+} from './Token2022Detector';
+
+export { PROGRAM_REGISTRY } from './InstructionLibrary';
+export type { ProgramInfo } from './InstructionLibrary';
