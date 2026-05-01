@@ -122,9 +122,8 @@ export function useWalletSimulator() {
           }));
         });
       },
-      onBlockedTransaction: (tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
+      onBlockedTransaction: (_tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
         // Log blocked transaction
-        // _tx is parsed transaction, _risk is risk assessment
         console.warn('[WalletSimulator] Blocked transaction:', {
           riskScore: risk.score,
           flags: risk.flags,

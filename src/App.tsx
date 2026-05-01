@@ -21,6 +21,7 @@ import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
 import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
+import { WalletProtectionPage } from './pages/WalletProtectionPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -134,6 +135,7 @@ function App() {
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false)
   const [showScamDatabase, setShowScamDatabase] = useState(false)
+  const [showWalletProtection, setShowWalletProtection] = useState(false)
   const [locale, setLocale] = useState<Locale>('en')
 
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
@@ -537,7 +539,9 @@ function App() {
       {/* Subtle purple grid on top */}
       <div className="fixed inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'linear-gradient(rgba(139,92,246,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.4) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-      {showValueProp ? (
+      {showWalletProtection ? (
+        <WalletProtectionPage onBack={() => setShowWalletProtection(false)} />
+      ) : showValueProp ? (
         <ValueProposition onBack={() => setShowValueProp(false)} />
       ) : showRoadmap ? (
         <Roadmap onBack={() => setShowRoadmap(false)} />
@@ -660,6 +664,7 @@ function App() {
                 if (section === 'roadmap') setShowRoadmap(true)
                 if (section === 'features') setShowValueProp(true)
                 if (section === 'scanners') setShowScamDatabase(true)
+                if (section === 'wallet-protection') setShowWalletProtection(true)
                 if (section === 'holder') setShowTierPage('holder')
                 if (section === 'whale') setShowTierPage('whale')
               }}
@@ -1087,7 +1092,7 @@ function App() {
       </>
     )}
 
-      {!showValueProp && !showRoadmap && !showTierPage && !showScamDatabase && (
+      {!showValueProp && !showRoadmap && !showTierPage && !showScamDatabase && !showWalletProtection && (
         <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
           <p className="text-gray-500">
             Built for degens, by degens •{' '}

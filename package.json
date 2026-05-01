@@ -7,7 +7,7 @@
     "dev": "concurrently -n SERVER,VITE -c blue,cyan \"npm run dev:server\" \"vite\"",
     "dev:server": "tsx watch server/index.ts",
     "dev:vite": "vite",
-    "build": "tsc -b --force && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
