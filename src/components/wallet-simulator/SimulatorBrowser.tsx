@@ -44,19 +44,36 @@ export function SimulatorBrowser({
     setLoadingState('loading');
     setError(null);
     
-    fetch(`/api/wallet-proxy?url=${encodeURIComponent(url)}`)
+    // Timeout for slow dApps
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    
+    fetch(`/api/wallet-proxy?url=${encodeURIComponent(url)}`, {
+      signal: controller.signal,
+    })
       .then(res => {
+        clearTimeout(timeout);
         if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
         return res.text();
       })
       .then(html => {
+        // Check if we got actual HTML content
+        if (!html || html.length < 100) {
+          throw new Error('Received empty or invalid response');
+        }
         setIframeHtml(html);
         setLoadingState('loaded');
       })
       .catch(err => {
-        setError(err.message);
+        clearTimeout(timeout);
+        setError(err.name === 'AbortError' ? 'Request timed out' : err.message);
         setLoadingState('error');
       });
+      
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, [url]);
 
   // ── Handle postMessage from iframe ──────────────────────────────────────────────
@@ -128,8 +145,13 @@ export function SimulatorBrowser({
   // ── Handle iframe load ───────────────────────────────────────────────────────────
 
   const handleIframeLoad = useCallback(() => {
+    // Check if iframe content is actually visible (not blank)
+    // This detects when CSP/CORS blocks rendering
     setLoadingState('loaded');
     setError(null);
+    
+    // TODO: Add blank page detection after a delay
+    // If the iframe shows blank after 2s, show a helpful message
   }, []);
 
   const handleIframeError = useCallback(() => {
@@ -181,18 +203,24 @@ export function SimulatorBrowser({
       {/* Error Overlay */}
       {loadingState === 'error' && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-          <div className="text-center space-y-4 p-6">
-            <AlertTriangle className="w-12 h-12 text-red-400 mx-auto" />
+          <div className="text-center space-y-4 p-6 max-w-md">
+            <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Failed to Load</h3>
-              <p className="text-sm text-gray-400 mt-1">{error}</p>
+              <h3 className="text-lg font-semibold text-white">Unable to Load dApp</h3>
+              <p className="text-sm text-gray-400 mt-1">{error || 'The dApp may have security restrictions that prevent embedding.'}</p>
+            </div>
+            <div className="text-xs text-gray-500 bg-white/5 rounded-lg p-3">
+              <p className="mb-2"><strong>Why this happens:</strong></p>
+              <p className="mb-2">Many DeFi dApps use security headers (CSP, X-Frame-Options) that prevent loading in iframes from other domains.</p>
+              <p><strong>Try:</strong> Different dApps may work. Jupiter and Raydium have strict security policies.</p>
             </div>
             <button
               onClick={() => {
                 setLoadingState('loading');
                 setError(null);
-                if (iframeRef.current) {
-                  iframeRef.current.src = iframeRef.current.src;
+                if (iframeRef.current && iframeRef.current.srcdoc) {
+                  // Re-fetch the content
+                  setIframeHtml(null);
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors mx-auto"
