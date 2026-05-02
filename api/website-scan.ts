@@ -611,7 +611,12 @@ function calculateRiskScore(threats: ThreatDetection[], scamIndicators: string[]
   return Math.min(Math.round((combinedWeight / 10) * 10) / 10, 10);
 }
 
-function getRiskLevel(score: number, threats: ThreatDetection[] = [], scamIndicators: string[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+function getRiskLevel(score: number, threats: ThreatDetection[] = [], scamIndicators: string[] = [], isLegitimate: boolean = false): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  // Legitimate domains should always be LOW unless there are CRITICAL threats
+  if (isLegitimate && !threats.some(t => t.severity === 'CRITICAL')) {
+    return 'LOW';
+  }
+  
   // Any CRITICAL threat automatically elevates to CRITICAL level
   if (threats.some(t => t.severity === 'CRITICAL')) {
     return 'CRITICAL';
