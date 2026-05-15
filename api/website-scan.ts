@@ -1,7 +1,8 @@
 /**
  * api/website-scan.ts — Website Security Scanner API
  * 
- * Detects wallet drainers, fake airdrops, phishing sites, and wallet theft attempts
+ * Detects wallet drainers, fake airdrops, phishing sites, wallet theft attempts,
+ * AND fake event ticket scams (World Cup 2026, major sporting events)
  * 
  * POST /api/website-scan
  * Body: { url: string }
@@ -39,6 +40,7 @@ interface WebsiteScanResult {
   deepScanId?: string;
   deepScanPollUrl?: string;
   scanDate: string;
+  scanCategory?: 'general' | 'ticket';
 }
 
 // ─── Known Scam Domains (Regulatory Warnings) ────────────────────────────────
@@ -52,6 +54,20 @@ const KNOWN_SCAM_DOMAINS: Record<string, { regulator: string; warning: string }>
   'tradevectorai-official.com': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
   'trade.errors-app.org': { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
   'trade-errors-app.org': { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
+
+  // ─── World Cup 2026 Ticket Scams ────────────────────────────────────────
+  // Known fake ticket sites — FIFA only sells via FIFA.com/tickets
+  'fifa2026tickets.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — FIFA is the ONLY authorized seller' },
+  'worldcup2026tickets.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — NOT authorized by FIFA' },
+  'fifaworldcup2026tickets.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — FIFA does not use subdomains for tickets' },
+  'wc2026tickets.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket reseller — unauthorized' },
+  '2026worldcuptickets.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — not authorized by FIFA' },
+  'worldcuptickets2026.com': { regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — FIFA is the ONLY official source' },
+  'fifatickets2026.com': { regulator: 'FIFA', warning: 'Impersonates FIFA — only FIFA.com/tickets is official' },
+  'fifa2026official.com': { regulator: 'FIFA', warning: 'Fake FIFA official site — FIFA only uses FIFA.com domain' },
+  'fifafans2026.com': { regulator: 'FIFA', warning: 'Fake FIFA fan site used for ticket scams' },
+  'worldcup-hospitality.com': { regulator: 'FIFA', warning: 'Fake hospitality reseller — FIFA Hospitality is the ONLY authorized program' },
+  'matchhospitality2026.com': { regulator: 'FIFA', warning: 'Fake hospitality reseller — not affiliated with FIFA/MATCH Hospitality' },
 };
 
 // ─── Scam Domain Patterns ───────────────────────────────────────────────────
@@ -61,6 +77,16 @@ const SCAM_DOMAIN_PATTERNS = [
   { pattern: /trade-vectorai/i, regulator: 'FCA', warning: 'UK FCA warned entity', weight: 30 },
   { pattern: /errors-app/i, regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern', weight: 25 },
   { pattern: /vectorai-app/i, regulator: 'FCA', warning: 'Associated with FCA warned entity', weight: 25 },
+  // World Cup 2026 ticket scam domain patterns
+  { pattern: /fifa.*2026.*ticket/i, regulator: 'FIFA', warning: 'Fake FIFA World Cup 2026 ticket site — FIFA.com is the ONLY authorized seller', weight: 30 },
+  { pattern: /worldcup.*2026.*ticket/i, regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — NOT authorized by FIFA', weight: 30 },
+  { pattern: /2026.*worldcup.*ticket/i, regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — NOT authorized by FIFA', weight: 30 },
+  { pattern: /wc2026.*ticket/i, regulator: 'FIFA', warning: 'Fake World Cup 2026 ticket site — NOT authorized by FIFA', weight: 30 },
+  { pattern: /fifa.*official.*2026/i, regulator: 'FIFA', warning: 'Fake FIFA official site — FIFA only uses FIFA.com domain', weight: 30 },
+  { pattern: /fifaticket/i, regulator: 'FIFA', warning: 'Impersonates FIFA ticket sales — only FIFA.com/tickets is official', weight: 30 },
+  { pattern: /worldcup.*hospitality/i, regulator: 'FIFA', warning: 'Fake World Cup hospitality reseller — FIFA Hospitality is the ONLY authorized program', weight: 25 },
+  { pattern: /match.*hospitality.*2026/i, regulator: 'FIFA', warning: 'Fake MATCH Hospitality reseller — not affiliated with FIFA', weight: 25 },
+  { pattern: /copa.*america.*2026.*ticket/i, regulator: 'CONCACAF', warning: 'Suspect Copa America 2026 ticket reseller — verify with CONCACAF', weight: 20 },
 ];
 
 // ─── Wallet Drainer Patterns ────────────────────────────────────────────────
@@ -87,9 +113,92 @@ const WALLET_DRAINER_SIGNATURES = [
 const INVESTMENT_FRAUD_KEYWORDS = [
   { pattern: 'recover your investment', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
   { pattern: 'recover your funds', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'HIGH' as const },
   { pattern: 'account suspended', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
   { pattern: 'account locked', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
+];
+
+// ─── Event Ticket Scam Keywords (World Cup 2026 & Major Events) ────────────────
+
+const EVENT_TICKET_SCAM_KEYWORDS = [
+  // FIFA / World Cup 2026 specific
+  { pattern: 'world cup 2026 tickets', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fifa 2026 tickets', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'guaranteed world cup tickets', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'buy world cup tickets', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'world cup tickets for sale', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'cheap world cup tickets', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'discount world cup', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'vip world cup packages', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'fifa hospitality package', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'official ticket reseller', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'authorized ticket vendor', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fifa approved seller', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'world cup final tickets', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'semi final tickets 2026', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+
+  // General ticket scam patterns
+  { pattern: 'tickets guaranteed', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: '100% guaranteed tickets', type: 'fake_event_ticket', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'sold out tickets', type: 'fake_event_ticket', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'hard to find tickets', type: 'fake_event_ticket', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'below face value', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'below face value tickets', type: 'fake_event_ticket', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'no questions asked', type: 'fake_event_ticket', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'e-ticket instant delivery', type: 'fake_event_ticket', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'pdf ticket download', type: 'fake_event_ticket', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'paperless ticket transfer', type: 'fake_event_ticket', weight: 15, severity: 'MEDIUM' as const },
+
+  // Urgency / scarcity pressure
+  { pattern: 'selling fast', type: 'ticket_urgency', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'limited availability', type: 'ticket_urgency', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'last chance tickets', type: 'ticket_urgency', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'tickets almost gone', type: 'ticket_urgency', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'book now before', type: 'ticket_urgency', weight: 10, severity: 'MEDIUM' as const },
+
+  // Payment red flags
+  { pattern: 'wire transfer only', type: 'suspicious_payment', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'western union', type: 'suspicious_payment', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'crypto payment only', type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'pay via bitcoin', type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'no refund', type: 'suspicious_payment', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'all sales final', type: 'suspicious_payment', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'non-refundable', type: 'suspicious_payment', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'cash only', type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'zelle payment', type: 'suspicious_payment', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'no buyer protection', type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+
+  // Contact/method red flags
+  { pattern: 'whatsapp ticket', type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'telegram ticket', type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'dm for tickets', type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'direct message for tickets', type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'meet in person', type: 'ticket_scam_method', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'pickup only', type: 'ticket_scam_method', weight: 15, severity: 'MEDIUM' as const },
+];
+
+// ─── FIFA Official Domains (never flag as scam) ───────────────────────────────
+
+const FIFA_OFFICIAL_DOMAINS = [
+  'fifa.com',
+  'fifa.org',
+  'fifaworldcup.com',
+  'fifaworldcup26.com',
+  'fifaconnect.com',
+  'fifadata.azurewebsites.net',
+];
+
+// ─── Authorized Ticket Sellers ────────────────────────────────────────────────
+
+const AUTHORIZED_TICKET_SELLERS = [
+  'fifa.com',
+  'fifaworldcup.com',
+  'match-hospitality.com',
+  'stubhub.com',
+  'ticketmaster.com',
+  'viagogo.com',
+  'seatgeek.com',
+  'vivaticket.com',
 ];
 
 // ─── Legitimate Domains ─────────────────────────────────────────────────────
@@ -102,6 +211,11 @@ const LEGITIMATE_DOMAINS = [
   'okx.com', 'kucoin.com', 'crypto.com', 'gate.io',
   'robinhood.com', 'webull.com', 'etrade.com', 'fidelity.com',
   'schwab.com', 'vanguard.com', 'sofi.com',
+  // FIFA official
+  'fifa.com', 'fifaworldcup.com', 'fifa.org',
+  // Authorized ticket resale platforms
+  'stubhub.com', 'ticketmaster.com', 'viagogo.com', 'seatgeek.com',
+  'vivaticket.com', 'match-hospitality.com',
 ];
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
@@ -117,6 +231,12 @@ function extractDomain(url: string): string {
 function isLegitimateDomain(domain: string): boolean {
   return LEGITIMATE_DOMAINS.some(legit => 
     domain === legit || domain.endsWith('.' + legit)
+  );
+}
+
+function isAuthorizedTicketSeller(domain: string): boolean {
+  return AUTHORIZED_TICKET_SELLERS.some(seller =>
+    domain === seller || domain.endsWith('.' + seller)
   );
 }
 
@@ -154,6 +274,7 @@ function checkKnownScamDomain(domain: string): ThreatDetection | null {
 function analyzeContent(html: string, _domain: string): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
   const lowerHtml = html.toLowerCase();
+  const domain = _domain.toLowerCase();
   
   // Check wallet drainer patterns
   for (const sig of WALLET_DRAINER_SIGNATURES) {
@@ -176,6 +297,19 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
         severity: keyword.severity,
         description: getThreatDescription(keyword.type),
         evidence: `Keyword: "${keyword.pattern}"`,
+        weight: keyword.weight,
+      });
+    }
+  }
+  
+  // Check event ticket scam keywords (World Cup 2026 & major events)
+  for (const keyword of EVENT_TICKET_SCAM_KEYWORDS) {
+    if (lowerHtml.includes(keyword.pattern)) {
+      threats.push({
+        type: keyword.type,
+        severity: keyword.severity,
+        description: getThreatDescription(keyword.type),
+        evidence: `Ticket scam keyword: "${keyword.pattern}"`,
         weight: keyword.weight,
       });
     }
@@ -211,7 +345,112 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
       weight: 10,
     });
   }
+
+  // ─── Event Ticket Specific Checks ──────────────────────────────────────
+
+  // Check for FIFA impersonation claims (e.g., "official FIFA partner")
+  const fifaImpersonationPatterns = [
+    { pattern: 'official fifa partner', severity: 'CRITICAL' as const, weight: 30 },
+    { pattern: 'fifa authorized', severity: 'CRITICAL' as const, weight: 30 },
+    { pattern: 'fifa approved', severity: 'CRITICAL' as const, weight: 30 },
+    { pattern: 'authorized fifa ticket', severity: 'CRITICAL' as const, weight: 30 },
+    { pattern: 'fifa official reseller', severity: 'CRITICAL' as const, weight: 30 },
+    { pattern: 'fifa world cup official tickets', severity: 'CRITICAL' as const, weight: 25 },
+    { pattern: 'fifa certified', severity: 'CRITICAL' as const, weight: 25 },
+    { pattern: 'concacaf official', severity: 'HIGH' as const, weight: 20 },
+  ];
+
+  // If domain is NOT FIFA official, flag impersonation claims
+  const isFifaOfficial = FIFA_OFFICIAL_DOMAINS.some(d => domain === d || domain.endsWith('.' + d));
+  if (!isFifaOfficial) {
+    for (const imp of fifaImpersonationPatterns) {
+      if (lowerHtml.includes(imp.pattern)) {
+        threats.push({
+          type: 'fifa_impersonation',
+          severity: imp.severity,
+          description: 'Claiming FIFA authorization — FIFA.com is the ONLY authorized ticket source for World Cup 2026',
+          evidence: `Pattern: "${imp.pattern}" on non-FIFA domain`,
+          weight: imp.weight,
+        });
+      }
+    }
+  }
+
+  // Check for ticket-specific page elements only when scam indicators present
+  const hasScamIndicator = threats.some(t => 
+    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation'].includes(t.type)
+  );
   
+  if (hasScamIndicator) {
+    const ticketPagePatterns = [
+      { pattern: 'add to cart', type: 'ticket_ecommerce', severity: 'LOW' as const, weight: 3 },
+      { pattern: 'checkout', type: 'ticket_ecommerce', severity: 'LOW' as const, weight: 3 },
+      { pattern: 'seat selection', type: 'ticket_ecommerce', severity: 'LOW' as const, weight: 5 },
+      { pattern: 'stadium map', type: 'ticket_ecommerce', severity: 'LOW' as const, weight: 3 },
+      { pattern: 'vip package', type: 'ticket_ecommerce', severity: 'MEDIUM' as const, weight: 5 },
+      { pattern: 'hospitality package', type: 'ticket_ecommerce', severity: 'MEDIUM' as const, weight: 5 },
+    ];
+
+    for (const tp of ticketPagePatterns) {
+      if (lowerHtml.includes(tp.pattern)) {
+        threats.push({
+          type: tp.type,
+          severity: tp.severity,
+          description: 'Ticket sale page with scam indicators present',
+          evidence: `Pattern: "${tp.pattern}"`,
+          weight: tp.weight,
+        });
+      }
+    }
+  }
+
+  // Check for recently created domain signal (copyright 2026 + ticket keywords)
+  if (lowerHtml.includes('copyright 2026') && lowerHtml.includes('ticket')) {
+    threats.push({
+      type: 'recent_domain_ticket',
+      severity: 'HIGH',
+      description: 'Site appears newly created for 2026 event ticket sales — common scam pattern',
+      evidence: 'Copyright 2026 + ticket keywords on same page',
+      weight: 15,
+    });
+  }
+
+  // Check for no physical address / company info on ticket sites
+  const hasTicketKeywords = lowerHtml.includes('ticket') && 
+    (lowerHtml.includes('world cup') || lowerHtml.includes('fifa') || lowerHtml.includes('2026'));
+  const hasContactInfo = lowerHtml.includes('address') && 
+    (lowerHtml.includes('street') || lowerHtml.includes('ave') || lowerHtml.includes('road') || lowerHtml.includes('blvd'));
+  const hasCompanyInfo = lowerHtml.includes('llc') || lowerHtml.includes('inc.') || lowerHtml.includes('ltd') || lowerHtml.includes('corp');
+  if (hasTicketKeywords && !hasContactInfo && !hasCompanyInfo) {
+    threats.push({
+      type: 'no_seller_info',
+      severity: 'MEDIUM',
+      description: 'Ticket selling site with no verifiable business address or company info',
+      evidence: 'Ticket keywords present but no company/address details found',
+      weight: 10,
+    });
+  }
+
+  // Check for pressure tactics specific to event tickets
+  const pressurePatterns = [
+    { pattern: 'selling fast', type: 'ticket_urgency', weight: 10, severity: 'MEDIUM' as const },
+    { pattern: 'price increases soon', type: 'ticket_urgency', weight: 15, severity: 'HIGH' as const },
+    { pattern: 'book now pay later', type: 'ticket_urgency', weight: 10, severity: 'MEDIUM' as const },
+    { pattern: 'reserve your seat', type: 'ticket_urgency', weight: 10, severity: 'MEDIUM' as const },
+  ];
+
+  for (const pp of pressurePatterns) {
+    if (lowerHtml.includes(pp.pattern)) {
+      threats.push({
+        type: pp.type,
+        severity: pp.severity,
+        description: 'High-pressure ticket sales tactic',
+        evidence: `Pressure pattern: "${pp.pattern}"`,
+        weight: pp.weight,
+      });
+    }
+  }
+
   return threats;
 }
 
@@ -228,6 +467,15 @@ function getThreatDescription(type: string): string {
     wallet_connect: 'Wallet connection - verify site first',
     obfuscated_code: 'Hidden malicious code',
     cloudflare_block: 'Site blocking scanners - suspicious behavior',
+    // Event ticket scam descriptions
+    fake_event_ticket: 'Fake event ticket scam — verify tickets only at official sources',
+    ticket_urgency: 'High-pressure ticket sales tactics — designed to force rushed decisions',
+    suspicious_payment: 'Suspicious payment method — no buyer protection, likely a scam',
+    ticket_scam_method: 'Dodgy ticket selling method — high risk of non-delivery',
+    fifa_impersonation: 'FIFA impersonation — only FIFA.com sells official World Cup 2026 tickets',
+    ticket_ecommerce: 'Ticket sales page with scam indicators — verify seller is authorized',
+    recent_domain_ticket: 'Recently created site selling event tickets — common scam pattern',
+    no_seller_info: 'No verifiable business info — legitimate ticket sellers always provide company details',
   };
   return descriptions[type] || 'Suspicious activity';
 }
@@ -271,19 +519,19 @@ interface SearchResult {
   description: string;
 }
 
-async function searchScamReports(domain: string): Promise<{ results: SearchResult[]; scamIndicators: string[] }> {
+async function searchScamReports(domain: string, isTicketRelated?: boolean): Promise<{ results: SearchResult[]; scamIndicators: string[] }> {
   const BRAVE_API_KEY = process.env.BRAVE_SEARCH_API_KEY;
   
   if (!BRAVE_API_KEY) {
-    // Fallback to static reputation links if no API key
-    return {
-      results: [],
-      scamIndicators: [],
-    };
+    return { results: [], scamIndicators: [] };
   }
   
   try {
-    const searchQuery = `${domain} scam legit review warning`;
+    // Build search query — add World Cup ticket context if domain seems ticket-related
+    let searchQuery = `${domain} scam legit review warning`;
+    if (isTicketRelated) {
+      searchQuery = `${domain} scam fake tickets legit review FIFA World Cup 2026`;
+    }
     const response = await fetch(
       `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=10`,
       {
@@ -310,6 +558,8 @@ async function searchScamReports(domain: string): Promise<{ results: SearchResul
     const scamPatterns = [
       /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
       /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
+      /fake tickets/i, /ticket scam/i, /invalid tickets/i,
+      /refused entry/i, /not authentic/i, /counterfeit/i,
     ];
     
     for (const result of results) {
@@ -328,7 +578,7 @@ async function searchScamReports(domain: string): Promise<{ results: SearchResul
   }
 }
 
-async function checkReputation(domain: string): Promise<{ results: ReputationResult[]; webSearchResults?: SearchResult[] }> {
+async function checkReputation(domain: string, isTicketRelated?: boolean): Promise<{ results: ReputationResult[]; webSearchResults?: SearchResult[] }> {
   const reputationResults: ReputationResult[] = [];
   
   // Always add static reputation links
@@ -347,9 +597,28 @@ async function checkReputation(domain: string): Promise<{ results: ReputationRes
     verdict: 'Check reviews',
     details: `https://www.trustpilot.com/review/${domain}`,
   });
+
+  // Add FIFA-specific verification links for ticket-related domains
+  if (isTicketRelated) {
+    reputationResults.push({
+      source: 'FIFA Official',
+      verdict: 'Official tickets only at FIFA.com',
+      details: 'https://www.fifa.com/tickets',
+    });
+    reputationResults.push({
+      source: 'FIFA Integrity',
+      verdict: 'Report FIFA ticket fraud',
+      details: 'https://www.fifa.com/about-fifa/organisation/integrity',
+    });
+    reputationResults.push({
+      source: 'WHOIS',
+      verdict: 'Check domain registration date',
+      details: `https://who.is/whois/${domain}`,
+    });
+  }
   
   // Try to get live search results if API key is available
-  const { results: searchResults, scamIndicators } = await searchScamReports(domain);
+  const { results: searchResults, scamIndicators } = await searchScamReports(domain, isTicketRelated);
   
   if (searchResults.length > 0) {
     reputationResults.push({
@@ -363,13 +632,59 @@ async function checkReputation(domain: string): Promise<{ results: ReputationRes
   return { results: reputationResults };
 }
 
-function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, _reputation?: ReputationResult[]): string[] {
+function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, domain?: string): string[] {
   if (isLegit) {
     return ['✅ Known legitimate domain', '🔐 Still verify URL is correct'];
   }
   
   const recs: string[] = [];
+  const hasTicketScam = threats.some(t => 
+    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket'].includes(t.type)
+  );
   
+  // World Cup 2026 ticket-specific recommendations
+  if (threats.some(t => t.type === 'fifa_impersonation')) {
+    recs.push('🚨 CRITICAL: This site claims FIFA authorization — FIFA is the ONLY official seller');
+    recs.push('⚽ Buy World Cup 2026 tickets ONLY at FIFA.com/tickets');
+    recs.push('❌ Do NOT purchase from this site');
+    recs.push('📋 Report FIFA ticket scams: https://www.fifa.com/about-fifa/organisation/integrity');
+  }
+  
+  if (threats.some(t => t.type === 'fake_event_ticket')) {
+    recs.push('🚨 CRITICAL: Potential fake event ticket scam detected');
+    recs.push('⚽ World Cup 2026 tickets are ONLY sold via FIFA.com/tickets');
+    recs.push('🎫 Authorized resale: StubHub, Ticketmaster, ViaGogo — verify before buying');
+    recs.push('❌ Never pay via wire transfer, crypto, or gift cards for event tickets');
+  }
+  
+  if (threats.some(t => t.type === 'suspicious_payment')) {
+    recs.push('🚨 CRITICAL: Suspicious payment method — likely a scam');
+    recs.push('❌ Wire transfer, crypto, and gift card payments have NO buyer protection');
+    recs.push('✅ Only buy tickets from sites with buyer protection (credit card, PayPal)');
+  }
+  
+  if (threats.some(t => t.type === 'ticket_scam_method')) {
+    recs.push('⚠️ Dodgy selling method detected — high risk of non-delivery');
+    recs.push('❌ Never buy tickets via DM, WhatsApp, or Telegram');
+    recs.push('✅ Use authorized resale platforms only');
+  }
+  
+  if (threats.some(t => t.type === 'ticket_urgency')) {
+    recs.push('⚠️ High-pressure sales tactics — legitimate sellers don\'t rush you');
+    recs.push('🤚 Take your time — real tickets won\'t disappear in seconds');
+  }
+  
+  if (threats.some(t => t.type === 'no_seller_info')) {
+    recs.push('⚠️ No verifiable business info found on this ticket site');
+    recs.push('🔍 Legitimate sellers always list company name, address, and registration');
+  }
+  
+  if (threats.some(t => t.type === 'recent_domain_ticket')) {
+    recs.push('⚠️ This site appears newly created for 2026 event ticket sales');
+    recs.push('🔍 Check domain age at who.is — scam sites are often recently registered');
+  }
+  
+  // General recommendations
   if (threats.some(t => t.type === 'regulatory_warning')) {
     recs.push('🚨 CRITICAL: Regulatory warning - known scam/fraud');
     recs.push('❌ Do NOT interact with this site');
@@ -405,6 +720,15 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, _
   if (threats.some(t => t.type === 'cloudflare_block')) {
     recs.push('⚠️ Site is blocking security scanners');
     recs.push('🔍 This is suspicious for a legitimate financial site');
+  }
+  
+  // Add FIFA-specific verification links for any ticket-related threats
+  if (hasTicketScam) {
+    recs.push('🔗 Verify World Cup 2026 tickets: https://www.fifa.com/tickets');
+    if (domain) {
+      recs.push(`🔗 Check domain age: https://who.is/whois/${domain}`);
+    }
+    recs.push('🔗 Report ticket fraud: https://reportfraud.ftc.gov');
   }
   
   if (threats.length === 0) {
@@ -447,6 +771,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let reputation: ReputationResult[] | undefined;
   let webSearchResults: SearchResult[] | undefined;
   
+  // Detect if this is a ticket-related domain
+  const isTicketRelated = domain.includes('ticket') || domain.includes('fifa') || domain.includes('worldcup') || domain.includes('wc2026') || domain.includes('worldcup2026') || domain.includes('fifa2026') || domain.includes('hospitality');
+  
   // ALWAYS check known scam domains FIRST (even if fetch fails later)
   const knownScamThreat = checkKnownScamDomain(domain);
   if (knownScamThreat) {
@@ -456,7 +783,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Run reputation check in parallel with content fetch
   let scamIndicators: string[] = [];
   const [reputationResults] = await Promise.allSettled([
-    checkReputation(domain),
+    checkReputation(domain, isTicketRelated),
   ]);
   
   if (reputationResults.status === 'fulfilled') {
@@ -507,7 +834,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const riskScore = calculateRiskScore(threats, scamIndicators);
   const riskLevel = getRiskLevel(riskScore, threats, scamIndicators);
-  const recommendations = generateRecommendations(threats, isLegit, reputation);
+  const recommendations = generateRecommendations(threats, isLegit, domain);
+
+  // Determine scan category for frontend
+  const hasTicketKeywords = threats.some(t => 
+    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce'].includes(t.type)
+  );
+  const scanCategory: 'general' | 'ticket' = hasTicketKeywords || isTicketRelated ? 'ticket' : 'general';
   
   // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
   let deepScanId: string | undefined;
@@ -519,7 +852,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     deepScanId = scanId;
     
     // Trigger immediate wake event to OpenClaw agent
-    // Agent will process with web_search and store results in session
     fetch('https://gateway.openclaw.ai/api/cron/wake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -529,6 +861,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 Scan ID: ${scanId}
 Domain: ${domain}
+Category: ${scanCategory}
 
 Use web_search to research this domain for scam reports, regulatory warnings, user reviews. 
 Then respond with detailed findings including risk level, scam indicators, and recommendations.
@@ -554,6 +887,7 @@ Format response as JSON for the user to see.`,
     deepScanId,
     deepScanPollUrl: deepScanId ? `/api/website-deep-scan?scanId=${deepScanId}` : undefined,
     scanDate: new Date().toISOString(),
+    scanCategory,
   };
   
   return res.status(200).json(result);
