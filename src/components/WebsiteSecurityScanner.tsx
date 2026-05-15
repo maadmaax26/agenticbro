@@ -316,6 +316,146 @@ export default function WebsiteSecurityScanner() {
             </div>
           )}
 
+          {/* Domain Age */}
+          {(result as any).domainInfo && (
+            <div
+              className="rounded-xl p-5"
+              style={{
+                background: (result as any).domainInfo.isNewDomain ? 'rgba(251,146,60,0.08)' : 'rgba(139,92,246,0.05)',
+                border: (result as any).domainInfo.isNewDomain ? '1px solid rgba(251,146,60,0.25)' : '1px solid rgba(139,92,246,0.15)',
+              }}
+            >
+              <h4 className="text-lg font-bold mb-3" style={{ color: (result as any).domainInfo.isNewDomain ? '#fb923c' : '#a78bfa' }}>
+                {(result as any).domainInfo.isNewDomain ? '🆕' : '📅'} Domain Registration
+              </h4>
+              <div className="space-y-2">
+                {(result as any).domainInfo.domainAgeDays !== undefined && (
+                  <p className="text-sm text-gray-300">
+                    <span className="text-gray-400">Age:</span>{' '}
+                    <span style={{ color: (result as any).domainInfo.isNewDomain ? '#fb923c' : '#4ade80' }}>
+                      {(result as any).domainInfo.domainAgeDays} days old
+                      {(result as any).domainInfo.isNewDomain && ' (LESS THAN 6 MONTHS!)'}
+                    </span>
+                  </p>
+                )}
+                {(result as any).domainInfo.registeredDate && (
+                  <p className="text-sm text-gray-300">
+                    <span className="text-gray-400">Registered:</span> {(result as any).domainInfo.registeredDate}
+                  </p>
+                )}
+                {(result as any).domainInfo.registrar && (
+                  <p className="text-sm text-gray-300">
+                    <span className="text-gray-400">Registrar:</span> {(result as any).domainInfo.registrar}
+                  </p>
+                )}
+                {(result as any).domainInfo.isNewDomain && (
+                  <p className="text-xs text-orange-300 mt-2">
+                    ⚠️ Newly registered domains are a common scam indicator. Legitimate businesses typically use domains registered years ago.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Payment Analysis */}
+          {(result as any).paymentAnalysis && (
+            <div
+              className="rounded-xl p-5"
+              style={{
+                background: (result as any).paymentAnalysis.riskAssessment === 'DANGEROUS' || (result as any).paymentAnalysis.riskAssessment === 'RISKY'
+                  ? 'rgba(239,68,68,0.08)'
+                  : (result as any).paymentAnalysis.riskAssessment === 'MIXED'
+                    ? 'rgba(251,191,36,0.08)'
+                    : 'rgba(74,222,128,0.05)',
+                border: (result as any).paymentAnalysis.riskAssessment === 'DANGEROUS' || (result as any).paymentAnalysis.riskAssessment === 'RISKY'
+                  ? '1px solid rgba(239,68,68,0.2)'
+                  : (result as any).paymentAnalysis.riskAssessment === 'MIXED'
+                    ? '1px solid rgba(251,191,36,0.2)'
+                    : '1px solid rgba(74,222,128,0.15)',
+              }}
+            >
+              <h4 className="text-lg font-bold mb-3" style={{
+                color: (result as any).paymentAnalysis.riskAssessment === 'DANGEROUS' ? '#f87171'
+                  : (result as any).paymentAnalysis.riskAssessment === 'RISKY' ? '#fb923c'
+                  : (result as any).paymentAnalysis.riskAssessment === 'MIXED' ? '#fbbf24'
+                  : '#4ade80'
+              }}>
+                💳 Payment Method Analysis
+              </h4>
+              <div className="space-y-3">
+                {/* Risk assessment badge */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold" style={{
+                    color: (result as any).paymentAnalysis.riskAssessment === 'DANGEROUS' ? '#f87171'
+                      : (result as any).paymentAnalysis.riskAssessment === 'RISKY' ? '#fb923c'
+                      : (result as any).paymentAnalysis.riskAssessment === 'MIXED' ? '#fbbf24'
+                      : '#4ade80'
+                  }}>
+                    {(result as any).paymentAnalysis.riskAssessment === 'DANGEROUS' ? '💀' :
+                     (result as any).paymentAnalysis.riskAssessment === 'RISKY' ? '🚨' :
+                     (result as any).paymentAnalysis.riskAssessment === 'MIXED' ? '⚠️' : '✅'}
+                    {' '}{(result as any).paymentAnalysis.riskAssessment}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    Buyer protection: {(result as any).paymentAnalysis.hasBuyerProtection ? '✅ Yes' : '❌ No'}
+                  </span>
+                </div>
+
+                {/* Payment providers */}
+                {(result as any).paymentAnalysis.paymentProviders.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Payment Processors:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(result as any).paymentAnalysis.paymentProviders.map((provider: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-400 border border-green-500/20">
+                          {provider}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Safe methods */}
+                {(result as any).paymentAnalysis.safeMethods.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">✅ Safe Methods:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(result as any).paymentAnalysis.safeMethods.map((method: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-400 border border-green-500/20">
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Risky methods */}
+                {(result as any).paymentAnalysis.riskyMethods.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">🚨 Risky Methods:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(result as any).paymentAnalysis.riskyMethods.map((method: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20">
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-red-300 mt-2">
+                      ⚠️ These payment methods offer no buyer protection. Once sent, your money cannot be recovered.
+                    </p>
+                  </div>
+                )}
+
+                {/* All methods detected */}
+                {(result as any).paymentAnalysis.detectedMethods.length === 0 && (result as any).paymentAnalysis.paymentProviders.length === 0 && (
+                  <p className="text-sm text-gray-400">
+                    ℹ️ No specific payment methods detected in page content. This could mean they're hidden behind a checkout flow.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recommendations */}
           <div
             className="rounded-xl p-5"
