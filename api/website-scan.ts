@@ -26,6 +26,22 @@ interface ReputationResult {
   details?: string;
 }
 
+interface DomainInfo {
+  registeredDate?: string;   // ISO date string
+  domainAgeDays?: number;
+  registrar?: string;
+  isNewDomain?: boolean;      // < 180 days
+}
+
+interface PaymentAnalysis {
+  detectedMethods: string[];    // All payment methods found
+  safeMethods: string[];       // Credit card, PayPal, Stripe, etc.
+  riskyMethods: string[];      // Wire, crypto, gift cards, Zelle, etc.
+  paymentProviders: string[];  // Stripe, PayPal, Square, etc. detected in HTML
+  hasBuyerProtection: boolean;
+  riskAssessment: 'SAFE' | 'MIXED' | 'RISKY' | 'DANGEROUS';
+}
+
 interface WebsiteScanResult {
   success: boolean;
   url: string;
@@ -41,6 +57,8 @@ interface WebsiteScanResult {
   deepScanPollUrl?: string;
   scanDate: string;
   scanCategory?: 'general' | 'ticket';
+  domainInfo?: DomainInfo;
+  paymentAnalysis?: PaymentAnalysis;
 }
 
 // ─── Known Scam Domains (Regulatory Warnings) ────────────────────────────────
@@ -415,6 +433,36 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
     });
   }
 
+  // ─── Deep Payment Method Analysis ──────────────────────────────────────
+  const paymentAnalysis = analyzePaymentMethods(html, domain);
+  
+  // Flag risky payment methods found on the page
+  for (const method of paymentAnalysis.riskyMethods) {
+    const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const
+      : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const
+      : 'MEDIUM' as const;
+    const weight = severity === 'CRITICAL' ? 25 : severity === 'HIGH' ? 20 : 10;
+    
+    threats.push({
+      type: 'risky_payment_method',
+      severity,
+      description: `Non-standard payment method detected: ${method} — no buyer protection`,
+      evidence: `Payment method: "${method}" found on site`,
+      weight,
+    });
+  }
+
+  // Flag if site has NO safe payment methods at all
+  if (paymentAnalysis.detectedMethods.length > 0 && paymentAnalysis.safeMethods.length === 0 && paymentAnalysis.riskyMethods.length > 0) {
+    threats.push({
+      type: 'no_safe_payment',
+      severity: 'CRITICAL',
+      description: 'Site only accepts non-standard payment methods — no credit card, PayPal, or buyer protection',
+      evidence: `Only accepts: ${paymentAnalysis.riskyMethods.join(', ')}`,
+      weight: 25,
+    });
+  }
+
   // Check for no physical address / company info on ticket sites
   const hasTicketKeywords = lowerHtml.includes('ticket') && 
     (lowerHtml.includes('world cup') || lowerHtml.includes('fifa') || lowerHtml.includes('2026'));
@@ -476,6 +524,9 @@ function getThreatDescription(type: string): string {
     ticket_ecommerce: 'Ticket sales page with scam indicators — verify seller is authorized',
     recent_domain_ticket: 'Recently created site selling event tickets — common scam pattern',
     no_seller_info: 'No verifiable business info — legitimate ticket sellers always provide company details',
+    risky_payment_method: 'Non-standard payment method — no buyer protection, money not recoverable',
+    no_safe_payment: 'No safe payment options — site only accepts irreversible payment methods',
+    newly_registered_domain: 'Domain registered recently — scam sites are often newly created',
   };
   return descriptions[type] || 'Suspicious activity';
 }
@@ -572,7 +623,7 @@ async function searchScamReports(domain: string, isTicketRelated?: boolean): Pro
       }
     }
     
-    return { results, scamIndicators: [...new Set(scamIndicators)] };
+    return { results, scamIndicators: Array.from(new Set(scamIndicators)) };
   } catch {
     return { results: [], scamIndicators: [] };
   }
@@ -639,7 +690,7 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
   
   const recs: string[] = [];
   const hasTicketScam = threats.some(t => 
-    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket'].includes(t.type)
+    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'risky_payment_method', 'no_safe_payment', 'newly_registered_domain'].includes(t.type)
   );
   
   // World Cup 2026 ticket-specific recommendations
@@ -682,6 +733,24 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
   if (threats.some(t => t.type === 'recent_domain_ticket')) {
     recs.push('⚠️ This site appears newly created for 2026 event ticket sales');
     recs.push('🔍 Check domain age at who.is — scam sites are often recently registered');
+  }
+  
+  if (threats.some(t => t.type === 'newly_registered_domain')) {
+    recs.push('🆕 This domain was recently registered — scam sites are often newly created');
+    recs.push('🔍 Legitimate businesses typically use domains registered years ago');
+    recs.push('🔗 Verify registration: https://who.is/whois/' + (domain || 'DOMAIN'));
+  }
+  
+  if (threats.some(t => t.type === 'risky_payment_method')) {
+    recs.push('⚠️ Non-standard payment methods detected — these have NO buyer protection');
+    recs.push('❌ Wire transfers, crypto, gift cards, and prepaid cards are UNRECOVERABLE once sent');
+    recs.push('✅ Only pay with credit cards, PayPal (goods/services), or platforms with buyer protection');
+  }
+  
+  if (threats.some(t => t.type === 'no_safe_payment')) {
+    recs.push('🚨 CRITICAL: This site offers NO safe payment options');
+    recs.push('❌ All payment methods on this site are irreversible — you cannot get your money back');
+    recs.push('🚫 Do NOT proceed with any purchase on this site');
   }
   
   // General recommendations
@@ -739,6 +808,242 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
   return recs.length > 0 ? recs : ['⚠️ Exercise caution', '🔍 Verify site legitimacy'];
 }
 
+// ─── WHOIS Domain Age Check ──────────────────────────────────────────────────
+
+async function checkDomainAge(domain: string): Promise<DomainInfo> {
+  const info: DomainInfo = {};
+  
+  try {
+    // Use who.is JSON endpoint or RDAP protocol
+    // Try RDAP first (standardized, free, no API key needed)
+    const tld = domain.split('.').pop() || '';
+    const rdapUrls: Record<string, string> = {
+      'com': 'https://rdap.verisign.com/com/v1/domain/',
+      'net': 'https://rdap.verisign.com/net/v1/domain/',
+      'org': 'https://rdap.publicinterestregistry.org/rdap/domain/',
+      'info': 'https://rdap.afilias.net/rdap/domain/',
+    };
+    
+    let rdapBase = rdapUrls[tld] || `https://rdap.${tld}/v1/domain/`;
+    
+    const response = await fetch(`${rdapBase}${domain}`, {
+      headers: { 'Accept': 'application/rdap+json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Extract registration date from RDAP events
+      const events = data.events || [];
+      for (const event of events) {
+        if (event.eventAction === 'registration') {
+          info.registeredDate = event.eventDate;
+          break;
+        }
+      }
+      
+      // Extract registrar
+      const entities = data.entities || [];
+      for (const entity of entities) {
+        if (entity.roles?.includes('registrar')) {
+          info.registrar = entity.vcardArray?.[1]?.find((v: any[]) => v[0] === 'fn')?.[3] || undefined;
+        }
+      }
+      
+      // Calculate age
+      if (info.registeredDate) {
+        const regDate = new Date(info.registeredDate);
+        const now = new Date();
+        info.domainAgeDays = Math.floor((now.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+        info.isNewDomain = info.domainAgeDays < 180; // Less than 6 months
+      }
+    }
+  } catch {
+    // RDAP failed — try who.is as fallback (scrape-friendly)
+    try {
+      const whoisResponse = await fetch(`https://who.is/whois/${domain}`, {
+        signal: AbortSignal.timeout(8000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' },
+      });
+      if (whoisResponse.ok) {
+        const text = await whoisResponse.text();
+        // Try to extract registration date from WHOIS text
+        const regMatch = text.match(/(?:Creation Date|Registered On|created|Registration Date|Domain Registration Date)[:\s]+(\d{4}-\d{2}-\d{2})/i);
+        if (regMatch) {
+          info.registeredDate = regMatch[1];
+          const regDate = new Date(regMatch[1]);
+          const now = new Date();
+          info.domainAgeDays = Math.floor((now.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+          info.isNewDomain = info.domainAgeDays < 180;
+        }
+      }
+    } catch {
+      // Both failed — domain info unavailable
+    }
+  }
+  
+  return info;
+}
+
+// ─── Payment Method Analysis ───────────────────────────────────────────────────
+
+function analyzePaymentMethods(html: string, _domain: string): PaymentAnalysis {
+  const lowerHtml = html.toLowerCase();
+  const analysis: PaymentAnalysis = {
+    detectedMethods: [],
+    safeMethods: [],
+    riskyMethods: [],
+    paymentProviders: [],
+    hasBuyerProtection: false,
+    riskAssessment: 'SAFE',
+  };
+  
+  // ─── Detect safe payment providers via script tags ─────────────────────
+  const SAFE_PAYMENT_PROVIDERS = [
+    { pattern: 'stripe.com', name: 'Stripe' },
+    { pattern: 'js.stripe.com', name: 'Stripe' },
+    { pattern: 'checkout.stripe.com', name: 'Stripe Checkout' },
+    { pattern: 'paypal.com/sdk', name: 'PayPal' },
+    { pattern: 'paypalobjects.com', name: 'PayPal' },
+    { pattern: 'squareup.com', name: 'Square' },
+    { pattern: 'squarecdn.com', name: 'Square' },
+    { pattern: 'shopify.com/s', name: 'Shopify Payments' },
+    { pattern: 'shopifycdn.com', name: 'Shopify' },
+    { pattern: 'braintreegateway.com', name: 'Braintree (PayPal)' },
+    { pattern: 'authorize.net', name: 'Authorize.net' },
+    { pattern: 'adyen.com', name: 'Adyen' },
+    { pattern: 'checkout.com', name: 'Checkout.com' },
+    { pattern: 'razorpay.com', name: 'Razorpay' },
+    { pattern: 'klarna.com', name: 'Klarna' },
+    { pattern: 'afterpay.com', name: 'Afterpay' },
+  ];
+  
+  for (const provider of SAFE_PAYMENT_PROVIDERS) {
+    if (lowerHtml.includes(provider.pattern)) {
+      analysis.paymentProviders.push(provider.name);
+      analysis.hasBuyerProtection = true;
+    }
+  }
+  
+  // ─── Detect safe payment keywords in content ──────────────────────────
+  const SAFE_METHOD_KEYWORDS = [
+    { pattern: 'credit card', name: 'Credit Card' },
+    { pattern: 'visa', name: 'Visa' },
+    { pattern: 'mastercard', name: 'Mastercard' },
+    { pattern: 'american express', name: 'American Express' },
+    { pattern: 'amex', name: 'Amex' },
+    { pattern: 'apple pay', name: 'Apple Pay' },
+    { pattern: 'google pay', name: 'Google Pay' },
+    { pattern: 'paypal', name: 'PayPal' },
+    { pattern: 'debit card', name: 'Debit Card' },
+  ];
+  
+  for (const method of SAFE_METHOD_KEYWORDS) {
+    if (lowerHtml.includes(method.pattern)) {
+      analysis.safeMethods.push(method.name);
+      analysis.hasBuyerProtection = true;
+    }
+  }
+  
+  // ─── Detect risky payment methods ─────────────────────────────────────
+  const RISKY_METHOD_KEYWORDS = [
+    // Wire transfers — highest risk, no recourse
+    { pattern: 'wire transfer', name: 'wire transfer', risk: 'critical' },
+    { pattern: 'bank wire', name: 'wire transfer', risk: 'critical' },
+    { pattern: 'wire payment', name: 'wire transfer', risk: 'critical' },
+    { pattern: 'swift transfer', name: 'wire transfer', risk: 'critical' },
+    { pattern: 'international wire', name: 'wire transfer', risk: 'critical' },
+    
+    // Money transfer services — no buyer protection
+    { pattern: 'western union', name: 'Western Union', risk: 'critical' },
+    { pattern: 'moneygram', name: 'MoneyGram', risk: 'critical' },
+    { pattern: 'remitly', name: 'Remitly', risk: 'high' },
+    
+    // Cryptocurrency — irreversible, anonymous
+    { pattern: 'bitcoin', name: 'bitcoin', risk: 'high' },
+    { pattern: 'ethereum', name: 'ethereum', risk: 'high' },
+    { pattern: 'usdt', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'usdc', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'tether', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'crypto payment', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'pay with crypto', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'crypto only', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'btc payment', name: 'bitcoin', risk: 'high' },
+    { pattern: 'eth payment', name: 'ethereum', risk: 'high' },
+    { pattern: 'wallet address payment', name: 'cryptocurrency', risk: 'high' },
+    { pattern: 'pay via bitcoin', name: 'bitcoin', risk: 'high' },
+    { pattern: 'send btc', name: 'bitcoin', risk: 'high' },
+    { pattern: 'send eth', name: 'ethereum', risk: 'high' },
+    
+    // Gift cards — top scam payment method
+    { pattern: 'gift card', name: 'gift card', risk: 'high' },
+    { pattern: 'gift cards accepted', name: 'gift card', risk: 'high' },
+    { pattern: 'amazon gift card', name: 'gift card', risk: 'high' },
+    { pattern: 'google play card', name: 'gift card', risk: 'high' },
+    { pattern: 'steam wallet', name: 'gift card', risk: 'high' },
+    { pattern: 'itunes card', name: 'gift card', risk: 'high' },
+    { pattern: 'prepaid card', name: 'prepaid card', risk: 'high' },
+    { pattern: 'vanilla card', name: 'prepaid card', risk: 'high' },
+    { pattern: 'green dot', name: 'prepaid card', risk: 'high' },
+    { pattern: 'moneypak', name: 'prepaid card', risk: 'high' },
+    
+    // Peer-to-peer with no protection
+    { pattern: 'zelle', name: 'Zelle', risk: 'medium' },
+    { pattern: 'zelle payment', name: 'Zelle', risk: 'medium' },
+    { pattern: 'venmo', name: 'Venmo (goods/services only)', risk: 'medium' },
+    { pattern: 'cash app', name: 'Cash App', risk: 'medium' },
+    
+    // Cash — untraceable
+    { pattern: 'cash only', name: 'cash', risk: 'high' },
+    { pattern: 'cash payment', name: 'cash', risk: 'medium' },
+    { pattern: 'cash on delivery', name: 'COD', risk: 'low' },
+    
+    // Check/money order — old school scam
+    { pattern: 'cashier check', name: "cashier's check", risk: 'medium' },
+    { pattern: 'cashiers check', name: "cashier's check", risk: 'medium' },
+    { pattern: 'money order', name: 'money order', risk: 'medium' },
+    { pattern: 'personal check', name: 'personal check', risk: 'medium' },
+  ];
+  
+  for (const method of RISKY_METHOD_KEYWORDS) {
+    if (lowerHtml.includes(method.pattern)) {
+      // Deduplicate by name
+      if (!analysis.riskyMethods.includes(method.name)) {
+        analysis.riskyMethods.push(method.name);
+      }
+    }
+  }
+  
+  // ─── Detect checkout form patterns ────────────────────────────────────
+  const hasCheckoutForm = lowerHtml.includes('checkout') || lowerHtml.includes('payment form') || lowerHtml.includes('place order');
+  const hasCart = lowerHtml.includes('add to cart') || lowerHtml.includes('shopping cart') || lowerHtml.includes('buy now');
+  
+  // ─── Build detected methods list ───────────────────────────────────────
+  analysis.detectedMethods = Array.from(new Set([...analysis.safeMethods, ...analysis.riskyMethods]));
+  
+  // ─── Assess risk level ────────────────────────────────────────────────
+  const hasRiskyCritical = analysis.riskyMethods.some(m => ['wire transfer', 'Western Union', 'MoneyGram'].includes(m));
+  const hasRiskyHigh = analysis.riskyMethods.some(m => ['bitcoin', 'ethereum', 'cryptocurrency', 'gift card', 'prepaid card', 'cash'].includes(m));
+  
+  if (hasRiskyCritical && !analysis.hasBuyerProtection) {
+    analysis.riskAssessment = 'DANGEROUS';
+  } else if ((hasRiskyCritical || hasRiskyHigh) && analysis.hasBuyerProtection) {
+    analysis.riskAssessment = 'MIXED'; // Has both safe and risky options
+  } else if (analysis.riskyMethods.length > 0) {
+    analysis.riskAssessment = 'RISKY';
+  } else {
+    analysis.riskAssessment = 'SAFE';
+  }
+  
+  // If it's a checkout/cart page with no detected payment methods at all, that's suspicious
+  if ((hasCheckoutForm || hasCart) && analysis.detectedMethods.length === 0 && analysis.paymentProviders.length === 0) {
+    analysis.riskAssessment = 'RISKY'; // Can't determine payment methods — could be hiding them
+  }
+  
+  return analysis;
+}
+
 // ─── Main Handler ────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -780,10 +1085,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     threats.push(knownScamThreat);
   }
   
-  // Run reputation check in parallel with content fetch
+  // Run reputation check and domain age check in parallel with content fetch
   let scamIndicators: string[] = [];
-  const [reputationResults] = await Promise.allSettled([
+  const [reputationResults, domainInfoResult] = await Promise.allSettled([
     checkReputation(domain, isTicketRelated),
+    checkDomainAge(domain),
   ]);
   
   if (reputationResults.status === 'fulfilled') {
@@ -805,9 +1111,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
       }
-      scamIndicators = [...new Set(scamIndicators)];
+      scamIndicators = Array.from(new Set(scamIndicators));
     }
   }
+  
+  let paymentAnalysis: PaymentAnalysis | undefined;
   
   try {
     const response = await fetch(validUrl, {
@@ -819,6 +1127,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const html = await response.text();
     const contentThreats = analyzeContent(html, domain);
     threats.push(...contentThreats);
+    
+    // Run payment analysis on fetched HTML
+    paymentAnalysis = analyzePaymentMethods(html, domain);
     
   } catch (error: any) {
     // Fetch failed - but we still check domain reputation
@@ -832,13 +1143,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
   
+  // ─── Domain Age Threat Assessment ──────────────────────────────────────
+  const domainInfo: DomainInfo = domainInfoResult.status === 'fulfilled' ? domainInfoResult.value : {};
+  
+  // Flag newly registered domains (less than 180 days)
+  if (domainInfo.isNewDomain) {
+    threats.push({
+      type: 'newly_registered_domain',
+      severity: 'HIGH',
+      description: `Domain registered only ${domainInfo.domainAgeDays} days ago — scam sites are often newly created`,
+      evidence: `Registered: ${domainInfo.registeredDate} (${domainInfo.domainAgeDays} days old, registrar: ${domainInfo.registrar || 'unknown'})`,
+      weight: 20,
+    });
+  }
+  // Flag domains less than 1 year old
+  if (domainInfo.domainAgeDays && domainInfo.domainAgeDays >= 180 && domainInfo.domainAgeDays < 365) {
+    threats.push({
+      type: 'newly_registered_domain',
+      severity: 'MEDIUM',
+      description: `Domain is less than 1 year old (${domainInfo.domainAgeDays} days) — newer domains carry more risk`,
+      evidence: `Registered: ${domainInfo.registeredDate} (${domainInfo.domainAgeDays} days old)`,
+      weight: 10,
+    });
+  }
+  
   const riskScore = calculateRiskScore(threats, scamIndicators);
   const riskLevel = getRiskLevel(riskScore, threats, scamIndicators);
   const recommendations = generateRecommendations(threats, isLegit, domain);
 
   // Determine scan category for frontend
   const hasTicketKeywords = threats.some(t => 
-    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce'].includes(t.type)
+    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce', 'risky_payment_method', 'no_safe_payment', 'newly_registered_domain'].includes(t.type)
   );
   const scanCategory: 'general' | 'ticket' = hasTicketKeywords || isTicketRelated ? 'ticket' : 'general';
   
@@ -888,6 +1223,8 @@ Format response as JSON for the user to see.`,
     deepScanPollUrl: deepScanId ? `/api/website-deep-scan?scanId=${deepScanId}` : undefined,
     scanDate: new Date().toISOString(),
     scanCategory,
+    domainInfo: Object.keys(domainInfo).length > 0 ? domainInfo : undefined,
+    paymentAnalysis,
   };
   
   return res.status(200).json(result);
