@@ -7,6 +7,7 @@
  * - Seed phrase harvesting
  * - Private key theft
  * - Phishing attempts
+ * - Fake event ticket scams (World Cup 2026)
  */
 
 import { useState } from 'react';
@@ -27,14 +28,26 @@ interface WebsiteScanResult {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   threats: ThreatDetection[];
   recommendations: string[];
+  reputation?: { source: string; verdict: string; details?: string }[];
   scanDate: string;
+  scanCategory?: 'general' | 'ticket';
 }
+
+type ScanMode = 'general' | 'ticket';
 
 export default function WebsiteSecurityScanner() {
   const [url, setUrl] = useState('');
+  const [scanMode, setScanMode] = useState<ScanMode>('general');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<WebsiteScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const getPlaceholder = () => {
+    if (scanMode === 'ticket') {
+      return 'https://fifa2026tickets.com or any ticket site';
+    }
+    return 'https://suspicious-site.com';
+  };
 
   const handleScan = async () => {
     if (!url.trim()) {
@@ -84,29 +97,84 @@ export default function WebsiteSecurityScanner() {
     }
   };
 
+  const isTicketRelated = result?.scanCategory === 'ticket' || 
+    result?.threats.some(t => ['fake_event_ticket', 'fifa_impersonation', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'no_seller_info', 'recent_domain_ticket'].includes(t.type));
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div
         className="rounded-xl p-6"
         style={{
-          background: 'rgba(139,92,246,0.05)',
-          border: '1px solid rgba(139,92,246,0.15)',
+          background: scanMode === 'ticket' 
+            ? 'rgba(234,179,8,0.05)' 
+            : 'rgba(139,92,246,0.05)',
+          border: scanMode === 'ticket'
+            ? '1px solid rgba(234,179,8,0.3)'
+            : '1px solid rgba(139,92,246,0.15)',
         }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">🌐</span>
+          <span className="text-2xl">{scanMode === 'ticket' ? '🎫' : '🌐'}</span>
           <div>
-            <h2 className="text-xl font-bold text-white">Website Security Scanner</h2>
-            <p className="text-sm text-gray-400">Detect wallet drainers, fake airdrops & phishing sites</p>
+            <h2 className="text-xl font-bold text-white">
+              {scanMode === 'ticket' ? 'Event Ticket Scam Scanner' : 'Website Security Scanner'}
+            </h2>
+            <p className="text-sm text-gray-400">
+              {scanMode === 'ticket' 
+                ? 'Detect fake World Cup 2026 tickets, FIFA impersonation & ticket fraud'
+                : 'Detect wallet drainers, fake airdrops & phishing sites'}
+            </p>
           </div>
         </div>
+
+        {/* Mode Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setScanMode('general')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              scanMode === 'general'
+                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-gray-700/50'
+            }`}
+          >
+            🌐 General Scan
+          </button>
+          <button
+            onClick={() => setScanMode('ticket')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              scanMode === 'ticket'
+                ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/40'
+                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-gray-700/50'
+            }`}
+          >
+            🎫 Ticket Scan
+          </button>
+        </div>
+
+        {/* World Cup 2026 Notice */}
+        {scanMode === 'ticket' && (
+          <div
+            className="mb-4 p-3 rounded-lg"
+            style={{
+              background: 'rgba(234,179,8,0.08)',
+              border: '1px solid rgba(234,179,8,0.2)',
+            }}
+          >
+            <p className="text-sm text-yellow-300 font-semibold">⚽ World Cup 2026 Ticket Scams</p>
+            <p className="text-xs text-gray-400 mt-1">
+              FIFA is the ONLY authorized seller of World Cup 2026 tickets. 
+              Buy only at <span className="text-yellow-300">FIFA.com/tickets</span>. 
+              Authorized resale: StubHub, Ticketmaster, ViaGogo, SeatGeek.
+            </p>
+          </div>
+        )}
 
         {/* URL Input */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-300 mb-2">
-              Website URL
+              {scanMode === 'ticket' ? '🎫 Ticket Website URL' : '🌐 Website URL'}
             </label>
             <div className="flex gap-2">
               <input
@@ -114,7 +182,7 @@ export default function WebsiteSecurityScanner() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && !scanning && handleScan()}
-                placeholder="https://suspicious-site.com"
+                placeholder={getPlaceholder()}
                 disabled={scanning}
                 className="flex-1 px-4 py-3 rounded-lg bg-black/40 border border-purple-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-50"
               />
@@ -127,11 +195,15 @@ export default function WebsiteSecurityScanner() {
             disabled={scanning || !url.trim()}
             className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+              background: scanMode === 'ticket'
+                ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'
+                : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              boxShadow: scanMode === 'ticket'
+                ? '0 4px 15px rgba(234,179,8,0.3)'
+                : '0 4px 15px rgba(139,92,246,0.3)',
             }}
           >
-            {scanning ? '🔍 Scanning...' : '🔒 Scan Website'}
+            {scanning ? '🔍 Scanning...' : scanMode === 'ticket' ? '🎫 Scan for Ticket Scams' : '🔒 Scan Website'}
           </button>
         </div>
 
@@ -161,7 +233,10 @@ export default function WebsiteSecurityScanner() {
           >
             <div className="space-y-3">
               <p className="text-sm text-gray-400">
-                🌐 Domain: {result.domain}
+                {isTicketRelated ? '🎫' : '🌐'} Domain: {result.domain}
+                {isTicketRelated && (
+                  <span className="ml-2 text-yellow-300 font-semibold">— EVENT TICKET SCAN</span>
+                )}
               </p>
               <h3 className="text-xl font-bold" style={{ color: getRiskColor(result.riskLevel).text }}>
                 🛡️ Risk Score: {result.riskScore}/10 — {result.riskLevel} RISK{' '}
@@ -180,6 +255,26 @@ export default function WebsiteSecurityScanner() {
               </div>
             </div>
           </div>
+
+          {/* FIFA Warning for ticket scams */}
+          {isTicketRelated && result.riskLevel !== 'LOW' && (
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'rgba(234,179,8,0.08)',
+                border: '1px solid rgba(234,179,8,0.25)',
+              }}
+            >
+              <p className="text-sm font-semibold text-yellow-300">⚽ World Cup 2026 — Ticket Safety</p>
+              <ul className="mt-2 space-y-1 text-xs text-gray-300">
+                <li>• FIFA.com/tickets is the ONLY official source</li>
+                <li>• Authorized resale: StubHub, Ticketmaster, ViaGogo, SeatGeek</li>
+                <li>• NEVER pay via wire transfer, crypto, or gift cards</li>
+                <li>• Check domain age at who.is — recent domains are suspicious</li>
+                <li>• Report FIFA ticket fraud: fifa.com/about-fifa/organisation/integrity</li>
+              </ul>
+            </div>
+          )}
 
           {/* Threats */}
           {result.threats.length > 0 && (
@@ -252,6 +347,7 @@ export default function WebsiteSecurityScanner() {
           >
             <p className="text-xs text-gray-400 leading-relaxed">
               📋 <span className="text-yellow-400 font-semibold">Disclaimer:</span> Educational purposes only. Not a guarantee of safety. Always verify URLs and never share seed phrases or private keys.
+              {isTicketRelated && ' For World Cup 2026 tickets, buy ONLY from FIFA.com/tickets.'}
             </p>
           </div>
         </div>
