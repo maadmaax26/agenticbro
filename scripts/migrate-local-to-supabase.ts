@@ -9,7 +9,7 @@
  *
  * Required env vars in .env.local:
  *   SUPABASE_URL             (or VITE_SUPABASE_URL)
- *   SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_SECRET_API_KEY
  */
 
 import { readFileSync } from 'fs'
@@ -46,14 +46,14 @@ const supabaseUrl =
   process.env.VITE_SUPABASE_URL ||
   ''
 
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const serviceKey = process.env.SUPABASE_SECRET_API_KEY || ''
 
 if (!supabaseUrl || !serviceKey) {
   console.error(
     '\n❌  Missing Supabase credentials.\n' +
     '    Add to .env.local:\n' +
     '      SUPABASE_URL=https://xxxx.supabase.co\n' +
-    '      SUPABASE_SERVICE_ROLE_KEY=eyJ...\n'
+    '      SUPABASE_SECRET_API_KEY=eyJ...\n'
   )
   process.exit(1)
 }

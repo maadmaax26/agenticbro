@@ -13,7 +13,7 @@
  */
 
 const SUPABASE_URL = 'https://drvasofyghnxfxvkkwad.supabase.co';
-const SUPABASE_KEY = 'SUPABASE_SERVICE_ROLE_KEY_REDACTED';
+const SUPABASE_KEY = 'SUPABASE_SECRET_API_KEY_REDACTED';
 
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);

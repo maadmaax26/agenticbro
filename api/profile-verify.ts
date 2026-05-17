@@ -61,7 +61,7 @@ interface ProfileVerifyResult {
 // Submits a profile scan job to Supabase; Mac Studio OpenClaw worker picks it up async.
 async function callLocalScanner(platform: string, username: string): Promise<any> {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
         console.warn('[profile-verify] Supabase env vars not set — skipping queue scan');
@@ -215,7 +215,7 @@ async function checkKnownScammers(username: string): Promise<{
 
   try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
 
       console.log('[profile-verify] Checking known scammers for:', handle);
 

@@ -16,7 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // ── Inline scan event tracking for analytics ──────────────────────────────
 const _supabase = process.env.SUPABASE_URL
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_API_KEY!)
   : null;
 
 async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {

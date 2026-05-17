@@ -28,7 +28,7 @@ if (fs.existsSync(envPath)) {
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_SECRET_API_KEY = process.env.SUPABASE_SECRET_API_KEY || '';
 const CSV_PATH = process.env.SCAM_DB_CSV_PATH || '/Users/efinney/.openclaw/workspace/scammer-database.csv';
 
 interface SyncResult {
@@ -82,8 +82,8 @@ async function supabaseRequest(table: string, options: {
   const response = await fetch(url.toString(), {
     method: options.method,
     headers: {
-      'apikey': SUPABASE_SERVICE_ROLE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'apikey': SUPABASE_SECRET_API_KEY,
+      'Authorization': `Bearer ${SUPABASE_SECRET_API_KEY}`,
       'Content-Type': 'application/json',
       'Prefer': options.method === 'POST' ? 'return=representation,resolution=merge-duplicates' : 'return=representation',
     },
@@ -483,11 +483,11 @@ async function sync(): Promise<SyncResult> {
 async function main() {
   console.log('[Sync] Starting scam database sync...');
   console.log(`[Sync] Supabase URL: ${SUPABASE_URL ? 'configured' : 'missing'}`);
-  console.log(`[Sync] Service Key: ${SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing'}`);
+  console.log(`[Sync] Service Key: ${SUPABASE_SECRET_API_KEY ? 'configured' : 'missing'}`);
   console.log(`[Sync] CSV Path: ${CSV_PATH}`);
   
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('[Sync] ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+  if (!SUPABASE_URL || !SUPABASE_SECRET_API_KEY) {
+    console.error('[Sync] ERROR: SUPABASE_URL and SUPABASE_SECRET_API_KEY must be set');
     process.exit(1);
   }
 
