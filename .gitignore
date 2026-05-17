@@ -43,3 +43,4 @@ dist/
 build/
 .vercel
 .env*.local
+.token-replacements.txt
