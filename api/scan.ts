@@ -11,7 +11,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { recordScanEvent } from '../lib/scan-tracking';
 
 // IMPORTANT: Use service role key (not anon key) in server-side routes
 const supabase = createClient(
@@ -19,6 +18,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// ── Inline scan event tracking for analytics ──────────────────────────────
+async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {
+  try {
+    await supabase.from('scan_events').insert({
+      scan_type: params.scan_type,
+      platform: params.platform ?? null,
+      target: params.target,
+      username: params.target,
+      risk_score: params.risk_score ?? null,
+      risk_level: params.risk_level ?? null,
+      source: params.source ?? 'website',
+      source_table: 'direct_insert',
+      event_date: new Date().toISOString().split('T')[0],
+      country_code: params.country_code ?? null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] Error:', e);
+  }
+}
 interface ScanRequest {
   address?: string;      // wallet / token address
   username?: string;     // social profile username (profile scans)
@@ -86,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Record to unified scan_events table for analytics
     try {
-      await recordScanEvent({
+      await trackScanEvent({
         scan_type: scan_type as any,
         platform: (platform as any) || null,
         target: address || username || '',
