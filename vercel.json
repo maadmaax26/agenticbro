@@ -17,16 +17,31 @@
       "maxDuration": 30
     },
     "api/scan.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/social-scan.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/phone-verify.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/phone-scan.ts": {
       "maxDuration": 15
+    },
+    "api/x-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
+    },
+    "api/website-deep-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
+    },
+    "api/token-impersonation-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/scan/[job_id].ts": {
       "maxDuration": 10
