@@ -12,6 +12,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
+import { recordScanEvent } from '../lib/scan-tracking';
 
 // ── Supabase Client for scan tracking ───────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -418,7 +419,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const result = await performScan(platform, username);
     
-    // Record scan to Supabase for tracking
+    // Record scan to Supabase for tracking (legacy scan_results table)
     if (result.success) {
       await recordScan({
         platform: result.platform,
@@ -428,6 +429,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         red_flags: result.flagDetails?.map((f: any) => f.name || f.id) || [],
         source: 'website',
       });
+    }
+    
+    // Record to unified scan_events table for analytics
+    try {
+      await recordScanEvent({
+        scan_type: 'social',
+        platform: result.platform as any,
+        target: result.username,
+        risk_score: result.riskScore,
+        risk_level: result.riskLevel as any,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] social-scan event error:', e);
     }
     
     res.status(200).json(result);

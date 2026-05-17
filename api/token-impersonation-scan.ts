@@ -9,6 +9,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http'
+import { recordScanEvent } from '../lib/scan-tracking'
 
 interface VercelResponse extends ServerResponse {
   status: (code: number) => this
@@ -294,6 +295,19 @@ export default async function handler(req: IncomingMessage, res: VercelResponse)
       impersonators.high_risk.length +
       impersonators.medium_risk.length +
       impersonators.low_risk.length
+
+    // Record to unified scan_events table for analytics
+    try {
+      await recordScanEvent({
+        scan_type: 'token_impersonation',
+        target: contractAddress,
+        risk_score: totalSuspicious > 3 ? 7 : totalSuspicious > 1 ? 4 : 2,
+        risk_level: totalSuspicious > 3 ? 'HIGH' : totalSuspicious > 1 ? 'MEDIUM' : 'LOW',
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] token-impersonation event error:', e);
+    }
 
     res.status(200).json({
       success: true,

@@ -11,6 +11,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { recordScanEvent } from '../lib/scan-tracking';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -74,6 +75,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: false, 
         error: 'Failed to queue scan' 
       });
+    }
+
+    // Record to unified scan_events table for analytics
+    try {
+      await recordScanEvent({
+        scan_type: 'x_cdp',
+        platform: 'twitter',
+        target: cleanUsername,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] x-scan event error:', e);
     }
 
     return res.status(200).json({
