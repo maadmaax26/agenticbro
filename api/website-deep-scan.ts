@@ -12,6 +12,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { recordScanEvent } from '../lib/scan-tracking';
 
 interface DeepScanRequest {
   url: string;
@@ -144,6 +145,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     await store.set(`scan:${scanId}`, updatedScan);
     
+    // Record to unified scan_events table for analytics
+    try {
+      await recordScanEvent({
+        scan_type: 'website',
+        target: existingScan.url,
+        risk_score: riskScore,
+        risk_level: riskLevel as any,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] website-deep-scan result event error:', e);
+    }
+    
     return res.status(200).json({
       success: true,
       message: 'Scan result updated',
@@ -184,6 +198,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   
   await store.set(`scan:${scanId}`, scanStatus);
+
+  // Record to unified scan_events table for analytics
+  try {
+    
+    await recordScanEvent({
+      scan_type: 'website',
+      target: validUrl,
+      source: 'website',
+    });
+  } catch (e) {
+    console.error('[scan-tracking] website-deep-scan queue event error:', e);
+  }
 
   // OpenClaw agent will pick this up via cron job checking /pending
   return res.status(202).json({

@@ -11,6 +11,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { recordScanEvent } from '../lib/scan-tracking';
 
 // IMPORTANT: Use service role key (not anon key) in server-side routes
 const supabase = createClient(
@@ -81,6 +82,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (error) {
       console.error('[scan] Supabase insert error:', error.message);
       return res.status(500).json({ error: error.message });
+    }
+
+    // Record to unified scan_events table for analytics
+    try {
+      await recordScanEvent({
+        scan_type: scan_type as any,
+        platform: (platform as any) || null,
+        target: address || username || '',
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] scan event error:', e);
     }
 
     return res.status(202).json({
