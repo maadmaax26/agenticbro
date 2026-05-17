@@ -12,7 +12,6 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
-import { recordScanEvent } from '../lib/scan-tracking';
 
 // ── Supabase Client for scan tracking ───────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -20,6 +19,27 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
+
+// ── Inline scan event tracking for analytics ──────────────────────────────
+async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {
+  if (!supabase) return;
+  try {
+    await supabase.from('scan_events').insert({
+      scan_type: params.scan_type,
+      platform: params.platform ?? null,
+      target: params.target,
+      username: params.target,
+      risk_score: params.risk_score ?? null,
+      risk_level: params.risk_level ?? null,
+      source: params.source ?? 'website',
+      source_table: 'direct_insert',
+      event_date: new Date().toISOString().split('T')[0],
+      country_code: params.country_code ?? null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] Error:', e);
+  }
+}
 
 // ── Record scan to Supabase ────────────────────────────────────────────────
 async function recordScan(data: {
@@ -433,7 +453,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     
     // Record to unified scan_events table for analytics
     try {
-      await recordScanEvent({
+      await trackScanEvent({
         scan_type: 'social',
         platform: result.platform as any,
         target: result.username,
