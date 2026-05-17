@@ -1212,7 +1212,7 @@ Format response as JSON for the user to see.`,
   try {
     const supabaseModule = await import('@supabase/supabase-js');
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
     if (supabaseUrl && supabaseKey) {
       const sb = supabaseModule.createClient(supabaseUrl, supabaseKey);
       await sb.rpc('record_scan_event', {
