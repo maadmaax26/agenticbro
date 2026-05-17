@@ -68,6 +68,20 @@ async function recordPhoneScan(data: {
     
     // Update stats counter
     await supabase.rpc('increment_phone_scan_count');
+
+    // Record to scan analytics
+    try {
+      await supabase.rpc('record_scan_event', {
+        p_event_type: 'phone',
+        p_platform: 'phone',
+        p_username: data.phone,
+        p_risk_score: data.risk_score,
+        p_risk_level: data.risk_level,
+        p_source: data.source || 'website',
+      });
+    } catch (analyticsErr) {
+      console.error('[Supabase] phone scan analytics error:', analyticsErr);
+    }
   } catch (err) {
     console.error('[Supabase] recordPhoneScan error:', err);
   }
