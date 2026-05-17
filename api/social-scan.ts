@@ -449,6 +449,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         red_flags: result.flagDetails?.map((f: any) => f.name || f.id) || [],
         source: 'website',
       });
+
+      // Also record to analytics with scan_type
+      try {
+        await fetch('https://agenticbro.app/api/scan-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'social',
+            platform: result.platform,
+            username: result.username,
+            risk_score: result.riskScore,
+            risk_level: result.riskLevel,
+            source: 'website',
+          }),
+        });
+      } catch (e) {
+        console.error('[social-scan] analytics tracking error:', e);
+      }
     }
     
     // Record to unified scan_events table for analytics
