@@ -71,6 +71,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Create scan job
     const jobId = crypto.randomUUID();
     
+    // Record to unified scan_events table for analytics (before job insert so we track even if queue fails)
+    try {
+      await trackScanEvent({
+        scan_type: 'x_cdp',
+        platform: 'twitter',
+        target: cleanUsername,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] x-scan event error:', e);
+    }
+
     const { error: insertError } = await supabase
       .from('scan_jobs')
       .insert({
@@ -94,18 +106,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: false, 
         error: 'Failed to queue scan' 
       });
-    }
-
-    // Record to unified scan_events table for analytics
-    try {
-      await trackScanEvent({
-        scan_type: 'x_cdp',
-        platform: 'twitter',
-        target: cleanUsername,
-        source: 'website',
-      });
-    } catch (e) {
-      console.error('[scan-tracking] x-scan event error:', e);
     }
 
     return res.status(200).json({
