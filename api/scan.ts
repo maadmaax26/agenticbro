@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 // IMPORTANT: Use service role key (not anon key) in server-side routes
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SECRET_API_KEY!
 );
 
 // ── Inline scan event tracking for analytics ──────────────────────────────
