@@ -16,6 +16,7 @@ import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
 import AgntcbroBalanceTracker from './components/AgntcbroBalanceTracker'
 import Roadmap from './components/Roadmap'
+import ScanAnalytics from './components/ScanAnalytics'
 import PreConnectScanWidget from './components/PreConnectScanWidget'
 import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
@@ -1005,6 +1006,11 @@ function App() {
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
         )}
+
+        {/* ── Scan Analytics — visible to all users ── */}
+        <div className="max-w-6xl mx-auto mt-12 px-4">
+          <ScanAnalytics />
+        </div>
 
         {!connected ? (
           <div className="max-w-6xl mx-auto">

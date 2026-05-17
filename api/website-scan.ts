@@ -1208,6 +1208,27 @@ Format response as JSON for the user to see.`,
     });
   }
   
+  // Track to scan analytics
+  try {
+    const supabaseModule = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && supabaseKey) {
+      const sb = supabaseModule.createClient(supabaseUrl, supabaseKey);
+      await sb.rpc('record_scan_event', {
+        p_event_type: 'website',
+        p_platform: 'website',
+        p_username: domain,
+        p_risk_score: riskScore,
+        p_risk_level: riskLevel,
+        p_source: 'website',
+      });
+    }
+  } catch (e) {
+    // Non-blocking: analytics failure shouldn't break the scan
+    console.error('[website-scan] analytics tracking error:', e);
+  }
+
   const result: WebsiteScanResult = {
     success: true,
     url: validUrl,
