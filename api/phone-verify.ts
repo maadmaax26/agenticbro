@@ -17,6 +17,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { execSync } from 'child_process';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { recordScanEvent } from '../lib/scan-tracking';
 
 // ── Supabase Client for scan tracking ───────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -794,6 +795,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     red_flags: result.redFlags || [],
     source: 'website',
   });
+  
+  // Record to unified scan_events table for analytics
+  try {
+    
+    await recordScanEvent({
+      scan_type: 'phone',
+      target: result.phone,
+      risk_score: result.riskScore,
+      risk_level: result.riskLevel as any,
+      source: 'website',
+      country_code: result.countryCode || null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] phone-verify event error:', e);
+  }
   
   res.status(200).json({ success: true, result });
 }
