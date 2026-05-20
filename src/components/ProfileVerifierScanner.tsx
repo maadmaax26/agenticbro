@@ -1197,15 +1197,15 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
             {(result.profileData?.followers !== undefined || result.profileData?.following !== undefined || result.profileData?.posts !== undefined) && (
               <p className="text-sm text-gray-300 mt-1">
                 <span className="text-gray-500">- </span>
-                {result.profileData.followers !== undefined && (
+                {result.profileData?.followers !== undefined && result.profileData.followers !== null && (
                   <>Followers: <span className="text-white font-medium">{result.profileData.followers >= 1000000 ? `${(result.profileData.followers / 1000000).toFixed(1)}M` : result.profileData.followers >= 1000 ? `${(result.profileData.followers / 1000).toFixed(1)}K` : result.profileData.followers.toLocaleString()}</span>{' | '}
                   </>
                 )}
-                {result.profileData.following !== undefined && (
+                {result.profileData?.following !== undefined && result.profileData.following !== null && (
                   <>Following: <span className="text-white font-medium">{result.profileData.following >= 1000 ? `${(result.profileData.following / 1000).toFixed(1)}K` : result.profileData.following.toLocaleString()}</span>{' | '}
                   </>
                 )}
-                {result.profileData.posts !== undefined && (
+                {result.profileData?.posts !== undefined && result.profileData.posts !== null && (
                   <>Posts: <span className="text-white font-medium">{result.profileData.posts >= 1000 ? `${(result.profileData.posts / 1000).toFixed(1)}K` : result.profileData.posts.toLocaleString()}</span>
                   </>
                 )}
@@ -1453,7 +1453,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                     <span className="font-medium">View Inflation:</span>{' '}
                     {result.engagementAnalysis.patterns.viewInflation.views >= 1000
                       ? `${(result.engagementAnalysis.patterns.viewInflation.views / 1000).toFixed(1)}K`
-                      : result.engagementAnalysis.patterns.viewInflation.views} views / {result.engagementAnalysis.patterns.viewInflation.followers.toLocaleString()} followers ({result.engagementAnalysis.patterns.viewInflation.ratio}x ratio)
+                      : result.engagementAnalysis.patterns.viewInflation.views} views / {(result.engagementAnalysis.patterns.viewInflation.followers ?? 0).toLocaleString()} followers ({result.engagementAnalysis.patterns.viewInflation.ratio}x ratio)
                   </div>
                 )}
 
