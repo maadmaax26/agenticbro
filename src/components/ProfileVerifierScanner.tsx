@@ -1162,10 +1162,10 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   <div 
                     className="h-full rounded-full transition-all duration-1000"
                     style={{
-                      width: `${(result.riskScore / 10) * 100}%`,
+                      width: `${result.riskScore}%`,
                       background: `linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)`,
                       backgroundSize: '300% 100%',
-                      backgroundPosition: `${(result.riskScore / 10) * 100}% 0`,
+                      backgroundPosition: `${result.riskScore}% 0`,
                     }}
                   />
                 </div>
@@ -1194,7 +1194,11 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 {result.displayName}
               </p>
             )}
-            {(result.profileData?.followers !== undefined || result.profileData?.following !== undefined || result.profileData?.posts !== undefined) && (
+            {result.profileData && (
+              (result.profileData?.followers !== undefined && result.profileData.followers !== null) ||
+              (result.profileData?.following !== undefined && result.profileData.following !== null) ||
+              (result.profileData?.posts !== undefined && result.profileData.posts !== null)
+            ) && (
               <p className="text-sm text-gray-300 mt-1">
                 <span className="text-gray-500">- </span>
                 {result.profileData?.followers !== undefined && result.profileData.followers !== null && (
@@ -1251,7 +1255,13 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
               </h3>
               
               <div className="space-y-1.5">
-                {result.redFlags.map((flag, index) => {
+                {result.redFlags
+                  .filter(flag => {
+                    // Filter out technical error messages that shouldnt be shown to users
+                    const isError = flag.includes('Error:') || flag.includes('Error') || flag.includes('CDP') || flag.includes('Chrome');
+                    return !isError;
+                  })
+                  .map((flag, index) => {
                   const pointMatch = flag.match(/\((\d+)pts?\)/);
                   const points = pointMatch ? parseInt(pointMatch[1]) : 0;
                   const hasPoints = pointMatch !== null;
@@ -1276,11 +1286,13 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 })}
               </div>
               
-              <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
-                <p className="text-xs text-gray-600">
-                  Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
-                </p>
-              </div>
+              {result.redFlags.some(flag => !flag.includes('Error:') && !flag.includes('Error') && !flag.includes('CDP') && !flag.includes('Chrome')) && (
+                <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
+                  <p className="text-xs text-gray-600">
+                    Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1303,7 +1315,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   : '1px solid rgba(16,185,129,0.2)',
               }}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold" style={{ color: formatBotClassification(result.botDetection.classification).color }}>
                   🤖 BOT ACTIVITY ASSESSMENT
                 </h3>
@@ -1390,7 +1402,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   : '1px solid rgba(59,130,246,0.2)',
               }}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold" style={{ color: formatEngagementClassification(result.engagementAnalysis.overallScore).color }}>
                   📊 ENGAGEMENT ANALYSIS
                 </h3>
