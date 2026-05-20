@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import React, { Component, useState, useCallback, useRef, useEffect } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
@@ -126,6 +126,29 @@ interface ChatMessage {
     scamType?: string
     evidence: string[]
     recommendedAction: string
+  }
+}
+
+// ─── Error Boundary to prevent blank screen crashes ────
+class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError: boolean, error: string}> {
+  state = { hasError: false, error: '' };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message || 'Unknown error' };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#f87171', maxWidth: '600px', margin: '4rem auto' }}>
+          <h2>Something went wrong</h2>
+          <p style={{ color: '#9ca3af', margin: '1rem 0' }}>{this.state.error}</p>
+          <button onClick={() => { this.setState({ hasError: false, error: '' }); window.location.reload(); }}
+            style={{ padding: '0.5rem 1.5rem', borderRadius: '0.5rem', background: 'rgba(16,185,129,0.2)', color: '#4ade80', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer' }}>
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
   }
 }
 
@@ -528,6 +551,7 @@ function App() {
       holderTierUnlocked, useCredit, addMsg])
 
   return (
+    <AppErrorBoundary>
     <div className="min-h-screen" style={{
         backgroundImage: 'url(/hero-banner.png)',
         backgroundSize: 'cover',
@@ -1190,7 +1214,10 @@ function App() {
         onClose={() => setShowPaymentModal(false)}
       />
     </div>
+    </AppErrorBoundary>
   )
 }
 
 export default App
+
+{ /* AppWithBoundary is available for wrapping in main.tsx if needed */ }
