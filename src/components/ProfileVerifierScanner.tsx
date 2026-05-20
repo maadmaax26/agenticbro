@@ -523,25 +523,10 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
         }
       }
 
-      // ── STEP 3: X/Twitter - try web scan first, then CDP queue ──
+      // ── STEP 3: X/Twitter - CDP queue first (full scan), Nitter as last resort ──
       if (platform === 'twitter') {
-        // First attempt: web-based scan via Nitter (public mirror)
-        try {
-          setScanStatus('Scanning X profile via web...');
-          const webResult = await scanXProfileWeb(cleanUsername);
-          if (webResult.success) {
-            setResult(webResult);
-            uploadScanToSupabase(webResult).catch(() => {});
-            setScanStatus(null);
-            setScanning(false);
-            return;
-          }
-          console.warn('[X-Scan] Web scan failed, falling back to CDP queue');
-        } catch (webErr) {
-          console.warn('[X-Scan] Web scan error:', webErr);
-        }
-
-        // Second attempt: queue for CDP worker
+        // First attempt: queue for CDP worker (full Chrome scan with tweets)
+        // This produces much better results than the Nitter bio-only scan.
         if (_supabaseAnonKey) {
           try {
             const client = createClient(_supabaseUrl, _supabaseAnonKey);
@@ -573,7 +558,23 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             console.warn('[X-Scan] Queue error:', queueErr);
           }
         }
-        
+
+        // Fallback 2: web-based scan via Nitter (bio-only, less accurate than CDP)
+        try {
+          setScanStatus('Trying Nitter web scan...');
+          const webResult = await scanXProfileWeb(cleanUsername);
+          if (webResult.success) {
+            setResult(webResult);
+            uploadScanToSupabase(webResult).catch(() => {});
+            setScanStatus(null);
+            setScanning(false);
+            return;
+          }
+          console.warn('[X-Scan] Nitter web scan failed');
+        } catch (webErr) {
+          console.warn('[X-Scan] Nitter web scan error:', webErr);
+        }
+
         // Final fallback: Try profile-verify API (has Nitter + pattern analysis)
         try {
           setScanStatus('Trying alternative scan method...');
