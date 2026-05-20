@@ -1593,6 +1593,8 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
 // ─── Helper: Scan X profile via web (Nitter) ──────────────────────────────────────────
 async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
   // Nitter instances to try (public X mirrors)
+  // NOTE: These will likely fail with CORS errors from the browser.
+  // The real scan happens via CDP queue + profile-verify API fallback.
   const nitterInstances = [
     'https://nitter.net',
     'https://nitter.privacydev.net',
@@ -1603,11 +1605,16 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
   for (const instance of nitterInstances) {
     try {
       const url = `${instance}/${username}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
       const res = await fetch(url, {
+        signal: controller.signal,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       });
+      clearTimeout(timeout);
 
       if (!res.ok) continue;
 
