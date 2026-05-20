@@ -574,7 +574,56 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
           }
         }
         
-        // Final fallback: Show instruction message
+        // Final fallback: Try profile-verify API (has Nitter + pattern analysis)
+        try {
+          setScanStatus('Trying alternative scan method...');
+          const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
+          const pvRes = await fetch(`${apiBase}/api/profile-verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: 'twitter', username: cleanUsername }),
+          });
+
+          if (pvRes.ok) {
+            const pvData = await pvRes.json();
+            if (pvData.success && pvData.riskScore > 0) {
+              const pvResult: ProfileScanResult = {
+                success: true,
+                platform: 'twitter',
+                username: cleanUsername,
+                displayName: pvData.displayName || pvData.username || cleanUsername,
+                verified: pvData.verified ?? false,
+                riskScore: pvData.riskScore ?? 0,
+                riskLevel: pvData.riskLevel || 'LOW',
+                scamType: pvData.scamType,
+                redFlags: pvData.redFlags || [],
+                evidence: pvData.evidence || [],
+                recommendation: pvData.recommendation || 'Profile analyzed via alternative method.',
+                profileData: pvData.profileData ? {
+                  followers: pvData.profileData.followers,
+                  following: pvData.profileData.following,
+                  posts: pvData.profileData.posts,
+                  bio: pvData.profileData.bio,
+                  location: pvData.profileData.location,
+                  website: pvData.profileData.website,
+                  joinDate: pvData.profileData.joinDate,
+                } : undefined,
+                confidence: pvData.confidence || 'MEDIUM',
+                scanDate: pvData.scanDate || new Date().toISOString(),
+                botDetection: pvData.botDetection,
+              };
+              setResult(pvResult);
+              uploadScanToSupabase(pvResult).catch(() => {});
+              setScanStatus(null);
+              setScanning(false);
+              return;
+            }
+          }
+        } catch (pvErr) {
+          console.warn('[X-Scan] profile-verify fallback failed:', pvErr);
+        }
+
+        // Absolute final fallback: Show instruction message
         const xResult: ProfileScanResult = {
           success: false,
           platform: 'twitter',
@@ -1628,14 +1677,15 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
         riskScore += 10;
       }
 
-      // Cap at 90
+      // Cap at 90 points, then convert to 0-100 API scale (90pts → 100, each point → 100/90)
       riskScore = Math.min(riskScore, 90);
+      const apiRiskScore = Math.round((riskScore / 90) * 100);
 
-      // Determine risk level
+      // Determine risk level (on 0-100 scale)
       const riskLevel: ProfileScanResult['riskLevel'] =
-        riskScore >= 75 ? 'CRITICAL' :
-        riskScore >= 50 ? 'HIGH' :
-        riskScore >= 30 ? 'MEDIUM' : 'LOW';
+        apiRiskScore >= 75 ? 'CRITICAL' :
+        apiRiskScore >= 50 ? 'HIGH' :
+        apiRiskScore >= 30 ? 'MEDIUM' : 'LOW';
 
       return {
         success: true,
@@ -1643,7 +1693,7 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
         username,
         displayName,
         verified,
-        riskScore,
+        riskScore: apiRiskScore,
         riskLevel,
         redFlags: flags.map(f => `${f.flag} (${f.weight}pts) — ${f.description}`),
         evidence: [],
