@@ -610,7 +610,7 @@ export class SupabaseScamDBSync {
  */
 export async function runSync(): Promise<SyncResult> {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const csvPath = process.env.SCAM_DB_CSV_PATH || '/Users/efinney/.openclaw/workspace/scammer-database.csv';
 
   if (!supabaseUrl || !serviceRoleKey) {

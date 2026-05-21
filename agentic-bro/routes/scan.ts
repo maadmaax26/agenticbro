@@ -398,7 +398,7 @@ router.post('/profile/queue', async (req: Request, res: Response) => {
 
     // Check if Supabase is configured
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (supabaseUrl && supabaseKey) {
       // Submit to Supabase scan_jobs table
@@ -467,7 +467,7 @@ router.get('/jobs/:jobId', async (req: Request, res: Response) => {
     const { jobId } = req.params;
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (supabaseUrl && supabaseKey) {
       const { createClient } = require('@supabase/supabase-js');
