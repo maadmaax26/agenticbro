@@ -1,0 +1,1 @@
+/usr/local/bin/monitor-new-members.sh -1003751594817 >/tmp/new-members-welcome.log 2>&1

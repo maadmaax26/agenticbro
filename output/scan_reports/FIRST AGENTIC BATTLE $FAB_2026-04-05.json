@@ -1,0 +1,20 @@
+{
+  "id": "0d6ed1a5",
+  "username": "FIRST AGENTIC BATTLE $FAB",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-05T06:00:34.734234",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0xcc4a77475c8dcfd522d785be8f3e1a271389ce985963f83b818eb33db4490cd4",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-05T06:00:32.321839"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

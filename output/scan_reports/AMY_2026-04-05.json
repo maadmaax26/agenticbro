@@ -1,0 +1,20 @@
+{
+  "id": "284fa18b",
+  "username": "AMY",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-05T06:00:34.734999",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "5RjAoFQHfvvrN41ammy1ctJMvAwKWaPecUrGh9ETXG5N",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-05T06:00:32.321859"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

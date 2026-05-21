@@ -1,0 +1,20 @@
+{
+  "id": "02951f21",
+  "username": "AGENTICTHI",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-11T06:00:27.168881",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "F9Hcv7kcPsDNXX421KPLDWF38w2RRNxzerTTcUBveyFb",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-11T06:00:24.737435"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

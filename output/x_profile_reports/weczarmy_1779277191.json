@@ -1,0 +1,48 @@
+{
+  "scan_timestamp": "2026-05-20T11:39:51Z",
+  "scan_method": "Chrome CDP Browser Automation",
+  "profile": {
+    "username": "weCZarmy",
+    "displayName": "CZ ARMY",
+    "verified": true,
+    "verifiedType": "blue",
+    "followers": 52800,
+    "following": 33300,
+    "bio": "Crypto marketing expert \u2022 Looking for realistic 10-100X GEMS \u2022 DM for marketing inquiries!",
+    "location": null,
+    "website": "t.me/CZ_Army",
+    "profileImage": "https://pbs.twimg.com/profile_images/2030156765145485315/NhKdS_Yo_normal.jpg",
+    "recentTweets": [
+      "My monthly subscriptions are basically paying for themselves now. \n\nChatGPT Plus. Spotify. Netflix. TradingView.\nAll paid with my Bybit Card \u2014 and getting up to 100% cashback.\n\nThis might be the ultimate subscription cheat code.\n\n No annual fees\n Instant virtual card\n",
+      "Stablecoins aren\u2019t just about faster transactions anymore \u2014 they\u2019re about building trust at the foundation level.\n\nPrivacy, security, and intelligent risk management will define the next era of digital finance, and D4U is positioning itself where that future begins.\n\nA strong",
+      "Stablecoins need more than speed. They need stronger foundations.\n\nAt D4U, we believe privacy and security should shape how funds are received, how risks are identified, and how value moves.\n\nFind more in our open letter:\n\nhttps://\nmedium.com/@d4uwalletoffi\ncial/an-open-letter-from-d4u-team-b31f924e",
+      "$DEGEN is looking insanely strong here \n\nMomentum keeps building and the smart money is quietly rotating in. Seeing some big wallets loading up rn\u2026 they definitely know something.\n\nHigher levels feel inevitable \n\nCA:\nFmjijgwEHpe32VPvHy1s7u7TLthh9yu1j75djVbWpump",
+      "$LAIKA (Quantum Doge) feels like one of the more creative meme experiments emerging on Solana right now. \n\nNot trying to be the loudest project \u2014 building a unique identity around \u201cthe mathematics of nature\u201d while keeping the meme culture alive."
+    ]
+  },
+  "analysis": {
+    "red_flags": [
+      {
+        "flag": "Guaranteed returns language",
+        "points": 25
+      },
+      {
+        "flag": "DM solicitation",
+        "points": 15
+      },
+      {
+        "flag": "Free crypto/money offers",
+        "points": 15
+      },
+      {
+        "flag": "Unrealistic profit claims",
+        "points": 10
+      }
+    ],
+    "total_points": 65,
+    "max_points": 90,
+    "risk_score": 7.2,
+    "risk_level": "CRITICAL",
+    "behavioral_pattern": "High-probability scam/engagement farming account"
+  }
+}

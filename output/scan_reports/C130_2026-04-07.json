@@ -1,0 +1,20 @@
+{
+  "id": "ba22f72f",
+  "username": "C130",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-07T06:00:33.391167",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "7dhoTebVHSTxCUWgXdwuhbgy9HYN5xjNCRapr82L8HGc",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-07T06:00:30.974713"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

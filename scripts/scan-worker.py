@@ -355,9 +355,9 @@ def write_result(client, job_id, result):
             "verification_level": verification,
         }
         # Add optional fields only if they have values
-        flags = [f["flag"] for f in result.get("flagDetails", [])]
-        if flags:
-            insert_body["red_flags"] = flags
+        # Save full flag details as JSONB array (not just flag names)
+        if result.get("flagDetails"):
+            insert_body["red_flags"] = result["flagDetails"]
         if result.get("bio"):
             insert_body["bio"] = result["bio"]
         if result.get("followers"):

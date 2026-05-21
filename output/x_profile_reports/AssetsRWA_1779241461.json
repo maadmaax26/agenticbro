@@ -1,0 +1,31 @@
+{
+  "scan_timestamp": "2026-05-20T01:44:21Z",
+  "scan_method": "Chrome CDP Browser Automation",
+  "profile": {
+    "username": "AssetsRWA",
+    "displayName": "Assets RWA",
+    "verified": true,
+    "verifiedType": "blue",
+    "followers": 120,
+    "following": 1,
+    "bio": "Own real-world assets onchain\nBuilt on Solana",
+    "location": "United States",
+    "website": "assetsrwa.org",
+    "profileImage": "https://pbs.twimg.com/profile_images/2030156765145485315/NhKdS_Yo_normal.jpg",
+    "recentTweets": [
+      "ASSETS RWA is now live on \n@Pumpfun\n \n\n\n$CA:6QarGt9RDHKGVohW3DJM287RgbXC7JhjnzAtkDa8pump\n\n\nWe\u2019re building a new financial layer for tokenized real-world assets on Solana.\n\nASSETS gives users exposure to real-world markets directly onchain:\n\u2022 Gold (xAU)\n\u2022 Silver (xAG)\n\u2022 Equities\n\u2022",
+      "A lot of people have been asking what makes ASSETS different.\n\nHere\u2019s the vision:\n\n\u2192 Multiple real-world asset markets in one place\n\u2192 Equities, metals, commodities, real estate & more\n\u2192 Clean dashboard experience for managing positions\n\u2192 Portfolio tracking & allocation system",
+      "NEW EQUITY MARKETS ADDED\n\nNow live on ASSETS RWA:\n\u2022 Dell Technologies xStock (DELLx)\n\u2022 Super Micro xStock (SMCIx)\n\u2022 Uber xStock (UBERx)\nExpanding access to tokenized equity markets on Solana with:\n\u2192 wallet-native access\n\u2192 real-time tracking\n\u2192 onchain settlement\nMore markets",
+      "NEW MARKET UPDATE\n\nTwo new tokenized markets are now live on ASSETS RWA:\n\n\u2022 HOME \u2014 Real Estate\n\u2022 BMNRx \u2014 BitMine xStock\nAvailable with:\n\u2192 live pricing\n\u2192 Solana settlement\n\u2192 wallet-native access\n\u2192 real-time market tracking\n\nContinuing to expand the onchain RWA ecosystem.",
+      "UTILITY UPDATE\n\nHolders with 1M+ ASSETS tokens will receive zero platform fees inside the ecosystem.\n\nLong-term utility and alignment for committed holders."
+    ]
+  },
+  "analysis": {
+    "red_flags": [],
+    "total_points": 0,
+    "max_points": 90,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "behavioral_pattern": "No significant scam patterns identified"
+  }
+}

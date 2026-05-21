@@ -65,7 +65,7 @@ SEARCH_TERMS = [
 def connect_chrome():
     """Connect to Chrome CDP"""
     try:
-        response = urllib.request.urlopen('http://localhost:18800/json/list', timeout=5)
+        response = urllib.request.urlopen('http://localhost:18801/json/list', timeout=5)
         pages = json.loads(response.read().decode())
         if not pages:
             print("❌ No Chrome tabs found")

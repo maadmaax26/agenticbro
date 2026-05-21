@@ -1,0 +1,19 @@
+{
+  "id": "83cb2df9",
+  "username": "BRO",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-12T06:00:20.256588",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "symbol_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "H7EMdqPdy6eg5E34yg4YGh3eaMGcXJWmi7powBH9aSte",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-12T06:00:19.089653"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

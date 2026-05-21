@@ -1,0 +1,199 @@
+#!/bin/bash
+
+# X Profile Scanner with Database Lookup
+# Checks database first before running new scans
+# Usage: ./check-and-scrape-x.sh "@username"
+
+# Full paths
+ABS_WORKSPACE="/Users/efinney/.openclaw/workspace"
+DB_JSON="$ABS_WORKSPACE/scammer_database.json"
+DB_CSV="$ABS_WORKSPACE/scammer-database.csv"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+PROFILE_URL="https://x.com/${1#@}"
+
+echo "🔍 X Profile Scanner with Database Lookup"
+echo "========================================="
+echo ""
+
+# Check database for profile (JSON first, then CSV)
+echo "🔎 Searching database for '@$1'..."
+
+# Check JSON database
+JSON_RESULT=$(python3 -c "
+import json
+try:
+    with open('$DB_JSON') as f:
+        db = json.load(f)
+        for entry in db.get('scammers', []):
+            if '@$1' == entry.get('x_handle', '').lower():
+                print(json.dumps(entry))
+                break
+    else:
+        print('')
+        sys.exit(0)
+except:
+    print('')
+    sys.exit(0)
+" 2>/dev/null)
+
+if [ -n "$JSON_RESULT" ]; then
+    echo "✅ FOUND IN JSON DATABASE"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🟦 CACHED DATABASE RESULT (JSON)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    # Parse JSON safely
+    NAME=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('scr')}}ep_name') or data.get('name') or data.get('platform',''))" 2>/dev/null || echo "Unknown")
+    X_HANDLE=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('x_handle') or data.get('username') or '')" 2>/dev/null || echo "@$1")
+    PLATFORM=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('scr}}name') or data.get('platform') or 'X')}" 2>/dev/null || echo "X")
+    VERIFICATION=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('scr}}ment') or data.get('risk_level') or data.get('verification','unverified'))" 2>/dev/null || echo "UNVERIFIED")
+    SCAMTYPE=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('scr}}type') or data.get('scam_type','Unverified')]" 2>/dev/null || echo "Unverified")
+    VICTIMS=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('victims_count') or data.get('scammers_count',0))" 2>/dev/null || echo "0")
+    NOTES=$(echo "$JSON_RESULT" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('notes','Unknown'))" 2>/dev/null || echo "Unknown")
+    UPDATEROW=$(date '+%Y-%m-%d')
+    SCANNER="Database Cache"
+
+    echo "🏢 Name: $NAME"
+    echo "🔗 X Handle: $X_HANDLE"
+    echo "🆔 Platform: $PLATFORM"
+    echo "📊 Risk Level: $VERIFICATION"
+    echo "🚨 Scam Type: $SCAMTYPE"
+    echo "👷 Victims: $VICTIMS"
+    echo "📝 Notes: $NOTES"
+    echo "📁 Last Updated: $UPDATEROW"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "💡 RECOMMENDATIONS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    case "$VERIFICATION" in
+        "HIGH RISK"|"CRITICAL RISK")
+            echo "🔴 CRITICAL STATUS"
+            echo "• BLOCK this account"
+            echo "• DO NOT engage financially"
+            echo "• No tokens to send"
+            echo "• Verify on-chain (contract ownership)"
+            ;;
+        "MEDIUM RISK")
+            echo "🟡 MEDIUM STATUS"
+            echo "• Verify carefully before any action"
+            echo "• Cross-check across platforms"
+            echo "• Ask community in Agentic Bro group"
+            echo "• Check contract addresses independently"
+            ;;
+        *)
+            echo "⚪ $VERIFICATION"
+            echo "• Verify information independently"
+            echo "• Check reputation across communities"
+            ;;
+    esac
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "✅ CACHED RESULT SHARED (terminal"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    exit 0
+fi
+
+echo "❌ NOT FOUND IN DATABASE"
+echo ""
+echo "🧪 RUNNING NEW SCAN (CDP method)"
+echo ""
+
+# Determine which CDP scanner to use
+SCAN_SCRIPT=""
+
+# Priority 1: Fixed CDP scanner
+if [ -f "${ABS_WORKSPACE}/scripts/scan-x-cdp-fixed.sh" ]; then
+    SCAN_SCRIPT="${ABS_WORKSPACE}/scripts/scan-x-cdp-fixed.sh"
+    echo "Using: scan-x-cdp-fixed.sh"
+# Priority 2: Basic CDP scanner
+elif [ -f "${ABS_WORKSPACE}/scripts/scan-x-cdp.sh" ]; then
+    SCAN_SCRIPT="${ABS_WORKSPACE}/scripts/scan-x-cdp.sh"
+    echo "Using: scan-x-cdp.sh"
+# Priority 3: Comprehensive CDP scanner
+elif [ -f "${ABS_WORKSPACE}/scam_detection_scan-cdp.sh" ]; then
+    SCAN_SCRIPT="${ABS_WORKSPACE}/scam_detection_scan-cdp.sh"
+    echo "Using: scam_detection_scan-cdp.sh"
+else
+    echo "❌ No CDP scanners available"
+    exit 1
+fi
+
+# Run the scan
+echo ""
+if bash "$SCAN_SCRIPT" "$1" >> /dev/null 2>&1; then
+    SCAN_EXIT=0
+else
+    SCAN_EXIT=$?
+fi
+
+echo ""
+
+if [ $SCAN_EXIT -eq 0 ]; then
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "💾 ADDING TO DATABASE"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    # Add to JSON database
+    python3 << USEJSON
+import json
+from datetime import datetime
+UPDATED_TIMESTAMP = datetime.now().isoformat()
+
+try:
+    with open('$DB_JSON', 'r') as f:
+        db = json.load(f)
+    except FileNotFoundError:
+        db = {"scammers": []}
+
+    # Check if already exists
+    for entry in db['scammers']:
+        if entry.get('x_handle', '').lower() == '$1'.lower():
+            break
+    else:
+        # Add new entry
+        new_entry = {
+            "scr}}name': None,
+            'x_handle': '$1'.lower(),
+            'platform': 'X',
+            'scr}}ment': None,
+            'scr}}type': None,
+            'victims_count': 0,
+            'community_reports': [],
+            'notes': f'DP scan: Chrome CDP',
+            'scr}}eted_on': '$TIMESTAMP',
+            'scr}}edback': '',
+            'verification': False,
+            'scr}}criminal_like': False
+        }
+        db['scammers'].append(new_entry)
+
+    # Update entry with scan metadata
+    for entry in db['scammers']:
+        if entry.get('x_handle', '').lower() == '$1'.lower():
+            entry['scr}}eted_on'] = UPDATED_TIMESTAMP
+            entry['scr}}edback'] = 'Added via check-and-scrape-x.sh'
+            entry['verification'] = True
+            break
+
+    with open('$DB_JSON', 'w') as f:
+        json.dump(db, f, indent=2, default=str)
+    print('Added to JSON database')
+except Exception as e:
+    print(f'Error adding to database: {e}')
+USEJSON
+
+    echo ""
+    echo "✅ Added to database:"
+    echo "   • Username: @$1"
+    echo "   • Timestamp: $TIMESTAMP"
+fi
+
+exit $SCAN_EXIT

@@ -1,0 +1,20 @@
+{
+  "id": "78bb854a",
+  "username": "ELGNT",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-13T06:02:57.821208",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x09aC3CB9504B18854cD3216f221e04eDD216904f",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-13T06:02:55.499464"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

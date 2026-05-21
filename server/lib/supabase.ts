@@ -1,13 +1,20 @@
 /**
  * Server-side Supabase client for AgenticBro backend
  *
- * Uses the service role key (bypasses Row Level Security) so the server
+ * Uses the secret key (bypasses Row Level Security) so the server
  * can freely read/write scan_results and known_scammers tables.
  *
+ * Supabase migrated from legacy JWT keys (anon/service_role) to new format
+ * (sb_publishable_/sb_secret_) on 2026-05-17. Legacy keys are DISABLED.
+ *
  * Required env vars (add to .env.local):
- *   SUPABASE_URL            — same value as VITE_SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY — from Supabase Dashboard → Settings → API → service_role key
- *   SUPABASE_ANON_KEY       — (optional) same as VITE_SUPABASE_ANON_KEY
+ *   SUPABASE_URL              — same value as VITE_SUPABASE_URL
+ *   SUPABASE_SECRET_API_KEY   — new format: sb_secret_...
+ *   VITE_SUPABASE_PUBLISHABLE_KEY — new format: sb_publishable_... (for anon client)
+ *
+ * Legacy vars (DEPRECATED, disabled on platform):
+ *   SUPABASE_SERVICE_ROLE_KEY — old JWT format, replaced by SUPABASE_SECRET_API_KEY
+ *   SUPABASE_ANON_KEY / VITE_SUPABASE_ANON_KEY — old JWT format, replaced by VITE_SUPABASE_PUBLISHABLE_KEY
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
@@ -18,20 +25,25 @@ const supabaseUrl =
   process.env.VITE_SUPABASE_URL ||
   ''
 
+// New secret key takes priority over legacy service_role key
 const serviceKey =
+  process.env.SUPABASE_SECRET_API_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   ''
 
+// New publishable key takes priority over legacy anon key
 const anonKey =
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   ''
 
 if (!supabaseUrl || !serviceKey) {
   console.warn(
-    '[Supabase] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — ' +
+    '[Supabase] SUPABASE_URL or SUPABASE_SECRET_API_KEY not set — ' +
     'scan results will NOT be persisted to Supabase. ' +
-    'Add these to .env.local to enable cloud storage.'
+    'Add these to .env.local to enable cloud storage. ' +
+    '(Legacy SUPABASE_SERVICE_ROLE_KEY is deprecated — use SUPABASE_SECRET_API_KEY)'
   )
 }
 

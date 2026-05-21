@@ -1,0 +1,23 @@
+{
+  "id": "50718fcb",
+  "username": "CryptoWhale_",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-04T00:02:42.237743",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "DM solicitation"
+  ],
+  "risk_score": 1.5,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:08:56.999030",
+  "completed_at": "2026-04-04T23:08:56.999032",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

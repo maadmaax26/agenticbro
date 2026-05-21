@@ -1,0 +1,20 @@
+{
+  "id": "9d38338a",
+  "username": "AGENTICART",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-12T06:00:20.245617",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "4yYRRD6W7hQ7wGe3bWiTo3UkLFN1MfaNWoMV8SV1QP8M",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-12T06:00:17.857180"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

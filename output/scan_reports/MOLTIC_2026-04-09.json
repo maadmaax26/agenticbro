@@ -1,0 +1,19 @@
+{
+  "id": "e21a9d0e",
+  "username": "MOLTIC",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-09T06:00:18.863266",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "DLPNQLfYUp31vj5iUcsATQP5jTAwW9GbvH8RRsespGUs",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-09T06:00:16.527710"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

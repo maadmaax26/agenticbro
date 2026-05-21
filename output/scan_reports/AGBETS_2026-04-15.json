@@ -1,0 +1,20 @@
+{
+  "id": "87226d21",
+  "username": "AGBETS",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-15T06:07:20.291543",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x650d4d553474297ed3e5dc3749b2888933579c9434579d57a049c9c6897c2c55",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-15T06:07:17.795719"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

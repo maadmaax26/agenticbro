@@ -1,0 +1,21 @@
+{
+  "id": "7131d284",
+  "username": "22J27",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-04T12:02:45.810059",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [],
+  "risk_score": 0.0,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:30:04.416821",
+  "completed_at": "2026-04-04T23:30:04.416824",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

@@ -17,7 +17,7 @@ type VercelResponse = ServerResponse & {
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     res.status(500).json({ error: 'Supabase not configured' });

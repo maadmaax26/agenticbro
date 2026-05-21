@@ -1,0 +1,16 @@
+#!/usr/bin/env zsh
+
+# Simple wrapper for scan-x unified scanner
+# This wrapper handles the symlink and calls the actual scanner
+
+SCRIPT_DIR="/Users/efinney/.openclaw/workspace/scripts"
+UNIFIED_SCANNER="$SCRIPT_DIR/scan-x-unified.sh"
+
+# Check if unified scanner exists
+if [ ! -f "$UNIFIED_SCANNER" ]; then
+    echo "❌ Error: Unified scanner not found at $UNIFIED_SCANNER"
+    exit 1
+fi
+
+# Run the unified scanner with all arguments
+zsh "$UNIFIED_SCANNER" "$@"

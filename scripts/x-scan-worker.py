@@ -117,6 +117,61 @@ def claim_job(job_id: str) -> bool:
         return False
 
 
+def write_scan_result(result: dict) -> None:
+    """Write scan result to scan_results table for website display."""
+    try:
+        username = result.get("username", "")
+        # Use "X" for scan_results platform constraint
+        platform = "X"
+
+        # Build scan_results row from the normalized result
+        risk_score = result.get("risk_score", 0)
+        risk_level = result.get("risk_level", "UNKNOWN")
+
+        # red_flags: save full flagDetails if available, otherwise save the string array
+        red_flags = result.get("red_flags", [])
+        flag_details = result.get("flagDetails", result.get("flag_details", None))
+        if flag_details:
+            red_flags = flag_details  # Full objects with flag, weight, description
+
+        insert_body = {
+            "username": username,
+            "platform": platform,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "red_flags": red_flags,
+            "verification_level": result.get("verification_level", "UNVERIFIED"),
+            "scan_date": result.get("scanDate", datetime.now(timezone.utc).isoformat()),
+        }
+
+        # Add optional fields (only columns that exist in scan_results table)
+        if result.get("bio"):
+            insert_body["bio"] = result["bio"]
+        if result.get("followers") is not None:
+            insert_body["followers"] = result["followers"]
+        if result.get("following") is not None:
+            insert_body["following"] = result["following"]
+        if result.get("displayName"):
+            insert_body["display_name"] = result["displayName"]
+        if result.get("evidence"):
+            insert_body["evidence"] = result["evidence"]
+        if result.get("recommendation"):
+            insert_body["recommendation"] = result["recommendation"]
+        if result.get("scam_type"):
+            insert_body["scam_type"] = result["scam_type"]
+        if result.get("confidence"):
+            insert_body["confidence"] = result["confidence"]
+
+        # Insert into scan_results (no upsert — no unique constraint on username,platform)
+        supabase.table("scan_results") \
+            .insert(insert_body) \
+            .execute()
+        log.info("Wrote scan_result for @%s (%s) score=%.1f level=%s",
+                 username, platform, risk_score, risk_level)
+    except Exception as exc:
+        log.warning("Failed to write scan_result (non-critical): %s", exc)
+
+
 def complete_job(job_id: str, result: dict) -> bool:
     """Mark a job as completed with result data."""
     try:
@@ -128,6 +183,8 @@ def complete_job(job_id: str, result: dict) -> bool:
             }) \
             .eq("id", job_id) \
             .execute()
+        # Also write to scan_results for website display
+        write_scan_result(result)
         return True
     except Exception as exc:
         log.error("Complete job error: %s", exc)
@@ -253,10 +310,17 @@ def process_job(job: dict) -> None:
         # Red flags: normalize from [{flag, points}] to ["flag (Npts)"]
         raw_flags = analysis.get("red_flags", result.get("red_flags", []))
         red_flags = []
+        flag_details = []  # Full flag objects for scan_results
         if isinstance(raw_flags, list):
             for f in raw_flags:
                 if isinstance(f, dict):
-                    red_flags.append(f"{f.get('flag', 'Unknown')} ({f.get('points', 0)}pts)")
+                    red_flags.append(f"{f.get('flag', 'Unknown')} ({f.get('points', f.get('weight', 0))}pts)")
+                    flag_details.append({
+                        "flag": f.get("flag", "Unknown"),
+                        "weight": f.get("weight", f.get("points", 0)),
+                        "description": f.get("description", ""),
+                        "patternMatched": f.get("patternMatched", f.get("pattern", ""))
+                    })
                 elif isinstance(f, str):
                     red_flags.append(f)
 
@@ -271,7 +335,7 @@ def process_job(job: dict) -> None:
         normalized = {
             # ── snake_case fields (read by profile-verify API) ──
             "success": True,
-            "platform": "twitter",
+            "platform": "X",
             "username": profile.get("username", username),
             "display_name": profile.get("display_name", profile.get("displayName", "")),
             "name": profile.get("display_name", profile.get("displayName", "")),
@@ -280,6 +344,7 @@ def process_job(job: dict) -> None:
             "risk_score": raw_score,  # 0-10 scale; API converts to 0-100
             "risk_level": risk_level,
             "red_flags": red_flags,
+            "flagDetails": flag_details,  # Full flag objects for scan_results
             "evidence": ["Chrome CDP scan completed", "Real profile data analyzed by local agent"],
             "recommendation": analysis.get("recommendation", result.get("recommendation", rec_map.get(risk_level, rec_map["LOW"]))),
             "scam_type": analysis.get("scam_type", result.get("scam_type", None)),

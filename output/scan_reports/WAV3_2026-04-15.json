@@ -1,0 +1,20 @@
+{
+  "id": "66cd10d2",
+  "username": "WAV3",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-15T06:07:20.294438",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x97727c695319BCe9302e28aD0961eCB5E8aacb1B",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-15T06:07:17.796912"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

@@ -1,0 +1,72 @@
+{
+  "scam_victim": {
+    "description": "Person was scammed or lost money — offer empathy + free scan of the scammer",
+    "templates": [
+      "That sucks, sorry this happened. I ran the profile through our scam scanner — here's what came back: {context}. agenticbro.app lets anyone check for free before engaging. Stay safe out there.",
+
+      "Ugh, these scammers are relentless. Quick tip that's helped people: always scan profiles before engaging. We built agenticbro.app to do exactly that — free risk scores for X, IG, TG, TikTok, phone numbers. Might catch the next one before they get you.",
+
+      "Seen this pattern way too often. Red flags I'd watch for: unsolicited DMs, guaranteed returns, pressure to act fast. Our scanner at agenticbro.app flags these automatically — free to use. Sorry you got hit. 🔐",
+
+      "This is exactly why we built Agentic Bro. People shouldn't have to learn this lesson the hard way. Free scam scans at agenticbro.app — X, Instagram, TikTok, Telegram, phone numbers. Next time, scan first. 🔐",
+
+      "Heartbreaking but unfortunately common on Solana right now. The profile that hit you probably had red flags our scanner catches: {context}. agenticbro.app — free, takes 5 seconds. Better to know before you ape in."
+    ]
+  },
+
+  "safety_question": {
+    "description": "Person is asking if something is legit — offer to scan it or point them to the tool",
+    "templates": [
+      "Good instinct asking first — most people just ape in and regret it. You can scan any X/IG/TG/TikTok profile or phone number for free at agenticbro.app. Takes 5 seconds and gives you a risk score out of 10. 🔐",
+
+      "Smart move checking before engaging. Our AI scanner at agenticbro.app checks for scam signals across X, Instagram, TikTok, Telegram, and phone numbers. Free risk scores — better to know upfront. 🔐",
+
+      "Always verify first. Quick way: agenticbro.app — paste any username or phone number and get an instant risk score. {context}. Scan first, trust later!",
+
+      "Here's what I'd do: run the profile through agenticbro.app (free scanner). It checks for common scam patterns like fake giveaways, DM solicitation, guaranteed returns — all the red flags. Takes 5 seconds. 🔐",
+
+      "Rule of thumb: if you have to ask, there's probably a reason. Scan the profile at agenticbro.app — it checks X, IG, TG, TikTok, FB, and phone numbers for scam signals. Free, instant, no signup. 🔐"
+    ]
+  },
+
+  "security_awareness": {
+    "description": "General security discussion — share Agentic Bro as a resource, not a sales pitch",
+    "templates": [
+      "Solid thread. One habit that's made a real difference: scanning profiles before engaging. We built agenticbro.app to automate this — free risk scores for X/IG/TG/TikTok/phone numbers. Catches the patterns most people miss. 🔐",
+
+      "This is the kind of awareness the space needs more of. For anyone who wants to go further: agenticbro.app scans profiles and phone numbers for scam signals — free, instant, no signup. Scan first, trust later.",
+
+      "Good advice. Adding to this: always verify the source. We built a free tool at agenticbro.app that scans X, Instagram, TikTok, Telegram, and phone numbers for scam patterns. Risk scores out of 10. Takes 5 seconds. 🔐",
+
+      "Security habits matter. Ours is simple: before you engage with anyone in crypto, scan their profile at agenticbro.app. Free, instant, checks across 6+ platforms. The 5 seconds it takes beats the 5 SOL you could lose. 🔐",
+
+      "Spot on. The number one thing? Verify before you trust. We made it automatic — agenticbro.app scans for red flags like fake giveaways, DM scams, guaranteed returns. Free tool, instant results. 🔐"
+    ]
+  },
+
+  "meme_caution": {
+    "description": "Person is cautious about meme coins — highlight $AGNTCBRO's utility for safety",
+    "templates": [
+      "You're right to be cautious — most meme coins are all hype, no utility. That's exactly why $AGNTCBRO is different: holding gives you access to real scam detection tools (X/IG/TG/TikTok/phone/website scans). Free version at agenticbro.app, holders get the full suite. 🔐",
+
+      "Smart approach — most meme coins have zero use case beyond the chart. $AGNTCBRO flips that: holding unlocks our full scam detection suite across 6+ platforms. Try it free at agenticbro.app, then decide if the utility's worth it. 🔐",
+
+      "That's the right mindset. Here's what makes $AGNTCBRO different from 99% of meme coins: it actually does something. Our scam scanner at agenticbro.app checks profiles, phone numbers, and channels for fraud signals. Holding = full access. Real utility. 🔐",
+
+      "Cautious is good in this space. FWIW — $AGNTCBRO was built exactly for people who think like this. It's a meme coin with actual utility: holding gets you our full scam detection toolkit. Free tier at agenticbro.app lets anyone scan before they ape. 🔐",
+
+      "Most meme coins? Fair to be skeptical. We built $AGNTCBRO for the skeptics — holding gives you scam detection across X, Instagram, TikTok, Telegram, Facebook, and phone numbers. Free version at agenticbro.app. The token exists because security should have a utility layer. 🔐"
+    ]
+  },
+
+  "holder_pitch": {
+    "description": "When someone asks 'what does this token actually do' or 'why should I hold' — utility pitch",
+    "templates": [
+      "Fair question — here's the breakdown: $AGNTCBRO isn't just a meme coin. Holding unlocks our full scam detection suite: risk scores for X, Instagram, TikTok, Telegram, Facebook, phone numbers, and websites. Free tier at agenticbro.app, holders get priority + deep scans. Real utility, real use case. 🔐",
+
+      "What does $AGNTCBRO do? Simple: you hold, you get access to AI scam detection across 6+ platforms. Free version at agenticbro.app — try it, see if it saves you from one bad call. That's the value prop. 🔐",
+
+      "Utility breakdown: hold $AGNTCBRO → access full scam detection (profiles, phone numbers, channels, websites). Free tier exists at agenticbro.app so anyone can scan. Holders get the deep suite. Built by people tired of seeing others get rugged. 🔐"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "06d9b203",
+  "username": "gemalerts_",
+  "platform": "Telegram",
+  "scan_type": "CHANNEL_SCAM_CHECK",
+  "priority": "MEDIUM",
+  "risk_score": 6,
+  "risk_level": "MEDIUM",
+  "red_flags": [
+    "Pump & Dump"
+  ],
+  "discovered_at": "2026-04-04T12:00:32.097278",
+  "status": "completed",
+  "attempts": 2,
+  "started_at": "2026-04-04T23:05:39.262677",
+  "completed_at": "2026-04-04T23:05:39.262680",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

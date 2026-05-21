@@ -1,0 +1,17 @@
+{"username": "follow_back_bot_viral",
+ "platform": "tiktok",
+ "scan_time": "2026-04-12T16:56:00Z",
+ "url": "https://www.tiktok.com/@follow_back_bot_viral",
+ "red_flags_detected": 3,
+ "flag_details": [
+   "Bot pattern 'follow_back_bot'",
+   "Engagement manipulation 'viral'",
+   "Automation indicator"
+ ],
+ "weights_sum": 900,
+ "risk_score": 9,
+ "risk_level": "CRITICAL",
+ "verification_level": "CRITICAL PATTERN",
+ "note": "Clear bot/fake account pattern. 'follow_back_bot' indicates automation/market manipulation, not organic content. 'viral' is classic traffic bait. Strong indicator of follower farm or engagement bot network.",
+ "scan_method": "anthology_risk_analysis_only",
+ "audit_trail": "/workspace/output/tiktok_scans/follow_back_bot_viral_20260412_165600.json"}

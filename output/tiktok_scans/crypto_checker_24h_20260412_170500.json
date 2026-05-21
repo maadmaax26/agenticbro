@@ -1,0 +1,16 @@
+{"username": "crypto_checker_24h",
+ "platform": "tiktok",
+ "scan_time": "2026-04-12T17:05:00Z",
+ "url": "https://www.tiktok.com/@crypto_checker_24h",
+ "red_flags_detected": 2,
+ "flag_details": [
+   "Crypto keyword 'crypto'",
+   "Unrealistic claim indicator '24h'"
+ ],
+ "weights_sum": 1300,
+ "risk_score": 10,
+ "risk_level": "CRITICAL",
+ "verification_level": "CRITICAL PATTERN",
+ "note": "Account name contains crypto keyword and '24h' — classic unrealistic promise pattern. Verification claims ('checker') often used by fake audit/verification accounts. Requires content inspection to confirm claims are truthful.",
+ "scan_method": "anthology_risk_analysis_only",
+ "audit_trail": "/workspace/output/tiktok_scans/crypto_checker_24h_20260412_170500.json"}

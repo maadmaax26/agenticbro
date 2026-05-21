@@ -1,0 +1,21 @@
+{
+  "id": "c6651df6",
+  "username": "22J27",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-04T08:02:35.941695",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [],
+  "risk_score": 0.0,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:31:26.669543",
+  "completed_at": "2026-04-04T23:31:26.669547",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "username": "tanko",
+  "profile_url": "https://www.tiktok.com/@tanko",
+  "scan_time": "2026-04-17T15:36:13Z",
+  "scan_method": "Direct_HTTP_Requests",
+  "risk_score": 0,
+  "risk_level": "HIGH",
+  "red_flags": [],
+  "disclaimer_version": "scan-tiktok-command-v2"
+}

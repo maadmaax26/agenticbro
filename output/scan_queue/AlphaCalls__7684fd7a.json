@@ -1,0 +1,23 @@
+{
+  "id": "7684fd7a",
+  "username": "AlphaCalls_",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-04T08:02:35.942503",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "DM solicitation"
+  ],
+  "risk_score": 1.5,
+  "attempts": 2,
+  "started_at": "2026-04-04T23:22:23.895741",
+  "completed_at": "2026-04-04T23:22:23.895743",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

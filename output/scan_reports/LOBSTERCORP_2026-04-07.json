@@ -1,0 +1,20 @@
+{
+  "id": "b4560f86",
+  "username": "LOBSTERCORP",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-07T06:00:33.387978",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "6KgR9ZKJXkHPkDh1EfWEXmq9GRKqWqWvgw9R1MHiDCMh",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-07T06:00:30.974586"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

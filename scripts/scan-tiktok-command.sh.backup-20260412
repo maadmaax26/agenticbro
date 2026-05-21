@@ -1,0 +1,136 @@
+#!/bin/bash
+# TikTok Scan from Chat Command Wrapper
+# Usage: ./scan-tiktok-command.sh @username
+
+set -euo pipefail
+
+WORKSPACE="/Users/efinney/.openclaw/workspace"
+SCAN_SCRIPT="/Users/efinney/.openclaw/workspace/scripts/tiktok-scan-fixed.py"
+OUTPUT_DIR="$WORKSPACE/output/tiktok_profiles"
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+TIMESTAMP_LOCAL=$(date +"%Y-%m-%d %H:%M:%S %Z")
+SCAN_TIME=$(date -f "%s%Z" -r "$(date +%Y%m%d%H%M%S)" +"%Y-%m-%dT%H:%M:%SZ") 2>/dev/null || echo "$TIMESTAMP"
+
+# Extract username
+USERNAME="${1#@}"
+PROFILE_URL="https://www.tiktok.com/@$USERNAME"
+OUTPUT_FILE="$OUTPUT_DIR/${USERNAME}_${SCAN_TIME}.json"
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Run the scan
+echo "━━━ 🔍 TIKTOK PROFILE SCAN — AI POWERED ASSESSMENT ━━━"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "⚠️  DISCLAIMER NOTICE"
+echo ""
+echo "This scan is an AI-powered threat assessment of social media content."
+echo "For complete accuracy, verify information through multiple sources."
+echo ""
+echo "LIMITATIONS:"
+echo "• Only scans public profile data"
+echo "• Does NOT verify user identity"
+echo "• May miss sophisticated, well-hidden scams"
+echo "• Scans HTML/timestamp - not reliable for all assets"
+echo "• Subject to website rules and rate limiting"
+echo ""
+echo "INDEPENDENT VERIFICATION REQUIRED:"
+echo "• Cross-check username across multiple platforms"
+echo "• Verify contract addresses manually"
+echo "• Beware of guaranteed returns or insider information"
+echo "• Never send money or share private keys"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+echo "┃                         ━━━━━━ WARNING ━━━━━━                      ┃"
+echo "┃                                                                   ┃"
+echo "┃  ALWAYS VERIFY WITH MULTIPLE SOURCES BEFORE MAKING DECISIONS     ┃"
+echo "┃                                                                   ┃"
+echo "┃  The AI analysis above may miss sophisticated scams that evade   ┃"
+echo "┃  automated detection. Human verification and cross-referencing   ┃"
+echo "┃  are essential for complete accuracy.                            ┃"
+echo "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+echo ""
+
+echo "╔═══════════════════════════════════════════════════════════════════════╗"
+echo "║ Scan Information                                                    ║"
+echo "╚═══════════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "📁 Account: $USERNAME"
+echo "🔗 URL:    $PROFILE_URL"
+echo "📅 Time:   $TIMESTAMP_LOCAL ($TIMESTAMP)"
+echo "🔍 Method: Direct HTTP (bypasses SSRF)"
+echo ""
+
+# Run Python scanner
+echo "Scanning... (this takes 1-2 seconds for each profile)"
+PROFILE_RESULT=$(python3 "$SCAN_SCRIPT" "$USERNAME" 2>&1)
+
+echo "$PROFILE_RESULT"
+
+# Save JSON output
+echo "" > "$OUTPUT_FILE"
+python3 -c "
+import sys
+try:
+    output = '''$PROFILE_RESULT'''
+
+    # Extract information
+    lines = output.split('\n')
+
+    # Find risk score
+    risk_line = None
+    for line in lines:
+        if 'RISK' in line and ('Score' in line or 'risk' in line):
+            risk_line = line
+            break
+
+    # Find risk level
+    risk_level = 'HIGH'
+    if 'CRITICAL' in output:
+        risk_level = 'CRITICAL'
+    elif 'MEDIUM' in output:
+        risk_level = 'MEDIUM'
+    elif 'LIKELY SAFE' in output or 'SAFE' in output:
+        risk_level = 'LIKELY SAFE'
+    elif 'Error' in output or 'timeout' in output.lower():
+        risk_level = 'ERROR'
+
+    # Find red flags
+    red_flags = []
+    for line in lines:
+        if line.strip().startswith('•') and 'Red Flags' not in line:
+            flag_text = line.strip()[2:].strip()
+            if flag_text:  # Filter empty lines
+                red_flags.append(flag_text)
+
+    # Create profile data
+    profile_data = {
+        'username': '$USERNAME',
+        'profile_url': '$PROFILE_URL',
+        'scan_time': '$TIMESTAMP',
+        'scan_method': 'Direct_HTTP_Requests',
+        'risk_score': 0,
+        'risk_level': risk_level,
+        'red_flags': red_flags,
+        'disclaimer_version': 'scan-tiktok-command-v2'
+    }
+
+    # Save to file
+    with open('$OUTPUT_FILE', 'w') as f:
+        import json
+        json.dump(profile_data, f, indent=2)
+
+    print('JSON saved successfully')
+except Exception as e:
+    print(f'Error: {e}')
+" 2>/dev/null && echo "📁 Full JSON: $OUTPUT_FILE"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "⚠️  Scan Complete — Refer to disclaimer above — Independent verification always recommended"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

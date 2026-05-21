@@ -12,14 +12,15 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Support both new publishable key format (sb_publishable_...) and legacy anon key (eyJ...)
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabasePublishableKey) {
   console.warn('Supabase credentials not configured. Using local storage fallback.');
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabasePublishableKey 
+  ? createClient(supabaseUrl, supabasePublishableKey)
   : null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────

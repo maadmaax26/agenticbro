@@ -1,0 +1,20 @@
+{
+  "id": "0c1f980c",
+  "username": "AGENTIC",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-05T06:00:34.729665",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "symbol_impersonation",
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x2df96031c949e80dac9cf0f3531e642735a56ec2896cfbf4c4ca23bd5878c285",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-05T06:00:32.321705"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

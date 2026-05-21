@@ -1,0 +1,16 @@
+{"username": "sats_wallet_claim",
+ "platform": "tiktok",
+ "scan_time": "2026-04-12T17:11:00Z",
+ "url": "https://www.tiktok.com/@sats_wallet_claim",
+ "red_flags_detected": 2,
+ "flag_details": [
+   "Crypto keyword 'sats'",
+   "DM solicitation pattern 'wallet_claim'"
+ ],
+ "weights_sum": 900,
+ "risk_score": 9,
+ "risk_level": "CRITICAL",
+ "verification_level": "CRITICAL PATTERN",
+ "note": "Direct DM solicitation pattern. 'wallet_claim' is critical fraud signal — attempts to trick users into clicking DMs for claimed wallets with coins inside. Classic market manipulation attempt.",
+ "scan_method": "anthology_risk_analysis_only",
+ "audit_trail": "/workspace/output/tiktok_scans/sats_wallet_claim_20260412_171100.json"}

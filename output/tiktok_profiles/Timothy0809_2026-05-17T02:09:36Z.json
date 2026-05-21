@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "username": "Timothy0809",
+  "profile_url": "https://www.tiktok.com/@Timothy0809",
+  "profile_data": {
+    "display_name": "arvinmariano0",
+    "bio": ""
+  },
+  "risk_score": 0,
+  "raw_score": 0,
+  "risk_level": "LIKELY SAFE",
+  "red_flags": [],
+  "scan_method": "Direct_HTTP_Request",
+  "disclaimer_version": "tiktok-scan-fixed-v2"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "99311c00",
+  "username": "AOE",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-12T06:00:20.245996",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x4c4B73378DAA1EC3a3F06c3a2541d3b4623C5387",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-12T06:00:17.857235"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

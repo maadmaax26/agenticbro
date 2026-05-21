@@ -1,0 +1,20 @@
+{
+  "id": "d7dc2f15",
+  "username": "ERA",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-09T06:00:18.865726",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "3RfdGacos1KtsigGZDPPMgU1DXXtXZ9xkpXRQo523wrn",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-09T06:00:16.528587"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}
