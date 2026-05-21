@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-04-12T08:05:00",
+  "total_found": 0,
+  "recommended": 0,
+  "targets": [],
+  "status": "No targets found - Chrome CDP connected but X search returned no results (likely rate limited or login wall)",
+  "note": "Raid target discovery requires manual X post URLs from user. Chrome CDP cannot reliably return X posts due to rate limiting and login requirements."
+}

@@ -1,0 +1,19 @@
+{
+  "id": "073e97ca",
+  "username": "ENGINEERING",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-12T06:00:20.242353",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "BHCqsk7WwAw5Evq1HuAib7FGpZTk5yy8KaEkdqT1SoKF",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-12T06:00:17.856512"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

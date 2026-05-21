@@ -1,0 +1,20 @@
+{
+  "id": "882446ab",
+  "username": "LOBSTERCOR",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-11T06:00:27.170681",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "9F5z8uQrU8SaEYjC28tqinv6B1w7AtVyanXmiTY3w1HH",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-11T06:00:24.737917"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

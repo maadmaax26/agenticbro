@@ -1,0 +1,20 @@
+{
+  "id": "0254a0b5",
+  "username": "ACP",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-08T06:03:38.807678",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "J9hsu4d4A9Db5vBURTQDwjdgoisH6RLUxrQy14s9qfLt",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-08T06:03:36.398395"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

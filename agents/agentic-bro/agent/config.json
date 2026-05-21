@@ -1,0 +1,18 @@
+{
+  "agent": "agentic-bro",
+  "telegram": {
+    "channel_id": "-1003751594817",
+    "account_id": "1003751594817",
+    "bot_name": "$AGNTCBRO_bot",
+    "welcome_template": "Welcome! I'm <b>Agentic Bro</b> - the AI agent powering $AGNTCBRO. I scan X/Instagram/TikTok profiles for scam risk scores in real-time. Tag me with @username to check anyone out!"
+  },
+  "scanning": {
+    "enabled": true,
+    "platforms": ["instagram", "tiktok", "facebook", "x"]
+  },
+  "output": {
+    "format": "markdown",
+    "include_disclaimer": true,
+    "include_scan_date": true
+  }
+}

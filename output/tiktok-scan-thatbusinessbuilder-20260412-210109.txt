@@ -1,0 +1,51 @@
+
+======================================================================
+🔍 TIKTOK PROFILE SCANNER - AI POWERED THREAT ASSESSMENT
+======================================================================
+
+══════════════════════════════════════════════════════════════════
+                    ⚠️  DISCLAIMER NOTICE ⚠️
+══════════════════════════════════════════════════════════════════
+
+This scan is an AI-powered threat assessment of social media content.
+For complete accuracy, verify information through multiple sources.
+
+LIMITATIONS:
+• Only scans public profile data
+• Does NOT verify user identity
+• May miss sophisticated, well-hidden scams
+• Scans HTML/timestamp - not reliable for all assets
+• Subject to website rules and rate limiting
+
+INDEPENDENDT VERIFICATION REQUIRED:
+• Cross-check username across multiple platforms
+• Verify contract addresses manually
+• Beware of "guaranteed returns" or "insider information"
+• Never send money or share private keys
+
+══════════════════════════════════════════════════════════════════
+
+──────────────────────────────────────────────────────────────────────
+Scanning: @thatbusinessbuilder
+Time: 2026-04-12 12:48:00 EDT
+──────────────────────────────────────────────────────────────────────
+
+
+📷 SCANNING: @@thatbusinessbuilder
+----------------------------------------------------------------------
+
+📊 RISK: 8/10 - HIGH RISK
+
+🚨 RED FLAGS:
+   • Emotional plea
+   • Download links
+   • Crypto keywords
+   • DM solicitation for crypto
+
+🔮 Profile: https://www.tiktok.com/@@thatbusinessbuilder
+
+⚠️  AI STRONGLY ADVISES CAUTION
+──────────────────────────────────────────────────────────────────────
+
+⚠️  Refer to disclaimer above - Independent verification always recommended
+======================================================================

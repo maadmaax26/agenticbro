@@ -1,0 +1,30 @@
+{
+  "scan_timestamp": "2026-05-04T06:57:24Z",
+  "scan_method": "Chrome CDP Browser Automation",
+  "profile": {
+    "username": "CryptoKing_C",
+    "displayName": "CryptoKing",
+    "verified": false,
+    "verifiedType": null,
+    "followers": 0,
+    "following": 5,
+    "bio": null,
+    "location": null,
+    "website": null,
+    "profileImage": null,
+    "recentTweets": []
+  },
+  "analysis": {
+    "red_flags": [
+      {
+        "flag": "Very low follower count",
+        "points": 10
+      }
+    ],
+    "total_points": 10,
+    "max_points": 90,
+    "risk_score": 1.1,
+    "risk_level": "LOW",
+    "behavioral_pattern": "Minor signals detected \u2014 verify independently"
+  }
+}

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-✅ **Bot Token Configured:** `***REMOVED***`
+✅ **Bot Token Configured:** `8692355…REDACTED`
 ⚠️ **MTProto Credentials Missing:** Required for priority scan feature
 
 ## Why You're Seeing "Demo Mode"

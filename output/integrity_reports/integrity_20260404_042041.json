@@ -1,0 +1,257 @@
+{
+  "timestamp": "2026-04-04T04:20:41.603361",
+  "summary": {
+    "total_checked": 15,
+    "matched": 0,
+    "csv_only": 15,
+    "supabase_only": 0,
+    "mismatched": 0
+  },
+  "discrepancies": {
+    "csv_only": [
+      {
+        "handle": "cryptowhale_",
+        "csv": {
+          "name": "CryptoWhale",
+          "platform": "X",
+          "x_handle": "@CryptoWhale_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "DM Solicitation",
+          "notes": "DM for alpha promoter",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "alphacalls_",
+        "csv": {
+          "name": "AlphaCalls",
+          "platform": "X",
+          "x_handle": "@AlphaCalls_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "DM Solicitation",
+          "notes": "DM for alpha scam",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "gemalerts_",
+        "csv": {
+          "name": "Gem Alerts",
+          "platform": "Telegram",
+          "x_handle": "@GemAlerts_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Pump & Dump",
+          "notes": "Pump group",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "freesolairdrop",
+        "csv": {
+          "name": "Free Sol Airdrop",
+          "platform": "Telegram",
+          "x_handle": "@FreeSolAirdrop",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Airdrop Scam",
+          "notes": "Wallet drainer via fake airdrop",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "22j27",
+        "csv": {
+          "name": "LUNA GREY",
+          "platform": "X",
+          "x_handle": "@22J27",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Pump & Dump Promoter",
+          "notes": "Self-described promoter with 1000x claims",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "claimyoursol",
+        "csv": {
+          "name": "Claim Your SOL",
+          "platform": "X",
+          "x_handle": "@ClaimYourSOL",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Wallet Drainer",
+          "notes": "Fake claim page",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "madapescall",
+        "csv": {
+          "name": "Mad Apes Call",
+          "platform": "X",
+          "x_handle": "@madapescall",
+          "telegram": "@mad_apes_gambles",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "UNVERIFIED",
+          "scam_type": "Requires Scan",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Crypto influencer platform. Requires verification scan.",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "dianasanchez_04",
+        "csv": {
+          "name": "Diana Sanchez",
+          "platform": "X",
+          "x_handle": "@DianaSanchez_04",
+          "telegram": "t.me/diana_sanchezok",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "VERIFIED",
+          "scam_type": "PAID PROMOTER",
+          "notes": "2026-04-02",
+          "last_updated": "KOL/Influencer",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "presalealerts",
+        "csv": {
+          "name": "Presale Alerts",
+          "platform": "Telegram",
+          "x_handle": "@PresaleAlerts",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Presale Scam",
+          "notes": "Fake presale channel",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "crypto_genius_09",
+        "csv": {
+          "name": "Crypto_Genius09",
+          "platform": "X",
+          "x_handle": "@Crypto_Genius_09",
+          "telegram": "",
+          "victims": "1",
+          "total_lost": "$50",
+          "verification": "RESOLVED",
+          "scam_type": "AMA Completed",
+          "notes": "Removed from scammer database - AMA was completed. Victim reported $50 loss but dispute was resolved. Account later suspended by X (April 2026).",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "coinlabverse",
+        "csv": {
+          "name": "CoinLabVerse",
+          "platform": "X",
+          "x_handle": "@CoinLabVerse",
+          "telegram": "@CoinLabVerseNews",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "UNVERIFIED",
+          "scam_type": "Requires Scan",
+          "notes": "Moved from legitimate_accounts - no Chrome CDP scan verification. Education/community channel. Requires verification scan.",
+          "last_updated": "2026-04-02",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "presaleking_",
+        "csv": {
+          "name": "PresaleKing",
+          "platform": "X",
+          "x_handle": "@PresaleKing_",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Presale Scam",
+          "notes": "Fake presale promoter",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "nftmintfree",
+        "csv": {
+          "name": "NFT Mint Free",
+          "platform": "X",
+          "x_handle": "@NFTMintFree",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Wallet Drainer",
+          "notes": "Connect wallet scam",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "gemhunter100x",
+        "csv": {
+          "name": "GemHunter",
+          "platform": "X",
+          "x_handle": "@GemHunter100x",
+          "telegram": "",
+          "victims": "Unknown",
+          "total_lost": "Unknown",
+          "verification": "UNVERIFIED",
+          "scam_type": "Pump & Dump",
+          "notes": "Unrealistic return claims",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      },
+      {
+        "handle": "degen_chad119",
+        "csv": {
+          "name": "Mania (Degen_chad119)",
+          "platform": "X",
+          "x_handle": "@Degen_chad119",
+          "telegram": "t.me/Degen_chad119",
+          "victims": "0",
+          "total_lost": "$0",
+          "verification": "LEGITIMATE",
+          "scam_type": "PAID PROMOTER",
+          "notes": "Verified KOL/influencer (blue checkmark). 7.8K followers. Self-admitted 'KOL For Notable projects' partnered with @MezoNetwork. PAID PROMOTER account - content is sponsored. Risk Score: 2.2/10 (LOW). NOT A SCAM.",
+          "last_updated": "2026-04-04",
+          "source": "csv"
+        }
+      }
+    ],
+    "supabase_only": [],
+    "mismatched": []
+  },
+  "status": "FAIL"
+}

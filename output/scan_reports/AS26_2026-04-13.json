@@ -1,0 +1,19 @@
+{
+  "id": "69d662e9",
+  "username": "AS26",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-13T06:02:57.818880",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0x93c4a9e316b54e99001b68a7c64f1d0d9922a67c7612a45fdf7bfd6c00fea9e0",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-13T06:02:55.499060"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

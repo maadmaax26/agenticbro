@@ -1,0 +1,41 @@
+{
+  "scan_timestamp": "2026-04-12T18:17:55Z",
+  "scan_method": "Chrome CDP Browser Automation",
+  "target_offset": 0,
+  "profile": {
+    "username": "AshCryptoX1",
+    "profile_url": "https://x.com/AshCryptoX1",
+    "display_name": "N/A",
+    "followers": 0,
+    "following": 0,
+    "verification_badge": false,
+    "bio": "",
+    "bio_length": 0
+  },
+  "red_flags": {
+    "total": 1,
+    "guaranteed_returns": true,
+    "dm_solicitation": true,
+    "giveaways": false,
+    "private_groups": false,
+    "money_schemes": false,
+    "urgency": false,
+    "disclaimer": true,
+    "emotional": false,
+    "suspicious_links": false,
+    "value_proposition": false
+  },
+  "risk_score": {
+    "score": 5.0,
+    "level": "UNDEFINED",
+    "assessment": "? Unknown risk"
+  },
+  "scan_config": {
+    "browser_cdp": "lo",
+    "profile_url": "https://x.com/AshCryptoX1",
+    "page_load_wait": 5,
+    "snapshot_complete": true,
+    "extraction_method": "grep_pattern_matching",
+    "red_flag_checker": "bash_grep_patterns"
+  }
+}

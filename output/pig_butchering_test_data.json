@@ -1,0 +1,415 @@
+{
+  "metadata": {
+    "title": "Pig Butchering (Sha Zhu Pan) Scam Detection Test Data",
+    "version": "1.0.0",
+    "created": "2026-04-04",
+    "source": "Compiled from Chainalysis, TRM Labs, FBI IC3, Elliptic, ProPublica, and multiple news sources",
+    "purpose": "Training data for scam detection system"
+  },
+  
+  "scam_overview": {
+    "name": "Pig Butchering (Sha Zhu Pan)",
+    "origin": "Southeast Asia (China/Cambodia/Myanmar)",
+    "total_losses_2024": "$9.3 billion (FBI IC3)",
+    "total_losses_2025": "$4+ billion (TRM Labs)",
+    "definition": "Long-con investment fraud where criminals build fake romantic or business relationships over weeks/months, then 'slaughter' victims by draining their crypto wallets"
+  },
+
+  "known_fake_platforms": [
+    {
+      "name": "bigoneit.site",
+      "type": "Fake exchange",
+      "impersonating": "BigONE",
+      "source": "Thomson Reuters (Nov 2024)",
+      "notes": "Fake version of legitimate crypto exchange"
+    },
+    {
+      "name": "UniApp",
+      "type": "Fake trading app",
+      "platform": "iOS and Android",
+      "source": "Group-IB (July 2025)",
+      "notes": "Distributed through official app stores and phishing sites"
+    },
+    {
+      "name": "Huione Guarantee",
+      "type": "Telegram-based marketplace",
+      "status": "Blocked by Telegram (2025)",
+      "source": "Wikipedia, CNBC",
+      "notes": "Used to support pig butchering industry and scam technology products"
+    }
+  ],
+
+  "known_wallet_addresses": [
+    {
+      "address": "Multiple Binance wallets (Myanmar)",
+      "blockchain": "Bitcoin",
+      "source": "FBI case (2025)",
+      "notes": "Traced to individuals in Myanmar for $164K loss case"
+    },
+    {
+      "address": "Tether-blacklisted addresses",
+      "blockchain": "Ethereum (USDT)",
+      "source": "Elliptic (late 2024)",
+      "notes": "Blacklisted by Tether, incoming exposure from confirmed pig butchering wallets"
+    }
+  ],
+
+  "red_flags": {
+    "initial_contact": [
+      {
+        "flag": "Wrong number text",
+        "weight": 8,
+        "description": "Text from 'wrong number' that initiates conversation",
+        "phrases": ["Hey, is this [name]?", "Hi! Sorry, wrong number", "Oh wait, you seem nice..."]
+      },
+      {
+        "flag": "Dating app match",
+        "weight": 7,
+        "description": "Match on dating app who quickly moves conversation to messaging apps",
+        "platforms": ["Tinder", "Bumble", "Hinge", "Match.com"]
+      },
+      {
+        "flag": "Social media DM",
+        "weight": 6,
+        "description": "Direct message from stranger on Instagram, Facebook, LinkedIn, X",
+        "patterns": ["Impressed by your profile", "Want to collaborate", "Looking for advice"]
+      },
+      {
+        "flag": "WhatsApp/Telegram contact",
+        "weight": 8,
+        "description": "Request to move conversation to encrypted messaging apps"
+      }
+    ],
+    
+    "romance_patterns": [
+      {
+        "flag": "Love bombing",
+        "weight": 9,
+        "description": "Excessive flattery, affection, and attention early in relationship",
+        "phrases": ["You're different", "I've never felt this way", "We're meant to be"]
+      },
+      {
+        "flag": "Avoids video calls",
+        "weight": 9,
+        "description": "Never shows face on video, always has excuses",
+        "excuses": ["Bad connection", "Camera broken", "Shy", "At work"]
+      },
+      {
+        "flag": "Fake photos",
+        "weight": 8,
+        "description": "Uses stock photos, AI-generated images, or stolen photos",
+        "indicators": ["Too professional looking", "Reverse image search shows matches"]
+      },
+      {
+        "flag": "Wealth displays",
+        "weight": 7,
+        "description": "Shows expensive cars, luxury travel, designer goods",
+        "purpose": "Build credibility and aspiration"
+      }
+    ],
+    
+    "investment_patterns": [
+      {
+        "flag": "Mentions crypto profits",
+        "weight": 10,
+        "description": "Shows screenshots of large trading profits",
+        "phrases": ["Made 500% on this trade", "My portfolio is up 10x", "I can teach you"]
+      },
+      {
+        "flag": "Exclusive platform",
+        "weight": 9,
+        "description": "Directs to unknown or fake trading platform",
+        "indicators": ["Platform URL looks similar to real exchange", "Requires direct wallet connection", "Asks to download app outside app store"]
+      },
+      {
+        "flag": "Guaranteed returns",
+        "weight": 9,
+        "description": "Promises high returns with 'no risk'",
+        "phrases": ["100% guaranteed", "Low risk high reward", "I'll show you exactly when to buy/sell"]
+      },
+      {
+        "flag": "Urgency tactics",
+        "weight": 8,
+        "description": "Creates artificial time pressure",
+        "phrases": ["This opportunity won't last", "Market moving fast", "Need to act now"]
+      },
+      {
+        "flag": "Small wins",
+        "weight": 8,
+        "description": "Allows victim to withdraw small amounts initially to build trust",
+        "purpose": "Victim sees 'proof' that platform is legitimate"
+      },
+      {
+        "flag": "Tax/fee demands",
+        "weight": 9,
+        "description": "Requests additional funds to 'release' profits",
+        "phrases": ["You owe $50,000 in taxes", "Need to pay fees to withdraw", "Account frozen until fee paid"]
+      }
+    ],
+    
+    "platform_patterns": [
+      {
+        "flag": "Fake exchange website",
+        "weight": 10,
+        "indicators": [
+          "URL slightly different from real exchange",
+          "No real company information",
+          "Requires direct crypto deposits",
+          "No regulatory compliance information"
+        ]
+      },
+      {
+        "flag": "Fake trading app",
+        "weight": 10,
+        "indicators": [
+          "Not in official app stores",
+          "Requires APK download",
+          "No independent reviews"
+        ]
+      },
+      {
+        "flag": "Telegram/WhatsApp group",
+        "weight": 7,
+        "indicators": [
+          "Invitation to 'VIP' trading group",
+          "Pump signals group",
+          "Exclusive alpha channel"
+        ]
+      }
+    ]
+  },
+
+  "characteristic_phrases": {
+    "initial_contact": [
+      "Hey, is this [name]?",
+      "Hi! Sorry, wrong number, but you seem nice...",
+      "I got your number from [friend's name]",
+      "I saw your profile and wanted to connect",
+      "Impressed by your [work/posts/profile]"
+    ],
+    "relationship_building": [
+      "What do you do for work?",
+      "Do you invest?",
+      "I made good money in crypto recently",
+      "My uncle/mentor showed me this strategy",
+      "I can teach you if you're interested"
+    ],
+    "investment_pitch": [
+      "I'll show you exactly when to buy and sell",
+      "This platform has better rates than Coinbase",
+      "Download this app, it's more private",
+      "Send me your wallet address, I'll send you some to start",
+      "You need to act fast, market is moving"
+    ],
+    "urgency_tactics": [
+      "This opportunity won't last",
+      "The whales are accumulating",
+      "I have insider information",
+      "My mentor says this is the one",
+      "Market conditions are perfect right now"
+    ],
+    "post_loss": [
+      "You need to pay taxes to withdraw",
+      "Account frozen, need fee to release",
+      "I lost everything too, let's figure it out together",
+      "Customer support is working on it",
+      "Just one more deposit to fix this"
+    ]
+  },
+
+  "test_cases": [
+    {
+      "id": "PB001",
+      "type": "wrong_number_text",
+      "scenario": "Text from unknown number saying 'Hey, is this Mike?' followed by 'Sorry wrong number but you seem interesting'",
+      "expected_result": "HIGH RISK - Classic pig butchering opener",
+      "red_flags_triggered": ["wrong_number_text", "stranger_persistence"]
+    },
+    {
+      "id": "PB002",
+      "type": "dating_app_match",
+      "scenario": "Match on Tinder who quickly moves to WhatsApp, avoids video calls, shows wealth photos, mentions crypto profits",
+      "expected_result": "CRITICAL RISK - Multiple pig butchering red flags",
+      "red_flags_triggered": ["dating_app", "messaging_app_redirect", "avoids_video", "wealth_displays", "crypto_mentions"]
+    },
+    {
+      "id": "PB003",
+      "type": "fake_exchange",
+      "scenario": "Platform that looks like Binance but URL is binanace.com (typo), asks for direct wallet connection",
+      "expected_result": "CRITICAL RISK - Fake exchange scam",
+      "red_flags_triggered": ["fake_exchange_url", "direct_wallet_connection", "no_regulatory_info"]
+    },
+    {
+      "id": "PB004",
+      "type": "small_win_trap",
+      "scenario": "Platform allows small $100 withdrawal to prove legitimacy, then demands fees for larger withdrawal",
+      "expected_result": "HIGH RISK - Pig butchering small win pattern",
+      "red_flags_triggered": ["small_withdrawal_proof", "fee_demand", "account_frozen"]
+    },
+    {
+      "id": "PB005",
+      "type": "telegram_group",
+      "scenario": "Invitation to VIP trading group with 'pump signals' and 'guaranteed returns'",
+      "expected_result": "HIGH RISK - Telegram scam group pattern",
+      "red_flags_triggered": ["telegram_group", "pump_signals", "guaranteed_returns"]
+    },
+    {
+      "id": "PB006",
+      "type": "collaboration_dm",
+      "scenario": "X/Twitter DM saying 'Impressed by your work! Let's collaborate!' from crypto account",
+      "expected_result": "MEDIUM-HIGH RISK - Engagement farming pattern (like @AshCryptoX1)",
+      "red_flags_triggered": ["collaboration_dm", "generic_template", "dm_solicitation"]
+    },
+    {
+      "id": "PB007",
+      "type": "romance_cryptocurrency",
+      "scenario": "Online relationship for weeks, person shows wealth, eventually mentions crypto profits and offers to teach trading",
+      "expected_result": "CRITICAL RISK - Classic romance + crypto pig butchering",
+      "red_flags_triggered": ["romance_scam", "wealth_displays", "crypto_profits_offer", "teach_trading"]
+    },
+    {
+      "id": "PB008",
+      "type": "tax_fee_demand",
+      "scenario": "After investing, told need to pay 'taxes' or 'fees' before withdrawal",
+      "expected_result": "CRITICAL RISK - Post-investment scam phase",
+      "red_flags_triggered": ["tax_demand", "fee_demand", "withdrawal_blocked"]
+    }
+  ],
+
+  "detection_rules": [
+    {
+      "rule_id": "PB-R001",
+      "name": "Wrong Number Initiated Contact",
+      "weight": 8,
+      "triggers": ["wrong number text", "stranger persistence", "quick topic shift"],
+      "risk_if_alone": "MEDIUM",
+      "risk_with_others": "HIGH"
+    },
+    {
+      "rule_id": "PB-R002",
+      "name": "Romance + Crypto Mention",
+      "weight": 10,
+      "triggers": ["romance relationship building", "crypto profit mentions", "investment teaching offer"],
+      "risk_if_alone": "HIGH",
+      "risk_with_others": "CRITICAL"
+    },
+    {
+      "rule_id": "PB-R003",
+      "name": "Fake Platform Redirection",
+      "weight": 10,
+      "triggers": ["non-standard platform URL", "app download outside store", "direct wallet connection required"],
+      "risk_if_alone": "CRITICAL",
+      "risk_with_others": "CRITICAL"
+    },
+    {
+      "rule_id": "PB-R004",
+      "name": "Video Call Avoidance",
+      "weight": 9,
+      "triggers": ["never shows face", "excuses for no video", "always texting/voice only"],
+      "risk_if_alone": "HIGH",
+      "risk_with_others": "CRITICAL"
+    },
+    {
+      "rule_id": "PB-R005",
+      "name": "Wealth Display + Investment Pitch",
+      "weight": 9,
+      "triggers": ["expensive car photos", "luxury travel", "trading profit screenshots"],
+      "risk_if_alone": "MEDIUM",
+      "risk_with_others": "HIGH"
+    },
+    {
+      "rule_id": "PB-R006",
+      "name": "Guaranteed/Urgent Returns",
+      "weight": 9,
+      "triggers": ["guaranteed returns", "limited time offer", "market moving fast"],
+      "risk_if_alone": "HIGH",
+      "risk_with_others": "CRITICAL"
+    },
+    {
+      "rule_id": "PB-R007",
+      "name": "Small Win Pattern",
+      "weight": 8,
+      "triggers": ["allows small withdrawal", "builds trust with proof", "then demands fees"],
+      "risk_if_alone": "HIGH",
+      "risk_with_others": "CRITICAL"
+    },
+    {
+      "rule_id": "PB-R008",
+      "name": "Tax/Fee Demand",
+      "weight": 10,
+      "triggers": ["tax payment required", "account frozen", "fee to release funds"],
+      "risk_if_alone": "CRITICAL",
+      "risk_with_others": "CRITICAL"
+    }
+  ],
+
+  "bot_like_patterns": [
+    {
+      "pattern": "Template replies",
+      "examples": [
+        "Impressed by your work! Let's collaborate!",
+        "Hi! Ready to collaborate for a brighter future?",
+        "Awesome! Want free assistance? DM me anytime!",
+        "Hey there! Exploring opportunities for synergy?"
+      ],
+      "source": "@AshCryptoX1 scan (Apr 2026)",
+      "risk": "HIGH - Bot network engagement farming"
+    },
+    {
+      "pattern": "DM solicitation",
+      "examples": [
+        "Want free help? DM me!",
+        "Send a DM for more info",
+        "DM me anytime for assistance"
+      ],
+      "source": "Multiple pig butchering cases",
+      "risk": "HIGH - Classic scam hook"
+    }
+  ],
+
+  "prevention_tips": [
+    "Never respond to 'wrong number' texts from strangers",
+    "Be suspicious of anyone on dating apps who quickly moves conversation to other platforms",
+    "Never send money or crypto to someone you haven't met in person",
+    "Video call early - scammers avoid showing their face",
+    "Reverse image search profile photos",
+    "Only use legitimate, regulated exchanges",
+    "If returns seem too good to be true, they are",
+    "Never pay 'fees' or 'taxes' to withdraw your own money",
+    "Report to FBI IC3, FTC, and local authorities"
+  ],
+
+  "reporting_resources": [
+    {
+      "name": "FBI IC3",
+      "url": "https://www.ic3.gov/",
+      "description": "Internet Crime Complaint Center - Federal reporting"
+    },
+    {
+      "name": "FTC",
+      "url": "https://reportfraud.ftc.gov/",
+      "description": "Federal Trade Commission fraud reporting"
+    },
+    {
+      "name": "DFPI (California)",
+      "url": "https://dfpi.ca.gov/",
+      "description": "Department of Financial Protection and Innovation"
+    },
+    {
+      "name": "Chainalysis Crypto Incident Response",
+      "url": "https://www.chainalysis.com/crypto-investigations/",
+      "description": "Blockchain forensics for recovery"
+    }
+  ],
+
+  "statistics": {
+    "global_losses_2024": "$9.3 billion (FBI IC3)",
+    "global_losses_2025": "$4+ billion (TRM Labs)",
+    "growth_yoy_2024": "40% increase",
+    "average_loss_per_victim": "$100,000 - $500,000",
+    "largest_single_loss": "$1+ million",
+    "primary_platforms": ["Dating apps", "WhatsApp", "Telegram", "Wrong number texts"],
+    "target_demographics": ["Seniors", "Divorcees", "Lonely individuals", "Crypto newcomers"],
+    "origin_countries": ["China", "Cambodia", "Myanmar", "Laos", "Vietnam"]
+  }
+}

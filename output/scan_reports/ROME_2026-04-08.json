@@ -1,0 +1,19 @@
+{
+  "id": "9c8b7bcb",
+  "username": "ROME",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-08T06:03:38.802320",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "DtjSTSvi3dnocqPJnACAwNC1aVAKpKg2r5mbQqKpBiMP",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-08T06:03:36.397393"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

@@ -1,0 +1,73 @@
+# X/Twitter Profile Scan Report
+**User:** Christmasg696
+**Platform:** X/Twitter
+**URL:** https://x.com/Christmasg696
+**Scan Time:** 2026-04-12 19:24:01 EDT
+**Method:** Direct HTTP Request
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  DISCLAIMER NOTICE
+
+This scan is an AI-powered threat assessment of X (Twitter) content.
+For complete accuracy, verify information through multiple sources.
+
+INDEPENDENT VERIFICATION REQUIRED:
+• Cross-check username across multiple platforms
+• Never send money or share private keys
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                         ━━━━━━ WARNING ━━━━━━                      ┃
+┃  ALWAYS VERIFY WITH MULTIPLE SOURCES BEFORE MAKING DECISIONS     ┃
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 RISK ASSESSMENT
+
+Risk Score: 10/10
+Risk Level: HIGH RISK
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚨 Red Flags Detected (8):
+
+1. Cryptocurrency Keywords
+   - Detected mentions of: crypto, coin, token, investment, trading
+
+2. DM Solicitation  
+   - Detection: Direct message requests found
+
+3. Financial Keywords
+   - Detected words: ROI, profit, gain, earnings, financial
+
+4. Unrealistic Returns
+   - Pattern found: "guaranteed returns," "100x," "aphine"
+
+5. Telegram Reference
+   - Links/mentions: Telegram links present with "${dm_solicitatio
+
+6. Exclusive Opportunities
+   - Language found: "exclusive," "insider," "private access
+
+7. Suspicious URLs
+   - Unsafe links detected in bio/posts
+
+8. Paid Promotion Signals
+   - Verified bot promoting token: "I am a verified b
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔮 Verification Level: AI Assessment Only
+⚠️  AI STRONGLY ADVISES CAUTION
+
+   • Verify information from multiple independent sources
+   • Be extremely cautious before any money transfer
+   • Do NOT provide personal or financial information
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  Refer to disclaimer above — Independent verification always recommended
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

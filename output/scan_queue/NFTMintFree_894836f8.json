@@ -1,0 +1,23 @@
+{
+  "id": "894836f8",
+  "username": "NFTMintFree",
+  "platform": "X",
+  "scan_type": "PROFILE_SCAM_CHECK",
+  "priority": "NORMAL",
+  "status": "completed",
+  "discovered_at": "2026-04-04T12:02:45.812605",
+  "source": "KNOWN_PATTERN",
+  "red_flags": [
+    "Wallet drainer"
+  ],
+  "risk_score": 2.0,
+  "attempts": 3,
+  "started_at": "2026-04-04T23:39:59.753428",
+  "completed_at": "2026-04-04T23:39:59.753431",
+  "result": {
+    "status": "active",
+    "risk_score": 0,
+    "level": "LOW",
+    "red_flags": []
+  }
+}

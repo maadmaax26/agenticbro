@@ -1,0 +1,19 @@
+{
+  "id": "a1ba681e",
+  "username": "AGENTIC CZ",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-09T06:00:18.869137",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0xC41a2A9BC2CbDcb021eCa0D8E29A251A5d85ce7B",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-09T06:00:16.529460"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

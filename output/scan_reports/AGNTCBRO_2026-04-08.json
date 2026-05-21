@@ -1,0 +1,21 @@
+{
+  "id": "1e09c4ca",
+  "username": "AGNTCBRO",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-08T06:03:38.794381",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "symbol_impersonation",
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "BwaPiaK2D43zt443X6WczJ4rDEAmdCBA5MDRzZ3rQD9K",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-08T06:03:33.876471"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

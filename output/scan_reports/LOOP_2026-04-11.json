@@ -1,0 +1,20 @@
+{
+  "id": "5e1ca321",
+  "username": "LOOP",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-11T06:00:27.164586",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "name_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "A9A7PZyN3eP1YXELPmM4Yq9XB7S4cpygKu6VyzXrhvHC",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-11T06:00:24.735948"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "51a0f9e9",
+  "username": "AGNT",
+  "platform": "Solana Token",
+  "scan_date": "2026-04-11T06:00:27.160959",
+  "risk_level": "HIGH RISK",
+  "risk_score": 10.0,
+  "red_flags": [
+    "symbol_impersonation",
+    "low_liquidity"
+  ],
+  "scam_type": "Token Impersonation",
+  "contract": "0xb8ff242dD1544Cb6C61Bf9602ac3419024e1625E",
+  "evidence": {
+    "source": "DexScreener",
+    "discovered_at": "2026-04-11T06:00:22.262845"
+  },
+  "notes": "",
+  "status": "AUTO_DISCOVERED"
+}

@@ -1,0 +1,179 @@
+{
+  "date": "2026-04-24T15:26:07.311Z",
+  "week": 1,
+  "sender": "J5jv4d6Y7o1T5YMNmbWzhULcXQasvw7BUGaRkoZTdd26",
+  "totalWallets": 21,
+  "successCount": 21,
+  "failCount": 0,
+  "totalSent": 2312500,
+  "results": [
+    {
+      "wallet": "6aSrey36pvkAKAVvsKL84X4CkDEY4bQCp5hFh8NVcN4j",
+      "tier": "Diamond",
+      "amount": 250000,
+      "status": "success",
+      "signature": "5RFnYT5G24bEKaBWdGu7L8cgaCx4ibfuJZm4d8AGWYJkw96r44VnYVEkPJKHn49GVXpfuTbrzroBo9Y2ow5bmpZo",
+      "solscan": "https://solscan.io/tx/5RFnYT5G24bEKaBWdGu7L8cgaCx4ibfuJZm4d8AGWYJkw96r44VnYVEkPJKHn49GVXpfuTbrzroBo9Y2ow5bmpZo"
+    },
+    {
+      "wallet": "ZzBAYTFDehbwrgzzgN8ecYUyHwokDFxfgbA945ZqGf3",
+      "tier": "Diamond",
+      "amount": 250000,
+      "status": "success",
+      "signature": "4v1vN2tQ7UTDFma5nVdS47aBS3w159NfZWgA2shN8XYbUUf7JSTBSwmEAtYAECVExC4LsPkSu9PbZ6d4pewVMhJk",
+      "solscan": "https://solscan.io/tx/4v1vN2tQ7UTDFma5nVdS47aBS3w159NfZWgA2shN8XYbUUf7JSTBSwmEAtYAECVExC4LsPkSu9PbZ6d4pewVMhJk"
+    },
+    {
+      "wallet": "B2YbTVUsC4MTdSCcn7SAFwBcYrZFPxbTBNosNcvGjMuB",
+      "tier": "Diamond",
+      "amount": 250000,
+      "status": "success",
+      "signature": "4iHRUpbJDq53t9ACdzY1td5otAinPtvQnEh8ALLWyzdry5BnJ4KPDo9YtQcJ53D1SbV6yM3iST94tE5K6nbNLpPg",
+      "solscan": "https://solscan.io/tx/4iHRUpbJDq53t9ACdzY1td5otAinPtvQnEh8ALLWyzdry5BnJ4KPDo9YtQcJ53D1SbV6yM3iST94tE5K6nbNLpPg"
+    },
+    {
+      "wallet": "CBReL95M1gS3SaeK7m38mpLKWmeAYk5KqyF9ND4Ta84y",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "4B1VfJNZVGJUe5wg1AgCTUg3TG8B7PiZejLdV3TW2EPUWNBs1uyrX13fAmzMABK6ah21EJr2Wh7HYCF6e9asK71b",
+      "solscan": "https://solscan.io/tx/4B1VfJNZVGJUe5wg1AgCTUg3TG8B7PiZejLdV3TW2EPUWNBs1uyrX13fAmzMABK6ah21EJr2Wh7HYCF6e9asK71b"
+    },
+    {
+      "wallet": "36J6TkbFc3QLEtT5V6H9hjXFKcRU5RKxqtbvtq55GEKc",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "2iHyZrgEWUxPFsBomSU8wyj6HFxsPwwpPdG4VNFLhgzooJEnfjiAz5bDqP2CKQz9A3TnBSZ5ceBmsn7xvrSXe3b5",
+      "solscan": "https://solscan.io/tx/2iHyZrgEWUxPFsBomSU8wyj6HFxsPwwpPdG4VNFLhgzooJEnfjiAz5bDqP2CKQz9A3TnBSZ5ceBmsn7xvrSXe3b5"
+    },
+    {
+      "wallet": "EZwbHQ54PwcsL9iHsaEG1ruMEjVHed8iBmv1esA1rs8n",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "3gP5zcNDZqPAPwrCH1rkEgpLzAZBRxyrwq5Htdz1piUvZdADvyKXL7yJ8pcfC4gKfLui4g2nZE8gGJgZwWkqtUr9",
+      "solscan": "https://solscan.io/tx/3gP5zcNDZqPAPwrCH1rkEgpLzAZBRxyrwq5Htdz1piUvZdADvyKXL7yJ8pcfC4gKfLui4g2nZE8gGJgZwWkqtUr9"
+    },
+    {
+      "wallet": "Cmw2B5LxVCrmw4zsdJoN4oRh9d5HErfn7mddepNmdky8",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "2o9NzvaBm6GMxRvz1VEFB2JqXdpfiyFfboEhyrMwv3xg9qpb8GBETJ4QZfqZSoyeF18LfT15xw9oUKwfxnrJm27z",
+      "solscan": "https://solscan.io/tx/2o9NzvaBm6GMxRvz1VEFB2JqXdpfiyFfboEhyrMwv3xg9qpb8GBETJ4QZfqZSoyeF18LfT15xw9oUKwfxnrJm27z"
+    },
+    {
+      "wallet": "63878UJuLZPNFTkU99xi4rPqBx4tnvQ5NMk677gwQGsi",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "3SmsSqJZvkXsinJUcEQK8ys2kSyDf32bMqmkGLXgFFxobd4qEG79eJ35CzV3wbst1GDC28mpPT6Rptc6S4LQQ8J7",
+      "solscan": "https://solscan.io/tx/3SmsSqJZvkXsinJUcEQK8ys2kSyDf32bMqmkGLXgFFxobd4qEG79eJ35CzV3wbst1GDC28mpPT6Rptc6S4LQQ8J7"
+    },
+    {
+      "wallet": "21BgRJNLCvpQximq33Q2XiXiTBkMGdshRJp5c5mz77os",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "48fgc5cDChGJJDEuLQPNWyiP5jdTmPUZtPUS3tKZQQyz7mDxBHjLWJGSSxV2wdcu1iYhQnjUDa7rgPbnyb58NMaC",
+      "solscan": "https://solscan.io/tx/48fgc5cDChGJJDEuLQPNWyiP5jdTmPUZtPUS3tKZQQyz7mDxBHjLWJGSSxV2wdcu1iYhQnjUDa7rgPbnyb58NMaC"
+    },
+    {
+      "wallet": "DJwK6keJYc8EZdSTySCjXBFN2QbWN6Xaf8iKiGWSckbh",
+      "tier": "Gold",
+      "amount": 125000,
+      "status": "success",
+      "signature": "4pymy1D3kPhukcP46q383jWKcCoRW7PLmXgUrXj6NdEac3yz5AGEMF6kZAkQQTknVBGUTba5gMfiknx4ousUbzHj",
+      "solscan": "https://solscan.io/tx/4pymy1D3kPhukcP46q383jWKcCoRW7PLmXgUrXj6NdEac3yz5AGEMF6kZAkQQTknVBGUTba5gMfiknx4ousUbzHj"
+    },
+    {
+      "wallet": "2XipXuKRtwgiV9ZYRg9t485Xw4jH9pTZ6pWJdqYWR6xB",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "3WAwc4LzzwHPfDA2MBWzmbYbtFubSSfFn8ARtkYUUFwvbhAUTJwx637QY6w6RkHpgSFfrNmCY2A7msc5A9kLj7K2",
+      "solscan": "https://solscan.io/tx/3WAwc4LzzwHPfDA2MBWzmbYbtFubSSfFn8ARtkYUUFwvbhAUTJwx637QY6w6RkHpgSFfrNmCY2A7msc5A9kLj7K2"
+    },
+    {
+      "wallet": "4vpq2KYHw9L1xZQSZddUWFYTrssYaup1ZAUH7JDjyhDa",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "N5pmwheGWidHjzqG3iQ1ZSE4nhYKKYbJhMyoxB1QjqTWf7wGomZE9f3hj3v5eVD9vjff21z3rAZK5355gPJgBga",
+      "solscan": "https://solscan.io/tx/N5pmwheGWidHjzqG3iQ1ZSE4nhYKKYbJhMyoxB1QjqTWf7wGomZE9f3hj3v5eVD9vjff21z3rAZK5355gPJgBga"
+    },
+    {
+      "wallet": "GUc6q8eyBbppMa7qdNzCUDeVVqzEcqr33QvuZ63QfMQJ",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "41tUFkorQ7Ee3rsnkTSKFJMt7ijVhYyDXMxW7XJnB6jjYQesXgnqzha8oyGugi7n8gtJhMLzQUDBiZWrRKgVUp3Z",
+      "solscan": "https://solscan.io/tx/41tUFkorQ7Ee3rsnkTSKFJMt7ijVhYyDXMxW7XJnB6jjYQesXgnqzha8oyGugi7n8gtJhMLzQUDBiZWrRKgVUp3Z"
+    },
+    {
+      "wallet": "5q7xgZuVPz7Jfip1L6sGgiSzTwxDpLQPzijzMmHeFRU4",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2UuBuAkCNaPkdwWoESqoCGiCeZ4WeX8pHypYsTvDe3QL5bmxYTH8CmZ6B1FwH5QcXZFGphDKQFkaXbLGpNx1idG4",
+      "solscan": "https://solscan.io/tx/2UuBuAkCNaPkdwWoESqoCGiCeZ4WeX8pHypYsTvDe3QL5bmxYTH8CmZ6B1FwH5QcXZFGphDKQFkaXbLGpNx1idG4"
+    },
+    {
+      "wallet": "H3XibQLNUhxzCfCSuXLDk91C4syvvVxu1BM4VpjzbT25",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2quJ13zupZa7JwtaR9UuWt66VTwtKrNsyELH2nd1kXzpag2jvRi46YCHwXSFfV9rg978x5TLb5RYJJn74Wys6di5",
+      "solscan": "https://solscan.io/tx/2quJ13zupZa7JwtaR9UuWt66VTwtKrNsyELH2nd1kXzpag2jvRi46YCHwXSFfV9rg978x5TLb5RYJJn74Wys6di5"
+    },
+    {
+      "wallet": "7v24h67inspXXHkwUf96937WK3oJfXAFtDDsk7DEsbK4",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "4yyYornz7jtmB6Vx5pG4KxYX6WirZfEEoXomwqDD82KDEVH2njzYWkBNKyiFVYznakrHQEeNqYyMGWFRFfEydR4t",
+      "solscan": "https://solscan.io/tx/4yyYornz7jtmB6Vx5pG4KxYX6WirZfEEoXomwqDD82KDEVH2njzYWkBNKyiFVYznakrHQEeNqYyMGWFRFfEydR4t"
+    },
+    {
+      "wallet": "BzK9pyjGhvSDcqWHRBt5P52Eh3sEWkrAhKT24gYRUp2C",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2JF9VWPc8BdQyxJnR57PnCTR33xbVcfXynMDq5EKLzq9XDtbY7C8km1CmryMEmk1rD7TA9WMrAAXpAdVZBJE2BVv",
+      "solscan": "https://solscan.io/tx/2JF9VWPc8BdQyxJnR57PnCTR33xbVcfXynMDq5EKLzq9XDtbY7C8km1CmryMEmk1rD7TA9WMrAAXpAdVZBJE2BVv"
+    },
+    {
+      "wallet": "HcHud5ttvTkT4H3RSHQ2D8GCDd6ar5zB94mPz8pekMba",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2AaCuvoVzx7BYhfBsDj3YYaHTWUTR7x6LXYKsJEzVPnHMwXq8h4CGBKjtJf3WMC9zRpF37Zx7scFDUWtSbQ23UeQ",
+      "solscan": "https://solscan.io/tx/2AaCuvoVzx7BYhfBsDj3YYaHTWUTR7x6LXYKsJEzVPnHMwXq8h4CGBKjtJf3WMC9zRpF37Zx7scFDUWtSbQ23UeQ"
+    },
+    {
+      "wallet": "GtYdoFGojHz54RXaWw3LQkjF89tdjjETfHv8kW4LRPaH",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2ACSfKEFyMbiyeXYUNHz937hrWPrBMGstvU771Z9HEgRio23Jrtj2hZQ5dedpTPKZY9HhZae4ciMjySuRM7LTZaD",
+      "solscan": "https://solscan.io/tx/2ACSfKEFyMbiyeXYUNHz937hrWPrBMGstvU771Z9HEgRio23Jrtj2hZQ5dedpTPKZY9HhZae4ciMjySuRM7LTZaD"
+    },
+    {
+      "wallet": "ARzPMLivPH9GsRnwZWymXcPJX9Br1oEH5od3WzoKmX5Y",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "4Cod3i7WgSEfmP8xk8ZxGZVQt7iDPUaMwan5kTQ7BDMbn1eG8uSZytYrosk8WEVcuFG19VVETkS3NnPfbabo3YzP",
+      "solscan": "https://solscan.io/tx/4Cod3i7WgSEfmP8xk8ZxGZVQt7iDPUaMwan5kTQ7BDMbn1eG8uSZytYrosk8WEVcuFG19VVETkS3NnPfbabo3YzP"
+    },
+    {
+      "wallet": "BZbk5WEKLcbc7SUaS76jCUmhJiLvkNXbYcWrcJ3K1x4W",
+      "tier": "Silver",
+      "amount": 62500,
+      "status": "success",
+      "signature": "2ZXA1HKcJogdBzMtWbhiDKcfSmLFCT84kL5vjw2Mrg3eir3o3Gj1XNHdH99XMyPH5s29Xu1hxVFAu4EZDNqDZuHR",
+      "solscan": "https://solscan.io/tx/2ZXA1HKcJogdBzMtWbhiDKcfSmLFCT84kL5vjw2Mrg3eir3o3Gj1XNHdH99XMyPH5s29Xu1hxVFAu4EZDNqDZuHR"
+    }
+  ]
+}

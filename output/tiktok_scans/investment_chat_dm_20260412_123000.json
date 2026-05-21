@@ -1,0 +1,16 @@
+{"username": "investment_chat_dm",
+ "platform": "tiktok",
+ "scan_time": "2026-04-12T16:30:00Z",
+ "url": "https://www.tiktok.com/@investment_chat_dm",
+ "red_flags_detected": 2,
+ "flag_details": [
+   "DM solicitation in username",
+   "Financial keyword 'investment'"
+ ],
+ "weights_sum": 900,
+ "risk_score": 8,
+ "risk_level": "HIGH",
+ "verification_level": "UNVERIFIED (PATTERN MATCHES)",
+ "note": "Account name contains DM solicitation pattern and financial keyword. Needs active JavaScript rendering for full profile verification.",
+ "scan_method": "name_pattern_analysis_only",
+ "audit_trail": "/workspace/output/tiktok_scans/investment_chat_dm_20260412_123000.json"}

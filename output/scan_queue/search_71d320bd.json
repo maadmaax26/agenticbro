@@ -1,0 +1,9 @@
+{
+  "id": "71d320bd",
+  "search_url": "https://x.com/search?q=\"sent%20you%20a%20DM\"%20airdrop&f=live",
+  "search_query": "\"sent you a DM\" airdrop",
+  "category": "dm_solicitation",
+  "priority": "MEDIUM",
+  "discovered_at": "2026-04-04T18:00:25.476872",
+  "status": "pending_scan"
+}

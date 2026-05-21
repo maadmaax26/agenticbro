@@ -1,0 +1,13 @@
+{
+  "models": {
+    "chat": "ollama/glm-5.1:cloud",
+    "cron": "ollama/qwen3.5:2b",
+    "complex": "ollama/glm-5.1:cloud",
+    "nightly": "ollama/glm-5.1:cloud"
+  },
+  "crons": {
+    "welcome": "ollama/qwen3.5:2b",
+    "buy_energy_boost": "ollama/qwen3.5:2b",
+    "token_reminder": "ollama/qwen3.5:2b"
+  }
+}
