@@ -12,10 +12,10 @@ const PORT = process.env.PORT || 3001;
 
 // Supabase client
 const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  console.error('Missing SUPABASE_URL or SUPABASE_SECRET_API_KEY');
   process.exit(1);
 }
 
