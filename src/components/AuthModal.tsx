@@ -73,6 +73,17 @@ export default function AuthModal({
       const { error: regError } = await registerWithEmail(email, password);
       if (regError) {
         setError(regError);
+      } else {
+        // Fire Google Ads sign-up conversion on successful email registration
+        const conversionFired = sessionStorage.getItem('gads_signup_conversion');
+        if (!conversionFired && typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'conversion', {
+            send_to: 'AW-18179207888/YqbSCI_OoLIcENDlwtxD',
+            value: 1.0,
+            currency: 'USD',
+          });
+          sessionStorage.setItem('gads_signup_conversion', '1');
+        }
       }
     } else {
       const { error: loginError } = await loginWithEmail(email, password);
