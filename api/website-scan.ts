@@ -493,8 +493,12 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
   // ─── Deep Payment Method Analysis ──────────────────────────────────────
   const paymentAnalysis = analyzePaymentMethods(html, domain);
   
-  // Flag risky payment methods found on the page
+  // Flag risky payment methods found on the page — skip crypto methods on known crypto/legitimate domains
+  const cryptoMethods = ['bitcoin', 'ethereum', 'cryptocurrency', 'crypto', 'usdt', 'usdc', 'tether'];
   for (const method of paymentAnalysis.riskyMethods) {
+    // Skip crypto-related payment methods on legitimate crypto domains
+    if (isLegit && cryptoMethods.includes(method)) continue;
+    
     const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const
       : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const
       : 'MEDIUM' as const;
@@ -1162,6 +1166,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const domain = extractDomain(validUrl);
   const isLegit = isLegitimateDomain(domain);
+
+  // ─── Early return for known legitimate domains ─────────────────────────
+  if (isLegit) {
+    return res.status(200).json({
+      success: true,
+      url: validUrl,
+      domain,
+      riskScore: 0,
+      riskLevel: 'LOW',
+      threats: [],
+      scamIndicators: [],
+      recommendations: ['✅ Known legitimate domain', '🔐 Still verify the URL is correct'],
+      legitimate: true,
+      scanDate: new Date().toISOString(),
+      scanCategory: domain.includes('fifa') || domain.includes('ticket') ? 'ticket' : 'general',
+    });
+  }
+
   const threats: ThreatDetection[] = [];
   let reputation: ReputationResult[] | undefined;
   let webSearchResults: SearchResult[] | undefined;
@@ -1236,8 +1258,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ─── Domain Age Threat Assessment ──────────────────────────────────────
   const domainInfo: DomainInfo = domainInfoResult.status === 'fulfilled' ? domainInfoResult.value : {};
   
-  // Flag newly registered domains (less than 180 days)
-  if (domainInfo.isNewDomain) {
+  // Flag newly registered domains (less than 180 days) — skip for known legitimate domains
+  if (domainInfo.isNewDomain && !isLegit) {
     threats.push({
       type: 'newly_registered_domain',
       severity: 'HIGH',
@@ -1246,8 +1268,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       weight: 20,
     });
   }
-  // Flag domains less than 1 year old
-  if (domainInfo.domainAgeDays && domainInfo.domainAgeDays >= 180 && domainInfo.domainAgeDays < 365) {
+  // Flag domains less than 1 year old — skip for known legitimate domains
+  if (!isLegit && domainInfo.domainAgeDays && domainInfo.domainAgeDays >= 180 && domainInfo.domainAgeDays < 365) {
     threats.push({
       type: 'newly_registered_domain',
       severity: 'MEDIUM',
@@ -1263,8 +1285,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Determine scan category for frontend
   const hasTicketKeywords = threats.some(t => 
-    ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce', 'risky_payment_method', 'no_safe_payment', 'newly_registered_domain'].includes(t.type)
-  );
+    ['fake_event_ticket', 'ticket_urgency', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce'].includes(t.type)
+  ) && !isLegit;
   const hasCasinoKeywords = threats.some(t =>
     ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type)
   );
