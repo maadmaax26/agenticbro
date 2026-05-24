@@ -1,61 +1,94 @@
-GNU GENERAL PUBLIC LICENSE
-Version 3, 29 June 2007
+Business Source License 1.1
 
-Copyright (c) 2026 Agentic Bro
+License text copyright (c) 2026 Agentic Bro
+License terms copyright (c) 2026 Agentic Bro
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make non-commercial use of the Licensed Work. The
+Licensor further grants you the right to make commercial use of the Licensed
+Work only under the following conditions:
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+1. Change Date: 2029-05-24
+2. Change License: Apache License, Version 2.0
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+Conditions:
+
+You may not use the Licensed Work to operate a competing scam detection,
+risk scoring, or crypto security service. Specifically, you may not:
+
+  a) Use the Licensed Work, or any derivative, to offer a commercial scam
+     detection, fraud screening, or crypto risk scoring product or service
+     that competes with Agentic Bro, Jeeevs, or any product offered by
+     the Licensor at the time of this License.
+
+  b) Use the Licensed Work, or any derivative, in a commercial product or
+     service that provides automated social media scanning, phone number
+     risk assessment, or website security analysis for cryptocurrency or
+     blockchain users, without a separate commercial license from the
+     Licensor.
+
+  c) SaaS or hosted use of the Licensed Work that serves end-users for
+     scam detection, fraud prevention, or crypto security purposes requires
+     a separate commercial license.
+
+For all other commercial uses not described above, contact the Licensor at
+hello@autonomousalpha.io for licensing terms.
+
+Until the Change Date, the Licensed Work is provided under the terms of this
+Business Source License. On or after the Change Date, this License will
+automatically convert to the Apache License, Version 2.0, at which point you
+may use the Licensed Work under the terms of that license.
+
+This License does not grant any patent rights or trademark rights.
 
 ================================================================================
 
-AGENTIC BRO - ADDITIONAL TERMS
+AGENTIC BRO — ADDITIONAL TERMS
 
-1. COMMERCIAL USE
-   Commercial use of this software requires written permission from
-   the copyright holder. Contact team@agenticbro.app for licensing
-   inquiries.
-
-2. ATTRIBUTION
-   Any use of this software must include clear attribution to Agentic Bro
+1. ATTRIBUTION
+   Any use of the Licensed Work must include clear attribution to Agentic Bro
    with a link to https://agenticbro.app
 
-3. TRADEMARK NOTICE
-   "Agentic Bro", "Jeeevs", and associated logos are trademarks of
-   Agentic Bro and may not be used without permission.
+2. TRADEMARK NOTICE
+   "Agentic Bro", "Jeeevs", "$AGNTCBRO", and associated logos are trademarks
+   of Agentic Bro and may not be used without written permission.
 
-4. PATENT NOTICE
-   This software may implement patented technology. Use of this software
-   does not grant any patent licenses. Contact us for patent licensing.
+3. PATENT NOTICE
+   This software may implement patented or patent-pending technology. Use of
+   this software does not grant any patent licenses. Contact the Licensor for
+   patent licensing inquiries.
+
+4. TRADE SECRET NOTICE
+   Certain components of the Agentic Bro system are not included in this
+   repository and are protected as trade secrets, including but not limited
+   to: scoring algorithm weights, scammer databases, prompt engineering
+   configurations, and operational intelligence. These components are
+   explicitly excluded from this License and may not be reverse-engineered,
+   extracted, or reconstructed from the Licensed Work.
 
 ================================================================================
 
 SUMMARY (NOT LEGAL ADVICE)
 
 What you CAN do:
-- Use the software for personal and non-commercial purposes
-- Study and modify the source code
-- Distribute copies to others
-- Contribute improvements back to the project
+  ✅ Use the software for personal, educational, or research purposes
+  ✅ Study, modify, and create derivative works
+  ✅ Use in non-competing commercial products (with attribution)
+  ✅ Contribute improvements back to the project
 
-What you CANNOT do:
-- Use it commercially without permission
-- Create closed-source derivatives
-- Remove copyright or license notices
-- Use the Agentic Bro name/brand without permission
+What you CANNOT do (without a commercial license):
+  ❌ Operate a competing scam detection or crypto security service
+  ❌ Offer SaaS/hosted scam detection using this code
+  ❌ Use in commercial fraud screening products for crypto/blockchain users
+  ❌ Use the Agentic Bro name, Jeeevs brand, or logos without permission
+  ❌ Reverse-engineer or extract trade-secret components
 
-For commercial licensing inquiries: hello@autonomousalpha.io
+After 2029-05-24, this license converts to Apache 2.0 (permissive).
+
+For commercial licensing: hello@autonomousalpha.io
+For trademark inquiries: hello@autonomousalpha.io
 
 ================================================================================
 
-For the full GNU GPL v3 license text, see:
-https://www.gnu.org/licenses/gpl-3.0.txt
+Licensed Work: Agentic Bro — AI-Powered Scam Detection Platform
+Copyright (c) 2026 Agentic Bro. All rights reserved.
