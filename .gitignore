@@ -1,5 +1,56 @@
-# Logs
-logs
+# ============================================================
+# Agentic Bro — .gitignore
+# ============================================================
+
+# ── Trade Secrets (NEVER commit) ─────────────────────────────
+# These contain proprietary scoring weights, operational intel,
+# scammer data, and agent configurations that are trade secrets.
+
+# Agent configuration & personality (trade secret)
+AGENTS.md
+SOUL.md
+IDENTITY.md
+MEMORY.md
+memory/
+BOOT.md
+HEARTBEAT.md
+
+# Scammer database (trade secret — curated intelligence)
+scammer-database.csv
+scammer-database.csv.backup
+scammer-database.csv.bak
+api/scammer-database.json
+server/data/scammer-database.csv
+
+# Scoring engine (trade secret — weights & thresholds)
+scam-detection-framework/unified_scoring.py
+scam-detection-framework/
+
+# Scanning scripts (trade secret — operational logic)
+scripts/
+scan_x_profile.sh
+
+# Solana RPC load balancer (contains API keys)
+scripts/solana-rpc.sh
+
+# ── Environment & Secrets (NEVER commit) ─────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+.token-replacements.txt
+.keychain-env.sh
+
+# ── Build & Dependencies ──────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+build/
+.vercel/
+.next/
+
+# ── Logs & Runtime Data ────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,40 +58,50 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ── OS & Editor ───────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Environment variables
-.env
-.env.local
-.env.production
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDEs
-.vscode/
-.idea/
 *.swp
 *.swo
 
-# Build
-dist/
-build/
-.vercel
-.env*.local
-.token-replacements.txt
+# ── Data & Output Files ───────────────────────────────────────
+output/
+reports/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig*.json
+!next.config.*
+!tailwind.config.*
+!postcss.config.*
+!vite.config.*
+!components.json
+
+# ── Virtual Environments ──────────────────────────────────────
+.venv/
+.venv-integrity/
+
+# ── Media & Audio ─────────────────────────────────────────────
+*.mp3
+*.wav
+*.mp4
+
+# ── Scratch & Temporary ───────────────────────────────────────
+*.tmp
+*.bak
+*.backup
+SESSION_STATE.json
+batch-welcome-state.json
+member-welcome-state.json
+
+# ── OpenClaw Internal ─────────────────────────────────────────
+.openclaw/
+.claude/
