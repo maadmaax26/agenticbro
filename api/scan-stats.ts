@@ -36,25 +36,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const key = supabaseServiceKey || supabaseAnonKey;
   const supabase = supabaseUrl && key ? createClient(supabaseUrl, key) : null;
 
-  // Debug: check env vars (remove after fixing)
-  if (req.url?.includes('debug=1')) {
-    res.status(200).json({
-      hasUrl: !!supabaseUrl,
-      hasKey: !!key,
-      hasServiceKey: !!supabaseServiceKey,
-      hasAnonKey: !!supabaseAnonKey,
-      urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) : null,
-      keyPrefix: key ? key.substring(0, 10) : null,
-    });
-    return;
-  }
+
+
 
   if (!supabase) {
     res.status(200).json({ error: 'Supabase not configured', stats: getEmptyStats() });
     return;
   }
 
-  console.log('[scan-stats] Supabase client created, url:', supabaseUrl?.substring(0, 30), 'method:', req.method);
+
 
   // ── POST: Record a scan event ──────────────────────────────────────────
   if (req.method === 'POST') {
@@ -116,7 +106,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
       if (error) {
         console.error('[scan-stats] get_scan_trends error:', error);
-        res.status(200).json({ trends: [], error: 'RPC not available' });
+        // Fallback: query scan_events directly
+        const { data: eventsData, error: eventsErr } = await supabase
+          .from('scan_events')
+          .select('scan_type, platform, created_at, risk_score, risk_level')
+          .gte('created_at', new Date(Date.now() - days * 86400000).toISOString())
+          .order('created_at', { ascending: true });
+
+        if (!eventsErr && eventsData) {
+          // Aggregate by day
+          const dayMap: Record<string, any> = {};
+          eventsData.forEach((e: any) => {
+            const date = (e.created_at || '').split('T')[0];
+            if (!dayMap[date]) dayMap[date] = { stat_date: date, total_scans: 0, social_scans: 0, phone_scans: 0, website_scans: 0, token_scans: 0, wallet_scans: 0, x_cdp_scans: 0, high_risk_total: 0, critical_total: 0 };
+            const d = dayMap[date];
+            d.total_scans++;
+            const t = (e.scan_type || 'social').toLowerCase();
+            if (t === 'social') d.social_scans++;
+            else if (t === 'phone') d.phone_scans++;
+            else if (t === 'website') d.website_scans++;
+            else if (t === 'token') d.token_scans++;
+            else if (t === 'wallet') d.wallet_scans++;
+            else if (t === 'x_cdp') d.x_cdp_scans++;
+            const rl = String(e.risk_level || '').toUpperCase();
+            if (['HIGH', 'HIGH RISK', 'CRITICAL'].includes(rl)) d.high_risk_total++;
+            if (rl === 'CRITICAL') d.critical_total++;
+          });
+          res.status(200).json({ period: `${days}d`, trends: Object.values(dayMap) });
+          return;
+        }
+
+        // Fallback 2: scan_results
+        const { data: resultsData, error: resultsErr } = await supabase
+          .from('scan_results')
+          .select('platform, risk_score, risk_level, scanned_at')
+          .gte('scanned_at', new Date(Date.now() - days * 86400000).toISOString())
+          .order('scanned_at', { ascending: true });
+
+        if (resultsErr) {
+          res.status(200).json({ trends: [], error: 'No data source available' });
+          return;
+        }
+        const dayMap2: Record<string, any> = {};
+        (resultsData || []).forEach((r: any) => {
+          const date = (r.scanned_at || '').split('T')[0];
+          if (!dayMap2[date]) dayMap2[date] = { stat_date: date, total_scans: 0, social_scans: 0, phone_scans: 0, website_scans: 0, token_scans: 0, wallet_scans: 0, x_cdp_scans: 0, high_risk_total: 0, critical_total: 0 };
+          dayMap2[date].total_scans++;
+          dayMap2[date].social_scans++;
+          const rl = String(r.risk_level || '').toUpperCase();
+          if (['HIGH', 'HIGH RISK', 'CRITICAL'].includes(rl)) dayMap2[date].high_risk_total++;
+          if (rl === 'CRITICAL') dayMap2[date].critical_total++;
+        });
+        res.status(200).json({ period: `${days}d`, trends: Object.values(dayMap2) });
         return;
       }
 
@@ -135,36 +176,113 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (error) {
       console.error('[scan-stats] get_scan_analytics error:', JSON.stringify(error));
-      // Fallback: query scan_results directly
-      const { data: recentScans, error: scanError } = await supabase
-        .from('scan_results')
-        .select('platform, scan_type, risk_score, risk_level, scanned_at, data_source')
-        .gte('scanned_at', new Date(Date.now() - days * 86400000).toISOString())
-        .order('scanned_at', { ascending: false });
+      // Fallback 1: try scan_events table (migration 002)
+      let scans: any[] = [];
+      let fallbackSource = 'fallback';
 
-      if (scanError) {
-        console.error('[scan-stats] fallback scan_results error:', JSON.stringify(scanError));
-        res.status(200).json({ ...getEmptyStats(), debug_rpc_error: error.message, debug_fallback_error: scanError.message });
-        return;
+      // Try scan_events first (has scan_type column)
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('scan_events')
+        .select('scan_type, platform, risk_score, risk_level, created_at, source')
+        .gte('created_at', new Date(Date.now() - days * 86400000).toISOString())
+        .order('created_at', { ascending: false });
+
+      if (!eventsError && eventsData && eventsData.length > 0) {
+        scans = eventsData;
+        fallbackSource = 'scan_events';
+      } else {
+        // Fallback 2: scan_results (may not have scan_type column)
+        const { data: resultsData, error: resultsError } = await supabase
+          .from('scan_results')
+          .select('platform, risk_score, risk_level, scanned_at, data_source')
+          .gte('scanned_at', new Date(Date.now() - days * 86400000).toISOString())
+          .order('scanned_at', { ascending: false });
+
+        if (resultsError) {
+          console.error('[scan-stats] all fallbacks failed:', JSON.stringify(resultsError));
+          res.status(200).json({ ...getEmptyStats() });
+          return;
+        }
+        scans = (resultsData || []).map((s: any) => ({ ...s, scan_type: 'social' }));
+        fallbackSource = 'scan_results';
       }
 
-      // Build stats from raw data
-      const scans = recentScans || [];
-      const byType: Record<string, number> = {};
-      const byPlatform: Record<string, number> = {};
+      // Build analytics from raw data
+      const totalScans = scans.length;
+      const totalHighRisk = scans.filter((s: any) => ['HIGH', 'HIGH RISK', 'CRITICAL'].includes(String(s.risk_level || '').toUpperCase())).length;
+      const totalCritical = scans.filter((s: any) => String((s.risk_level || '')).toUpperCase() === 'CRITICAL').length;
+      const avgRisk = totalScans > 0 ? scans.reduce((sum: number, s: any) => sum + (Number(s.risk_score) || 0), 0) / totalScans : 0;
 
-      scans.forEach(s => {
+      const byType: Record<string, any> = {};
+      const byPlatform: Record<string, any> = {};
+      const dailyMap: Record<string, { date: string; count: number; high_risk: number; critical: number; total_risk: number }> = {};
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      let todayCount = 0, yesterdayCount = 0, last7d = 0, last30d = 0;
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString();
+      const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+      let thisWeekCount = 0, lastWeekCount = 0;
+
+      scans.forEach((s: any) => {
         const type = s.scan_type || 'social';
-        byType[type] = (byType[type] || 0) + 1;
-        byPlatform[s.platform] = (byPlatform[s.platform] || 0) + 1;
+        const platform = (s.platform || 'unknown').toLowerCase();
+        const isHighRisk = ['HIGH', 'HIGH RISK', 'CRITICAL'].includes(String(s.risk_level || '').toUpperCase());
+        const isCritical = String((s.risk_level || '')).toUpperCase() === 'CRITICAL';
+        const dateStr = (s.created_at || s.scanned_at || '').split('T')[0];
+
+        // By type
+        if (!byType[type]) byType[type] = { count: 0, high_risk: 0, critical: 0, avg_risk: 0 };
+        byType[type].count++;
+        if (isHighRisk) byType[type].high_risk++;
+        if (isCritical) byType[type].critical++;
+        byType[type].avg_risk = ((byType[type].avg_risk * (byType[type].count - 1)) + (Number(s.risk_score) || 0)) / byType[type].count;
+
+        // By platform
+        if (!byPlatform[platform]) byPlatform[platform] = { count: 0, high_risk: 0, critical: 0, avg_risk: 0 };
+        byPlatform[platform].count++;
+        if (isHighRisk) byPlatform[platform].high_risk++;
+        if (isCritical) byPlatform[platform].critical++;
+        byPlatform[platform].avg_risk = ((byPlatform[platform].avg_risk * (byPlatform[platform].count - 1)) + (Number(s.risk_score) || 0)) / byPlatform[platform].count;
+
+        // Daily map
+        if (dateStr) {
+          if (!dailyMap[dateStr]) dailyMap[dateStr] = { date: dateStr, count: 0, high_risk: 0, critical: 0, total_risk: 0 };
+          dailyMap[dateStr].count++;
+          if (isHighRisk) dailyMap[dateStr].high_risk++;
+          if (isCritical) dailyMap[dateStr].critical++;
+          dailyMap[dateStr].total_risk += Number(s.risk_score) || 0;
+        }
+
+        // Growth counts
+        const ts = s.created_at || s.scanned_at || '';
+        if (dateStr === today) todayCount++;
+        if (dateStr === yesterday) yesterdayCount++;
+        if (ts >= monthAgo) last30d++;
+        if (ts >= weekAgo) { last7d++; thisWeekCount++; }
+        if (ts >= twoWeeksAgo && ts < weekAgo) lastWeekCount++;
       });
 
+      const growthPercent = lastWeekCount > 0 ? Math.round(((thisWeekCount - lastWeekCount) / lastWeekCount) * 100 * 10) / 10 : null;
+
       res.status(200).json({
-        total_scans: scans.length,
+        total_scans: totalScans,
+        total_high_risk: totalHighRisk,
+        total_critical: totalCritical,
+        avg_risk_score: Math.round(avgRisk * 10) / 10,
+        unique_days: Object.keys(dailyMap).length,
         by_type: byType,
         by_platform: byPlatform,
+        daily: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)),
+        growth: {
+          today: todayCount,
+          yesterday: yesterdayCount,
+          last_7d: last7d,
+          last_30d: last30d,
+          this_week_vs_last_week: growthPercent,
+        },
         period: `${days}d`,
-        source: 'fallback',
+        source: fallbackSource,
       });
       return;
     }
