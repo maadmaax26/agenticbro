@@ -30,10 +30,10 @@ interface WebsiteScanResult {
   recommendations: string[];
   reputation?: { source: string; verdict: string; details?: string }[];
   scanDate: string;
-  scanCategory?: 'general' | 'ticket';
+  scanCategory?: 'general' | 'ticket' | 'crypto_casino';
 }
 
-type ScanMode = 'general' | 'ticket';
+type ScanMode = 'general' | 'ticket' | 'crypto_casino';
 
 export default function WebsiteSecurityScanner() {
   const [url, setUrl] = useState('');
@@ -45,6 +45,9 @@ export default function WebsiteSecurityScanner() {
   const getPlaceholder = () => {
     if (scanMode === 'ticket') {
       return 'https://fifa2026tickets.com or any ticket site';
+    }
+    if (scanMode === 'crypto_casino') {
+      return 'https://fake-crypto-casino.com or any casino site';
     }
     return 'https://suspicious-site.com';
   };
@@ -98,7 +101,9 @@ export default function WebsiteSecurityScanner() {
   };
 
   const isTicketRelated = result?.scanCategory === 'ticket' || 
-    result?.threats.some(t => ['fake_event_ticket', 'fifa_impersonation', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'no_seller_info', 'recent_domain_ticket'].includes(t.type));
+    result?.threats.some(t => ['fake_event_ticket', 'fifa_impersonation', 'ticket_urgency', 'ticket_scam_method', 'no_seller_info', 'recent_domain_ticket'].includes(t.type));
+  const isCasinoRelated = result?.scanCategory === 'crypto_casino' ||
+    result?.threats.some(t => ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type));
 
   return (
     <div className="space-y-6">
@@ -108,21 +113,27 @@ export default function WebsiteSecurityScanner() {
         style={{
           background: scanMode === 'ticket' 
             ? 'rgba(234,179,8,0.05)' 
+            : scanMode === 'crypto_casino'
+            ? 'rgba(239,68,68,0.05)'
             : 'rgba(139,92,246,0.05)',
           border: scanMode === 'ticket'
             ? '1px solid rgba(234,179,8,0.3)'
+            : scanMode === 'crypto_casino'
+            ? '1px solid rgba(239,68,68,0.3)'
             : '1px solid rgba(139,92,246,0.15)',
         }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">{scanMode === 'ticket' ? '🎫' : '🌐'}</span>
+          <span className="text-2xl">{scanMode === 'ticket' ? '🎫' : scanMode === 'crypto_casino' ? '🎰' : '🌐'}</span>
           <div>
             <h2 className="text-xl font-bold text-white">
-              {scanMode === 'ticket' ? 'Event Ticket Scam Scanner' : 'Website Security Scanner'}
+              {scanMode === 'ticket' ? 'Event Ticket Scam Scanner' : scanMode === 'crypto_casino' ? 'Crypto Casino Scanner' : 'Website Security Scanner'}
             </h2>
             <p className="text-sm text-gray-400">
               {scanMode === 'ticket' 
                 ? 'Detect fake World Cup 2026 tickets, FIFA impersonation & ticket fraud'
+                : scanMode === 'crypto_casino'
+                ? 'Detect fake/unlicensed crypto casinos, withdrawal traps & rigged games'
                 : 'Detect wallet drainers, fake airdrops & phishing sites'}
             </p>
           </div>
@@ -141,6 +152,16 @@ export default function WebsiteSecurityScanner() {
             🌐 General Scan
           </button>
           <button
+            onClick={() => setScanMode('crypto_casino')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              scanMode === 'crypto_casino'
+                ? 'bg-red-500/30 text-red-300 border border-red-500/40'
+                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-gray-700/50'
+            }`}
+          >
+            🎰 Casino Scan
+          </button>
+          <button
             onClick={() => setScanMode('ticket')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               scanMode === 'ticket'
@@ -151,6 +172,24 @@ export default function WebsiteSecurityScanner() {
             🎫 Ticket Scan
           </button>
         </div>
+
+        {/* Casino Warning */}
+        {scanMode === 'crypto_casino' && (
+          <div
+            className="mb-4 p-3 rounded-lg"
+            style={{
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.2)',
+            }}
+          >
+            <p className="text-sm text-red-300 font-semibold">🎰 Crypto Casino Warning</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Many crypto casinos are unlicensed, rigged, or refuse withdrawals. 
+              Verify licensing (Curacao, Malta, UK) before depositing. 
+              Never deposit more than you can afford to lose.
+            </p>
+          </div>
+        )}
 
         {/* World Cup 2026 Notice */}
         {scanMode === 'ticket' && (
@@ -174,7 +213,7 @@ export default function WebsiteSecurityScanner() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-300 mb-2">
-              {scanMode === 'ticket' ? '🎫 Ticket Website URL' : '🌐 Website URL'}
+              {scanMode === 'ticket' ? '🎫 Ticket Website URL' : scanMode === 'crypto_casino' ? '🎰 Casino Website URL' : '🌐 Website URL'}
             </label>
             <div className="flex gap-2">
               <input
@@ -197,13 +236,17 @@ export default function WebsiteSecurityScanner() {
             style={{
               background: scanMode === 'ticket'
                 ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'
+                : scanMode === 'crypto_casino'
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
                 : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
               boxShadow: scanMode === 'ticket'
                 ? '0 4px 15px rgba(234,179,8,0.3)'
+                : scanMode === 'crypto_casino'
+                ? '0 4px 15px rgba(239,68,68,0.3)'
                 : '0 4px 15px rgba(139,92,246,0.3)',
             }}
           >
-            {scanning ? '🔍 Scanning...' : scanMode === 'ticket' ? '🎫 Scan for Ticket Scams' : '🔒 Scan Website'}
+            {scanning ? '🔍 Scanning...' : scanMode === 'ticket' ? '🎫 Scan for Ticket Scams' : scanMode === 'crypto_casino' ? '🎰 Scan Casino' : '🔒 Scan Website'}
           </button>
         </div>
 
@@ -233,8 +276,11 @@ export default function WebsiteSecurityScanner() {
           >
             <div className="space-y-3">
               <p className="text-sm text-gray-400">
-                {isTicketRelated ? '🎫' : '🌐'} Domain: {result.domain}
-                {isTicketRelated && (
+                {isCasinoRelated ? '🎰' : isTicketRelated ? '🎫' : '🌐'} Domain: {result.domain}
+                {isCasinoRelated && (
+                  <span className="ml-2 text-red-300 font-semibold">— CRYPTO CASINO SCAN</span>
+                )}
+                {isTicketRelated && !isCasinoRelated && (
                   <span className="ml-2 text-yellow-300 font-semibold">— EVENT TICKET SCAN</span>
                 )}
               </p>
@@ -256,8 +302,28 @@ export default function WebsiteSecurityScanner() {
             </div>
           </div>
 
+          {/* Casino Warning for casino scams */}
+          {isCasinoRelated && result.riskLevel !== 'LOW' && (
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+              }}
+            >
+              <p className="text-sm font-semibold text-red-300">🎰 Crypto Casino — Safety Warning</p>
+              <ul className="mt-2 space-y-1 text-xs text-gray-300">
+                <li>• Unlicensed crypto casinos often refuse withdrawals</li>
+                <li>• "Wagering requirements" trap deposits — you must bet 30-100x before withdrawing</li>
+                <li>• NEVER deposit more than you can afford to lose entirely</li>
+                <li>• Verify licensing: Curacao, Malta Gaming Authority, UK Gambling Commission</li>
+                <li>• Check reputation: askgamblers.com, casinomeister.com</li>
+              </ul>
+            </div>
+          )}
+
           {/* FIFA Warning for ticket scams */}
-          {isTicketRelated && result.riskLevel !== 'LOW' && (
+          {isTicketRelated && !isCasinoRelated && result.riskLevel !== 'LOW' && (
             <div
               className="rounded-xl p-4"
               style={{
@@ -487,7 +553,8 @@ export default function WebsiteSecurityScanner() {
           >
             <p className="text-xs text-gray-400 leading-relaxed">
               📋 <span className="text-yellow-400 font-semibold">Disclaimer:</span> Educational purposes only. Not a guarantee of safety. Always verify URLs and never share seed phrases or private keys.
-              {isTicketRelated && ' For World Cup 2026 tickets, buy ONLY from FIFA.com/tickets.'}
+              {isCasinoRelated && ' Unlicensed casinos may refuse withdrawals. Never deposit more than you can afford to lose.'}
+              {isTicketRelated && !isCasinoRelated && ' For World Cup 2026 tickets, buy ONLY from FIFA.com/tickets.'}
             </p>
           </div>
         </div>
