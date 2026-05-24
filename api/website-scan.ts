@@ -56,7 +56,7 @@ interface WebsiteScanResult {
   deepScanId?: string;
   deepScanPollUrl?: string;
   scanDate: string;
-  scanCategory?: 'general' | 'ticket';
+  scanCategory?: 'general' | 'ticket' | 'crypto_casino';
   domainInfo?: DomainInfo;
   paymentAnalysis?: PaymentAnalysis;
 }
@@ -195,6 +195,42 @@ const EVENT_TICKET_SCAM_KEYWORDS = [
   { pattern: 'pickup only', type: 'ticket_scam_method', weight: 15, severity: 'MEDIUM' as const },
 ];
 
+// ─── Crypto Casino Signatures ────────────────────────────────────────────────────
+
+const CRYPTO_CASINO_KEYWORDS = [
+  // Casino identity
+  { pattern: 'crypto casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'blockchain casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'bitcoin casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'solana casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'online casino', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'live casino', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'crypto slots', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'crypto betting', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'provably fair', type: 'fake_casino', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'house edge', type: 'fake_casino', weight: 10, severity: 'MEDIUM' as const },
+  // Gambling keywords
+  { pattern: 'slot machine', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'slot game', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'crash game', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'plinko', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'crash gambling', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  // Deposit/bonus lures
+  { pattern: 'deposit bonus', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'welcome bonus', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'first deposit', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'free spins', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'no deposit bonus', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'matched deposit', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'vip program', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  // Withdrawal red flags
+  { pattern: 'withdrawal pending', type: 'casino_withhold', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'wagering requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'wager requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'playthrough requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'minimum withdrawal', type: 'casino_withhold', weight: 10, severity: 'MEDIUM' as const },
+];
+
 // ─── FIFA Official Domains (never flag as scam) ───────────────────────────────
 
 const FIFA_OFFICIAL_DOMAINS = [
@@ -320,16 +356,35 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
     }
   }
   
-  // Check event ticket scam keywords (World Cup 2026 & major events)
-  for (const keyword of EVENT_TICKET_SCAM_KEYWORDS) {
+  // Check crypto casino keywords — detect BEFORE ticket patterns
+  let casinoHitCount = 0;
+  for (const keyword of CRYPTO_CASINO_KEYWORDS) {
     if (lowerHtml.includes(keyword.pattern)) {
+      casinoHitCount++;
       threats.push({
         type: keyword.type,
         severity: keyword.severity,
         description: getThreatDescription(keyword.type),
-        evidence: `Ticket scam keyword: "${keyword.pattern}"`,
+        evidence: `Casino keyword: "${keyword.pattern}"`,
         weight: keyword.weight,
       });
+    }
+  }
+
+  // Check event ticket scam keywords — SKIP if casino detected
+  // Fake casinos often trigger ticket patterns ("no refund", "crypto payment only", etc.)
+  const isLikelyCasino = casinoHitCount >= 2;
+  if (!isLikelyCasino) {
+    for (const keyword of EVENT_TICKET_SCAM_KEYWORDS) {
+      if (lowerHtml.includes(keyword.pattern)) {
+        threats.push({
+          type: keyword.type,
+          severity: keyword.severity,
+          description: getThreatDescription(keyword.type),
+          evidence: `Ticket scam keyword: "${keyword.pattern}"`,
+          weight: keyword.weight,
+        });
+      }
     }
   }
   
@@ -364,8 +419,9 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
     });
   }
 
-  // ─── Event Ticket Specific Checks ──────────────────────────────────────
+  // ─── Event Ticket Specific Checks — skip if casino ──────────────────────
 
+  if (!isLikelyCasino) {
   // Check for FIFA impersonation claims (e.g., "official FIFA partner")
   const fifaImpersonationPatterns = [
     { pattern: 'official fifa partner', severity: 'CRITICAL' as const, weight: 30 },
@@ -422,8 +478,8 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
     }
   }
 
-  // Check for recently created domain signal (copyright 2026 + ticket keywords)
-  if (lowerHtml.includes('copyright 2026') && lowerHtml.includes('ticket')) {
+  // Check for recently created domain signal (copyright 2026 + ticket keywords) — skip if casino
+  if (!isLikelyCasino && lowerHtml.includes('copyright 2026') && lowerHtml.includes('ticket')) {
     threats.push({
       type: 'recent_domain_ticket',
       severity: 'HIGH',
@@ -432,6 +488,7 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
       weight: 15,
     });
   }
+  } // end if (!isLikelyCasino) — close ticket-specific checks
 
   // ─── Deep Payment Method Analysis ──────────────────────────────────────
   const paymentAnalysis = analyzePaymentMethods(html, domain);
@@ -520,6 +577,9 @@ function getThreatDescription(type: string): string {
     ticket_urgency: 'High-pressure ticket sales tactics — designed to force rushed decisions',
     suspicious_payment: 'Suspicious payment method — no buyer protection, likely a scam',
     ticket_scam_method: 'Dodgy ticket selling method — high risk of non-delivery',
+    fake_casino: 'Fake or unlicensed crypto casino — high risk of fund theft or rigged games',
+    casino_lure: 'Casino deposit/bonus lure — designed to trap deposits with impossible withdrawal terms',
+    casino_withhold: 'Withdrawal restrictions — scam casinos often block or delay payouts',
     fifa_impersonation: 'FIFA impersonation — only FIFA.com sells official World Cup 2026 tickets',
     ticket_ecommerce: 'Ticket sales page with scam indicators — verify seller is authorized',
     recent_domain_ticket: 'Recently created site selling event tickets — common scam pattern',
@@ -692,8 +752,37 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
   const hasTicketScam = threats.some(t => 
     ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'risky_payment_method', 'no_safe_payment', 'newly_registered_domain'].includes(t.type)
   );
-  
-  // World Cup 2026 ticket-specific recommendations
+  const hasCasinoScam = threats.some(t =>
+    ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type)
+  );
+
+  // Crypto Casino recommendations
+  if (threats.some(t => t.type === 'fake_casino')) {
+    recs.push('🎰 CRITICAL: Fake or unlicensed crypto casino detected');
+    recs.push('❌ These sites often refuse withdrawals or rig games');
+    recs.push('🔐 Do NOT deposit any funds — you may never see them again');
+    recs.push('🔍 Verify licensing: legitimate casinos display gambling licenses (Curacao, Malta, UK)');
+  }
+
+  if (threats.some(t => t.type === 'casino_lure')) {
+    recs.push('⚠️ Deposit/bonus trap — bonus terms are designed to be impossible to fulfill');
+    recs.push('❌ "Deposit bonus" = you must wager 30-100x before ANY withdrawal');
+    recs.push('🔐 Never deposit more than you can afford to lose entirely');
+  }
+
+  if (threats.some(t => t.type === 'casino_withhold')) {
+    recs.push('🚨 Withdrawal restrictions detected — this casino likely blocks cashouts');
+    recs.push('⚠️ "Wagering requirements" mean you must bet your deposit many times over');
+    recs.push('❌ If you deposited, stop immediately — do not chase losses');
+  }
+
+  if (hasCasinoScam) {
+    recs.push('🔗 Report crypto scams: https://reportfraud.ftc.gov');
+    recs.push('🔗 Check casino reputation: https://askgamblers.com');
+  }
+
+  // World Cup 2026 ticket-specific recommendations — skip if casino
+  if (!hasCasinoScam) {
   if (threats.some(t => t.type === 'fifa_impersonation')) {
     recs.push('🚨 CRITICAL: This site claims FIFA authorization — FIFA is the ONLY official seller');
     recs.push('⚽ Buy World Cup 2026 tickets ONLY at FIFA.com/tickets');
@@ -752,7 +841,8 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
     recs.push('❌ All payment methods on this site are irreversible — you cannot get your money back');
     recs.push('🚫 Do NOT proceed with any purchase on this site');
   }
-  
+  } // end if (!hasCasinoScam) — close ticket recommendations
+
   // General recommendations
   if (threats.some(t => t.type === 'regulatory_warning')) {
     recs.push('🚨 CRITICAL: Regulatory warning - known scam/fraud');
@@ -791,8 +881,8 @@ function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, d
     recs.push('🔍 This is suspicious for a legitimate financial site');
   }
   
-  // Add FIFA-specific verification links for any ticket-related threats
-  if (hasTicketScam) {
+  // Add FIFA-specific verification links for any ticket-related threats — skip if casino
+  if (hasTicketScam && !hasCasinoScam) {
     recs.push('🔗 Verify World Cup 2026 tickets: https://www.fifa.com/tickets');
     if (domain) {
       recs.push(`🔗 Check domain age: https://who.is/whois/${domain}`);
@@ -1076,8 +1166,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let reputation: ReputationResult[] | undefined;
   let webSearchResults: SearchResult[] | undefined;
   
-  // Detect if this is a ticket-related domain
-  const isTicketRelated = domain.includes('ticket') || domain.includes('fifa') || domain.includes('worldcup') || domain.includes('wc2026') || domain.includes('worldcup2026') || domain.includes('fifa2026') || domain.includes('hospitality');
+  // Detect if this is a ticket-related or casino-related domain
+  const isTicketRelated = !domain.includes('casino') && !domain.includes('bet') && !domain.includes('slot') && (domain.includes('ticket') || domain.includes('fifa') || domain.includes('worldcup') || domain.includes('wc2026') || domain.includes('worldcup2026') || domain.includes('fifa2026') || domain.includes('hospitality'));
   
   // ALWAYS check known scam domains FIRST (even if fetch fails later)
   const knownScamThreat = checkKnownScamDomain(domain);
@@ -1175,7 +1265,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const hasTicketKeywords = threats.some(t => 
     ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket', 'ticket_ecommerce', 'risky_payment_method', 'no_safe_payment', 'newly_registered_domain'].includes(t.type)
   );
-  const scanCategory: 'general' | 'ticket' = hasTicketKeywords || isTicketRelated ? 'ticket' : 'general';
+  const hasCasinoKeywords = threats.some(t =>
+    ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type)
+  );
+  let scanCategory: 'general' | 'ticket' | 'crypto_casino' = 'general';
+  if (hasCasinoKeywords || domain.includes('casino') || domain.includes('bet') || domain.includes('slot')) scanCategory = 'crypto_casino';
+  else if (hasTicketKeywords || isTicketRelated) scanCategory = 'ticket';
   
   // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
   let deepScanId: string | undefined;
