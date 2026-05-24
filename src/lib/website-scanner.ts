@@ -8,6 +8,7 @@
  * - Seed phrase harvesting
  * - Private key theft attempts
  * - Malicious contract interactions
+ * - Fake crypto casinos (unlicensed, withdrawal traps, rigged games)
  * - Fake event ticket scams (World Cup 2026, major sporting events)
  */
 
@@ -20,7 +21,7 @@ export interface WebsiteScanResult {
   threats: ThreatDetection[];
   recommendations: string[];
   scanDate: string;
-  scanCategory?: 'general' | 'ticket';
+  scanCategory?: 'general' | 'ticket' | 'crypto_casino';
 }
 
 export interface ThreatDetection {
@@ -77,6 +78,51 @@ const WALLET_DRAINER_SIGNATURES: Array<{ pattern: string; type: string; weight: 
   // Malicious redirects
   { pattern: 'window.location.replace', type: 'redirect', weight: 5, severity: 'LOW' as const },
   { pattern: 'meta refresh', type: 'redirect', weight: 5, severity: 'LOW' as const },
+];
+
+// ─── Fake Crypto Casino Signatures ────────────────────────────────────────────────
+
+const CRYPTO_CASINO_SIGNATURES: Array<{ pattern: string; type: string; weight: number; severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' }> = [
+  // Casino identity
+  { pattern: 'crypto casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'blockchain casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'bitcoin casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'solana casino', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'online casino', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'live casino', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'crypto slots', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'crypto betting', type: 'fake_casino', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'provably fair', type: 'fake_casino', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'house edge', type: 'fake_casino', weight: 10, severity: 'MEDIUM' as const },
+
+  // Gambling keywords
+  { pattern: 'slot machine', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'slot game', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'blackjack', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'roulette', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'baccarat', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'dice game', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'crash game', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'plinko', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+  { pattern: 'crash gambling', type: 'fake_casino', weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'wager', type: 'fake_casino', weight: 10, severity: 'LOW' as const },
+
+  // Deposit/bonus lures (common on scam casinos)
+  { pattern: 'deposit bonus', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'welcome bonus', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'first deposit', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'free spins', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'no deposit bonus', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'matched deposit', type: 'casino_lure', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'vip program', type: 'casino_lure', weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'cashback', type: 'casino_lure', weight: 5, severity: 'LOW' as const },
+
+  // Withdrawal red flags (scam casinos block withdrawals)
+  { pattern: 'withdrawal pending', type: 'casino_withhold', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'wagering requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'wager requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'playthrough requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'minimum withdrawal', type: 'casino_withhold', weight: 10, severity: 'MEDIUM' as const },
 ];
 
 // ─── Event Ticket Scam Keywords (World Cup 2026 & Major Events) ────────────────────
@@ -216,16 +262,35 @@ export function analyzePageContent(html: string, url: string): ThreatDetection[]
     }
   }
 
-  // Check event ticket scam patterns
-  for (const sig of EVENT_TICKET_SCAM_SIGNATURES) {
+  // Check fake crypto casino patterns
+  let casinoHitCount = 0;
+  for (const sig of CRYPTO_CASINO_SIGNATURES) {
     if (lowerHtml.includes(sig.pattern)) {
+      casinoHitCount++;
       threats.push({
         type: sig.type,
         severity: sig.severity,
         description: getThreatDescription(sig.type),
-        evidence: `Ticket scam keyword: "${sig.pattern}"`,
+        evidence: `Casino keyword: "${sig.pattern}"`,
         weight: sig.weight,
       });
+    }
+  }
+
+  // Check event ticket scam patterns — SKIP if casino detected
+  // Fake casinos often trigger ticket patterns ("no refund", "crypto payment only", etc.)
+  const isLikelyCasino = casinoHitCount >= 2;
+  if (!isLikelyCasino) {
+    for (const sig of EVENT_TICKET_SCAM_SIGNATURES) {
+      if (lowerHtml.includes(sig.pattern)) {
+        threats.push({
+          type: sig.type,
+          severity: sig.severity,
+          description: getThreatDescription(sig.type),
+          evidence: `Ticket scam keyword: "${sig.pattern}"`,
+          weight: sig.weight,
+        });
+      }
     }
   }
   
@@ -261,8 +326,8 @@ export function analyzePageContent(html: string, url: string): ThreatDetection[]
     });
   }
 
-  // Check for recently registered domain signal (copyright 2026 + ticket keywords)
-  if (lowerHtml.includes('copyright 2026') && lowerHtml.includes('ticket')) {
+  // Check for recently registered domain signal (copyright 2026 + ticket keywords) — skip if casino
+  if (!isLikelyCasino && lowerHtml.includes('copyright 2026') && lowerHtml.includes('ticket')) {
     threats.push({
       type: 'recent_domain_ticket',
       severity: 'HIGH',
@@ -272,8 +337,8 @@ export function analyzePageContent(html: string, url: string): ThreatDetection[]
     });
   }
 
-  // Check for no business info on ticket sites
-  const hasTicketKeywords = lowerHtml.includes('ticket') && 
+  // Check for no business info on ticket sites — skip if casino
+  const hasTicketKeywords = !isLikelyCasino && lowerHtml.includes('ticket') && 
     (lowerHtml.includes('world cup') || lowerHtml.includes('fifa') || lowerHtml.includes('2026'));
   const hasContactInfo = lowerHtml.includes('address') && 
     (lowerHtml.includes('street') || lowerHtml.includes('ave') || lowerHtml.includes('road'));
@@ -343,6 +408,9 @@ function getThreatDescription(type: string): string {
     approval_abuse: 'Token approval abuse - grants unlimited spending rights',
     suspicious_permit: 'Suspicious permit signature - may drain tokens',
     fake_event_ticket: 'Fake event ticket scam — verify tickets only at official sources',
+    fake_casino: 'Fake or unlicensed crypto casino — high risk of fund theft or rigged games',
+    casino_lure: 'Casino deposit/bonus lure — designed to trap deposits with impossible withdrawal terms',
+    casino_withhold: 'Withdrawal restrictions — scam casinos often block or delay payouts',
     ticket_urgency: 'High-pressure ticket sales tactics — designed to force rushed decisions',
     suspicious_payment: 'Suspicious payment method — no buyer protection, likely a scam',
     ticket_scam_method: 'Dodgy ticket selling method — high risk of non-delivery',
@@ -375,6 +443,33 @@ export function generateRecommendations(threats: ThreatDetection[]): string[] {
     recommendations.push('❌ Never pay via wire transfer, crypto, or gift cards for event tickets');
   }
 
+  // ─── Crypto Casino Recommendations ─────────────────────────────────────────────
+  if (threats.some(t => t.type === 'fake_casino')) {
+    recommendations.push('🎰 CRITICAL: Fake or unlicensed crypto casino detected');
+    recommendations.push('❌ These sites often refuse withdrawals or rig games');
+    recommendations.push('🔐 Do NOT deposit any funds — you may never see them again');
+    recommendations.push('🔍 Verify licensing: legitimate casinos display gambling licenses (Curacao, Malta, UK)');
+  }
+
+  if (threats.some(t => t.type === 'casino_lure')) {
+    recommendations.push('⚠️ Deposit/bonus trap — bonus terms are designed to be impossible to fulfill');
+    recommendations.push('❌ "Deposit bonus" = you must wager 30-100x before ANY withdrawal');
+    recommendations.push('🔐 Never deposit more than you can afford to lose entirely');
+  }
+
+  if (threats.some(t => t.type === 'casino_withhold')) {
+    recommendations.push('🚨 Withdrawal restrictions detected — this casino likely blocks cashouts');
+    recommendations.push('⚠️ "Wagering requirements" mean you must bet your deposit many times over');
+    recommendations.push('❌ If you deposited, stop immediately — do not chase losses');
+  }
+
+  const hasCasinoScam = threats.some(t => ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type));
+  if (hasCasinoScam) {
+    recommendations.push('🔗 Report crypto scams: https://reportfraud.ftc.gov');
+    recommendations.push('🔗 Check casino reputation: https://askgamblers.com');
+  }
+
+  // ─── Ticket Payment Scams ──────────────────────────────────────────────────────
   if (threats.some(t => t.type === 'suspicious_payment')) {
     recommendations.push('🚨 CRITICAL: Suspicious payment method — likely a scam');
     recommendations.push('❌ Wire transfer, crypto, and gift card payments have NO buyer protection');
@@ -447,7 +542,7 @@ export function generateRecommendations(threats: ThreatDetection[]): string[] {
     recommendations.push('🔐 Only connect wallet if you trust the site');
   }
   
-  return [...new Set(recommendations)];
+  return Array.from(new Set(recommendations));
 }
 
 // ─── Main Scan Function ─────────────────────────────────────────────────────
@@ -523,7 +618,15 @@ export async function scanWebsite(url: string): Promise<WebsiteScanResult> {
   const hasTicketKeywords = threats.some(t => 
     ['fake_event_ticket', 'ticket_urgency', 'suspicious_payment', 'ticket_scam_method', 'fifa_impersonation', 'no_seller_info', 'recent_domain_ticket'].includes(t.type)
   );
-  const isTicketRelated = domain.includes('ticket') || domain.includes('fifa') || domain.includes('worldcup') || hasTicketKeywords;
+  const hasCasinoScam = threats.some(t =>
+    ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type)
+  );
+  const isTicketRelated = !hasCasinoScam && (domain.includes('ticket') || domain.includes('fifa') || domain.includes('worldcup') || hasTicketKeywords);
+  const isCasinoRelated = hasCasinoScam || domain.includes('casino') || domain.includes('bet') || domain.includes('slot');
+
+  let scanCategory: 'general' | 'ticket' | 'crypto_casino' = 'general';
+  if (isCasinoRelated) scanCategory = 'crypto_casino';
+  else if (isTicketRelated) scanCategory = 'ticket';
   
   return {
     success: true,
@@ -534,7 +637,7 @@ export async function scanWebsite(url: string): Promise<WebsiteScanResult> {
     threats,
     recommendations,
     scanDate: new Date().toISOString(),
-    scanCategory: isTicketRelated ? 'ticket' : 'general',
+    scanCategory,
   };
 }
 
