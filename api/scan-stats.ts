@@ -12,7 +12,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://***REMOVED***';
 const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY;
 
@@ -32,8 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  // Use service key for writes, anon for reads
-  const key = req.method === 'POST' ? supabaseServiceKey : (supabaseAnonKey || supabaseServiceKey);
+  // Use service key for both reads and writes (Vercel serverless env doesn't expose VITE_ vars)
+  const key = supabaseServiceKey || supabaseAnonKey;
   const supabase = supabaseUrl && key ? createClient(supabaseUrl, key) : null;
 
   if (!supabase) {
