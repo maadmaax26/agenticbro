@@ -36,6 +36,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const key = supabaseServiceKey || supabaseAnonKey;
   const supabase = supabaseUrl && key ? createClient(supabaseUrl, key) : null;
 
+  // Debug: check env vars (remove after fixing)
+  if (req.url?.includes('debug=1')) {
+    res.status(200).json({
+      hasUrl: !!supabaseUrl,
+      hasKey: !!key,
+      hasServiceKey: !!supabaseServiceKey,
+      hasAnonKey: !!supabaseAnonKey,
+      urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) : null,
+      keyPrefix: key ? key.substring(0, 10) : null,
+    });
+    return;
+  }
+
   if (!supabase) {
     res.status(200).json({ error: 'Supabase not configured', stats: getEmptyStats() });
     return;
