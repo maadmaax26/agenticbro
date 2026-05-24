@@ -54,6 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  console.log('[scan-stats] Supabase client created, url:', supabaseUrl?.substring(0, 30), 'method:', req.method);
+
   // ── POST: Record a scan event ──────────────────────────────────────────
   if (req.method === 'POST') {
     const body = req.body ?? {};
@@ -132,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
 
     if (error) {
-      console.error('[scan-stats] get_scan_analytics error:', error);
+      console.error('[scan-stats] get_scan_analytics error:', JSON.stringify(error));
       // Fallback: query scan_results directly
       const { data: recentScans, error: scanError } = await supabase
         .from('scan_results')
@@ -141,7 +143,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .order('scanned_at', { ascending: false });
 
       if (scanError) {
-        res.status(200).json(getEmptyStats());
+        console.error('[scan-stats] fallback scan_results error:', JSON.stringify(scanError));
+        res.status(200).json({ ...getEmptyStats(), debug_rpc_error: error.message, debug_fallback_error: scanError.message });
         return;
       }
 
