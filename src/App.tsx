@@ -1071,7 +1071,7 @@ function App() {
             {/* Stats bar */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
               {[
-                { value: '5,000+', label: 'Scammers in Database', color: '#f87171' },
+                { value: '260+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
                 { value: '5 Free', label: 'Priority Scans',       color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
@@ -1100,7 +1100,7 @@ function App() {
                 </p>
                 <div className="space-y-2">
                   {[
-                    '🚨 Cross-reference 5,000+ known scammer wallets',
+                    '🚨 Cross-reference 260+ known scammer wallets',
                     '📊 On-chain behaviour pattern analysis',
                     '💬 Telegram channel credibility scoring',
                     '🪙 Token rug-pull risk assessment',

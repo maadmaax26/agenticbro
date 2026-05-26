@@ -14,7 +14,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       color: 'green',
       metrics: [
         { value: '547+', label: 'Scans Completed' },
-        { value: '5,000+', label: 'Users Protected' },
+        { value: '260+', label: 'Users Protected' },
         { value: '$125K+', label: '$SOL Protected' },
         { value: '500+', label: 'Known Scammers' },
         { value: '12+', label: 'Scammers Detected' },
@@ -116,7 +116,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
         { value: '50K+', label: 'Active Users' },
         { value: '500+', label: 'Daily Scans' },
         { value: '$10M+', label: '$SOL Protected' },
-        { value: '5000+', label: 'Known Scammers' },
+        { value: '260+', label: 'Known Scammers' },
       ],
       sections: [
         {
