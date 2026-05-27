@@ -1146,30 +1146,6 @@ function App() {
               </div>
             </div>
 
-            {/* Informed Trading section */}
-            <div className="bg-gradient-to-r from-purple-900/20 to-cyan-900/20 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6 mb-10">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl">📈</span>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Informed Trading and Investing Intelligence</h3>
-                  <p className="text-xs text-cyan-400 font-semibold">Because degen without data is just gambling</p>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                {[
-                  { icon: '🤖', title: 'AI Portfolio Analysis', desc: 'Get a brutally honest AI breakdown of your portfolio with risk scores, over-exposure flags, and actionable rebalancing advice.' },
-                  { icon: '📊', title: 'Real-Time Market Signals', desc: 'Live BTC, ETH, SOL signals with liquidation level tracking and AI-synthesised daily market reports.' },
-                  { icon: '🏆', title: 'Holder Tier — 50 Scans/mo', desc: 'Hold $100+ in AGNTCBRO to unlock 50 monthly Priority Scans across all scan types.' },
-                ].map((item) => (
-                  <div key={item.title} className="bg-black/30 rounded-xl p-4 border border-white/10">
-                    <div className="text-2xl mb-2">{item.icon}</div>
-                    <p className="font-bold text-white text-sm mb-1">{item.title}</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             
             <PreConnectScanWidget lang={locale} />
             {/* Connect CTA */}
