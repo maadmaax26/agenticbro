@@ -365,13 +365,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   let phoneRiskData: Record<string, any> = {};
   try {
     // Call phone-verify internally
-    const phoneVerifyUrl = `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/phone-verify`;
-    const phoneRes = await fetch(phoneVerifyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    });
-    if (phoneRes.ok) {
+    // Try multiple internal URLs for robustness
+    const phoneVerifyUrls = [
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/phone-verify` : null,
+      'https://agenticbro.app/api/phone-verify',
+    ].filter(Boolean) as string[];
+
+    let phoneRes: Response | null = null;
+    for (const url of phoneVerifyUrls) {
+      try {
+        phoneRes = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        if (phoneRes.ok) break;
+        phoneRes = null;
+      } catch { continue; }
+    }
+    if (phoneRes && phoneRes.ok) {
       const phoneJson = await phoneRes.json() as Record<string, any>;
       phoneRiskData = phoneJson.result || phoneJson;
     }
