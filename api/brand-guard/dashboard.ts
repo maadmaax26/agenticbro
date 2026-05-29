@@ -1,11 +1,11 @@
 /**
  * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
  * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
- * Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
+ * Commercial use restrictions apply - contact agenticbro@agenticbro.app for licensing.
  */
 
 /**
- * api/brand-guard/dashboard.ts — Reputation Dashboard API
+ * api/brand-guard/dashboard.ts - Reputation Dashboard API
  * ========================================================================
  * Aggregates data from all Brand Guard features into a unified dashboard.
  * Provides threat feed, brand health score, takedown actions, and alerts.
@@ -222,23 +222,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .single();
     brand = brandData;
 
-    // Fetch impersonator threats
+    // Fetch impersonator threats from brand_guard_scans (primary source)
+    // Falls back to brand_impersonators if available
+    const { data: impScans } = await supabase
+      .from('brand_guard_scans')
+      .select('*')
+      .eq('brand_monitor_id', brandId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (impScans) {
+      for (const scan of impScans) {
+        const result = scan.result as Record<string, unknown> | null;
+        if (!result) continue;
+        const impersonators = (result.impersonators || result.impersonator_results || []) as Record<string, unknown>[];
+        for (const imp of impersonators) {
+          const riskLevel = (imp.risk_level as string) || 'LOW';
+          threats.push({
+            id: `${scan.scan_id}-${imp.handle}`,
+            type: 'social_impersonator',
+            severity: riskLevel === 'CRITICAL' ? 'critical' : riskLevel === 'HIGH' ? 'high' : riskLevel === 'MEDIUM' ? 'medium' : 'low',
+            platform: (imp.platform as string) || 'unknown',
+            target: (imp.handle as string) || 'unknown',
+            risk_score: (imp.risk_score as number) || 0,
+            risk_level: riskLevel,
+            evidence: [(imp.type as string) || 'Impersonator', (imp.method as string) || ''].filter(Boolean),
+            detected_at: (scan.created_at as string) || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
+      }
+    }
+
+    // Also check brand_impersonators table (legacy / direct entries)
     const { data: impersonators } = await supabase
       .from('brand_impersonators')
       .select('*')
       .eq('brand_monitor_id', brandId)
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (impersonators) {
       for (const imp of impersonators) {
+        // Skip duplicates already added from brand_guard_scans
+        const existing = threats.some(t => t.target === (imp.username || imp.handle) && t.type === 'social_impersonator');
+        if (existing) continue;
         threats.push({
           id: imp.id,
           type: 'social_impersonator',
           severity: imp.risk_level === 'CRITICAL' ? 'critical' : imp.risk_level === 'HIGH' ? 'high' : imp.risk_level === 'MEDIUM' ? 'medium' : 'low',
           platform: imp.platform || 'unknown',
-          target: imp.username || 'unknown',
-          risk_score: imp.impersonation_score || 0,
+          target: imp.username || imp.handle || 'unknown',
+          risk_score: imp.impersonation_score || imp.risk_score || 0,
           risk_level: imp.risk_level || 'LOW',
           evidence: imp.evidence || [],
           detected_at: imp.first_seen_at || imp.created_at || new Date().toISOString(),
@@ -248,14 +284,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
     }
 
-    // Fetch domain lookalikes — expand each variant into its own threat
+    // Fetch domain lookalikes - expand each variant into its own threat
     const { data: domains } = await supabase
       .from('domain_lookalikes')
       .select('*')
       .eq('domain', ((brand as Record<string, unknown>)?.brand_domain as string) || ((brand as Record<string, unknown>)?.brand_handle as string) || '')
       .order('created_at', { ascending: false })
       .limit(10);
-    
+
     if (domains) {
       for (const dom of domains) {
         const variants = (dom.variants as Record<string, unknown>[]) || [];
@@ -308,7 +344,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .or('verification_level=eq.LIKELY_FRAUDULENT')
       .order('created_at', { ascending: false })
       .limit(20);
-    
+
     if (verifications) {
       for (const v of verifications) {
         threats.push({
@@ -333,7 +369,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (takedowns) {
       takedownActions = takedowns.map((t: Record<string, unknown>) => ({
         id: t.id,
@@ -376,18 +412,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     // Build scan history from brand_guard_scans
-    const { data: scans } = await supabase
+    const { data: scanRows } = await supabase
       .from('brand_guard_scans')
-      .select('scan_id, created_at, status, platforms')
+      .select('scan_id, created_at, status, platforms, impersonators_found')
       .eq('brand_monitor_id', brandId)
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (scans) {
-      scanHistory = scans.map((s: Record<string, unknown>) => ({
+    if (scanRows) {
+      scanHistory = scanRows.map((s: Record<string, unknown>) => ({
         scan_type: 'impersonator_scan',
         scan_date: s.created_at || new Date().toISOString(),
-        results_count: s.status === 'complete' ? 1 : 0,
+        results_count: (s.impersonators_found as number) || (s.status === 'complete' || s.status === 'completed' ? 1 : 0),
       }));
     }
   }
