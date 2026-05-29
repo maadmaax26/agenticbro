@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
@@ -79,7 +80,9 @@ createRoot(document.getElementById('root')!).render(
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <AuthProvider>
-            <App />
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
           </AuthProvider>
         </WalletModalProvider>
       </WalletProvider>

@@ -48,6 +48,30 @@
     },
     "api/scan/[job_id].ts": {
       "maxDuration": 10
+    },
+    "api/brand-guard/brands.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/credits.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/impersonator-scan.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/stripe-webhook.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/dashboard.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/domain-monitor.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/threat-correlate.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/vendor-verify.ts": {
+      "maxDuration": 15
     }
   },
   "rewrites": [
@@ -55,6 +79,12 @@
     { "source": "/api/scan", "destination": "/api/scan.ts" },
     { "source": "/api/phone-scan/:job_id", "destination": "/api/phone-scan/[job_id].ts" },
     { "source": "/api/phone-scan", "destination": "/api/phone-scan.ts" },
+    { "source": "/api/brand-guard/stripe-webhook", "destination": "/api/brand-guard/stripe-webhook.ts" },
+    { "source": "/api/brand-guard/credits/:path*", "destination": "/api/brand-guard/credits.ts" },
+    { "source": "/api/brand-guard/brands/:path*", "destination": "/api/brand-guard/brands.ts" },
+    { "source": "/api/brand-guard/dashboard/:path*", "destination": "/api/brand-guard/dashboard.ts" },
+    { "source": "/api/brand-guard/impersonator-scan/:path*", "destination": "/api/brand-guard/impersonator-scan.ts" },
+    { "source": "/api/brand-guard/:path*", "destination": "/api/brand-guard/:path*" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
