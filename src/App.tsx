@@ -1,4 +1,5 @@
 import React, { Component, useState, useCallback, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
@@ -23,6 +24,7 @@ import UserMenu from './components/UserMenu'
 import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
+import { BrandGuardPage } from './pages/BrandGuardPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -153,6 +155,12 @@ class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError:
 }
 
 function App() {
+  const location = useLocation()
+  // Brand Guard has its own full-page layout
+  if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
+    return <BrandGuardPage />
+  }
+
   const { connected, publicKey } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
@@ -684,6 +692,12 @@ function App() {
               >
                 🔍 Scam Database
               </button>
+              <a
+                href="/brand-guard"
+                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
+              >
+                🔐 Brand Guard
+              </a>
               <a
                 href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
                 target="_blank"
