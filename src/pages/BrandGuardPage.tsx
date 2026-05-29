@@ -425,9 +425,29 @@ export function BrandGuardPage() {
       const data = await res.json();
       // Domain monitor & vendor verify wrap results under .result; flatten for display
       const result = data.success && data.result ? data.result : data;
+
+      // If scan failed on the server side, refund the deducted credit
+      if (data.error || res.status >= 400) {
+        try {
+          await fetch(`${API_BASE}/credits/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({ amount: 1, payment_method: 'refund', description: `Refund: ${type} scan failed` }),
+          });
+        } catch { /* best-effort refund */ }
+      }
+
       setScanResult(result);
       await fetchCredits();
     } catch (err) {
+      // Network error — refund the deducted credit
+      try {
+        await fetch(`${API_BASE}/credits/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ amount: 1, payment_method: 'refund', description: `Refund: ${type} scan network error` }),
+        });
+      } catch { /* best-effort refund */ }
       setScanResult({ error: err instanceof Error ? err.message : 'Scan failed' });
     } finally { setScanning(null); }
   };
@@ -458,9 +478,29 @@ export function BrandGuardPage() {
       });
       const data = await res.json();
       const result = data.success && data.result ? data.result : data;
+
+      // Refund credit if scan failed on server
+      if (data.error || res.status >= 400) {
+        try {
+          await fetch(`${API_BASE}/credits/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({ amount: 1, payment_method: 'refund', description: 'Refund: vendor scan failed' }),
+          });
+        } catch { /* best-effort refund */ }
+      }
+
       setScanResult(result);
       await fetchCredits();
     } catch (err) {
+      // Network error — refund the deducted credit
+      try {
+        await fetch(`${API_BASE}/credits/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ amount: 1, payment_method: 'refund', description: 'Refund: vendor scan network error' }),
+        });
+      } catch { /* best-effort refund */ }
       setScanResult({ error: err instanceof Error ? err.message : 'Scan failed' });
     } finally { setScanning(null); }
   };
@@ -482,9 +522,29 @@ export function BrandGuardPage() {
       });
       const data = await res.json();
       const result = data.success && data.result ? data.result : data;
+
+      // Refund credit if scan failed on server
+      if (data.error || res.status >= 400) {
+        try {
+          await fetch(`${API_BASE}/credits/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({ amount: 1, payment_method: 'refund', description: 'Refund: website scan failed' }),
+          });
+        } catch { /* best-effort refund */ }
+      }
+
       setScanResult(result);
       await fetchCredits();
     } catch (err) {
+      // Network error — refund the deducted credit
+      try {
+        await fetch(`${API_BASE}/credits/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ amount: 1, payment_method: 'refund', description: 'Refund: website scan network error' }),
+        });
+      } catch { /* best-effort refund */ }
       setScanResult({ error: err instanceof Error ? err.message : 'Scan failed' });
     } finally { setScanning(null); }
   };
