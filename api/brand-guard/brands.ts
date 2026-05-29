@@ -154,10 +154,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    // ── Auto-initialize 10 free Brand Guard credits for new users ───────
+    // ── Auto-initialize Brand Guard credits for new users ───────
     // Calls the DB function that creates the credits row if it doesn't exist
+    // Supports promo codes: e.g. beta2026 grants 500 free scans
+    const promoCode = (body.promo_code as string) || null;
     try {
-      await supabase.rpc('initialize_brand_guard_credits', { p_owner_id: userId });
+      const { data: creditData } = await supabase.rpc('initialize_brand_guard_credits', {
+        p_owner_id: userId,
+        p_promo_code: promoCode,
+      });
+      const creditResult = creditData as Record<string, unknown> | null;
+      const freeCredits = (creditResult?.free_credits as number) || 10;
+      const promoBonus = (creditResult?.promo_bonus as number) || 0;
+      const message = promoBonus > 0
+        ? `Welcome, beta tester! You have ${freeCredits} free scans.`
+        : `${freeCredits} free Brand Guard scans granted!`;
+      res.status(201).json({ success: true, brand: data, credits: { free_remaining: freeCredits, promo_code: promoCode, promo_bonus: promoBonus, message } });
+      return;
     } catch (creditErr) {
       // Non-fatal: credits may already exist from a previous brand
       console.warn('[brands] Credit initialization skipped (may already exist):', creditErr);
