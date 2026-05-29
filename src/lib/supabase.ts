@@ -20,7 +20,13 @@ if (!supabaseUrl || !supabasePublishableKey) {
 }
 
 export const supabase = supabaseUrl && supabasePublishableKey 
-  ? createClient(supabaseUrl, supabasePublishableKey)
+  ? createClient(supabaseUrl, supabasePublishableKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,18 +116,36 @@ export async function signUpWithEmail(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/brand-guard`,
+    },
   });
   
   if (error) return { user: null, error };
   
   // Create profile with 5 free scans
   if (data.user) {
-    await supabase.from('user_profiles').insert({
-      id: data.user.id,
-      email: data.user.email,
-      scan_credits: 0,
-      free_scans_used: 0,
-    });
+    // Check if email confirmation is needed
+    if (!data.session) {
+      // Email confirmation required — user needs to confirm before they can sign in
+      return {
+        user: data.user,
+        error: null,
+        needsConfirmation: true as any,
+      };
+    }
+    
+    try {
+      await supabase.from('user_profiles').insert({
+        id: data.user.id,
+        email: data.user.email,
+        scan_credits: 0,
+        free_scans_used: 0,
+      });
+    } catch (e) {
+      // Profile may already exist, that's fine
+      console.log('Profile insert skipped:', e);
+    }
   }
   
   return { user: data.user, error: null };
