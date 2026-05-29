@@ -1918,7 +1918,7 @@ n            </p>
                   <div style={{ fontSize: '12px', color: dark.textMuted }}>Platforms</div>
                 </div>
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: dark.green }}>{totalRemaining}</div>
+                  <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: dark.green }}>{totalRemaining >= 1000000 ? `${(totalRemaining / 1000000).toFixed(1)}M` : totalRemaining >= 1000 ? `${(totalRemaining / 1000).toFixed(1)}K` : totalRemaining}</div>
                   <div style={{ fontSize: '12px', color: dark.textMuted }}>Scans Left</div>
                 </div>
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center' }}>
