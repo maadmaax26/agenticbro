@@ -65,6 +65,7 @@ interface VendorVerifyResult {
   country: string;
   vendor_name: string | null;
   call_context: string | null;
+  brand_monitor_id?: string;
   phone_risk: {
     score: number;
     level: string;
@@ -344,6 +345,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const country = ((body.country as string) || 'US').toUpperCase();
   const vendorName = (body.vendor_name as string) || '';
   const callContext = (body.call_context as string) || '';
+  const brandMonitorId = (body.brand_monitor_id as string) || '';
 
   if (!phone) {
     res.status(400).json({ error: 'Missing required field: phone' });
@@ -464,6 +466,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     country,
     vendor_name: vendorName || null,
     call_context: callContext || null,
+    brand_monitor_id: brandMonitorId || undefined,
     phone_risk: phoneRisk,
     vendor_verification: {
       score: Math.round(vendorScore),
@@ -486,6 +489,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     try {
       await supabase.from('vendor_verifications').insert({
         verification_id: verificationId,
+        brand_monitor_id: brandMonitorId || null,
         phone,
         country,
         vendor_name: vendorName || null,
