@@ -1804,30 +1804,92 @@ n            </p>
                       {/* Vendor verify results */}
                       {scanType === 'vendor' && (
                         <>
-                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                            <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
-                              <div style={{ fontSize: '12px', color: dark.textMuted }}>Verification Level</div>
-                              <div style={{ fontSize: '18px', fontWeight: 800, color: (scanResult.verification_level === 'LIKELY_FRAUDULENT' || scanResult.verification_level === 'SUSPICIOUS') ? dark.red : dark.green }}>
-                                {String(scanResult.verification_level ?? '?')}
-                              </div>
-                            </div>
-                            <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
-                              <div style={{ fontSize: '12px', color: dark.textMuted }}>Vendor Score</div>
-                              <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: (scanResult.verification_score ?? 100) < 50 ? dark.red : dark.green }}>
-                                {String(scanResult.verification_score ?? '?')}/100
-                              </div>
-                            </div>
-                          </div>
-                          {Array.isArray(scanResult.scam_patterns) && scanResult.scam_patterns.length > 0 && (
-                            <div style={{ display: 'grid', gap: '8px' }}>
-                              {scanResult.scam_patterns.slice(0, 5).map((p: Record<string, unknown>, i: number) => (
-                                <div key={i} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                  <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{String(p.type || p.pattern || 'Scam Pattern')}</div>
-                                  <div style={{ color: dark.textMuted, fontSize: '11px', marginTop: '2px' }}>{String(p.description || p.detail || '')}</div>
+                          {(() => {
+                            const vv = scanResult.vendor_verification as Record<string, unknown> | undefined;
+                            const ba = scanResult.business_assessment as Record<string, unknown> | undefined;
+                            const sd = scanResult.scam_detection as Record<string, unknown> | undefined;
+                            const pr = scanResult.phone_risk as Record<string, unknown> | undefined;
+                            const vLevel = (vv?.level as string) || (scanResult.verification_level as string) || 'UNKNOWN';
+                            const vScore = (vv?.score as number) ?? (scanResult.verification_score as number) ?? 0;
+                            const vMessage = (vv?.message as string) || '';
+                            const bScore = (ba?.legitimacy_score as number) ?? (scanResult.legitimacy_score as number) ?? 0;
+                            const bLevel = (ba?.legitimacy_level as string) || '';
+                            const bIndicators = (ba?.business_indicators as string[]) || [];
+                            const sIndicators = (ba?.suspicious_indicators as string[]) || [];
+                            const patterns = (sd?.patterns_detected as Record<string, unknown>[]) || (scanResult.scam_patterns as Record<string, unknown>[]) || [];
+                            const evidence = (Array.isArray(scanResult.evidence) ? scanResult.evidence : []) as string[];
+                            const phoneValid = pr?.valid !== false;
+                            const phoneCarrier = (pr?.carrier as string) || 'Unknown';
+                            const phoneLineType = (pr?.line_type as string) || 'unknown';
+                            const phoneRiskLevel = (pr?.level as string) || 'UNKNOWN';
+                            return (
+                              <>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                                  <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                    <div style={{ fontSize: '12px', color: dark.textMuted }}>Verification</div>
+                                    <div style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 800, color: (vLevel === 'LIKELY_FRAUDULENT' || vLevel === 'SUSPICIOUS') ? dark.red : vLevel === 'VERIFIED' ? dark.green : '#f59e0b' }}>
+                                      {vLevel}
+                                    </div>
+                                  </div>
+                                  <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                    <div style={{ fontSize: '12px', color: dark.textMuted }}>Risk Score</div>
+                                    <div style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 800, color: vScore < 50 ? dark.red : vScore < 70 ? '#f59e0b' : dark.green }}>
+                                      {vScore}/100
+                                    </div>
+                                  </div>
+                                  <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                    <div style={{ fontSize: '12px', color: dark.textMuted }}>Legitimacy</div>
+                                    <div style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 800, color: bScore < 40 ? dark.red : bScore < 60 ? '#f59e0b' : dark.green }}>
+                                      {bScore}/100 {bLevel && `(${bLevel})`}
+                                    </div>
+                                  </div>
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                                {vMessage && (
+                                  <div style={{ padding: '12px', borderRadius: '8px', background: vLevel === 'LIKELY_FRAUDULENT' || vLevel === 'SUSPICIOUS' ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', border: `1px solid ${vLevel === 'LIKELY_FRAUDULENT' || vLevel === 'SUSPICIOUS' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '13px', color: vLevel === 'LIKELY_FRAUDULENT' || vLevel === 'SUSPICIOUS' ? dark.red : dark.green, fontWeight: 600 }}>{vMessage}</div>
+                                  </div>
+                                )}
+                                {(patterns.length > 0 || sIndicators.length > 0) && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: dark.red, marginBottom: '8px' }}>⚠️ Red Flags</div>
+                                    <div style={{ display: 'grid', gap: '6px' }}>
+                                      {patterns.map((p: Record<string, unknown>, i: number) => (
+                                        <div key={i} style={{ padding: '8px 10px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{String(p.type || p.pattern || 'Scam Pattern')}</div>
+                                          <div style={{ fontSize: '11px', color: dark.textMuted }}>{String(p.description || p.detail || '')}</div>
+                                        </div>
+                                      ))}
+                                      {sIndicators.map((s: string, i: number) => (
+                                        <div key={`s-${i}`} style={{ padding: '8px 10px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                          <div style={{ fontSize: '12px', color: '#f59e0b' }}>⚠️ {s}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {bIndicators.length > 0 && (
+                                  <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: dark.green, marginBottom: '8px' }}>✅ Positive Indicators</div>
+                                    <div style={{ display: 'grid', gap: '4px' }}>
+                                      {bIndicators.map((b: string, i: number) => (
+                                        <div key={i} style={{ fontSize: '12px', color: dark.green }}>• {b}</div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                                  <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+                                    <div style={{ fontSize: '11px', color: dark.textMuted }}>Carrier</div>
+                                    <div style={{ fontSize: '13px', color: '#fff' }}>{phoneCarrier}</div>
+                                  </div>
+                                  <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+                                    <div style={{ fontSize: '11px', color: dark.textMuted }}>Line Type</div>
+                                    <div style={{ fontSize: '13px', color: '#fff' }}>{phoneLineType}</div>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </>
                       )}
 
