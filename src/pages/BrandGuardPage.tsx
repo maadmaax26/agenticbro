@@ -616,7 +616,7 @@ export function BrandGuardPage() {
       const res = await fetch(`${API_BASE}/vendor-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ phone: vendorPhone, country: vendorCountry, vendor_name: activeBrand.brand_name }),
+        body: JSON.stringify({ phone: vendorPhone.startsWith('+') ? vendorPhone : `+${vendorPhone}`, country: vendorCountry, vendor_name: activeBrand.brand_name, brand_monitor_id: activeBrand.id }),
       });
       const data = await res.json();
       const result = data.success && data.result ? data.result : data;
@@ -1595,7 +1595,7 @@ n            </p>
                 <div style={{ padding: '16px', borderRadius: '10px', border: `1px solid ${dark.border}`, background: dark.cardBg }}>
                   <div style={{ color: '#fff', fontWeight: 600, marginBottom: '8px' }}>📞 Vendor Phone Verification</div>
                   <input
-                    placeholder="+1 555 123 4567"
+                    placeholder="+1 555 123 4567 (with country code)"
                     value={vendorPhone}
                     onChange={e => setVendorPhone(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px', marginBottom: '8px', outline: 'none' }}
