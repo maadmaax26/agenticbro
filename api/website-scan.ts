@@ -1175,6 +1175,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
+  let validUrl: string;
+  try {
+    validUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://' + url;
+    new URL(validUrl);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL format' });
+  }
+
+  const domain = extractDomain(validUrl);
+
   // ── Look up brand domain for legitimate domain tracking ──────────────────
   let brandDomain: string | null = null;
   if (brand_monitor_id) {
