@@ -1648,7 +1648,7 @@ n            </p>
                   </h3>
                   {scanResult.error ? (
                     <div style={{ color: dark.red, fontSize: '14px' }}>{String(scanResult.error)}</div>
-                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.red_flags) ? (
+                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.red_flags) ? (
                     <div>
                       {/* Impersonator scan results */}
                       {scanType === 'impersonator' && (
