@@ -248,29 +248,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
     }
 
-    // Fetch domain lookalikes
+    // Fetch domain lookalikes — expand each variant into its own threat
     const { data: domains } = await supabase
       .from('domain_lookalikes')
       .select('*')
+      .eq('domain', ((brand as Record<string, unknown>)?.brand_domain as string) || ((brand as Record<string, unknown>)?.brand_handle as string) || '')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(10);
     
     if (domains) {
       for (const dom of domains) {
+        const variants = (dom.variants as Record<string, unknown>[]) || [];
         const summary = dom.summary as Record<string, number> || {};
-        threats.push({
-          id: dom.scan_id || dom.id,
-          type: 'domain_lookalike',
-          severity: (summary.critical || 0) > 0 ? 'critical' : (summary.high || 0) > 0 ? 'high' : 'medium',
-          platform: 'domain',
-          target: dom.domain || 'unknown',
-          risk_score: 0,
-          risk_level: (summary.critical || 0) > 0 ? 'CRITICAL' : (summary.high || 0) > 0 ? 'HIGH' : 'MEDIUM',
-          evidence: [],
-          detected_at: dom.created_at || new Date().toISOString(),
-          status: 'new',
-          takedown_actions: [],
-        });
+        // Show top variants as individual threats
+        const topVariants = variants.slice(0, 10);
+        for (const v of topVariants) {
+          const vScore = (v.risk_score as number) || 0;
+          const vLevel = (v.risk_level as string) || 'LOW';
+          const vType = (v.variant_type as string) || 'unknown';
+          const vDomain = (v.domain as string) || 'unknown';
+          threats.push({
+            id: `${dom.scan_id || dom.id}-${vDomain}`,
+            type: 'domain_lookalike',
+            severity: vLevel === 'CRITICAL' ? 'critical' : vLevel === 'HIGH' ? 'high' : vLevel === 'MEDIUM' ? 'medium' : 'low',
+            platform: 'domain',
+            target: vDomain,
+            risk_score: vScore,
+            risk_level: vLevel,
+            evidence: (v.evidence as string[]) || [`${vType.replace(/_/g, ' ')} of ${dom.domain}`],
+            detected_at: dom.created_at || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
+        // If no variants parsed, add a single summary threat
+        if (topVariants.length === 0) {
+          threats.push({
+            id: dom.scan_id || dom.id,
+            type: 'domain_lookalike',
+            severity: (summary.critical || 0) > 0 ? 'critical' : (summary.high || 0) > 0 ? 'high' : 'medium',
+            platform: 'domain',
+            target: dom.domain || 'unknown',
+            risk_score: Math.max(summary.critical || 0, summary.high || 0, 1),
+            risk_level: (summary.critical || 0) > 0 ? 'CRITICAL' : (summary.high || 0) > 0 ? 'HIGH' : 'MEDIUM',
+            evidence: [`${(summary.critical || 0) + (summary.high || 0)} high-risk variants found`],
+            detected_at: dom.created_at || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
       }
     }
 

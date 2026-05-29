@@ -1450,27 +1450,40 @@ n            </p>
                                   <div style={{ fontSize: '13px' }}>No threats detected. Run a scan to check.</div>
                                 </div>
                               ) : (
-                                <div style={{ display: 'grid', gap: '6px' }}>
-                                  {threats.slice(0, 10).map((t: Record<string, unknown>, i: number) => {
+                                <div style={{ display: 'grid', gap: '8px' }}>
+                                  {threats.slice(0, 15).map((t: Record<string, unknown>, i: number) => {
                                     const sev = (t.severity as string) || 'low';
                                     const sevIcon = sev === 'critical' ? '🚨' : sev === 'high' ? '⚠️' : sev === 'medium' ? 'ℹ️' : '✅';
+                                    const typeLabel = (t.type as string) === 'social_impersonator' ? 'Impersonator' : (t.type as string) === 'domain_lookalike' ? 'Lookalike Domain' : (t.type as string) === 'phone_scam' ? 'Phone Scam' : (t.type as string) === 'cross_channel' ? 'Cross-channel' : 'Scammer DB';
                                     const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : '🕵️';
                                     const sevColor = sev === 'critical' ? dark.red : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : dark.green;
                                     const sevBg = sev === 'critical' ? 'rgba(239,68,68,0.1)' : sev === 'high' ? 'rgba(249,115,22,0.1)' : sev === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)';
+                                    const evidence = (t.evidence as string[]) || [];
+                                    const score = Number(t.risk_score ?? 0);
+                                    const scoreDisplay = score > 0 ? `${score}/10` : '—';
                                     return (
-                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: sevBg, border: `1px solid ${sevColor}20` }}>
-                                        <span style={{ fontSize: '16px' }}>{sevIcon}</span>
-                                        <span style={{ fontSize: '16px' }}>{typeIcon}</span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{String(t.target || 'Unknown')}</div>
-                                          <div style={{ fontSize: '11px', color: dark.textMuted }}>{String(t.platform || '')} · {String(t.type || '').replace(/_/g, ' ')}</div>
+                                      <div key={i} style={{ padding: '12px', borderRadius: '8px', background: sevBg, border: `1px solid ${sevColor}30` }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                          <span style={{ fontSize: '14px' }}>{sevIcon}</span>
+                                          <span style={{ fontSize: '14px' }}>{typeIcon}</span>
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(t.target || 'Unknown')}</div>
+                                          </div>
+                                          <div style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
+                                            {scoreDisplay}
+                                          </div>
+                                          <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
+                                            {String(t.status || 'new').toUpperCase()}
+                                          </div>
                                         </div>
-                                        <div style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
-                                          {String(t.risk_score ?? 0)}/10
+                                        <div style={{ fontSize: '11px', color: dark.textMuted, marginTop: '2px' }}>
+                                          {typeLabel} · {String(t.platform || 'unknown')}
                                         </div>
-                                        <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
-                                          {String(t.status || 'new').toUpperCase()}
-                                        </div>
+                                        {evidence.length > 0 && (
+                                          <div style={{ fontSize: '11px', color: sevColor, marginTop: '4px', fontStyle: 'italic' }}>
+                                            {evidence[0]}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
