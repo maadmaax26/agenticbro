@@ -596,7 +596,7 @@ export function BrandGuardPage() {
       const res = await fetch('/api/website-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ url: websiteUrl }),
+        body: JSON.stringify({ url: websiteUrl, brand_monitor_id: activeBrand?.id }),
       });
       const data = await res.json();
       const result = data.success && data.result ? data.result : data;
