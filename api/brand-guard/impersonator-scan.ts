@@ -366,24 +366,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (!authErr && user) userId = user.id;
   }
 
-  // If authenticated, check credits before allowing scan
+  // If authenticated, verify credits exist before allowing scan
+  // (Frontend handles the actual deduction via /credits/deduct before calling this API)
   if (userId && supabase) {
-    const { data: creditResult, error: creditErr } = await supabase.rpc('deduct_brand_guard_credit', {
-      p_owner_id: userId,
-      p_brand_monitor_id: (req.body?.brand_monitor_id as string) || null,
-      p_scan_id: null, // Will be set after scan ID is generated
-    });
+    const { data: credits, error: creditErr } = await supabase
+      .from('brand_guard_credits')
+      .select('free_credits_total, free_credits_used, paid_credits')
+      .eq('owner_id', userId)
+      .single();
 
-    if (creditErr || !creditResult) {
-      res.status(500).json({ error: 'Failed to check credits', details: creditErr?.message });
+    if (creditErr && creditErr.code !== 'PGRST116') {
+      res.status(500).json({ error: 'Failed to check credits', details: creditErr.message });
       return;
     }
 
-    const result = creditResult as Record<string, unknown>;
-    if (!(result.success as boolean)) {
+    const freeRemaining = credits ? credits.free_credits_total - credits.free_credits_used : 10;
+    const totalRemaining = credits ? freeRemaining + credits.paid_credits : 10;
+
+    if (totalRemaining <= 0) {
       res.status(402).json({
         error: 'Insufficient credits',
-        message: result.message || 'No credits available. Purchase credits or set up a subscription to continue scanning.',
+        message: 'No credits available. Purchase credits or set up a subscription to continue scanning.',
         remaining: 0,
         upgrade_url: '/brand-guard?buy_credits=true',
       });
