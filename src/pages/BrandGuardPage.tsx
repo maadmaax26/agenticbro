@@ -104,7 +104,7 @@ export function BrandGuardPage() {
   const [authLoading, setAuthLoading] = useState(true);
 
   // Login form state
-  const [loginMode, setLoginMode] = useState<'login' | 'register' | 'reset' | 'update-password'>('login');
+  const [loginMode, setLoginMode] = useState<'login' | 'register' | 'reset'>('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -145,9 +145,16 @@ export function BrandGuardPage() {
     }
     checkAuth();
 
-    // Listen for auth state changes (email confirmation, sign in, sign out)
+    // Listen for auth state changes (email confirmation, sign in, sign out, password reset)
     if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          // User clicked the password reset link — show the update form, don't go to dashboard
+          setShowPasswordUpdate(true);
+          setAuthToken(session?.access_token || null);
+          setUserId(session?.user?.id || null);
+          return; // Don't redirect to dashboard
+        }
         if (session?.access_token) {
           setAuthToken(session.access_token);
           setUserId(session.user.id);
@@ -297,12 +304,18 @@ export function BrandGuardPage() {
   };
 
   // Handle password reset callback (when user returns from email link)
+  // Supabase puts the recovery token in the URL hash.
+  // The onAuthStateChange listener above will fire with PASSWORD_RECOVERY event
+  // and set the session. We just need to detect that and show the update form.
+  const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
+
   useEffect(() => {
     if (!supabase) return;
     const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('access_token')) {
-      // User clicked the reset link — switch to password update mode
-      setLoginMode('update-password');
+    if (hash.includes('type=recovery')) {
+      setShowPasswordUpdate(true);
+      // Clear the hash so it doesn't re-trigger on refresh
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 
@@ -313,11 +326,21 @@ export function BrandGuardPage() {
     setLoginLoading(true);
     setLoginError(null);
     try {
+      // Ensure we have an active session (the recovery link should have established one)
+      const { data: sessionData } = await supabase!.auth.getSession();
+      if (!sessionData?.session) {
+        // Session not established yet — try to exchange the hash fragment
+        // This happens if onAuthStateChange hasn't fired yet
+        setLoginError('Session expired. Please request a new password reset link.');
+        setLoginLoading(false);
+        return;
+      }
       const { error } = await supabase!.auth.updateUser({ password: newPassword });
       if (error) throw error;
       setLoginError(null);
       setLoginMode('login');
       setLoginPassword('');
+      setShowPasswordUpdate(false);
       // Clear the hash fragment
       window.history.replaceState(null, '', window.location.pathname);
     } catch (err) {
@@ -634,7 +657,61 @@ export function BrandGuardPage() {
     );
   }
 
-  if (!authToken) {
+  if (!authToken || showPasswordUpdate) {
+    // Password update form (shown when user clicks reset link from email)
+    if (showPasswordUpdate) {
+      return (
+        <div style={{ minHeight: '100vh', background: dark.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ maxWidth: '420px', width: '100%', padding: isMobile ? '16px' : '32px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔑</div>
+              <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Update Password</h1>
+              <p style={{ color: dark.textMuted, fontSize: '15px' }}>Choose a new password for your Brand Guard account.</p>
+            </div>
+
+            <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '20px' : '28px', backdropFilter: 'blur(12px)' }}>
+              <div style={{ display: 'grid', gap: '14px' }}>
+                <div>
+                  <label style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '10px',
+                      background: 'rgba(0,0,0,0.4)', border: `1px solid ${dark.border}`, color: '#fff',
+                      fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && handleUpdatePassword()}
+                  />
+                </div>
+              </div>
+
+              {loginError && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: loginError.includes('reset') || loginError.includes('sent') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${loginError.includes('reset') || loginError.includes('sent') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: loginError.includes('reset') || loginError.includes('sent') ? dark.green : dark.red, fontSize: '13px' }}>
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                onClick={handleUpdatePassword}
+                disabled={loginLoading || !newPassword || newPassword.length < 6}
+                style={{
+                  width: '100%', marginTop: '16px', padding: '14px', borderRadius: '12px', border: 'none',
+                  background: loginLoading || !newPassword || newPassword.length < 6 ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
+                  color: '#fff', fontSize: '16px', fontWeight: 700,
+                  cursor: loginLoading || !newPassword || newPassword.length < 6 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loginLoading ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ minHeight: '100vh', background: dark.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: '420px', width: '100%', padding: isMobile ? '16px' : '32px' }}>
@@ -680,12 +757,6 @@ n            </p>
               <div style={{ marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>🔑 Reset Password</h2>
                 <p style={{ color: dark.textMuted, fontSize: '13px' }}>Enter your email and we\'ll send you a link to reset your password.</p>
-              </div>
-            )}
-            {loginMode === 'update-password' && (
-              <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>🔑 Update Password</h2>
-                <p style={{ color: dark.textMuted, fontSize: '13px' }}>Choose a new password for your account.</p>
               </div>
             )}
 
@@ -784,43 +855,6 @@ n            </p>
               </div>
             )}
 
-            {/* Update Password form (after clicking reset link) */}
-            {loginMode === 'update-password' && (
-              <div style={{ marginTop: '12px' }}>
-                <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '16px' }}>
-                  <span style={{ color: dark.accent, fontWeight: 600, fontSize: '14px' }}>🔑 Set your new password</span>
-                </div>
-                <div style={{ display: 'grid', gap: '14px' }}>
-                  <div>
-                    <label style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>New Password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      style={{
-                        width: '100%', padding: '12px 16px', borderRadius: '10px',
-                        background: 'rgba(0,0,0,0.4)', border: `1px solid ${dark.border}`, color: '#fff',
-                        fontSize: '15px', outline: 'none', boxSizing: 'border-box',
-                      }}
-                      onKeyDown={e => e.key === 'Enter' && handleUpdatePassword()}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={handleUpdatePassword}
-                  disabled={loginLoading || !newPassword || newPassword.length < 6}
-                  style={{
-                    width: '100%', marginTop: '16px', padding: '14px', borderRadius: '12px', border: 'none',
-                    background: loginLoading || !newPassword || newPassword.length < 6 ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
-                    color: '#fff', fontSize: '16px', fontWeight: 700,
-                    cursor: loginLoading || !newPassword || newPassword.length < 6 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loginLoading ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            )}
 
             {loginError && (
               <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? dark.green : dark.red, fontSize: '13px' }}>
