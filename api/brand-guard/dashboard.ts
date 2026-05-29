@@ -70,7 +70,7 @@ interface BrandHealthScore {
     social_health: number;
     domain_health: number;
     phone_health: number;
-    scammer_db_exposure: number;
+    web_reputation: number;
   };
   trend: 'improving' | 'stable' | 'declining';
   last_scan: string;
@@ -122,7 +122,7 @@ function calculateHealthScore(
   socialThreats: number,
   domainThreats: number,
   phoneThreats: number,
-  scammerDbMatches: number,
+  webReputationFlags: number,
   criticalCount: number,
   highCount: number
 ): BrandHealthScore {
@@ -140,8 +140,8 @@ function calculateHealthScore(
   // Phone threats: -2 per threat
   score -= Math.min(10, phoneThreats * 2);
 
-  // Scammer DB exposure: -5 per match
-  score -= Math.min(20, scammerDbMatches * 5);
+  // Web reputation flags: -5 per flag (ScamAdviser warnings, negative search signals)
+  score -= Math.min(20, webReputationFlags * 5);
 
   // Floor at 0
   score = Math.max(0, Math.min(100, score));
@@ -162,7 +162,7 @@ function calculateHealthScore(
   if (criticalCount > 0) recommendations.push('File urgent abuse reports for all critical threats');
   if (highCount > 0) recommendations.push('Monitor high-threat profiles and file abuse reports within 48 hours');
   if (domainThreats > 0) recommendations.push('Register key domain variants to prevent typosquatting');
-  if (scammerDbMatches > 0) recommendations.push('Review scammer database entries and update monitoring keywords');
+  if (webReputationFlags > 0) recommendations.push('Check ScamAdviser and review any negative web reputation signals');
   if (socialThreats > 5) recommendations.push('Consider increasing scan frequency to daily for this brand');
   if (phoneThreats > 0) recommendations.push('Set up call screening for reported phone numbers');
 
@@ -173,7 +173,7 @@ function calculateHealthScore(
       social_health: Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15)),
       domain_health: Math.max(0, 100 - Math.min(70, domainThreats * 3)),
       phone_health: Math.max(0, 100 - Math.min(40, phoneThreats * 10)),
-      scammer_db_exposure: Math.max(0, 100 - Math.min(50, scammerDbMatches * 15)),
+      web_reputation: Math.max(0, 100 - Math.min(50, webReputationFlags * 10)),
     },
     trend: trend as 'improving' | 'stable' | 'declining',
     last_scan: new Date().toISOString(),
@@ -407,7 +407,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     threats.filter(t => t.type === 'social_impersonator').length,
     threats.filter(t => t.type === 'domain_lookalike').length,
     threats.filter(t => t.type === 'phone_scam').length,
-    threats.filter(t => t.type === 'scammer_db').length,
+    threats.filter(t => t.type === 'cross_channel').length,
     criticalCount,
     highCount,
   );

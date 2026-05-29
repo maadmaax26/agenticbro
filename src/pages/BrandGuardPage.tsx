@@ -1404,7 +1404,7 @@ n            </p>
                                   { label: '👤 Social', value: breakdown?.social_health ?? 0 },
                                   { label: '🌐 Domain', value: breakdown?.domain_health ?? 0 },
                                   { label: '📞 Phone', value: breakdown?.phone_health ?? 0 },
-                                  { label: '🕵️ DB Exposure', value: breakdown?.scammer_db_exposure ?? 0 },
+                                  { label: '🌐 Web Reputation', value: breakdown?.web_reputation ?? 100 },
                                 ].map(item => (
                                   <div key={item.label}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
