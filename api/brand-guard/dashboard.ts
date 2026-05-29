@@ -134,8 +134,8 @@ function calculateHealthScore(
   score -= Math.min(20, criticalCount * 10);
   score -= Math.min(15, highCount * 5);
 
-  // Domain threats: -2 per threat
-  score -= Math.min(20, domainThreats * 2);
+  // Domain threats: -1 per threat (variants inflated count, so use smaller penalty)
+  score -= Math.min(20, domainThreats * 1);
 
   // Phone threats: -2 per threat
   score -= Math.min(10, phoneThreats * 2);
@@ -170,10 +170,10 @@ function calculateHealthScore(
     overall_score: score,
     overall_level: level,
     breakdown: {
-      social_health: Math.max(0, 100 - socialThreats * 5 - criticalCount * 15),
-      domain_health: Math.max(0, 100 - domainThreats * 5),
-      phone_health: Math.max(0, 100 - phoneThreats * 10),
-      scammer_db_exposure: Math.max(0, 100 - scammerDbMatches * 15),
+      social_health: Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15)),
+      domain_health: Math.max(0, 100 - Math.min(70, domainThreats * 3)),
+      phone_health: Math.max(0, 100 - Math.min(40, phoneThreats * 10)),
+      scammer_db_exposure: Math.max(0, 100 - Math.min(50, scammerDbMatches * 15)),
     },
     trend: trend as 'improving' | 'stable' | 'declining',
     last_scan: new Date().toISOString(),
