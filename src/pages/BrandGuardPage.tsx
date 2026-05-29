@@ -940,6 +940,11 @@ n            </p>
         position: 'sticky', top: 0, zIndex: 50,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {isMobile && (
+            <button onClick={() => navigate('/')} style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', cursor: 'pointer', color: '#fff', fontSize: '14px', padding: '6px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+              ←
+            </button>
+          )}
           {!isMobile && <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: dark.textMuted, fontSize: '14px' }}>
             ← Home
           </button>}
