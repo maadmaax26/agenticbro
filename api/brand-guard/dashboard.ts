@@ -411,6 +411,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
     }
 
+    // Fetch email spoof check threats
+    const { data: emailSpoofChecks } = await supabase
+      .from('email_spoof_checks')
+      .select('*')
+      .eq('brand_monitor_id', brandId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (emailSpoofChecks) {
+      for (const esc of emailSpoofChecks) {
+        const result = esc.result as Record<string, unknown> || {};
+        const emailSec = result.email_security as Record<string, unknown> || {};
+        const newDomainThreats = (Array.isArray(result.new_domain_threats) ? result.new_domain_threats : []) as Record<string, unknown>[];
+
+        // Add email vulnerability as a threat if spoofable
+        if (emailSec.spoofable === true) {
+          threats.push({
+            id: `es-${esc.scan_id}`,
+            type: 'domain_lookalike',
+            severity: 'high',
+            platform: 'email',
+            target: esc.domain || 'unknown',
+            risk_score: 100 - (emailSec.overall_score as number || 0) / 10,
+            risk_level: emailSec.vulnerability_level as string || 'HIGH',
+            evidence: (Array.isArray(emailSec.spoof_methods) ? emailSec.spoof_methods as string[] : []).slice(0, 3),
+            detected_at: esc.created_at as string || new Date().toISOString(),
+            status: 'active',
+            takedown_actions: [],
+          });
+        }
+
+        // Add lookalike domain threats from CertStream
+        for (const dt of newDomainThreats.slice(0, 10)) {
+          threats.push({
+            id: `es-dt-${esc.scan_id}-${dt.domain}`,
+            type: 'domain_lookalike',
+            severity: (dt.riskLevel === 'CRITICAL' || dt.riskLevel === 'HIGH') ? 'high' : (dt.riskLevel === 'MEDIUM') ? 'medium' : 'low',
+            platform: 'email',
+            target: (dt.domain as string) || 'unknown',
+            risk_score: Math.round((dt.similarity as number || 0) * 10),
+            risk_level: (dt.riskLevel as string) || 'LOW',
+            evidence: (Array.isArray(dt.evidence) ? dt.evidence as string[] : []).slice(0, 3),
+            detected_at: esc.created_at as string || new Date().toISOString(),
+            status: 'active',
+            takedown_actions: [],
+          });
+        }
+
+        // Add to scan history
+        scanHistory.push({
+          scan_type: 'email_spoof',
+          scan_date: esc.created_at as string || new Date().toISOString(),
+          results_count: 1 + newDomainThreats.length,
+        });
+      }
+    }
+
     // Build scan history from brand_guard_scans
     const { data: scanRows } = await supabase
       .from('brand_guard_scans')

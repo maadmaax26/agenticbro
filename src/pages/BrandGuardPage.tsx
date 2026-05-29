@@ -1461,7 +1461,7 @@ n            </p>
                                   {threats.slice(0, 15).map((t: Record<string, unknown>, i: number) => {
                                     const sev = (t.severity as string) || 'low';
                                     const sevIcon = sev === 'critical' ? '🚨' : sev === 'high' ? '⚠️' : sev === 'medium' ? 'ℹ️' : '✅';
-                                    const typeLabel = (t.type as string) === 'social_impersonator' ? 'Impersonator' : (t.type as string) === 'domain_lookalike' ? 'Lookalike Domain' : (t.type as string) === 'phone_scam' ? 'Phone Scam' : (t.type as string) === 'cross_channel' ? 'Cross-channel' : 'Scammer DB';
+                                    const typeLabel = (t.type as string) === 'social_impersonator' ? 'Impersonator' : (t.type as string) === 'domain_lookalike' ? 'Lookalike Domain' : (t.type as string) === 'phone_scam' ? 'Phone Scam' : (t.type as string) === 'cross_channel' ? 'Cross-channel' : (t.type as string) === 'email' ? 'Email Spoof' : 'Unknown';
                                     const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : '🕵️';
                                     const sevColor = sev === 'critical' ? dark.red : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : dark.green;
                                     const sevBg = sev === 'critical' ? 'rgba(239,68,68,0.1)' : sev === 'high' ? 'rgba(249,115,22,0.1)' : sev === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)';
