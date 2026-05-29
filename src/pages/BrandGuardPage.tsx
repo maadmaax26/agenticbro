@@ -1263,7 +1263,7 @@ n            </p>
                 {[
                   { type: 'impersonator', icon: '🔍', label: 'Impersonator Scan', desc: 'Find fake accounts mimicking your brand' },
                   { type: 'domain', icon: '🌐', label: 'Domain Monitor', desc: 'Detect lookalike domains & phishing sites' },
-                  { type: 'website', icon: '🖥️', label: 'Website Scan', desc: 'Scan any URL for scam indicators' },
+                  { type: 'website', icon: '🖥️', label: 'Website Scan', desc: 'Check any URL for impersonation of your brand' },
                   { type: 'threat', icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk correlation' },
                   { type: 'vendor', icon: '📞', label: 'Vendor Verify', desc: 'Check phone numbers for vendor fraud' },
                 ].map(scan => (
@@ -1433,6 +1433,25 @@ n            </p>
                       {/* Website scan results */}
                       {scanType === 'website' && (
                         <>
+                          {/* Brand impersonation alert */}
+                          {scanResult.brandImpersonationInfo?.is_lookalike && (
+                            <div style={{ marginBottom: '16px', padding: '14px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)' }}>
+                              <div style={{ color: dark.red, fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>⚠️ Brand Domain Impersonation Detected</div>
+                              <div style={{ color: '#fff', fontSize: '13px', marginBottom: '6px' }}>
+                                <strong>{scanResult.domain}</strong> is a <strong>{scanResult.brandImpersonationInfo.variant_type.replace(/_/g, ' ')}</strong> of your brand domain <strong>{scanResult.brandImpersonationInfo.brand_domain}</strong>
+                              </div>
+                              <div style={{ color: dark.textMuted, fontSize: '12px' }}>
+                                Similarity: {Math.round((scanResult.brandImpersonationInfo.similarity ?? 0) * 100)}% — this domain may be impersonating your brand
+                              </div>
+                            </div>
+                          )}
+                          {/* Verified brand domain */}
+                          {scanResult.brandImpersonationInfo === null && scanResult.legitimate && scanResult.riskScore === 0 && (
+                            <div style={{ marginBottom: '16px', padding: '14px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                              <div style={{ color: dark.green, fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>✅ Verified Brand Domain</div>
+                              <div style={{ color: dark.textMuted, fontSize: '12px' }}>This is your registered brand domain — no impersonation detected.</div>
+                            </div>
+                          )}
                           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                             <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
                               <div style={{ fontSize: '12px', color: dark.textMuted }}>Risk Score</div>
