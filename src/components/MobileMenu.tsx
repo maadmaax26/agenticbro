@@ -141,17 +141,18 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
 
             {/* Navigation */}
             <nav className="flex flex-col p-4 gap-3">
-              <button
-                onClick={() => handleNavigate('scanners')}
-                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/40 text-left w-full border border-red-500/30 transition-colors"
-                type="button"
+              <a
+                href="https://agenticbro.app/brand-guard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-purple-500/20 hover:bg-purple-500/40 text-left w-full border border-purple-500/30 transition-colors"
               >
-                <ShieldAlert className="h-7 w-7 text-red-400 flex-shrink-0" />
+                <ShieldAlert className="h-7 w-7 text-purple-400 flex-shrink-0" />
                 <div>
-                  <span className="text-white font-semibold text-xl">Scam Detection</span>
-                  <p className="text-xs text-red-300/80 mt-0.5">Profile • Token • Wallet scans</p>
+                  <span className="text-white font-semibold text-xl">Brand Guard</span>
+                  <p className="text-xs text-purple-300/80 mt-0.5">Impersonator • Domain • Threat scans</p>
                 </div>
-              </button>
+              </a>
 
               <button
                 onClick={() => handleNavigate('wallet-protection')}
