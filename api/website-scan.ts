@@ -265,6 +265,8 @@ const LEGITIMATE_DOMAINS = [
   'okx.com', 'kucoin.com', 'crypto.com', 'gate.io',
   'robinhood.com', 'webull.com', 'etrade.com', 'fidelity.com',
   'schwab.com', 'vanguard.com', 'sofi.com',
+  // Agentic Bro — our own domain
+  'agenticbro.app',
   // FIFA official
   'fifa.com', 'fifaworldcup.com', 'fifa.org',
   // Authorized ticket resale platforms
@@ -497,7 +499,7 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
   const cryptoMethods = ['bitcoin', 'ethereum', 'cryptocurrency', 'crypto', 'usdt', 'usdc', 'tether'];
   for (const method of paymentAnalysis.riskyMethods) {
     // Skip crypto-related payment methods on legitimate crypto domains
-    if (isLegit && cryptoMethods.includes(method)) continue;
+    if (isLegitimateDomain(_domain) && cryptoMethods.includes(method)) continue;
     
     const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const
       : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const
@@ -673,8 +675,11 @@ async function searchScamReports(domain: string, isTicketRelated?: boolean): Pro
       description: r.description,
     }));
     
-    // Extract scam indicators from descriptions
+    // Extract scam indicators from search results — only count results
+    // that actually mention the domain being scanned, not generic scam articles
     const scamIndicators: string[] = [];
+    const domainParts = domain.split('.');
+    const domainRoot = domainParts[0].toLowerCase(); // e.g. 'agenticbro' from agenticbro.app
     const scamPatterns = [
       /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
       /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
@@ -684,6 +689,15 @@ async function searchScamReports(domain: string, isTicketRelated?: boolean): Pro
     
     for (const result of results) {
       const text = `${result.title} ${result.description}`.toLowerCase();
+      const resultUrl = result.url.toLowerCase();
+      
+      // Only flag as indicator if the search result actually mentions
+      // the domain or its root name — skip generic scam articles
+      const mentionsDomain = text.includes(domain) || text.includes(domainRoot) ||
+        resultUrl.includes(domain) || resultUrl.includes(domainRoot);
+      
+      if (!mentionsDomain) continue; // Skip unrelated results
+      
       for (const pattern of scamPatterns) {
         if (pattern.test(text)) {
           scamIndicators.push(result.title);
@@ -1212,8 +1226,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (reputationResults.status === 'fulfilled') {
     reputation = reputationResults.value.results;
     webSearchResults = reputationResults.value.webSearchResults;
-    // Extract scam indicators from web search results
+    // Extract scam indicators from web search results — only count results
+    // that actually mention the domain being scanned
     if (reputationResults.value.webSearchResults) {
+      const domainParts = domain.split('.');
+      const domainRoot = domainParts[0].toLowerCase();
       const scamPatterns = [
         /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
         /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
@@ -1221,6 +1238,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       for (const result of reputationResults.value.webSearchResults) {
         const text = `${result.title} ${result.description}`.toLowerCase();
+        const resultUrl = result.url.toLowerCase();
+        
+        // Only flag as indicator if the search result actually mentions
+        // the domain or its root name — skip generic scam articles
+        const mentionsDomain = text.includes(domain) || text.includes(domainRoot) ||
+          resultUrl.includes(domain) || resultUrl.includes(domainRoot);
+        
+        if (!mentionsDomain) continue;
+        
         for (const pattern of scamPatterns) {
           if (pattern.test(text)) {
             scamIndicators.push(result.title);
