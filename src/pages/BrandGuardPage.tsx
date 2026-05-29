@@ -109,6 +109,7 @@ export function BrandGuardPage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('');
 
   // Brand state
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -328,6 +329,7 @@ export function BrandGuardPage() {
           brand_domain: brandDomain || null,
           platforms: selectedPlatforms,
           scan_frequency: scanFrequency,
+          promo_code: promoCode.trim() || null,
         }),
       });
       const data = await res.json();
@@ -833,7 +835,7 @@ n            </p>
                 Review & Confirm
               </h2>
               <p style={{ color: dark.textMuted, marginBottom: '32px' }}>
-                Confirm your brand monitoring setup. You'll get 10 free scans to start.
+                Confirm your brand monitoring setup. {promoCode.trim().toLowerCase() === 'beta2026' ? 'As a beta tester, you\'ll get 500 free scans!' : 'You\'ll get 10 free scans to start.'}
               </p>
               <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '16px' : '24px', marginBottom: '16px' }}>
                 <div style={{ display: 'grid', gap: '16px' }}>
@@ -871,10 +873,33 @@ n            </p>
                   </div>
                 </div>
               </div>
-              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center', marginBottom: '16px' }}>
                 <div style={{ fontSize: '24px', marginBottom: '4px' }}>🎁</div>
-                <div style={{ color: dark.green, fontWeight: 700 }}>10 free scans included</div>
+                <div style={{ color: dark.green, fontWeight: 700 }}>{promoCode.trim().toLowerCase() === 'beta2026' ? '500 free scans (Beta Tester)' : '10 free scans included'}</div>
                 <div style={{ color: dark.textMuted, fontSize: '13px' }}>$1 per scan after that</div>
+              </div>
+              {/* Promo code input */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12px', color: dark.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+                  Promo Code (optional)
+                </label>
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Enter promo code"
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '10px',
+                    border: `1px solid ${promoCode.trim().toLowerCase() === 'beta2026' ? dark.green : dark.border}`,
+                    background: promoCode.trim().toLowerCase() === 'beta2026' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.3)',
+                    color: '#fff', fontSize: '14px', outline: 'none',
+                  }}
+                />
+                {promoCode.trim().toLowerCase() === 'beta2026' && (
+                  <div style={{ fontSize: '13px', color: dark.green, marginTop: '6px', fontWeight: 600 }}>
+                    ✅ Beta tester unlocked — 500 free scans!
+                  </div>
+                )}
               </div>
               {onboardError && (
                 <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: dark.red, fontSize: '14px', marginBottom: '16px' }}>

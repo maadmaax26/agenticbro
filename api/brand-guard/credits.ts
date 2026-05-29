@@ -169,6 +169,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         total_remaining: totalRemaining,
         has_credits: totalRemaining > 0,
         first_brand_at: credits.first_brand_at,
+        promo_code: credits.promo_code || null,
+        promo_credits: credits.promo_credits || 0,
       },
     });
     return;
