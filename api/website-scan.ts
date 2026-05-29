@@ -1169,25 +1169,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body as { url?: string };
+  const { url, brand_monitor_id } = req.body as { url?: string; brand_monitor_id?: string };
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  let validUrl: string;
-  try {
-    validUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://' + url;
-    new URL(validUrl);
-  } catch {
-    return res.status(400).json({ error: 'Invalid URL format' });
+  // ── Look up brand domain for legitimate domain tracking ──────────────────
+  let brandDomain: string | null = null;
+  if (brand_monitor_id) {
+    try {
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabaseModule = await import('@supabase/supabase-js');
+        const sb = supabaseModule.createClient(supabaseUrl, supabaseKey);
+        const { data: brand } = await sb
+          .from('brand_monitors')
+          .select('brand_domain')
+          .eq('id', brand_monitor_id)
+          .single();
+        if (brand?.brand_domain) {
+          brandDomain = brand.brand_domain.replace(/^https?:\/\//, '').replace(/\/.+$/, '').toLowerCase();
+        }
+      }
+    } catch (e) {
+      // Non-blocking: brand domain lookup failure shouldn't break the scan
+      console.error('[website-scan] brand domain lookup error:', e);
+    }
   }
 
-  const domain = extractDomain(validUrl);
-  const isLegit = isLegitimateDomain(domain);
+  // Add brand domain to legitimate domains for this scan
+  const dynamicLegitDomains = [...LEGITIMATE_DOMAINS];
+  if (brandDomain && !dynamicLegitDomains.includes(brandDomain)) {
+    dynamicLegitDomains.push(brandDomain);
+  }
+  const isLegit = dynamicLegitDomains.some(legit =>
+    domain === legit || domain.endsWith('.' + legit)
+  );
 
   // ─── Early return for known legitimate domains ─────────────────────────
   if (isLegit) {
+    const isBrandDomain = brandDomain && domain === brandDomain;
     return res.status(200).json({
       success: true,
       url: validUrl,
@@ -1196,7 +1219,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       riskLevel: 'LOW',
       threats: [],
       scamIndicators: [],
-      recommendations: ['✅ Known legitimate domain', '🔐 Still verify the URL is correct'],
+      recommendations: isBrandDomain
+        ? ['✅ This is your verified brand domain', '✅ No threats detected', '🔐 Monitor for lookalike domains that may impersonate your brand']
+        : ['✅ Known legitimate domain', '🔐 Still verify the URL is correct'],
       legitimate: true,
       scanDate: new Date().toISOString(),
       scanCategory: domain.includes('fifa') || domain.includes('ticket') ? 'ticket' : 'general',
