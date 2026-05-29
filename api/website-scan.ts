@@ -56,9 +56,10 @@ interface WebsiteScanResult {
   deepScanId?: string;
   deepScanPollUrl?: string;
   scanDate: string;
-  scanCategory?: 'general' | 'ticket' | 'crypto_casino';
+  scanCategory?: 'general' | 'ticket' | 'crypto_casino' | 'brand_impersonation';
   domainInfo?: DomainInfo;
   paymentAnalysis?: PaymentAnalysis;
+  brandImpersonationInfo?: { is_lookalike: boolean; brand_domain: string | null; similarity: number; variant_type: string } | null;
 }
 
 // ─── Known Scam Domains (Regulatory Warnings) ────────────────────────────────
@@ -294,6 +295,23 @@ function isAuthorizedTicketSeller(domain: string): boolean {
   return AUTHORIZED_TICKET_SELLERS.some(seller =>
     domain === seller || domain.endsWith('.' + seller)
   );
+}
+
+// ─── Levenshtein distance ─────────────────────────────────────────────────
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
 }
 
 function checkKnownScamDomain(domain: string): ThreatDetection | null {
@@ -1239,6 +1257,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const threats: ThreatDetection[] = [];
+
+  // ─── Brand domain impersonation check ────────────────────────────────────
+  // When a brand_monitor_id is provided, check if the scanned domain
+  // is a lookalike/typosquat of the brand's legitimate domain
+  let brandImpersonationInfo: { is_lookalike: boolean; brand_domain: string | null; similarity: number; variant_type: string } | null = null;
+  if (brandDomain && domain !== brandDomain) {
+    // Simple typosquat detection: compute similarity and check variant types
+    const brandParts = brandDomain.split('.')[0].toLowerCase();
+    const domainParts = domain.split('.')[0].toLowerCase();
+    const brandTld = '.' + brandDomain.split('.').slice(1).join('.').toLowerCase();
+    const domainTld = '.' + domain.split('.').slice(1).join('.').toLowerCase();
+    
+    // Levenshtein distance for similarity
+    const levDist = levenshtein(domainParts, brandParts);
+    const maxLen = Math.max(domainParts.length, brandParts.length);
+    const similarity = maxLen > 0 ? Math.round(((1 - levDist / maxLen) * 1000)) / 1000 : 0;
+    
+    let variantType = 'unknown';
+    let isLookalike = false;
+    
+    // Check TLD swap (same base, different TLD)
+    if (domainParts === brandParts && domainTld !== brandTld) {
+      variantType = 'tld_swap';
+      isLookalike = true;
+    }
+    // Check phishing prefix (login-, verify-, secure- etc.)
+    else if (brandParts.length > 0 && (domainParts.startsWith(brandParts) || domainParts.endsWith(brandParts)) && domainParts !== brandParts) {
+      variantType = domainParts.startsWith(brandParts) ? 'phishing_prefix' : 'phishing_suffix';
+      isLookalike = true;
+    }
+    // Check homoglyph/typo (high similarity but not identical)
+    else if (similarity >= 0.6 && domainParts !== brandParts) {
+      variantType = 'homoglyph';
+      isLookalike = true;
+    }
+    // Check subdomain phishing (brand is a subdomain)
+    else if (domain.includes(brandDomain) && domain !== brandDomain) {
+      variantType = 'subdomain_phishing';
+      isLookalike = true;
+    }
+    
+    if (isLookalike) {
+      brandImpersonationInfo = { is_lookalike: true, brand_domain: brandDomain, similarity, variant_type: variantType };
+      
+      // Add threat for lookalike domain
+      const severity = similarity >= 0.9 ? 'CRITICAL' : similarity >= 0.75 ? 'HIGH' : similarity >= 0.5 ? 'MEDIUM' : 'LOW';
+      const weight = similarity >= 0.9 ? 30 : similarity >= 0.75 ? 25 : similarity >= 0.5 ? 15 : 8;
+      threats.push({
+        type: 'brand_domain_lookalike',
+        severity: severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        description: `Domain "${domain}" is a ${variantType.replace(/_/g, ' ')} of brand domain "${brandDomain}" (${Math.round(similarity * 100)}% similar)`,
+        evidence: `Scanned domain: ${domain} | Brand domain: ${brandDomain} | Similarity: ${Math.round(similarity * 100)}% | Type: ${variantType}`,
+        weight,
+      });
+    }
+  }
+
   let reputation: ReputationResult[] | undefined;
   let webSearchResults: SearchResult[] | undefined;
   
@@ -1356,8 +1431,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const hasCasinoKeywords = threats.some(t =>
     ['fake_casino', 'casino_lure', 'casino_withhold'].includes(t.type)
   );
-  let scanCategory: 'general' | 'ticket' | 'crypto_casino' = 'general';
-  if (hasCasinoKeywords || domain.includes('casino') || domain.includes('bet') || domain.includes('slot')) scanCategory = 'crypto_casino';
+  const hasBrandLookalike = threats.some(t => t.type === 'brand_domain_lookalike');
+  let scanCategory: 'general' | 'ticket' | 'crypto_casino' | 'brand_impersonation' = 'general';
+  if (hasBrandLookalike) scanCategory = 'brand_impersonation';
+  else if (hasCasinoKeywords || domain.includes('casino') || domain.includes('bet') || domain.includes('slot')) scanCategory = 'crypto_casino';
   else if (hasTicketKeywords || isTicketRelated) scanCategory = 'ticket';
   
   // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
@@ -1429,6 +1506,7 @@ Format response as JSON for the user to see.`,
     scanCategory,
     domainInfo: Object.keys(domainInfo).length > 0 ? domainInfo : undefined,
     paymentAnalysis,
+    brandImpersonationInfo,
   };
   
   return res.status(200).json(result);
