@@ -104,7 +104,7 @@ export function BrandGuardPage() {
   const [authLoading, setAuthLoading] = useState(true);
 
   // Login form state
-  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
+  const [loginMode, setLoginMode] = useState<'login' | 'register' | 'reset' | 'update-password'>('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -269,6 +269,59 @@ export function BrandGuardPage() {
       setLoginError('Confirmation email sent! Check your inbox and spam folder.');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Failed to resend');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // ── Password Reset ────────────────────────────────────────────────────────
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!loginEmail) { setLoginError('Enter your email address'); return; }
+    setLoginLoading(true);
+    setLoginError(null);
+    setResetSent(false);
+    try {
+      const { error } = await supabase!.auth.resetPasswordForEmail(loginEmail, {
+        redirectTo: `${window.location.origin}/brand-guard`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      setLoginError('Password reset email sent! Check your inbox (and spam folder). The link expires in 1 hour.');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Failed to send reset email');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // Handle password reset callback (when user returns from email link)
+  useEffect(() => {
+    if (!supabase) return;
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') || hash.includes('access_token')) {
+      // User clicked the reset link — switch to password update mode
+      setLoginMode('update-password');
+    }
+  }, []);
+
+  const [newPassword, setNewPassword] = useState('');
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) { setLoginError('Password must be at least 6 characters'); return; }
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const { error } = await supabase!.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setLoginError(null);
+      setLoginMode('login');
+      setLoginPassword('');
+      // Clear the hash fragment
+      window.history.replaceState(null, '', window.location.pathname);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Failed to update password. The reset link may have expired.');
     } finally {
       setLoginLoading(false);
     }
@@ -594,7 +647,8 @@ n            </p>
           </div>
 
           <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '20px' : '28px', backdropFilter: 'blur(12px)' }}>
-            {/* Tab switcher */}
+            {/* Tab switcher (hidden in reset/update-password mode) */}
+            {(loginMode === 'login' || loginMode === 'register') && (
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: '8px', marginBottom: '24px' }}>
               <button
                 onClick={() => { setLoginMode('login'); setLoginError(null); }}
@@ -619,11 +673,29 @@ n            </p>
                 Create Account
               </button>
             </div>
+            )}
 
+            {/* Reset password heading */}
+            {loginMode === 'reset' && (
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>🔑 Reset Password</h2>
+                <p style={{ color: dark.textMuted, fontSize: '13px' }}>Enter your email and we\'ll send you a link to reset your password.</p>
+              </div>
+            )}
+            {loginMode === 'update-password' && (
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>🔑 Update Password</h2>
+                <p style={{ color: dark.textMuted, fontSize: '13px' }}>Choose a new password for your account.</p>
+              </div>
+            )}
+
+            {(loginMode === 'login' || loginMode === 'register') && (
             <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '20px' }}>
               <span style={{ color: dark.green, fontWeight: 600, fontSize: '14px' }}>🎁 10 free scans included with sign-up</span>
             </div>
+            )}
 
+            {(loginMode === 'login' || loginMode === 'register') && (
             <div style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Email</label>
@@ -655,10 +727,103 @@ n            </p>
                   onKeyDown={e => e.key === 'Enter' && handleLogin()}
                 />
               </div>
+              {loginMode === 'login' && (
+                <div style={{ textAlign: 'right', marginTop: '4px' }}>
+                  <button
+                    onClick={() => { setLoginMode('reset'); setLoginError(null); setResetSent(false); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: dark.accent, fontSize: '13px', textDecoration: 'underline' }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
             </div>
+            )}
+
+            {/* Reset Password form */}
+            {loginMode === 'reset' && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ display: 'grid', gap: '14px' }}>
+                  <div>
+                    <label style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Email address</label>
+                    <input
+                      type="email"
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      style={{
+                        width: '100%', padding: '12px 16px', borderRadius: '10px',
+                        background: 'rgba(0,0,0,0.4)', border: `1px solid ${dark.border}`, color: '#fff',
+                        fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                      }}
+                      onKeyDown={e => e.key === 'Enter' && handleResetPassword()}
+                    />
+                  </div>
+                </div>
+                <p style={{ color: dark.textMuted, fontSize: '13px', marginTop: '8px' }}>
+                  We\'ll send a password reset link to your email. The link expires in 1 hour.
+                </p>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={loginLoading || !loginEmail}
+                  style={{
+                    width: '100%', marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
+                    background: loginLoading || !loginEmail ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
+                    color: '#fff', fontSize: '16px', fontWeight: 700,
+                    cursor: loginLoading || !loginEmail ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loginLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+                <button
+                  onClick={() => { setLoginMode('login'); setLoginError(null); }}
+                  style={{ width: '100%', marginTop: '8px', padding: '10px', borderRadius: '10px', border: `1px solid ${dark.border}`, background: 'transparent', color: dark.textMuted, fontSize: '13px', cursor: 'pointer' }}
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            )}
+
+            {/* Update Password form (after clicking reset link) */}
+            {loginMode === 'update-password' && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '16px' }}>
+                  <span style={{ color: dark.accent, fontWeight: 600, fontSize: '14px' }}>🔑 Set your new password</span>
+                </div>
+                <div style={{ display: 'grid', gap: '14px' }}>
+                  <div>
+                    <label style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      style={{
+                        width: '100%', padding: '12px 16px', borderRadius: '10px',
+                        background: 'rgba(0,0,0,0.4)', border: `1px solid ${dark.border}`, color: '#fff',
+                        fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                      }}
+                      onKeyDown={e => e.key === 'Enter' && handleUpdatePassword()}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleUpdatePassword}
+                  disabled={loginLoading || !newPassword || newPassword.length < 6}
+                  style={{
+                    width: '100%', marginTop: '16px', padding: '14px', borderRadius: '12px', border: 'none',
+                    background: loginLoading || !newPassword || newPassword.length < 6 ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
+                    color: '#fff', fontSize: '16px', fontWeight: 700,
+                    cursor: loginLoading || !newPassword || newPassword.length < 6 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loginLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            )}
 
             {loginError && (
-              <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: loginError.includes('sent') || loginError.includes('Account created') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${loginError.includes('sent') || loginError.includes('Account created') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: loginError.includes('sent') || loginError.includes('Account created') ? dark.green : dark.red, fontSize: '13px' }}>
+              <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, color: loginError.includes('sent') || loginError.includes('Account created') || loginError.includes('reset') ? dark.green : dark.red, fontSize: '13px' }}>
                 {loginError}
                 {(loginError.includes('confirm') || loginError.includes('Confirmation')) && (
                   <button onClick={handleResendConfirmation} style={{ marginLeft: '8px', color: dark.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px' }}>
@@ -668,6 +833,7 @@ n            </p>
               </div>
             )}
 
+            {(loginMode === 'login' || loginMode === 'register') && (
             <button
               onClick={handleLogin}
               disabled={loginLoading || !loginEmail || !loginPassword}
@@ -680,6 +846,7 @@ n            </p>
             >
               {loginLoading ? 'Please wait...' : loginMode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
+            )}
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
