@@ -1262,8 +1262,8 @@ n            </p>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {[
                   { type: 'impersonator', icon: '🔍', label: 'Impersonator Scan', desc: 'Find fake accounts mimicking your brand' },
-                  { type: 'domain', icon: '🌐', label: 'Domain Monitor', desc: 'Detect lookalike domains & phishing sites' },
-                  { type: 'website', icon: '🖥️', label: 'Website Scan', desc: 'Check any URL for impersonation of your brand' },
+                  { type: 'domain', icon: '🌐', label: 'Domain Sweep', desc: 'Map all lookalike & typosquat domains targeting your brand' },
+                  { type: 'website', icon: '🔗', label: 'Link Scanner', desc: 'Check any URL — is it impersonating your brand or a scam?' },
                   { type: 'threat', icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk correlation' },
                   { type: 'vendor', icon: '📞', label: 'Vendor Verify', desc: 'Check phone numbers for vendor fraud' },
                 ].map(scan => (
@@ -1327,7 +1327,7 @@ n            </p>
               {/* Website URL input */}
               {showWebsiteInput && (
                 <div style={{ padding: '16px', borderRadius: '10px', border: `1px solid ${dark.border}`, background: dark.cardBg }}>
-                  <div style={{ color: '#fff', fontWeight: 600, marginBottom: '8px' }}>🖥️ Website Scan</div>
+                  <div style={{ color: '#fff', fontWeight: 600, marginBottom: '8px' }}>🔗 Link Scanner</div>
                   <input
                     placeholder="https://example.com"
                     value={websiteUrl}
@@ -1352,7 +1352,7 @@ n            </p>
               {scanResult ? (
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
                   <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>
-                    {scanType === 'domain' ? '🌐 Domain Monitor Results' : scanType === 'website' ? '🖥️ Website Scan Results' : scanType === 'threat' ? '⚡ Threat Correlation Results' : scanType === 'vendor' ? '📞 Vendor Verification Results' : '🔍 Impersonator Scan Results'}
+                    {scanType === 'domain' ? '🌐 Domain Sweep Results' : scanType === 'website' ? '🔗 Link Scanner Results' : scanType === 'threat' ? '⚡ Threat Correlation Results' : scanType === 'vendor' ? '📞 Vendor Verification Results' : '🔍 Impersonator Scan Results'}
                   </h3>
                   {scanResult.error ? (
                     <div style={{ color: dark.red, fontSize: '14px' }}>{String(scanResult.error)}</div>
