@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase, signUpWithEmail, signInWithEmail } from '../lib/supabase';
+import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Mobile Detection Hook
@@ -1162,6 +1162,17 @@ n            </p>
             }}
           >
             + Add Brand
+          </button>
+          {/* Sign out button */}
+          <button
+            onClick={async () => { await signOut(); setAuthToken(null); }}
+            style={{
+              padding: '6px 12px', borderRadius: '8px',
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#ef4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Sign Out
           </button>
         </div>
       </div>
