@@ -686,14 +686,8 @@ function App() {
                   </button>
                 </div>
               </div>
-              <button
-                onClick={() => setShowScamDatabase(true)}
-                className="px-2 xl:px-3 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
-              >
-                🔍 Scam Database
-              </button>
               <a
-                href="/brand-guard"
+                href="https://agenticbro.app/brand-guard"
                 className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
               >
                 🔐 Brand Guard
