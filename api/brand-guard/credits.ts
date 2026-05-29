@@ -226,8 +226,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (!paymentMethod || !['stripe', 'usdc_solana', 'usdc_base', 'agntcbro', 'subscription', 'admin', 'refund'].includes(paymentMethod)) {
-      res.status(400).json({ error: 'Invalid payment_method. Must be: stripe, usdc_solana, usdc_base, agntcbro, subscription, or admin' });
+    if (!paymentMethod || !['stripe', 'usdc_solana', 'usdc_base', 'agntcbro', 'subscription', 'admin', 'refund', 'health_refresh'].includes(paymentMethod)) {
+      res.status(400).json({ error: 'Invalid payment_method. Must be: stripe, usdc_solana, usdc_base, agntcbro, subscription, admin, or refund' });
       return;
     }
 
