@@ -25,6 +25,7 @@ import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
 import { BrandGuardPage } from './pages/BrandGuardPage'
+import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -159,6 +160,11 @@ function App() {
   // Brand Guard has its own full-page layout
   if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
     return <BrandGuardPage />
+  }
+
+  // Brand Guard Admin — restricted to agenticbro@agenticbro.app
+  if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
+    return <BrandGuardAdminPage />
   }
 
   const { connected, publicKey } = useWallet()
