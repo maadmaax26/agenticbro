@@ -544,6 +544,13 @@ export function BrandGuardPage() {
           brand_handle: activeBrand.brand_handle,
           brand_domain: activeBrand.brand_domain || '',
         };
+      } else if (type === 'email') {
+        endpoint = `${API_BASE}/email-spoof`;
+        body = {
+          domain: activeBrand.brand_domain || activeBrand.brand_handle,
+          brand_name: activeBrand.brand_name,
+          brand_monitor_id: activeBrand.id,
+        };
       } else if (type === 'vendor') {
         endpoint = `${API_BASE}/vendor-verify`;
         body = {
@@ -1553,6 +1560,7 @@ n            </p>
                 {[
                   { type: 'impersonator', icon: '🔍', label: 'Impersonator Scan', desc: 'Find fake accounts mimicking your brand' },
                   { type: 'domain', icon: '🌐', label: 'Domain Sweep', desc: 'Map all lookalike & typosquat domains targeting your brand' },
+                  { type: 'email', icon: '📧', label: 'Email Spoof Check', desc: 'Check SPF/DKIM/DMARC & find spoofable lookalike domains' },
                   { type: 'website', icon: '🔗', label: 'Link Scanner', desc: 'Check any URL — is it impersonating your brand or a scam?' },
                   { type: 'threat', icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk correlation' },
                   { type: 'vendor', icon: '📞', label: 'Vendor Verify', desc: 'Check phone numbers for vendor fraud' },
@@ -1644,11 +1652,11 @@ n            </p>
               {scanResult ? (
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
                   <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>
-                    {scanType === 'domain' ? '🌐 Domain Sweep Results' : scanType === 'website' ? '🔗 Link Scanner Results' : scanType === 'threat' ? '⚡ Threat Correlation Results' : scanType === 'vendor' ? '📞 Vendor Verification Results' : '🔍 Impersonator Scan Results'}
+                    {scanType === 'domain' ? '🌐 Domain Sweep Results' : scanType === 'website' ? '🔗 Link Scanner Results' : scanType === 'threat' ? '⚡ Threat Correlation Results' : scanType === 'vendor' ? '📞 Vendor Verification Results' : scanType === 'email' ? '📧 Email Spoof Check Results' : '🔍 Impersonator Scan Results'}
                   </h3>
                   {scanResult.error ? (
                     <div style={{ color: dark.red, fontSize: '14px' }}>{String(scanResult.error)}</div>
-                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.red_flags) ? (
+                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.email_security || scanResult.red_flags) ? (
                     <div>
                       {/* Impersonator scan results */}
                       {scanType === 'impersonator' && (
@@ -1892,6 +1900,134 @@ n            </p>
                           })()}
                         </>
                       )}
+
+                      {/* Email Spoof Check Results */}
+                      {scanType === 'email' && (() => {
+                        const es = scanResult.email_security as Record<string, unknown> | undefined;
+                        if (!es) return null;
+                        const spf = es.spf as Record<string, unknown> | null;
+                        const dmarc = es.dmarc as Record<string, unknown> | null;
+                        const dkim = es.dkim as Record<string, unknown> | null;
+                        const newThreats = (Array.isArray(scanResult.new_domain_threats) ? scanResult.new_domain_threats : []) as Record<string, unknown>[];
+                        const recs = (Array.isArray(scanResult.recommendations) ? scanResult.recommendations : []) as string[];
+                        const overallScore = (es.overall_score as number) ?? 0;
+                        const vulLevel = (es.vulnerability_level as string) || 'UNKNOWN';
+                        const isSpoofable = es.spoofable === true;
+                        const spoofMethods = (Array.isArray(es.spoof_methods) ? es.spoof_methods : []) as string[];
+                        const scoreColor = overallScore >= 80 ? dark.green : overallScore >= 60 ? '#f59e0b' : overallScore >= 40 ? '#f97316' : dark.red;
+                        const levelColor = vulLevel === 'PROTECTED' ? dark.green : vulLevel === 'LOW' ? '#f59e0b' : vulLevel === 'MEDIUM' ? '#f97316' : dark.red;
+                        return (
+                          <>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                              <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                <div style={{ fontSize: '12px', color: dark.textMuted }}>Security Score</div>
+                                <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: scoreColor }}>{overallScore}/100</div>
+                              </div>
+                              <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                <div style={{ fontSize: '12px', color: dark.textMuted }}>Vulnerability</div>
+                                <div style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 800, color: levelColor }}>{vulLevel}</div>
+                              </div>
+                              <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
+                                <div style={{ fontSize: '12px', color: dark.textMuted }}>Spoofable?</div>
+                                <div style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 800, color: isSpoofable ? dark.red : dark.green }}>
+                                  {isSpoofable ? '🚨 YES' : '✅ NO'}
+                                </div>
+                              </div>
+                            </div>
+                            {isSpoofable && spoofMethods.length > 0 && (
+                              <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: dark.red, marginBottom: '6px' }}>🚨 This Domain Is Spoofable</div>
+                                {spoofMethods.map((m: string, i: number) => (
+                                  <div key={i} style={{ fontSize: '12px', color: '#fca5a5', marginBottom: '2px' }}>• {m}</div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${dark.border}`, marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>📧 SPF Record</div>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: spf ? (spf.isStrict ? dark.green : spf.isPassAll ? dark.red : '#f59e0b') : dark.red }}>
+                                  {spf ? (spf.isStrict ? '✅ Strict (-all)' : spf.isSoftFail ? '⚠️ Soft (~all)' : spf.isPassAll ? '🚨 Open (+all)' : '? Neutral') : '❌ Missing'}
+                                </div>
+                              </div>
+                              {spf && spf.raw && (
+                                <div style={{ fontSize: '11px', color: dark.textMuted, wordBreak: 'break-all' }}>{String(spf.raw)}</div>
+                              )}
+                              {spf && Array.isArray(spf.issues) && (spf.issues as string[]).length > 0 && (
+                                <div style={{ marginTop: '4px' }}>
+                                  {(spf.issues as string[]).map((issue: string, i: number) => (
+                                    <div key={i} style={{ fontSize: '11px', color: '#fca5a5' }}>⚠️ {issue}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${dark.border}`, marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>🔒 DMARC Policy</div>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: dmarc ? (dmarc.isEnforced ? dark.green : dmarc.policy === 'none' ? dark.red : '#f59e0b') : dark.red }}>
+                                  {dmarc ? (dmarc.policy === 'reject' ? '✅ Reject' : dmarc.policy === 'quarantine' ? '⚠️ Quarantine' : dmarc.policy === 'none' ? '🚨 None' : '? Unknown') : '❌ Missing'}
+                                </div>
+                              </div>
+                              {dmarc && dmarc.raw && (
+                                <div style={{ fontSize: '11px', color: dark.textMuted, wordBreak: 'break-all' }}>{String(dmarc.raw)}</div>
+                              )}
+                              {dmarc && Array.isArray(dmarc.issues) && (dmarc.issues as string[]).length > 0 && (
+                                <div style={{ marginTop: '4px' }}>
+                                  {(dmarc.issues as string[]).map((issue: string, i: number) => (
+                                    <div key={i} style={{ fontSize: '11px', color: '#fca5a5' }}>⚠️ {issue}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${dark.border}`, marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>🔑 DKIM Record</div>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: dkim && dkim.found ? dark.green : '#f59e0b' }}>
+                                  {dkim && dkim.found ? `✅ Found (${(dkim.selectors as string[]).length})` : '⚠️ Not Found'}
+                                </div>
+                              </div>
+                              {dkim && Array.isArray(dkim.issues) && (dkim.issues as string[]).length > 0 && (
+                                <div style={{ marginTop: '4px' }}>
+                                  {(dkim.issues as string[]).map((issue: string, i: number) => (
+                                    <div key={i} style={{ fontSize: '11px', color: '#f59e0b' }}>⚠️ {issue}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {newThreats.length > 0 && (
+                              <div style={{ marginBottom: '12px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: dark.red, marginBottom: '8px' }}>🔍 {String(newThreats.length)} Lookalike Domain{newThreats.length > 1 ? 's' : ''} Found</div>
+                                <div style={{ display: 'grid', gap: '6px' }}>
+                                  {newThreats.slice(0, 10).map((t: Record<string, unknown>, i: number) => {
+                                    const riskLevel = (t.riskLevel || t.risk_level || 'LOW') as string;
+                                    const riskColor = riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? dark.red : riskLevel === 'MEDIUM' ? '#f59e0b' : dark.textMuted;
+                                    return (
+                                      <div key={i} style={{ padding: '8px 10px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{String(t.domain || 'unknown')}</div>
+                                          <div style={{ fontSize: '11px', fontWeight: 600, color: riskColor, padding: '2px 6px', borderRadius: '4px', background: 'rgba(0,0,0,0.3)' }}>{riskLevel}</div>
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: dark.textMuted, marginTop: '2px' }}>
+                                          {String(t.variantType || '')} • {String(Math.round((t.similarity as number || 0) * 100))}% similar
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            {recs.length > 0 && (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>📋 Recommendations</div>
+                                <div style={{ display: 'grid', gap: '4px' }}>
+                                  {recs.map((r: string, i: number) => (
+                                    <div key={i} style={{ fontSize: '12px', color: dark.textMuted }}>{r}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       <div style={{ marginTop: '16px', fontSize: '11px', color: dark.textMuted, textAlign: 'center' }}>
                         Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: {new Date().toLocaleDateString()}
