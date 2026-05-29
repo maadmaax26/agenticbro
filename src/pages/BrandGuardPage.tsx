@@ -424,6 +424,70 @@ export function BrandGuardPage() {
     } finally { setOnboardLoading(false); }
   };
 
+  // ── Monitoring Dashboard ──────────────────────────────────────────────────
+  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring'>('scans');
+  const [monitoringData, setMonitoringData] = useState<Record<string, unknown> | null>(null);
+  const [monitoringLoading, setMonitoringLoading] = useState(false);
+  const [refreshingHealth, setRefreshingHealth] = useState(false);
+
+  const fetchMonitoring = useCallback(async () => {
+    if (!authToken || !activeBrand) return;
+    setMonitoringLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/dashboard?brand_id=${activeBrand.id}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success && data.dashboard) {
+        setMonitoringData(data.dashboard);
+      }
+    } catch {
+      // Non-blocking: monitoring data failure shouldn't break the dashboard
+    } finally {
+      setMonitoringLoading(false);
+    }
+  }, [authToken, activeBrand]);
+
+  const refreshHealthScore = async () => {
+    if (!authToken || !activeBrand) return;
+    setRefreshingHealth(true);
+    try {
+      const ok = await deductCredit('health_refresh');
+      if (!ok) { setRefreshingHealth(false); return; }
+      // Run all scan types in parallel for the brand
+      const results = await Promise.allSettled([
+        fetch(`${API_BASE}/impersonator-scan`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ brand_id: activeBrand.id, brand_name: activeBrand.brand_name, brand_handle: activeBrand.brand_handle, brand_domain: activeBrand.brand_domain || '', platforms: activeBrand.platforms }),
+        }),
+        fetch(`${API_BASE}/domain-monitor`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ domain: activeBrand.brand_domain || activeBrand.brand_handle, limit: 30 }),
+        }),
+      ]);
+      // Refund the extra credits — the health refresh only costs 1, not per-scan
+      try {
+        await fetch(`${API_BASE}/credits/add`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ amount: 1, payment_method: 'refund', description: 'Refund: health refresh batch scan' }),
+        });
+      } catch {}
+      // Refetch monitoring data with fresh scan results
+      await fetchMonitoring();
+      await fetchCredits();
+    } catch {
+      // Best effort
+    } finally {
+      setRefreshingHealth(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authToken && activeBrand && dashboardTab === 'monitoring') {
+      fetchMonitoring();
+    }
+  }, [authToken, activeBrand, dashboardTab]);
+
   // ── Run scans ────────────────────────────────────────────────────────────────
   const [scanning, setScanning] = useState<string | null>(null); // scan type being run
   const [scanResult, setScanResult] = useState<any>(null);
@@ -1258,6 +1322,219 @@ n            </p>
                 </div>
               </div>
 
+              {/* Dashboard tabs */}
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '4px' }}>
+                <button
+                  onClick={() => setDashboardTab('scans')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    background: dashboardTab === 'scans' ? dark.accent : 'transparent',
+                    color: dashboardTab === 'scans' ? '#fff' : dark.textMuted,
+                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >🔍 Scans</button>
+                <button
+                  onClick={() => setDashboardTab('monitoring')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    background: dashboardTab === 'monitoring' ? dark.accent : 'transparent',
+                    color: dashboardTab === 'monitoring' ? '#fff' : dark.textMuted,
+                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >📊 Monitoring</button>
+              </div>
+
+              {dashboardTab === 'monitoring' ? (
+                <div> {/* ── Monitoring Dashboard ─────────────────────────────── */}
+                  {monitoringLoading && !monitoringData ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+                      <div style={{ color: dark.textMuted, fontSize: '14px' }}>Loading monitoring data...</div>
+                    </div>
+                  ) : monitoringData ? (
+                    <> {/* Health Score */}
+                      {(() => {
+                        const health = monitoringData.health_score as Record<string, unknown> | undefined;
+                        const summary = monitoringData.summary as Record<string, number> | undefined;
+                        const threats = (monitoringData.threats || []) as Record<string, unknown>[];
+                        const brand = monitoringData.brand as Record<string, string> | undefined;
+                        const score = (health?.overall_score as number) ?? 0;
+                        const level = (health?.overall_level as string) ?? 'UNKNOWN';
+                        const trend = (health?.trend as string) ?? 'stable';
+                        const breakdown = health?.breakdown as Record<string, number> | undefined;
+                        const recs = (health?.recommendations as string[]) ?? [];
+                        const scoreColor = score >= 80 ? dark.green : score >= 60 ? '#f59e0b' : score >= 40 ? '#f97316' : dark.red;
+                        return (
+                          <>
+                            {/* Health Score Card */}
+                            <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>📊 Brand Health Score</div>
+                                <button
+                                  onClick={refreshHealthScore}
+                                  disabled={refreshingHealth}
+                                  style={{
+                                    padding: '6px 14px', borderRadius: '8px', border: 'none',
+                                    background: refreshingHealth ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
+                                    color: '#fff', fontSize: '12px', fontWeight: 600, cursor: refreshingHealth ? 'not-allowed' : 'pointer',
+                                  }}
+                                >
+                                  {refreshingHealth ? '⟳ Refreshing...' : '⟳ Refresh (1 credit)'}
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' }}>
+                                <div style={{
+                                  width: '80px', height: '80px', borderRadius: '50%',
+                                  border: `4px solid ${scoreColor}`,
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  <span style={{ fontSize: '24px', fontWeight: 800, color: scoreColor }}>{score}</span>
+                                  <span style={{ fontSize: '10px', color: dark.textMuted }}>/100</span>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '16px', fontWeight: 700, color: scoreColor }}>{level}</div>
+                                  <div style={{ fontSize: '12px', color: dark.textMuted, marginTop: '2px' }}>
+                                    Trend: {trend === 'improving' ? '📈 Improving' : trend === 'declining' ? '📉 Declining' : '➡️ Stable'}
+                                  </div>
+                                </div>
+                              </div>
+                              {/* Breakdown bars */}
+                              <div style={{ display: 'grid', gap: '10px', marginBottom: recs.length > 0 ? '16px' : '0' }}>
+                                {[
+                                  { label: '👤 Social', value: breakdown?.social_health ?? 0 },
+                                  { label: '🌐 Domain', value: breakdown?.domain_health ?? 0 },
+                                  { label: '📞 Phone', value: breakdown?.phone_health ?? 0 },
+                                  { label: '🕵️ DB Exposure', value: breakdown?.scammer_db_exposure ?? 0 },
+                                ].map(item => (
+                                  <div key={item.label}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                                      <span style={{ fontSize: '12px', color: dark.text }}>{item.label}</span>
+                                      <span style={{ fontSize: '12px', fontWeight: 600, color: dark.text }}>{item.value}%</span>
+                                    </div>
+                                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                      <div style={{ height: '100%', width: `${item.value}%`, background: item.value >= 80 ? dark.green : item.value >= 60 ? '#f59e0b' : item.value >= 40 ? '#f97316' : dark.red, borderRadius: '3px' }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {recs.length > 0 && (
+                                <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: 700, color: dark.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Recommendations</div>
+                                  {recs.map((r: string, i: number) => <div key={i} style={{ fontSize: '12px', color: dark.text, marginBottom: '2px' }}>→ {r}</div>)}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Summary Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                              {[
+                                { label: 'Total', value: summary?.total_threats ?? 0, color: dark.textMuted, bg: 'rgba(255,255,255,0.05)' },
+                                { label: 'Critical', value: summary?.critical_threats ?? 0, color: dark.red, bg: 'rgba(239,68,68,0.1)' },
+                                { label: 'High', value: summary?.high_threats ?? 0, color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
+                                { label: 'Medium', value: summary?.medium_threats ?? 0, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                                { label: 'Low', value: summary?.low_threats ?? 0, color: dark.green, bg: 'rgba(34,197,94,0.1)' },
+                              ].map(card => (
+                                <div key={card.label} style={{ padding: '12px', borderRadius: '8px', background: card.bg, border: `1px solid ${card.color}30`, textAlign: 'center' }}>
+                                  <div style={{ fontSize: '20px', fontWeight: 800, color: card.color }}>{card.value}</div>
+                                  <div style={{ fontSize: '10px', color: card.color, marginTop: '2px', fontWeight: 600, textTransform: 'uppercase' }}>{card.label}</div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Threat Feed */}
+                            <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>⚠️ Threat Feed</div>
+                              {threats.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '32px 0', color: dark.textMuted }}>
+                                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔍</div>
+                                  <div style={{ fontSize: '13px' }}>No threats detected. Run a scan to check.</div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'grid', gap: '6px' }}>
+                                  {threats.slice(0, 10).map((t: Record<string, unknown>, i: number) => {
+                                    const sev = (t.severity as string) || 'low';
+                                    const sevIcon = sev === 'critical' ? '🚨' : sev === 'high' ? '⚠️' : sev === 'medium' ? 'ℹ️' : '✅';
+                                    const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : '🕵️';
+                                    const sevColor = sev === 'critical' ? dark.red : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : dark.green;
+                                    const sevBg = sev === 'critical' ? 'rgba(239,68,68,0.1)' : sev === 'high' ? 'rgba(249,115,22,0.1)' : sev === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)';
+                                    return (
+                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: sevBg, border: `1px solid ${sevColor}20` }}>
+                                        <span style={{ fontSize: '16px' }}>{sevIcon}</span>
+                                        <span style={{ fontSize: '16px' }}>{typeIcon}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{String(t.target || 'Unknown')}</div>
+                                          <div style={{ fontSize: '11px', color: dark.textMuted }}>{String(t.platform || '')} · {String(t.type || '').replace(/_/g, ' ')}</div>
+                                        </div>
+                                        <div style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
+                                          {String(t.risk_score ?? 0)}/10
+                                        </div>
+                                        <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
+                                          {String(t.status || 'new').toUpperCase()}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Takedown Center */}
+                            {(() => {
+                              const takedowns = (monitoringData?.takedown_actions || []) as Record<string, unknown>[];
+                              const pending = takedowns.filter(t => t.status === 'pending');
+                              const inProgress = takedowns.filter(t => ['submitted', 'acknowledged'].includes(String(t.status)));
+                              const completed = takedowns.filter(t => ['removed', 'rejected'].includes(String(t.status)));
+                              return (
+                                <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '16px' }}>
+                                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>📋 Takedown Center</div>
+                                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.15)' }}>
+                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#92400e' }}>{pending.length}</span>
+                                      <span style={{ fontSize: '11px', color: '#92400e', marginLeft: '4px' }}>Pending</span>
+                                    </div>
+                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)' }}>
+                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#1e40af' }}>{inProgress.length}</span>
+                                      <span style={{ fontSize: '11px', color: '#1e40af', marginLeft: '4px' }}>In Progress</span>
+                                    </div>
+                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(34,197,94,0.15)' }}>
+                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#065f46' }}>{completed.length}</span>
+                                      <span style={{ fontSize: '11px', color: '#065f46', marginLeft: '4px' }}>Completed</span>
+                                    </div>
+                                  </div>
+                                  {takedowns.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '24px 0', color: dark.textMuted }}>
+                                      <div style={{ fontSize: '13px' }}>No takedown actions yet. Run a scan to detect threats.</div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'grid', gap: '6px' }}>
+                                      {takedowns.slice(0, 8).map((t: Record<string, unknown>, i: number) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}` }}>
+                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.priority === 'urgent' ? dark.red : t.priority === 'high' ? '#f97316' : '#f59e0b' }} />
+                                          <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{String(t.priority || 'medium').toUpperCase()} · {String(t.platform || 'unknown')}</div>
+                                            <div style={{ fontSize: '11px', color: dark.textMuted }}>{String(t.action_type || 'report')} → {String(t.target || 'unknown')}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </>
+                        );
+                      })()}
+                    </>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+                      <div style={{ color: dark.textMuted, fontSize: '14px' }}>No monitoring data available.</div>
+                      <div style={{ color: dark.textMuted, fontSize: '12px', marginTop: '4px' }}>Run a scan or refresh your health score to populate the dashboard.</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+              <div>
               {/* Scan buttons */}
               <div style={{ display: 'grid', gap: '8px' }}>
                 {[
@@ -1297,6 +1574,8 @@ n            </p>
                 >
                   💎 Buy Credits — $1/scan
                 </button>
+              )}
+              </div>
               )}
               {/* Vendor phone input modal */}
               {showVendorInput && (
