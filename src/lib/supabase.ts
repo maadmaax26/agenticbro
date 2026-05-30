@@ -117,6 +117,10 @@ export async function signUpWithEmail(email: string, password: string) {
     email,
     password,
     options: {
+      data: {
+        source: 'brand-guard',
+        app: 'brand-guard',
+      },
       emailRedirectTo: `${window.location.origin}/brand-guard`,
     },
   });
