@@ -72,6 +72,12 @@
     },
     "api/brand-guard/vendor-verify.ts": {
       "maxDuration": 15
+    },
+    "api/brand-guard/admin.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/email-spoof.ts": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -83,6 +89,7 @@
     { "source": "/api/brand-guard/credits/:path*", "destination": "/api/brand-guard/credits.ts" },
     { "source": "/api/brand-guard/brands/:path*", "destination": "/api/brand-guard/brands.ts" },
     { "source": "/api/brand-guard/dashboard/:path*", "destination": "/api/brand-guard/dashboard.ts" },
+    { "source": "/api/brand-guard/admin/:path*", "destination": "/api/brand-guard/admin.ts" },
     { "source": "/api/brand-guard/impersonator-scan/:path*", "destination": "/api/brand-guard/impersonator-scan.ts" },
     { "source": "/api/brand-guard/:path*", "destination": "/api/brand-guard/:path*" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
