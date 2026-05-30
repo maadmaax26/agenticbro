@@ -163,6 +163,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return acc;
     }, { free_total: 0, free_used: 0, paid_balance: 0, paid_purchased: 0, promo_bonus: 0 }) || { free_total: 0, free_used: 0, paid_balance: 0, paid_purchased: 0, promo_bonus: 0 };
 
+    // Scan type breakdown
+    const { data: scanTypeData } = await serviceClient
+      .from('brand_guard_credit_transactions')
+      .select('description')
+      .in('transaction_type', ['free_usage', 'paid_usage']);
+    const scanTypes: Record<string, number> = {};
+    for (const tx of (scanTypeData || [])) {
+      const desc = (tx.description as string) || '';
+      const match = desc.match(/scan:\s*(\w+)/i) || desc.match(/^(impersonator|domain|website|threat|vendor|email)\s/i);
+      const type = match ? match[1].toLowerCase() : 'other';
+      scanTypes[type] = (scanTypes[type] || 0) + 1;
+    }
+
+    // Recent signups
+    const { data: recentSignups } = await serviceClient
+      .from('brand_guard_credits')
+      .select('owner_id, promo_code, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    const signupEmails: Record<string, string> = {};
+    if (recentSignups && recentSignups.length > 0) {
+      const userIds = recentSignups.map((r: Record<string, unknown>) => r.owner_id);
+      const { data: signupUsers } = await serviceClient
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+      for (const u of (signupUsers || [])) {
+        signupEmails[u.id] = u.email;
+      }
+    }
+    const recentSignupsList = (recentSignups || []).map((r: Record<string, unknown>) => ({
+      email: signupEmails[r.owner_id as string] || 'unknown',
+      created_at: r.created_at as string,
+      promo_code: r.promo_code as string | null,
+    }));
+
+    // Recent scans
+    const { data: recentScans } = await serviceClient
+      .from('brand_guard_credit_transactions')
+      .select('owner_id, description, created_at')
+      .in('transaction_type', ['free_usage', 'paid_usage'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+    const scanEmails: Record<string, string> = {};
+    if (recentScans && recentScans.length > 0) {
+      const userIds = [...new Set(recentScans.map((r: Record<string, unknown>) => r.owner_id as string))];
+      const { data: scanUsers } = await serviceClient
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+      for (const u of (scanUsers || [])) {
+        scanEmails[u.id] = u.email;
+      }
+    }
+    const recentScansList = (recentScans || []).map((r: Record<string, unknown>) => {
+      const desc = (r.description as string) || '';
+      const typeMatch = desc.match(/scan:\s*(\w+)/i) || desc.match(/^(impersonator|domain|website|threat|vendor|email)\s/i);
+      return {
+        email: scanEmails[r.owner_id as string] || 'unknown',
+        scan_type: typeMatch ? typeMatch[1] : 'unknown',
+        created_at: r.created_at as string,
+      };
+    });
+
     res.status(200).json({
       success: true,
       stats: {
@@ -171,6 +235,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         total_scans: totalScans || 0,
         promo_users: promoUsers || 0,
         beta2026_users: betaUsers || 0,
+        scan_types: scanTypes,
+        recent_signups: recentSignupsList,
+        recent_scans: recentScansList,
         credits: summary,
       },
     });

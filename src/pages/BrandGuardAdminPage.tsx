@@ -35,6 +35,9 @@ interface AdminStats {
   total_scans: number;
   promo_users: number;
   beta2026_users: number;
+  scan_types: Record<string, number>;
+  recent_signups: Array<{ email: string; created_at: string; promo_code: string | null }>;
+  recent_scans: Array<{ scan_type: string; created_at: string; email: string }>;
   credits: {
     free_total: number;
     free_used: number;
@@ -56,7 +59,7 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity'>('users');
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -237,6 +240,14 @@ export function BrandGuardAdminPage() {
               color: activeTab === 'stats' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
             }}
           >📊 Stats</button>
+          <button
+            onClick={() => setActiveTab('activity')}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'activity' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
+              background: activeTab === 'activity' ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: activeTab === 'activity' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >🕐 Activity</button>
         </div>
 
         {error && (
@@ -351,6 +362,71 @@ export function BrandGuardAdminPage() {
                 <div style={{ fontSize: '28px', fontWeight: 700, color: '#f59e0b' }}>{stats.credits.promo_bonus}</div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'activity' && stats && (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {/* Scan Type Breakdown */}
+            {stats.scan_types && Object.keys(stats.scan_types).length > 0 && (
+              <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '20px' }}>
+                <h3 style={{ color: '#fff', marginBottom: '12px' }}>🔍 Scan Breakdown</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                  {Object.entries(stats.scan_types).map(([type, count]) => {
+                    const icons: Record<string, string> = { impersonator: '🔍', domain: '🌐', website: '🔗', threat: '⚡', vendor: '📞', email: '📧' };
+                    const labels: Record<string, string> = { impersonator: 'Impersonator', domain: 'Domain Sweep', website: 'Link Scanner', threat: 'Threat Correlate', vendor: 'Vendor Verify', email: 'Email Spoof' };
+                    return (
+                      <div key={type} style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(139,92,246,0.15)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', marginBottom: '4px' }}>{icons[type] || '🔎'}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#8b5cf6' }}>{String(count)}</div>
+                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>{labels[type] || type}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Signups */}
+            {stats.recent_signups && stats.recent_signups.length > 0 && (
+              <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '20px' }}>
+                <h3 style={{ color: '#fff', marginBottom: '12px' }}>👥 Recent Signups</h3>
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {stats.recent_signups.map((signup, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#8b5cf6' }}>{signup.email.charAt(0).toUpperCase()}</div>
+                        <div>
+                          <div style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>{signup.email}</div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>{new Date(signup.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      {signup.promo_code && (
+                        <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: signup.promo_code === 'beta2026' ? 'rgba(245,158,11,0.2)' : 'rgba(139,92,246,0.2)', color: signup.promo_code === 'beta2026' ? '#f59e0b' : '#8b5cf6', border: `1px solid ${signup.promo_code === 'beta2026' ? 'rgba(245,158,11,0.4)' : 'rgba(139,92,246,0.4)'}` }}>{signup.promo_code}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Scans */}
+            {stats.recent_scans && stats.recent_scans.length > 0 && (
+              <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '20px' }}>
+                <h3 style={{ color: '#fff', marginBottom: '12px' }}>🔎 Recent Scans</h3>
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {stats.recent_scans.map((scan, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+                      <div>
+                        <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>{scan.email}</span>
+                        <span style={{ fontSize: '11px', color: '#8b5cf6', marginLeft: '8px' }}>{scan.scan_type}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{new Date(scan.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
