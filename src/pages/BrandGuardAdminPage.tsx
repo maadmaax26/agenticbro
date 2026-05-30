@@ -16,6 +16,8 @@ interface AdminUser {
   user_id: string;
   email: string;
   full_name: string | null;
+  signup_source: string | null;
+  signup_app: string | null;
   user_created_at: string;
   free_credits_total: number;
   free_credits_used: number;
@@ -278,6 +280,7 @@ export function BrandGuardAdminPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(139,92,246,0.3)' }}>
                     <th style={{ padding: '10px 8px', textAlign: 'left', color: '#9ca3af', fontWeight: 600 }}>Email</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Source</th>
                     <th style={{ padding: '10px 8px', textAlign: 'left', color: '#9ca3af', fontWeight: 600 }}>Promo</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Free</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Used</th>
@@ -293,6 +296,15 @@ export function BrandGuardAdminPage() {
                   {users.map(user => (
                     <tr key={user.user_id} style={{ borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
                       <td style={{ padding: '10px 8px', color: '#fff', fontWeight: 500 }}>{user.email}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                        {user.signup_source === 'brand-guard' || user.signup_app === 'brand-guard' ? (
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}>Brand Guard</span>
+                        ) : user.signup_source ? (
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)' }}>{user.signup_source}</span>
+                        ) : (
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: 'rgba(156,163,175,0.1)', color: '#9ca3af', border: '1px solid rgba(156,163,175,0.2)' }}>AgenticBro</span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 8px' }}>
                         {user.promo_code ? (
                           <span style={{
