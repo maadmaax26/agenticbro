@@ -78,6 +78,21 @@
     },
     "api/brand-guard/email-spoof.ts": {
       "maxDuration": 30
+    },
+    "api/brand-guard/takedown.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/fingerprint.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/marketplace.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/monitor-worker.ts": {
+      "maxDuration": 300
+    },
+    "api/brand-guard/alert-delivery.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -91,8 +106,23 @@
     { "source": "/api/brand-guard/dashboard/:path*", "destination": "/api/brand-guard/dashboard.ts" },
     { "source": "/api/brand-guard/admin/:path*", "destination": "/api/brand-guard/admin.ts" },
     { "source": "/api/brand-guard/impersonator-scan/:path*", "destination": "/api/brand-guard/impersonator-scan.ts" },
+    { "source": "/api/brand-guard/takedown/:path*", "destination": "/api/brand-guard/takedown.ts" },
+    { "source": "/api/brand-guard/fingerprint/:path*", "destination": "/api/brand-guard/fingerprint.ts" },
+    { "source": "/api/brand-guard/marketplace/:path*", "destination": "/api/brand-guard/marketplace.ts" },
+    { "source": "/api/brand-guard/monitor-worker", "destination": "/api/brand-guard/monitor-worker.ts" },
+    { "source": "/api/brand-guard/alert-delivery", "destination": "/api/brand-guard/alert-delivery.ts" },
     { "source": "/api/brand-guard/:path*", "destination": "/api/brand-guard/:path*" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/brand-guard/monitor-worker",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/brand-guard/alert-delivery",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }

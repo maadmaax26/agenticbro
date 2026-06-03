@@ -3,7 +3,7 @@
  *
  * Manages monthly scan credits for Holder and Whale tier users.
  * 
- * Free Tier: 5 free scans
+ * Free Tier: 25 free scans
  * Holder Tier ($100+ AGNTCBRO): 50 ALL scans/month (Profile, Phone, Token, Channel, Priority)
  * Whale Tier ($1,000+ AGNTCBRO): Unlimited scans
  * 
@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const FREE_TIER_SCANS = 5; // Free scans for everyone
+export const FREE_TIER_SCANS = 25; // Free scans for everyone
 export const HOLDER_TIER_SCANS = 50; // 50 ALL scans/month for Holder Tier
 export const SCAN_PRICE_USD = 1; // $1 per scan after allowance
 

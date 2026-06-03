@@ -1,7 +1,7 @@
 /**
  * PreConnectScanWidget.tsx
  * Scam detection widget for pre-wallet-connect section.
- * Allows 5 free scans tracked via localStorage.
+ * Allows 25 free scans tracked via localStorage.
  * Supports EN, ZH, JA, DE, FR, ES languages.
  */
 
@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 const SCAN_STORAGE_KEY = 'preconnect_scan_count'
-const FREE_SCANS = 5
+const FREE_SCANS = 25
 
 interface ScanResult {
   risk_score: number

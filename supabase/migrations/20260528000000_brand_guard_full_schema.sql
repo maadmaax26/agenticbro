@@ -323,7 +323,7 @@ CREATE POLICY "Users can update own preferences" ON dashboard_preferences FOR UP
 -- Brand Guard Credits & Billing Schema
 -- ============================================================
 -- Extends brand_monitors with credit tracking.
--- Mirrors the social scan credit system: 10 free scans, then pay-as-you-go.
+-- Mirrors the social scan credit system: 25 free scans, then pay-as-you-go.
 -- Supports future subscription plans via brand_guard_subscriptions.
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -335,7 +335,7 @@ CREATE TABLE IF NOT EXISTS brand_guard_credits (
   owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
 
   -- Free tier
-  free_credits_total INTEGER NOT NULL DEFAULT 10,    -- starting free credits
+  free_credits_total INTEGER NOT NULL DEFAULT 25,    -- starting free credits
   free_credits_used INTEGER NOT NULL DEFAULT 0,       -- consumed free credits
 
   -- Paid credits (pay-as-you-go)
@@ -359,7 +359,7 @@ CREATE TABLE IF NOT EXISTS brand_guard_credit_transactions (
 
   -- Transaction details
   transaction_type TEXT NOT NULL CHECK (transaction_type IN (
-    'free_grant',       -- Initial 10 free credits on first brand creation
+    'free_grant',       -- Initial 25 free credits on first brand creation
     'free_usage',       -- Consuming a free credit
     'purchase',         -- Buying pay-as-you-go credits (Stripe/crypto)
     'purchase_bonus',   -- Bonus credits added on top of purchase (e.g., whale pack)
@@ -404,7 +404,7 @@ CREATE TABLE IF NOT EXISTS brand_guard_subscriptions (
 
   -- Plan
   plan_id TEXT NOT NULL CHECK (plan_id IN (
-    'free',           -- 10 free scans, no subscription
+    'free',           -- 25 free scans, no subscription
     'guardian',       -- $29/mo: 50 scans/mo, 3 brands, weekly monitoring
     'sentinel',       -- $79/mo: 200 scans/mo, 10 brands, daily monitoring
     'fortress'        -- $199/mo: Unlimited scans, Unlimited brands, real-time monitoring
@@ -449,14 +449,14 @@ DECLARE
   credit_id UUID;
 BEGIN
   INSERT INTO brand_guard_credits (owner_id, free_credits_total, free_credits_used, paid_credits, first_brand_at)
-  VALUES (p_owner_id, 10, 0, 0, now())
+  VALUES (p_owner_id, 25, 0, 0, now())
   ON CONFLICT (owner_id) DO NOTHING
   RETURNING id INTO credit_id;
 
   -- Log the free grant
   IF credit_id IS NOT NULL THEN
     INSERT INTO brand_guard_credit_transactions (owner_id, transaction_type, amount, balance_after, free_remaining_after, paid_remaining_after, description)
-    VALUES (p_owner_id, 'free_grant', 10, 10, 10, 0, 'Initial 10 free Brand Guard scans');
+    VALUES (p_owner_id, 'free_grant', 25, 25, 25, 0, 'Initial 25 free Brand Guard scans');
   END IF;
 
   RETURN credit_id;
