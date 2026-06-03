@@ -11,6 +11,8 @@ import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supa
 import { TakedownModal } from '../components/brand-guard/TakedownModal';
 import { FingerprintManager } from '../components/brand-guard/FingerprintManager';
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
+import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
+import { SubscriptionManager } from '../components/brand-guard/SubscriptionManager';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Mobile Detection Hook
@@ -122,6 +124,18 @@ export function BrandGuardPage() {
   const [credits, setCredits] = useState<CreditInfo | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
   const [showPurchase, setShowPurchase] = useState(false);
+
+  // Subscription management state
+  const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+
+  // Alert bell state
+  const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [alerts, setAlerts] = useState<any[]>([]);
 
   // Onboarding form
   const [onboardStep, setOnboardStep] = useState(1);
@@ -392,6 +406,116 @@ export function BrandGuardPage() {
   }, [authToken]);
 
   useEffect(() => { fetchCredits(); }, [fetchCredits]);
+
+  // ── Fetch subscription ──────────────────────────────────────────────────────
+  const fetchSubscription = useCallback(async () => {
+    if (!authToken) { return; }
+    setSubscriptionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/subscription`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) setSubscription(data.subscription);
+    } catch (err) {
+      setSubscriptionError(err instanceof Error ? err.message : 'Failed to fetch subscription');
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, [authToken]);
+
+  useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
+
+  // ── Subscription management handlers ────────────────────────────────────────
+  const handleManageBilling = useCallback(async () => {
+    if (!authToken) { setSubscriptionError('Please sign in first'); return; }
+    try {
+      const res = await fetch(`${API_BASE}/stripe-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else if (data.sessionId) {
+        const stripe = (window as any).stripe;
+        if (stripe) {
+          const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+          if (error) throw new Error(error.message);
+        }
+      } else {
+        throw new Error('Failed to create portal session');
+      }
+    } catch (err) {
+      setSubscriptionError(err instanceof Error ? err.message : 'Failed to open billing portal');
+    }
+  }, [authToken]);
+
+  const handleChangePlan = useCallback(() => {
+    setShowPlansModal(true);
+  }, []);
+
+  const handleCancelSubscription = useCallback(async () => {
+    if (!authToken) { setSubscriptionError('Please sign in first'); return; }
+    setSubscriptionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/cancel-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubscription(null);
+        setSubscriptionError(null);
+        alert('Subscription cancelled successfully');
+      } else {
+        throw new Error(data.error || 'Failed to cancel subscription');
+      }
+    } catch (err) {
+      setSubscriptionError(err instanceof Error ? err.message : 'Failed to cancel subscription');
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, [authToken]);
+
+  // ── Alert bell handlers ──────────────────────────────────────────────────────
+  const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  const fetchAlerts = useCallback(async () => {
+    if (!authToken) { return; }
+    try {
+      const res = await fetch(`${API_BASE}/alerts?limit=50`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAlerts(data.alerts);
+        setUnreadAlerts(data.alerts.filter((a: any) => !a.read).length);
+      }
+    } catch {
+      // Ignore errors for alerts
+    }
+  }, [authToken]);
+
+  useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
+
+  const markAlertRead = useCallback(async (alertId: string) => {
+    if (!authToken || !alertId) { return; }
+    try {
+      const res = await fetch(`${API_BASE}/alerts/${alertId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, read: true } : a));
+        setUnreadAlerts(prev => Math.max(0, prev - 1));
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [authToken]);
 
   // ── Create brand ─────────────────────────────────────────────────────────────
   const handleCreateBrand = async () => {
@@ -1295,6 +1419,148 @@ n            </p>
           >
             Sign Out
           </button>
+          {/* Alert bell */}
+          {authToken && (
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                onClick={() => setShowAlertsDropdown(!showAlertsDropdown)}
+                style={{
+                  padding: '6px 10px', borderRadius: '8px',
+                  background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)',
+                  color: '#8b5cf6', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                🔔 Alerts
+                {unreadAlerts > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      background: '#ef4444',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                    }}
+                  >
+                    {unreadAlerts}
+                  </span>
+                )}
+              </button>
+              {showAlertsDropdown && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    width: '320px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    background: '#1a1a2e',
+                    border: '1px solid rgba(139,92,246,0.3)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    zIndex: 60,
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ color: '#fff', fontWeight: '600' }}>Alerts</span>
+                    {unreadAlerts > 0 && (
+                      <button
+                        onClick={async () => {
+                          if (authToken) {
+                            try {
+                              await fetch(`${API_BASE}/alerts/mark-all-read`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                              });
+                              setAlerts(prev => prev.map(a => ({ ...a, read: true })));
+                              setUnreadAlerts(0);
+                              setShowAlertsDropdown(false);
+                            } catch {
+                              // Ignore errors
+                            }
+                          }
+                        }}
+                        style={{
+                          fontSize: '11px',
+                          color: '#8b5cf6',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  {alerts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '13px' }}>
+                      No alerts
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {alerts.slice(0, 10).map((alert: any) => (
+                        <div
+                          key={alert.id}
+                          onClick={() => {
+                            markAlertRead(alert.id);
+                            setShowAlertsDropdown(false);
+                          }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            background: alert.read ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.2)',
+                            border: `1px solid ${alert.read ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.4)'}`,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '11px', color: alert.read ? '#94a3b8' : '#8b5cf6' }}>{alert.severity.toUpperCase()} • {new Date(alert.created_at).toLocaleTimeString()} - {alert.platform}</span>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', color: alert.read ? '#94a3b8' : '#fff' }}>{alert.title}</span>
+                          </div>
+                          {alert.message && (
+                            <div style={{ fontSize: '12px', color: alert.read ? '#94a3b8' : '#e2e8f0' }}>{alert.message}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {alerts.length > 10 && (
+                    <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                      +{alerts.length - 10} more alerts
+                    </div>
+                  )}
+                  {alerts.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setShowAlertsDropdown(false);
+                        window.location.href = '/brand-guard/alerts';
+                      }}
+                      style={{
+                        marginTop: '12px',
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        background: 'rgba(139,92,246,0.2)',
+                        border: '1px solid rgba(139,92,246,0.3)',
+                        color: '#8b5cf6',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View All Alerts
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2393,6 +2659,81 @@ n            </p>
           onClose={() => setShowPurchase(false)}
           onSuccess={() => { setShowPurchase(false); fetchCredits(); }}
         />
+      )}
+      {/* Subscription Plans Modal */}
+      {showPlansModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: isMobile ? '12px' : '24px' }}
+          onClick={(e) => e.target === e.currentTarget && setShowPlansModal(false)}
+        >
+          <div style={{ maxWidth: isMobile ? '100%' : '800px', width: '100%', background: '#1a1a2e', borderRadius: '16px', padding: isMobile ? '20px' : '32px', border: '1px solid rgba(139,92,246,0.3)', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button onClick={() => setShowPlansModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '8px' }}>💎</div>
+              <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', margin: 0 }}>Select Your Plan</h2>
+              <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Choose the perfect plan for your brand protection needs</p>
+            </div>
+
+            <SubscriptionPlans
+              currentPlanId={subscription?.plan_id || 'free'}
+              onSelectPlan={async (planId) => {
+                if (authToken) {
+                  try {
+                    const res = await fetch('/api/brand-guard/stripe-checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                      body: JSON.stringify({ planId, currentPlanId: subscription?.plan_id || 'free' }),
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else if (data.sessionId) {
+                      const stripe = (window as any).stripe;
+                      if (stripe) {
+                        const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+                        if (error) throw new Error(error.message);
+                      }
+                    }
+                    setShowPlansModal(false);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : 'Failed to create checkout session');
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {/* Subscription Manager Modal */}
+      {showSubscriptionManager && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: isMobile ? '12px' : '24px' }}
+          onClick={(e) => e.target === e.currentTarget && setShowSubscriptionManager(false)}
+        >
+          <div style={{ maxWidth: isMobile ? '100%' : '700px', width: '100%', background: '#1a1a2e', borderRadius: '16px', padding: isMobile ? '20px' : '32px', border: '1px solid rgba(139,92,246,0.3)', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button onClick={() => setShowSubscriptionManager(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '8px' }}>⚙️</div>
+              <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', margin: 0 }}>Subscription Management</h2>
+              <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Manage your current plan and billing settings</p>
+            </div>
+
+            <SubscriptionManager
+              subscription={subscription}
+              onManageBilling={handleManageBilling}
+              onChangePlan={() => {
+                setShowSubscriptionManager(false);
+                setShowPlansModal(true);
+              }}
+              onCancelSubscription={handleCancelSubscription}
+              loading={subscriptionLoading}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
