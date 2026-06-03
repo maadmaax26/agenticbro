@@ -113,7 +113,7 @@ interface ScamDatabaseModalProps {
 // Supabase Client
 // ============================================
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://***REMOVED***';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const isSupabaseConfigured = !!(supabaseUrl && supabaseUrl.length > 0 && supabaseAnonKey && supabaseAnonKey.length > 0);
 

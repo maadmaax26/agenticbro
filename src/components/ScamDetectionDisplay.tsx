@@ -75,7 +75,7 @@ interface Stats {
 // Supabase Client
 // ============================================
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://***REMOVED***';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
