@@ -27,7 +27,7 @@ interface Fingerprint {
   created_at: string;
 }
 
-export function FingerprintManager({ brandId, brandDomain, authToken, dark, isMobile, apiBase }: FingerprintManagerProps) {
+export function FingerprintManager({ brandId, brandDomain, authToken, dark, apiBase }: FingerprintManagerProps) {
   const [fingerprints, setFingerprints] = useState<Fingerprint[]>([]);
   const [loading, setLoading] = useState(false);
   const [registering, setRegistering] = useState(false);

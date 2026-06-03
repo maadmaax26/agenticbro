@@ -39,7 +39,18 @@ const STRIPE_PRICES = {
   'bg-guardian': process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_1TcC6Z1lUBogdwcDetJfQtGS', // $29/mo
   'bg-sentinel': process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_1TcC6Z1lUBogdwcDzNKnTEkh', // $79/mo
   'bg-fortress': process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_1TcC6Z1lUBogdwcDgTFlMRFf', // $199/mo
+  // Brand Guard Subscription plans (new)
+  'guardian':    process.env.STRIPE_GUARDIAN_PRICE_ID    || 'price_guardian_12345', // $29/mo
+  'sentinel':    process.env.STRIPE_SENTINEL_PRICE_ID    || 'price_sentinel_67890', // $99/mo
+  'fortress':    process.env.STRIPE_FORTRESS_PRICE_ID    || 'price_fortress_abcde', // $299/mo
 } as const;
+
+// ── Brand Guard Subscription Plans ────────────────────────────────────────────
+const SUBSCRIPTION_PLANS = [
+  { id: 'guardian', name: 'Guardian', price_usd: 29, monthly_credits: 50, brands_included: 3, stripe_price_id: STRIPE_PRICES['guardian'] },
+  { id: 'sentinel', name: 'Sentinel', price_usd: 99, monthly_credits: 200, brands_included: 10, stripe_price_id: STRIPE_PRICES['sentinel'] },
+  { id: 'fortress', name: 'Fortress', price_usd: 299, monthly_credits: -1, brands_included: -1, stripe_price_id: STRIPE_PRICES['fortress'] }, // -1 = unlimited
+];
 
 // ── Credit Packages (mirrors social scan pricing) ────────────────────────────
 const CREDIT_PACKAGES = [
@@ -392,7 +403,251 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, POST /crypto-confirm' });
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /subscribe — Create Stripe subscription checkout (recurring)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/subscribe') {
+    const body = await parseBody(req);
+    const planId = body.plan_id as string; // guardian | sentinel | fortress
+    const email = body.email as string | undefined;
+
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
+    if (!plan) {
+      res.status(400).json({ error: `Invalid plan_id. Available: guardian, sentinel, fortress` });
+      return;
+    }
+
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: 'Stripe not configured' });
+      return;
+    }
+
+    try {
+      const checkoutParams: Record<string, string> = {
+        'mode': 'subscription',
+        'success_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        'cancel_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=cancelled`,
+        'customer_email': email || '',
+        'metadata[user_id]': userId || '',
+        'metadata[plan_id]': planId,
+        'metadata[type]': 'brand_guard_subscription',
+        'subscription_data[trial_period_days]': '7',
+        'subscription_data[metadata][user_id]': userId || '',
+        'subscription_data[metadata][plan_id]': planId,
+        'line_items[0][price]': plan.stripe_price_id,
+        'line_items[0][quantity]': '1',
+      };
+
+      const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(checkoutParams).toString(),
+      });
+
+      const session = await stripeResponse.json();
+
+      if (!stripeResponse.ok) {
+        throw new Error(session.error?.message || 'Stripe checkout creation failed');
+      }
+
+      res.status(200).json({
+        success: true,
+        checkout_url: session.url,
+        session_id: session.id,
+        plan: planId,
+        trial_days: 7,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Payment processing failed';
+      res.status(500).json({ error: message });
+    }
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /subscription — Get current subscription status
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/subscription') {
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    try {
+      const { data: subscription, error } = await serviceClient
+        .from('brand_guard_subscriptions')
+        .select('*')
+        .eq('owner_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        res.status(500).json({ error: 'Failed to fetch subscription', details: error.message });
+        return;
+      }
+
+      // Get credits info
+      const { data: credits } = await serviceClient
+        .from('brand_guard_credits')
+        .select('*')
+        .eq('owner_id', userId)
+        .maybeSingle();
+
+      const planConfig = subscription
+        ? SUBSCRIPTION_PLANS.find(p => p.id === subscription.plan_id)
+        : null;
+
+      res.status(200).json({
+        success: true,
+        subscription: subscription ? {
+          id: subscription.id,
+          plan_id: subscription.plan_id,
+          plan_name: planConfig?.name || subscription.plan_id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          monthly_credits_included: subscription.monthly_credits_included,
+          monthly_credits_used: subscription.monthly_credits_used,
+          brands_included: subscription.brands_included,
+          price_usd: planConfig?.price_usd || 0,
+        } : null,
+        credits: credits || { total_credits: 25, used_credits: 0, free_credits_remaining: 25 },
+        is_free: !subscription,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch subscription' });
+    }
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /stripe-portal — Create Stripe Customer Portal session
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/stripe-portal') {
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: 'Stripe not configured' });
+      return;
+    }
+
+    try {
+      // Find the user's Stripe customer ID
+      const { data: subscription } = await serviceClient
+        .from('brand_guard_subscriptions')
+        .select('stripe_customer_id')
+        .eq('owner_id', userId)
+        .not('stripe_customer_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!subscription?.stripe_customer_id) {
+        res.status(404).json({ error: 'No Stripe customer found. Subscribe first.' });
+        return;
+      }
+
+      const portalParams = new URLSearchParams({
+        'customer': subscription.stripe_customer_id,
+        'return_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard`,
+      });
+
+      const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: portalParams.toString(),
+      });
+
+      const session = await portalResponse.json();
+
+      if (!portalResponse.ok) {
+        throw new Error(session.error?.message || 'Failed to create portal session');
+      }
+
+      res.status(200).json({ url: session.url });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create billing portal';
+      res.status(500).json({ error: message });
+    }
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /cancel-subscription — Cancel active subscription
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/cancel-subscription') {
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: 'Stripe not configured' });
+      return;
+    }
+
+    try {
+      const { data: subscription } = await serviceClient
+        .from('brand_guard_subscriptions')
+        .select('id, stripe_subscription_id, plan_id')
+        .eq('owner_id', userId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!subscription?.stripe_subscription_id) {
+        res.status(404).json({ error: 'No active subscription found' });
+        return;
+      }
+
+      // Cancel at period end (don't immediately revoke access)
+      const cancelResponse = await fetch(
+        `https://api.stripe.com/v1/subscriptions/${subscription.stripe_subscription_id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'cancel_at_period_end=true',
+        }
+      );
+
+      if (!cancelResponse.ok) {
+        const err = await cancelResponse.json();
+        throw new Error(err.error?.message || 'Failed to cancel subscription');
+      }
+
+      // Update local DB
+      await serviceClient
+        .from('brand_guard_subscriptions')
+        .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+        .eq('id', subscription.id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Subscription will be cancelled at the end of the current billing period',
+        cancel_at_period_end: true,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel subscription';
+      res.status(500).json({ error: message });
+    }
+    return;
+  }
+
+  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, POST /subscribe, GET /subscription, POST /stripe-portal, POST /cancel-subscription, POST /crypto-confirm' });
 }
 
 export const config = {

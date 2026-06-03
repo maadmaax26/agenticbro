@@ -27,6 +27,11 @@
  *   - Guardian Plan ($29/mo)                 → price: price_bg_guardian
  *   - Sentinel Plan ($79/mo)                 → price: price_bg_sentinel
  *   - Fortress Plan ($199/mo)                → price: price_bg_fortress
+ *
+ * Subscription Plans (for Stripe Checkout):
+ *   - Guardian:   $29/mo, 50 scans, 3 brands
+ *   - Sentinel:   $99/mo, 200 scans, 10 brands
+ *   - Fortress:   $299/mo, unlimited scans, unlimited brands
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -37,6 +42,18 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL ||
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// Stripe Subscription Price IDs (set in Stripe Dashboard, then copy here)
+const GUARDIAN_PRICE_ID = process.env.STRIPE_GUARDIAN_PRICE_ID || 'price_guardian_12345';
+const SENTINEL_PRICE_ID = process.env.STRIPE_SENTINEL_PRICE_ID || 'price_sentinel_67890';
+const FORTRESS_PRICE_ID = process.env.STRIPE_FORTRESS_PRICE_ID || 'price_fortress_abcde';
+
+// ── Plan Configuration ────────────────────────────────────────────────────────
+const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_credits: number; brands_included: number; plan_id: string }> = {
+  [GUARDIAN_PRICE_ID]: { name: 'Guardian', price_usd: 29, monthly_credits: 50, brands_included: 3, plan_id: 'guardian' },
+  [SENTINEL_PRICE_ID]: { name: 'Sentinel', price_usd: 99, monthly_credits: 200, brands_included: 10, plan_id: 'sentinel' },
+  [FORTRESS_PRICE_ID]: { name: 'Fortress', price_usd: 299, monthly_credits: -1, brands_included: -1, plan_id: 'fortress' }, // -1 = unlimited
+};
 
 // ── Credit Package Lookup ─────────────────────────────────────────────────────
 // Maps Stripe price_id → { credits, package_name, type }
@@ -50,6 +67,10 @@ const PRICE_MAP: Record<string, { credits: number; name: string; type: 'credits'
   [process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_bg_guardian']: { credits: 50, name: 'Guardian Monthly', type: 'subscription', plan_id: 'guardian' },
   [process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_bg_sentinel']: { credits: 200, name: 'Sentinel Monthly', type: 'subscription', plan_id: 'sentinel' },
   [process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_bg_fortress']: { credits: -1, name: 'Fortress Monthly (unlimited)', type: 'subscription', plan_id: 'fortress' },
+  // Brand Guard Subscription plans (via new checkout flow)
+  [GUARDIAN_PRICE_ID]: { credits: 50, name: 'Guardian ($29/mo)', type: 'subscription', plan_id: 'guardian' },
+  [SENTINEL_PRICE_ID]: { credits: 200, name: 'Sentinel ($99/mo)', type: 'subscription', plan_id: 'sentinel' },
+  [FORTRESS_PRICE_ID]: { credits: -1, name: 'Fortress ($299/mo, unlimited)', type: 'subscription', plan_id: 'fortress' },
 };
 
 // ── Supabase Client ────────────────────────────────────────────────────────────
@@ -476,6 +497,158 @@ export default async function handler(
         .eq('stripe_subscription_id', subscriptionId);
 
       console.log(`[bg-webhook] ⚠️ Payment failed for subscription ${subscriptionId}`);
+      break;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // checkout.session.completed — Brand Guard subscription signup (new flow)
+    // ══════════════════════════════════════════════════════════════════════
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      const userId = session.metadata?.user_id;
+      const customerEmail = session.customer_email || session.customer_details?.email;
+      const paymentStatus = session.payment_status;
+
+      if (paymentStatus !== 'paid') {
+        console.log(`[bg-webhook] Session not paid yet: ${session.id} (status: ${paymentStatus})`);
+        return res.status(200).json({ received: true, skipped: 'not_paid' });
+      }
+
+      if (!userId) {
+        console.error('[bg-webhook] Missing user_id in session metadata');
+        return res.status(400).json({ error: 'Missing user_id in metadata' });
+      }
+
+      const lineItems = session.line_items?.data || [];
+      const { credits, packageId, type, planId } = resolveCredits(session.metadata || {}, lineItems);
+
+      // Check if this is a subscription plan
+      if (type === 'subscription' && planId) {
+        // Handle subscription checkout (Guardian/Sentinel/Fortress plans)
+        const planConfig = Object.values(PLAN_CONFIG).find(p => p.plan_id === planId);
+        if (!planConfig) {
+          console.error(`[bg-webhook] Unknown plan_id in subscription checkout: ${planId}`);
+          return res.status(400).json({ error: 'Unknown subscription plan' });
+        }
+
+        const supabase = getSupabase();
+        const stripeCustomerId = session.customer;
+        const stripeSubscriptionId = session.subscription;
+
+        // Check if subscription already exists
+        const { data: existingSub } = await supabase
+          .from('brand_guard_subscriptions')
+          .select('*')
+          .eq('owner_id', userId)
+          .eq('plan_id', planId)
+          .maybeSingle();
+
+        if (existingSub && existingSub.stripe_subscription_id) {
+          // Upgrade or update existing subscription
+          const { error: updateError } = await supabase
+            .from('brand_guard_subscriptions')
+            .update({
+              status: 'active',
+              current_period_start: new Date(session.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(session.current_period_end * 1000).toISOString(),
+              cancel_at_period_end: false,
+              stripe_customer_id: stripeCustomerId,
+              stripe_subscription_id: stripeSubscriptionId as string,
+              stripe_price_id: packageId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('owner_id', userId)
+            .eq('plan_id', planId);
+
+          if (updateError) {
+            console.error(`[bg-webhook] Failed to update subscription: ${updateError.message}`);
+          }
+
+          // Grant renewal credits if period restarted
+          const previousAttributes = event.data.previous_attributes;
+          if (previousAttributes?.current_period_start &&
+              previousAttributes.current_period_start !== session.current_period_start) {
+            const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
+            await supabase.rpc('add_brand_guard_credits', {
+              p_owner_id: userId,
+              p_amount: monthlyCredits,
+              p_transaction_type: 'subscription_grant',
+              p_payment_method: 'stripe',
+              p_payment_reference: stripeSubscriptionId as string,
+              p_amount_usd: planConfig.price_usd,
+              p_description: `${planConfig.name} subscription renewal — ${monthlyCredits === 999999 ? 'unlimited' : monthlyCredits} monthly credits`,
+            });
+            console.log(`[bg-webhook] ✅ Granted ${monthlyCredits} renewal credits for ${planConfig.name}`);
+          }
+        } else {
+          // Create new subscription
+          const { error: subError } = await supabase
+            .from('brand_guard_subscriptions')
+            .insert({
+              owner_id: userId,
+              brand_monitor_id: session.metadata?.brand_monitor_id || null,
+              plan_id: planId,
+              status: 'active',
+              current_period_start: new Date(session.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(session.current_period_end * 1000).toISOString(),
+              cancel_at_period_end: false,
+              monthly_credits_included: planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits,
+              monthly_credits_used: 0,
+              brands_included: planConfig.brands_included === -1 ? 999 : planConfig.brands_included,
+              stripe_customer_id: stripeCustomerId,
+              stripe_subscription_id: stripeSubscriptionId as string,
+              stripe_price_id: packageId,
+              created_at: new Date().toISOString(),
+            });
+
+          if (subError) {
+            console.error(`[bg-webhook] Failed to create subscription: ${subError.message}`);
+          } else {
+            console.log(`[bg-webhook] ✅ Created new ${planConfig.name} subscription for ${userId}`);
+          }
+
+          // Grant initial monthly credits
+          const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
+          if (monthlyCredits > 0) {
+            await supabase.rpc('add_brand_guard_credits', {
+              p_owner_id: userId,
+              p_amount: monthlyCredits,
+              p_transaction_type: 'subscription_grant',
+              p_payment_method: 'stripe',
+              p_payment_reference: stripeSubscriptionId as string,
+              p_amount_usd: planConfig.price_usd,
+              p_description: `${planConfig.name} subscription — ${monthlyCredits === 999999 ? 'unlimited' : monthlyCredits} monthly credits`,
+            });
+            console.log(`[bg-webhook] ✅ Granted ${monthlyCredits} initial credits for ${planConfig.name}`);
+          }
+        }
+      } else {
+        // One-time credit purchase (existing logic)
+        if (credits <= 0) {
+          console.error(`[bg-webhook] Could not resolve credits for session ${session.id}`);
+          return res.status(400).json({ error: 'Could not resolve credit amount' });
+        }
+
+        // Add credits via Supabase function
+        const supabase = getSupabase();
+        const { data, error } = await supabase.rpc('add_brand_guard_credits', {
+          p_owner_id: userId,
+          p_amount: credits,
+          p_transaction_type: type === 'subscription' ? 'subscription_grant' : 'purchase',
+          p_payment_method: 'stripe',
+          p_payment_reference: session.id,
+          p_amount_usd: session.amount_total ? session.amount_total / 100 : null,
+          p_description: `Purchased ${credits} Brand Guard credits via Stripe (${packageId})`,
+        });
+
+        if (error) {
+          console.error('[bg-webhook] Failed to add credits:', error);
+          return res.status(500).json({ error: 'Failed to add credits', details: error.message });
+        }
+
+        console.log(`[bg-webhook] ✅ Added ${credits} Brand Guard credits to ${userId}:`, data);
+      }
+
       break;
     }
 
