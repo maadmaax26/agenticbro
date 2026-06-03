@@ -380,7 +380,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const freeRemaining = credits ? credits.free_credits_total - credits.free_credits_used : 10;
+    const freeRemaining = credits ? credits.free_credits_total - credits.free_credits_used : 25;
     const totalRemaining = credits ? freeRemaining + credits.paid_credits : 10;
 
     if (totalRemaining <= 0) {

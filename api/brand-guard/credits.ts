@@ -8,7 +8,7 @@
  * api/brand-guard/credits.ts — Brand Guard Credits API
  * ========================================================================
  * Manages pay-as-you-go credits for Brand Guard scans.
- * Mirrors the social scan credit system: 10 free scans, then $1/scan.
+ * Mirrors the social scan credit system: 25 free scans, then $1/scan.
  *
  * GET    /api/brand-guard/credits                    — Get user's credit balance
  * POST   /api/brand-guard/credits/deduct             — Deduct 1 credit for a scan
@@ -49,7 +49,7 @@ const CREDIT_PACKAGES = [
   { id: 'bg-whale', name: 'Whale', credits: 100, price_usd: 100, bonus: 10, stripe_price_id: STRIPE_PRICES['bg-whale'] },
 ];
 
-const FREE_CREDITS_DEFAULT = 10;
+const FREE_CREDITS_DEFAULT = 25;
 const PRICE_PER_SCAN_USD = 1.00;
 
 // Payment wallets (same as social scans)
@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .single();
 
     if (error || !credits) {
-      // No credits row yet — return defaults (10 free available)
+      // No credits row yet — return defaults (25 free available)
       res.status(200).json({
         success: true,
         credits: {

@@ -11,7 +11,7 @@ const AGNTCBRO_MINT = new PublicKey('52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopum
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
-const DEFAULT_FREE_SCAN_LIMIT = 5;
+const DEFAULT_FREE_SCAN_LIMIT = 25;
 const SCAN_COST_USD = 2.00;
 const TOKEN_DECIMALS = 6; // AGNTCBRO has 6 decimals
 

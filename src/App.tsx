@@ -606,7 +606,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 5 scans. Hold tokens to unlock more.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 25 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -746,7 +746,7 @@ function App() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
-                        { icon: '🔍', title: 'Priority Scans', desc: '5 free wallet/channel/token scans' },
+                        { icon: '🔍', title: 'Priority Scans', desc: '25 free wallet/channel/token scans' },
                         { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
@@ -995,7 +995,7 @@ function App() {
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-              <p className="text-gray-400">5 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
+              <p className="text-gray-400">25 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
@@ -1155,7 +1155,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
                   <span>🎁</span>
-                  <span>5 free scans when you connect your wallet — no token required</span>
+                  <span>25 free scans when you connect your wallet — no token required</span>
                 </div>
               </div>
             </div>
