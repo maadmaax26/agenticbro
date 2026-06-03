@@ -1,7 +1,7 @@
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║  MIGRATION: Scan Analytics — ALTER existing scan_events + add analytics ║
 -- ║  Run this in Supabase Dashboard → SQL Editor                           ║
--- ║  Project: drvasofyghnxfxvkkwad                                         ║
+-- ║  Project: YOUR_PROJECT_ID                                         ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 --
 -- EXISTING SCHEMA (as of 2026-05-17):
