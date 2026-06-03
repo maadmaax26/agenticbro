@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../lib/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface Subscription {

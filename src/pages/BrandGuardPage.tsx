@@ -555,7 +555,6 @@ export function BrandGuardPage() {
 
   // ── Alert bell handlers ──────────────────────────────────────────────────────
   // (alerts, showAlertsDropdown, unreadAlerts already declared above)
-
   const fetchAlerts = useCallback(async () => {
     if (!authToken) { return; }
     try {
