@@ -79,6 +79,9 @@
     "api/brand-guard/email-spoof.ts": {
       "maxDuration": 30
     },
+    "api/brand-guard/email-spoof.ts": {
+      "maxDuration": 30
+    },
     "api/brand-guard/takedown.ts": {
       "maxDuration": 15
     },
@@ -93,6 +96,18 @@
     },
     "api/brand-guard/alert-delivery.ts": {
       "maxDuration": 60
+    },
+    "api/brand-guard/scheduled-scan-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/domain-monitor-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/alerts/deliver.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/stripe/checkout.ts": {
+      "maxDuration": 15
     }
   },
   "rewrites": [
