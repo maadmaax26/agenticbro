@@ -127,7 +127,7 @@ export async function signUpWithEmail(email: string, password: string) {
   
   if (error) return { user: null, error };
   
-  // Create profile with 5 free scans
+  // Create profile with 25 free scans
   if (data.user) {
     // Check if email confirmation is needed
     if (!data.session) {

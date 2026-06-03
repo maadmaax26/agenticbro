@@ -41,14 +41,14 @@ CREATE OR REPLACE FUNCTION initialize_brand_guard_credits(
 RETURNS JSONB AS $$
 DECLARE
   credit_id UUID;
-  v_free_total INTEGER := 10;
+  v_free_total INTEGER := 25;
   v_promo_credits INTEGER := 0;
   v_total_initial INTEGER;
 BEGIN
   -- Check promo code
   IF p_promo_code IS NOT NULL AND LOWER(p_promo_code) = 'beta2026' THEN
     v_free_total := 500;
-    v_promo_credits := 490;  -- 500 total minus the base 10
+    v_promo_credits := 475;  -- 500 total minus the base 25
   END IF;
 
   INSERT INTO brand_guard_credits (owner_id, free_credits_total, free_credits_used, paid_credits, promo_code, promo_credits, first_brand_at)
@@ -63,7 +63,7 @@ BEGIN
     VALUES (p_owner_id, 'free_grant', v_free_total, v_total_initial, v_total_initial, 0,
       CASE WHEN v_promo_credits > 0
         THEN 'Beta tester: ' || v_free_total || ' free Brand Guard scans (promo: ' || p_promo_code || ')'
-        ELSE 'Initial 10 free Brand Guard scans'
+        ELSE 'Initial 25 free Brand Guard scans'
       END
     );
 

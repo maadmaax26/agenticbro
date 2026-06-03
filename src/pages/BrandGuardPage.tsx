@@ -8,6 +8,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
+import { TakedownModal } from '../components/brand-guard/TakedownModal';
+import { FingerprintManager } from '../components/brand-guard/FingerprintManager';
+import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Mobile Detection Hook
@@ -425,8 +428,9 @@ export function BrandGuardPage() {
   };
 
   // ── Monitoring Dashboard ──────────────────────────────────────────────────
-  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring'>('scans');
+  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns'>('scans');
   const [monitoringData, setMonitoringData] = useState<Record<string, unknown> | null>(null);
+  const [takedownStandalone, setTakedownStandalone] = useState(false);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
   const [refreshingHealth, setRefreshingHealth] = useState(false);
 
@@ -492,6 +496,7 @@ export function BrandGuardPage() {
   const [scanning, setScanning] = useState<string | null>(null); // scan type being run
   const [scanResult, setScanResult] = useState<any>(null);
   const [scanType, setScanType] = useState<string>('impersonator');
+  const [showTakedown, setShowTakedown] = useState(false);
 
   const deductCredit = async (scanTypeStr: string) => {
     if (!authToken || !activeBrand) return false;
@@ -609,6 +614,8 @@ export function BrandGuardPage() {
   // Website scan needs a URL input
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [showWebsiteInput, setShowWebsiteInput] = useState(false);
+  const [showMarketplacePanel, setShowMarketplacePanel] = useState(false);
+  const [showFingerprintPanel, setShowFingerprintPanel] = useState(false);
 
   const handleVendorScan = async () => {
     if (!vendorPhone) return;
@@ -833,7 +840,7 @@ n            </p>
 
             {(loginMode === 'login' || loginMode === 'register') && (
             <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '20px' }}>
-              <span style={{ color: dark.green, fontWeight: 600, fontSize: '14px' }}>🎁 10 free scans included with sign-up</span>
+              <span style={{ color: dark.green, fontWeight: 600, fontSize: '14px' }}>🎁 25 free scans included with sign-up</span>
             </div>
             )}
 
@@ -1107,7 +1114,7 @@ n            </p>
                 Review & Confirm
               </h2>
               <p style={{ color: dark.textMuted, marginBottom: '32px' }}>
-                Confirm your brand monitoring setup. {promoCode.trim().toLowerCase() === 'beta2026' ? 'As a beta tester, you\'ll get 500 free scans!' : 'You\'ll get 10 free scans to start.'}
+                Confirm your brand monitoring setup. {promoCode.trim().toLowerCase() === 'beta2026' ? 'As a beta tester, you\'ll get 500 free scans!' : 'You\'ll get 25 free scans to start.'}
               </p>
               <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '16px' : '24px', marginBottom: '16px' }}>
                 <div style={{ display: 'grid', gap: '16px' }}>
@@ -1147,7 +1154,7 @@ n            </p>
               </div>
               <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center', marginBottom: '16px' }}>
                 <div style={{ fontSize: '24px', marginBottom: '4px' }}>🎁</div>
-                <div style={{ color: dark.green, fontWeight: 700 }}>{promoCode.trim().toLowerCase() === 'beta2026' ? '500 free scans (Beta Tester)' : '10 free scans included'}</div>
+                <div style={{ color: dark.green, fontWeight: 700 }}>{promoCode.trim().toLowerCase() === 'beta2026' ? '500 free scans (Beta Tester)' : '25 free scans included'}</div>
                 <div style={{ color: dark.textMuted, fontSize: '13px' }}>$1 per scan after that</div>
               </div>
               {/* Promo code input */}
@@ -1197,8 +1204,8 @@ n            </p>
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────────────
-  const totalRemaining = credits?.total_remaining ?? 10;
-  const freeRemaining = credits?.free_remaining ?? 10;
+  const totalRemaining = credits?.total_remaining ?? 25;
+  const freeRemaining = credits?.free_remaining ?? 25;
   const paidCredits = credits?.paid_credits ?? 0;
 
   return (
@@ -1231,18 +1238,27 @@ n            </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Credits badge */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '6px 12px', borderRadius: '8px',
-            background: totalRemaining > 0 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-            border: `1px solid ${totalRemaining > 0 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
-          }}>
-            <span style={{ fontSize: '14px' }}>{totalRemaining > 0 ? '✅' : '🚫'}</span>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: totalRemaining > 0 ? dark.green : dark.red }}>
+          <div
+            onClick={() => { if (totalRemaining <= 5) setShowPurchase(true); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '8px',
+              background: totalRemaining === 0 ? 'rgba(239,68,68,0.15)' : totalRemaining <= 5 ? 'rgba(245,158,11,0.15)' : 'rgba(34,197,94,0.15)',
+              border: `1px solid ${totalRemaining === 0 ? 'rgba(239,68,68,0.4)' : totalRemaining <= 5 ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.4)'}`,
+              cursor: totalRemaining <= 5 ? 'pointer' : 'default',
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>{totalRemaining === 0 ? '🚫' : totalRemaining <= 5 ? '⚠️' : '✅'}</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: totalRemaining === 0 ? dark.red : totalRemaining <= 5 ? '#f59e0b' : dark.green }}>
               {creditsLoading ? '...' : totalRemaining} scans
             </span>
-            {freeRemaining > 0 && (
+            {freeRemaining > 0 && !creditsLoading && (
               <span style={{ fontSize: '11px', color: dark.textMuted }}>({freeRemaining} free + {paidCredits} paid)</span>
+            )}
+            {totalRemaining <= 5 && !creditsLoading && (
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#3b82f6', marginLeft: '4px' }}>
+                {totalRemaining === 0 ? 'Buy Credits →' : '+ Add more'}
+              </span>
             )}
           </div>
           {/* Brand switcher */}
@@ -1349,6 +1365,15 @@ n            </p>
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >📊 Monitoring</button>
+                <button
+                  onClick={() => setDashboardTab('takedowns')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    background: dashboardTab === 'takedowns' ? dark.accent : 'transparent',
+                    color: dashboardTab === 'takedowns' ? '#fff' : dark.textMuted,
+                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >📋 Takedowns</button>
               </div>
 
               {dashboardTab === 'monitoring' ? (
@@ -1553,6 +1578,113 @@ n            </p>
                     </div>
                   )}
                 </div>
+              ) : dashboardTab === 'takedowns' ? (
+                <div>
+                  {/* ── Takedowns Tab ─────────────────────────────── */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>📋 Takedown Center</div>
+                      <div style={{ fontSize: '12px', color: dark.textMuted, marginTop: '2px' }}>Generate DMCA, Shopify, and platform-specific takedown reports</div>
+                    </div>
+                    <button
+                      onClick={() => setTakedownStandalone(true)}
+                      style={{
+                        padding: '10px 20px', borderRadius: '10px', border: 'none',
+                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                        color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                      }}
+                    >
+                      📋 Generate Takedown Report
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const takedowns = (monitoringData?.takedown_actions || []) as Record<string, unknown>[];
+                    const pending = takedowns.filter(t => t.status === 'pending' || t.status === 'new');
+                    const inProgress = takedowns.filter(t => ['submitted', 'acknowledged', 'monitoring'].includes(String(t.status)));
+                    const completed = takedowns.filter(t => ['removed', 'resolved', 'dismissed', 'rejected'].includes(String(t.status)));
+                    const draft = takedowns.filter(t => t.status === 'draft');
+
+                    return (
+                      <>
+                        {/* Status cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                          {[
+                            { label: 'Drafts', count: draft.length, color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
+                            { label: 'Pending', count: pending.length, color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+                            { label: 'In Progress', count: inProgress.length, color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+                            { label: 'Resolved', count: completed.length, color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+                          ].map(s => (
+                            <div key={s.label} style={{ padding: '12px', borderRadius: '10px', background: s.bg, textAlign: 'center' }}>
+                              <div style={{ fontSize: '24px', fontWeight: 700, color: s.color }}>{s.count}</div>
+                              <div style={{ fontSize: '11px', color: s.color, marginTop: '2px' }}>{s.label}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Takedown actions list */}
+                        {takedowns.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '40px 0', background: dark.cardBg, borderRadius: '12px', border: `1px solid ${dark.border}` }}>
+                            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📋</div>
+                            <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>No Takedown Reports Yet</div>
+                            <div style={{ color: dark.textMuted, fontSize: '13px', maxWidth: '360px', margin: '0 auto', lineHeight: 1.5 }}>
+                              Generate a takedown report to create DMCA notices, Shopify IP complaints, and platform-specific removal requests for impersonating stores and accounts.
+                            </div>
+                            <button
+                              onClick={() => setTakedownStandalone(true)}
+                              style={{
+                                marginTop: '16px', padding: '10px 24px', borderRadius: '10px', border: 'none',
+                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                              }}
+                            >
+                              📋 Generate Your First Report
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gap: '6px' }}>
+                            {takedowns.slice(0, 20).map((t: Record<string, unknown>, i: number) => {
+                              const status = String(t.status || 'new');
+                              const statusColors: Record<string, string> = {
+                                draft: '#6b7280', new: '#f59e0b', pending: '#f59e0b',
+                                submitted: '#3b82f6', acknowledged: '#3b82f6', monitoring: '#3b82f6',
+                                removed: '#22c55e', resolved: '#22c55e', dismissed: '#6b7280', rejected: '#ef4444',
+                              };
+                              const statusBgs: Record<string, string> = {
+                                draft: 'rgba(107,114,128,0.1)', new: 'rgba(245,158,11,0.1)', pending: 'rgba(245,158,11,0.1)',
+                                submitted: 'rgba(59,130,246,0.1)', acknowledged: 'rgba(59,130,246,0.1)', monitoring: 'rgba(59,130,246,0.1)',
+                                removed: 'rgba(34,197,94,0.1)', resolved: 'rgba(34,197,94,0.1)', dismissed: 'rgba(107,114,128,0.1)', rejected: 'rgba(239,68,68,0.1)',
+                              };
+                              const priorityIcon = String(t.priority) === 'urgent' ? '🔴' : String(t.priority) === 'high' ? '🟠' : '🟡';
+                              return (
+                                <div key={i} style={{
+                                  display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px',
+                                  borderRadius: '8px', border: `1px solid ${dark.border}`, background: statusBgs[status] || 'transparent',
+                                }}>
+                                  <span>{priorityIcon}</span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                                      {String(t.platform || 'unknown').toUpperCase()} · {String(t.action_type || 'report')}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: dark.textMuted }}>
+                                      {String(t.target || 'unknown').substring(0, 60)}
+                                    </div>
+                                  </div>
+                                  <span style={{
+                                    padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700,
+                                    background: statusBgs[status] || 'transparent', color: statusColors[status] || '#fff',
+                                    textTransform: 'uppercase',
+                                  }}>{status}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               ) : (
               <div>
               {/* Scan buttons */}
@@ -1564,14 +1696,16 @@ n            </p>
                   { type: 'website', icon: '🔗', label: 'Link Scanner', desc: 'Check any URL — is it impersonating your brand or a scam?' },
                   { type: 'threat', icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk correlation' },
                   { type: 'vendor', icon: '📞', label: 'Vendor Verify', desc: 'Check phone numbers for vendor fraud' },
+                  { type: 'marketplace', icon: '🛍️', label: 'Marketplace Scanner', desc: 'Scan Shopify & Etsy for brand impersonators' },
+                  { type: 'fingerprint', icon: '🖼️', label: 'Visual Fingerprints', desc: 'Register & manage brand image fingerprints' },
                 ].map(scan => (
                   <button
                     key={scan.type}
-                    onClick={() => scan.type === 'vendor' ? setShowVendorInput(true) : scan.type === 'website' ? setShowWebsiteInput(true) : handleRunScan(scan.type)}
+                    onClick={() => scan.type === 'vendor' ? setShowVendorInput(true) : scan.type === 'website' ? setShowWebsiteInput(true) : scan.type === 'marketplace' ? setShowMarketplacePanel(v => !v) : scan.type === 'fingerprint' ? setShowFingerprintPanel(v => !v) : handleRunScan(scan.type)}
                     disabled={scanning !== null || !credits?.has_credits}
                     style={{
                       padding: '12px', borderRadius: '10px', border: `1px solid ${dark.border}`,
-                      background: scanning === scan.type ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.1)',
+                      background: scanning === scan.type ? 'rgba(139,92,246,0.3)' : scan.type === 'marketplace' && showMarketplacePanel ? 'rgba(139,92,246,0.3)' : scan.type === 'fingerprint' && showFingerprintPanel ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.1)',
                       color: '#fff', fontSize: '14px', fontWeight: 600, cursor: scanning !== null || !credits?.has_credits ? 'not-allowed' : 'pointer',
                       display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left',
                     }}
@@ -1648,6 +1782,47 @@ n            </p>
 
             {/* Right: Scan results / threats */}
             <div style={{ display: 'grid', gap: '16px' }}>
+              {/* Marketplace Scanner Panel */}
+              {showMarketplacePanel && activeBrand && (
+                <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
+                  <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>
+                    🛍️ Marketplace Scanner
+                  </h3>
+                  <div style={{ fontSize: '12px', color: dark.textMuted, marginBottom: '4px' }}>
+                    Scan Shopify & Etsy for stores impersonating your brand. Visual fingerprint matching included.
+                  </div>
+                  <MarketplaceScanner
+                    brandId={activeBrand.id}
+                    brandName={activeBrand.brand_name}
+                    brandDomain={activeBrand.brand_domain}
+                    authToken={authToken}
+                    dark={dark}
+                    isMobile={isMobile}
+                    apiBase={API_BASE}
+                  />
+                </div>
+              )}
+
+              {/* Fingerprint Manager Panel */}
+              {showFingerprintPanel && activeBrand && (
+                <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
+                  <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>
+                    🖼️ Visual Fingerprints
+                  </h3>
+                  <div style={{ fontSize: '12px', color: dark.textMuted, marginBottom: '4px' }}>
+                    Register your brand images to enable visual matching across marketplaces and social platforms.
+                  </div>
+                  <FingerprintManager
+                    brandId={activeBrand.id}
+                    brandDomain={activeBrand.brand_domain}
+                    authToken={authToken}
+                    dark={dark}
+                    isMobile={isMobile}
+                    apiBase={API_BASE}
+                  />
+                </div>
+              )}
+
               {/* Scan results */}
               {scanResult ? (
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
@@ -2029,6 +2204,82 @@ n            </p>
                         );
                       })()}
 
+                      {/* Takedown Report button for medium/high/critical risk results */}
+                      {scanResult && (scanResult.risk_level === 'HIGH' || scanResult.risk_level === 'CRITICAL' || scanResult.risk_level === 'MEDIUM' || scanResult.risk_score >= 4) && (
+                        <>
+                          <button
+                            onClick={() => setShowTakedown(true)}
+                            style={{
+                              marginTop: '12px',
+                              width: '100%',
+                              padding: '8px 16px',
+                              background: 'rgba(239,68,68,0.2)',
+                              border: '1px solid rgba(239,68,68,0.5)',
+                              borderRadius: '8px',
+                              color: '#ef4444',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            📋 Generate Takedown Report
+                          </button>
+                          <TakedownModal
+                            isOpen={showTakedown}
+                            onClose={() => setShowTakedown(false)}
+                            scanId={activeBrand?.id || ''}
+                            scanType={scanType}
+                            riskScore={scanResult.aggregate_risk_score ?? scanResult.risk_score ?? 0}
+                            riskLevel={String(scanResult.risk_level ?? 'LOW')}
+                            evidence={{
+                              urls: Array.isArray(scanResult.variants) ? scanResult.variants.map((v: any) => v.domain || v.url || '').filter(Boolean) : [],
+                              descriptions: String(scanResult.risk_level ?? '')
+                            }}
+                            brand={{
+                              name: activeBrand?.brand_name || '',
+                              website: activeBrand?.brand_domain || ''
+                            }}
+                            violator={{
+                              platform: scanType,
+                              url: Array.isArray(scanResult.variants) && scanResult.variants[0]?.domain ? String(scanResult.variants[0].domain) : '',
+                              name: Array.isArray(scanResult.variants) && scanResult.variants[0]?.domain ? String(scanResult.variants[0].domain) : ''
+                            }}
+                            user={{
+                              id: authToken || '',
+                              email: '',
+                              companyName: activeBrand?.brand_name || ''
+                            }}
+                          />
+                        </>
+                      )}
+
+                      {/* Standalone Takedown Modal (from Takedowns tab) */}
+                      {takedownStandalone && activeBrand && (
+                        <TakedownModal
+                          isOpen={takedownStandalone}
+                          onClose={() => setTakedownStandalone(false)}
+                          scanId={activeBrand.id}
+                          scanType="impersonator"
+                          riskScore={0}
+                          riskLevel="medium"
+                          evidence={{ urls: [], descriptions: '' }}
+                          brand={{
+                            name: activeBrand.brand_name,
+                            website: activeBrand.brand_domain || ''
+                          }}
+                          violator={{
+                            platform: 'shopify',
+                            url: '',
+                          }}
+                          user={{
+                            id: authToken || '',
+                            email: '',
+                            companyName: activeBrand.brand_name
+                          }}
+                        />
+                      )}
+
                       <div style={{ marginTop: '16px', fontSize: '11px', color: dark.textMuted, textAlign: 'center' }}>
                         Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR. Scan date: {new Date().toLocaleDateString()}
                       </div>
@@ -2053,9 +2304,15 @@ n            </p>
                   <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: dark.accent }}>{activeBrand.platforms.length}</div>
                   <div style={{ fontSize: '12px', color: dark.textMuted }}>Platforms</div>
                 </div>
-                <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: dark.green }}>{totalRemaining >= 1000000 ? `${(totalRemaining / 1000000).toFixed(1)}M` : totalRemaining >= 1000 ? `${(totalRemaining / 1000).toFixed(1)}K` : totalRemaining}</div>
+                <div
+                  style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center', cursor: totalRemaining <= 5 ? 'pointer' : 'default' }}
+                  onClick={() => { if (totalRemaining <= 5) setShowPurchase(true); }}
+                >
+                  <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: totalRemaining === 0 ? dark.red : totalRemaining <= 5 ? '#f59e0b' : dark.green }}>{totalRemaining >= 1000000 ? `${(totalRemaining / 1000000).toFixed(1)}M` : totalRemaining >= 1000 ? `${(totalRemaining / 1000).toFixed(1)}K` : totalRemaining}</div>
                   <div style={{ fontSize: '12px', color: dark.textMuted }}>Scans Left</div>
+                  {totalRemaining <= 5 && !creditsLoading && (
+                    <div style={{ fontSize: '10px', color: '#3b82f6', marginTop: '4px', fontWeight: 600 }}>{totalRemaining === 0 ? 'Buy Credits →' : '+ Add more'}</div>
+                  )}
                 </div>
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: isMobile ? '10px' : '16px', textAlign: 'center' }}>
                   <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: '#fff' }}>{brands.length}</div>
@@ -2070,6 +2327,63 @@ n            </p>
             <h2 style={{ color: '#fff', fontSize: '24px', marginBottom: '8px' }}>Loading brand data...</h2>
           </div>
         )}
+
+        {/* Credit Balance Details Panel */}
+        <div style={{
+          background: dark.cardBg,
+          border: `1px solid ${dark.border}`,
+          borderRadius: '16px',
+          padding: isMobile ? '16px' : '24px',
+          marginTop: '24px',
+          backdropFilter: 'blur(12px)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, margin: 0 }}>🔐 Credit Balance</h3>
+            <button
+              onClick={() => setShowPurchase(true)}
+              style={{
+                padding: '6px 14px', borderRadius: '8px',
+                background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
+                color: '#3b82f6', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              }}
+            >+ Buy Credits</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '12px' }}>
+            <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: dark.green }}>{creditsLoading ? '...' : freeRemaining}</div>
+              <div style={{ fontSize: '11px', color: dark.textMuted }}>Free Scans</div>
+            </div>
+            <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#a78bfa' }}>{creditsLoading ? '...' : paidCredits}</div>
+              <div style={{ fontSize: '11px', color: dark.textMuted }}>Paid Credits</div>
+            </div>
+            <div style={{ background: totalRemaining === 0 ? 'rgba(239,68,68,0.1)' : totalRemaining <= 5 ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)', border: totalRemaining === 0 ? '1px solid rgba(239,68,68,0.3)' : totalRemaining <= 5 ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: totalRemaining === 0 ? dark.red : totalRemaining <= 5 ? '#f59e0b' : dark.green }}>{creditsLoading ? '...' : totalRemaining}</div>
+              <div style={{ fontSize: '11px', color: dark.textMuted }}>Total Remaining</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${dark.border}`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>{creditsLoading ? '...' : credits?.free_used ?? 0}</div>
+              <div style={{ fontSize: '11px', color: dark.textMuted }}>Scans Used</div>
+            </div>
+          </div>
+          {totalRemaining === 0 && !creditsLoading && (
+            <div style={{ marginTop: '16px', padding: '16px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: dark.red, marginBottom: '8px' }}>🔒 Out of credits</div>
+              <button
+                onClick={() => setShowPurchase(true)}
+                style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                💎 Buy Credits — $1/scan
+              </button>
+            </div>
+          )}
+          {totalRemaining > 0 && totalRemaining <= 5 && !creditsLoading && (
+            <div style={{ marginTop: '12px', padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#f59e0b' }}>⚠️ Running low on credits — </span>
+              <span style={{ fontSize: '13px', color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }} onClick={() => setShowPurchase(true)}>Buy more →</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Credit Purchase Modal */}

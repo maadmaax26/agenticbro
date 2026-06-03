@@ -164,7 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         p_promo_code: promoCode,
       });
       const creditResult = creditData as Record<string, unknown> | null;
-      const freeCredits = (creditResult?.free_credits as number) || 10;
+      const freeCredits = (creditResult?.free_credits as number) || 25;
       const promoBonus = (creditResult?.promo_bonus as number) || 0;
       const message = promoBonus > 0
         ? `Welcome, beta tester! You have ${freeCredits} free scans.`
@@ -176,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       console.warn('[brands] Credit initialization skipped (may already exist):', creditErr);
     }
 
-    res.status(201).json({ success: true, brand: data, credits: { free_remaining: 10, message: '10 free Brand Guard scans granted!' } });
+    res.status(201).json({ success: true, brand: data, credits: { free_remaining: 25, message: '25 free Brand Guard scans granted!' } });
     return;
   }
 
