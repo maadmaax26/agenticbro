@@ -28,7 +28,7 @@ import {
 } from '../lib/engagement-analysis';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
-const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://***REMOVED***';
+const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const _supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void> {
