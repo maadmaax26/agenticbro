@@ -37,7 +37,10 @@ scripts/solana-rpc.sh
 .env
 .env.local
 .env.production
+.env.staging
 .env.*.local
+***REMOVED***
+***REMOVED***
 .token-replacements.txt
 .keychain-env.sh
 
