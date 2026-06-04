@@ -37,7 +37,7 @@ const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, s
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ThreatItem {
   id: string;
-  type: 'social_impersonator' | 'phone_scam' | 'domain_lookalike' | 'cross_channel' | 'scammer_db';
+  type: 'social_impersonator' | 'phone_scam' | 'domain_lookalike' | 'cross_channel' | 'scammer_db' | 'email';
   severity: 'critical' | 'high' | 'medium' | 'low';
   platform: string;
   target: string;
@@ -45,7 +45,7 @@ interface ThreatItem {
   risk_level: string;
   evidence: string[];
   detected_at: string;
-  status: 'new' | 'monitoring' | 'reported' | 'resolved' | 'dismissed';
+  status: 'new' | 'monitoring' | 'reported' | 'resolved' | 'dismissed' | 'active';
   takedown_actions: TakedownAction[];
 }
 
@@ -127,7 +127,11 @@ function calculateHealthScore(
   phoneThreats: number,
   webReputationFlags: number,
   criticalCount: number,
-  highCount: number
+  highCount: number,
+  domainCriticalCount: number,
+  domainHighCount: number,
+  domainMediumCount: number,
+  domainLowCount: number
 ): BrandHealthScore {
   // Start at 100 (perfect health), subtract for threats
   let score = 100;
@@ -176,21 +180,15 @@ function calculateHealthScore(
   if (socialThreats > 5) recommendations.push('Consider increasing scan frequency to daily for this brand');
   if (phoneThreats > 0) recommendations.push('Set up call screening for reported phone numbers');
 
-  // Calculate severity-weighted domain penalty
-  // Critical domains hurt 15pts each, high 5pts, medium 1pt, low/minimal are noise
-  const domainCriticalCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'critical').length;
-  const domainHighCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'high').length;
-  const domainMediumCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'medium').length;
-  const domainLowCount = Math.max(0, domainThreats - domainCriticalCount - domainHighCount - domainMediumCount);
-
-  // Generate per-category improvement tips
-  const improvement_tips: Record<string, string[]> = {};
+  // Per-category health scores
   const socialHealth = Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15));
   const domainHealth = Math.max(0, 100 - Math.min(25, domainCriticalCount * 15) - Math.min(15, domainHighCount * 5) - Math.min(10, domainMediumCount) - Math.min(5, domainLowCount));
   const emailHealth = Math.max(0, 100 - Math.min(70, emailThreats * 10));
   const phoneHealth = Math.max(0, 100 - Math.min(40, phoneThreats * 10));
   const webRep = Math.max(0, 100 - Math.min(50, webReputationFlags * 10));
 
+  // Generate per-category improvement tips
+  const improvement_tips: Record<string, string[]> = {};
   if (socialHealth < 80) {
     improvement_tips.social = [];
     if (socialThreats > 0) improvement_tips.social.push('Report fake accounts on each platform to reduce active impersonators');
@@ -433,15 +431,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (takedowns) {
       takedownActions = takedowns.map((t: Record<string, unknown>) => ({
-        id: t.id,
-        platform: t.platform || 'unknown',
-        action_type: t.action_type || 'report',
-        target: t.evidence_url || 'unknown',
+        id: String(t.id || ''),
+        platform: String(t.platform || 'unknown'),
+        action_type: String(t.action_type || 'report') as TakedownAction['action_type'],
+        target: String(t.evidence_url || 'unknown'),
         url: '',
-        status: t.status || 'pending',
-        priority: t.status === 'pending' ? 'urgent' : 'medium',
+        status: String(t.status || 'pending') as TakedownAction['status'],
+        priority: t.status === 'pending' ? 'urgent' as const : 'medium' as const,
         evidence_needed: [],
-        created_at: t.created_at || new Date().toISOString(),
+        created_at: String(t.created_at || new Date().toISOString()),
       }));
     }
 
@@ -466,7 +464,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           risk_level: tp.risk_level as string || 'UNKNOWN',
           evidence: (riskProfile.evidence as string[]) || [],
           detected_at: tp.created_at as string || new Date().toISOString(),
-          status: tp.status as string || 'active',
+          status: ['new','monitoring','reported','resolved','dismissed','active'].includes(String(tp.status)) ? String(tp.status) as ThreatItem['status'] : 'active' as ThreatItem['status'],
           takedown_actions: [],
         });
       }
@@ -565,6 +563,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     threats.filter(t => t.type === 'cross_channel').length,
     criticalCount,
     highCount,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'critical').length,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'high').length,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'medium').length,
+    Math.max(0, threats.filter(t => t.type === 'domain_lookalike').length - threats.filter(t => t.type === 'domain_lookalike' && ['critical','high','medium'].includes(t.severity)).length),
   );
 
   const summary = {
