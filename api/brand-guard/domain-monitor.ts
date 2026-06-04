@@ -51,6 +51,8 @@ interface DomainVariant {
   takedown_action: string;
   dns_info?: { resolves: boolean; ip_addresses?: string[]; has_www?: boolean };
   ssl_info?: { has_ssl: boolean; issuer?: string; is_self_signed?: boolean; is_lets_encrypt?: boolean };
+  domain_age?: { days?: number; created_date?: string; registrar?: string; is_new?: boolean; source?: string };
+  active_page?: { is_active: boolean; status?: number; title?: string; has_brand_content: boolean; brand_matches?: string[]; impersonation_confidence: number; content_snippet?: string };
 }
 
 // ── Domain Variant Generation ─────────────────────────────────────────────────
@@ -225,6 +227,187 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
   return variants.slice(0, limit);
 }
 
+// ── Domain Age Lookup (WHOIS via free APIs) ──────────────────────────────────────
+
+async function lookupDomainAge(domain: string): Promise<DomainVariant['domain_age']> {
+  try {
+    // Use whoisjson.com free tier (10 req/hr without key)
+    const res = await fetch(`https://whoisjson.com/api/v1/whois?domain=${encodeURIComponent(domain)}`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return { source: 'whois_failed' };
+    const data = await res.json();
+
+    // Try multiple date fields
+    const createdStr = data.creation_date || data.created_date || data.creationDate || null;
+    const registrar = data.registrar || data.registrarName || null;
+
+    if (!createdStr) return { registrar, source: 'whois_no_date' };
+
+    // Parse date (handles ISO, RFC, and Unix timestamp formats)
+    let createdDate: Date | null = null;
+    if (typeof createdStr === 'string') {
+      createdDate = new Date(createdStr);
+    } else if (typeof createdStr === 'number') {
+      createdDate = new Date(createdStr * 1000); // Unix timestamp
+    } else if (Array.isArray(createdStr) && createdStr.length > 0) {
+      createdDate = new Date(createdStr[0]);
+    }
+
+    if (!createdDate || isNaN(createdDate.getTime())) return { registrar, source: 'whois_invalid_date' };
+
+    const days = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    const isNew = days < 90; // Less than 90 days = suspicious new domain
+
+    return {
+      days,
+      created_date: createdDate.toISOString().split('T')[0],
+      registrar: registrar || undefined,
+      is_new: isNew,
+      source: 'whois',
+    };
+  } catch {
+    // Fallback: try dns0.eu free API
+    try {
+      const res2 = await fetch(`https://dns0.eu/whois/${encodeURIComponent(domain)}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res2.ok) return { source: 'whois_unavailable' };
+      const text = await res2.text();
+      // Parse WHOIS text output for creation date
+      const dateMatch = text.match(/Creation Date:\s*(.+)/i) || text.match(/Created Date:\s*(.+)/i) || text.match(/Registered On:\s*(.+)/i);
+      if (dateMatch) {
+        const createdDate = new Date(dateMatch[1].trim());
+        if (!isNaN(createdDate.getTime())) {
+          const days = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+          return { days, created_date: createdDate.toISOString().split('T')[0], is_new: days < 90, source: 'whois_text' };
+        }
+      }
+      return { source: 'whois_no_date' };
+    } catch {
+      return { source: 'whois_unavailable' };
+    }
+  }
+}
+
+// ── Active Page & Impersonation Detection ──────────────────────────────────────
+
+async function checkActiveImpersonation(
+  domain: string,
+  brandName: string,
+  brandDomain: string
+): Promise<DomainVariant['active_page']> {
+  const result: DomainVariant['active_page'] = {
+    is_active: false,
+    has_brand_content: false,
+    impersonation_confidence: 0,
+  };
+
+  try {
+    const urls = [`https://${domain}`, `http://${domain}`, `https://www.${domain}`];
+    let response: Response | null = null;
+    let finalUrl = '';
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(8000),
+          redirect: 'follow',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        });
+        if (res.ok) {
+          response = res;
+          finalUrl = res.url || url;
+          break;
+        }
+      } catch { /* try next URL */ }
+    }
+
+    if (!response) return result;
+
+    result.is_active = true;
+    result.status = response.status;
+
+    const html = await response.text();
+
+    // Extract title
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    result.title = titleMatch ? titleMatch[1].trim().substring(0, 200) : undefined;
+
+    // Check for brand name mentions in visible content
+    const visibleText = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .substring(0, 5000)
+      .toLowerCase();
+
+    const brandLower = brandName.toLowerCase();
+    const brandParts = brandLower.split(/\s+/).filter(p => p.length > 2);
+
+    // Check title for brand name
+    const titleLower = (result.title || '').toLowerCase();
+    const titleHasBrand = brandParts.some(p => titleLower.includes(p));
+
+    // Check meta tags for brand references
+    const metaMatches = html.match(/<meta[^>]*(?:content|property|name)=["'][^"']*?["'][^>]*>/gi) || [];
+    const metaText = metaMatches.join(' ').toLowerCase();
+    const metaHasBrand = brandParts.some(p => metaText.includes(p));
+
+    // Check for brand domain references (impersonators often reference the real site)
+    const domainLower = brandDomain.toLowerCase().replace(/^www\./, '');
+    const htmlLower = html.toLowerCase();
+    const referencesRealDomain = htmlLower.includes(domainLower);
+
+    // Check for login/wallet/connect phrases (common in crypto phishing)
+    const phishingPhrases = [
+      'connect wallet', 'connect your wallet', 'link wallet',
+      'claim airdrop', 'claim your', 'free claim', 'connect to claim',
+      'verify wallet', 'wallet verification', 'sync wallet',
+      'sign transaction', 'approve transaction',
+    ];
+    const foundPhishing = phishingPhrases.filter(p => visibleText.includes(p));
+
+    // Check for copied site indicators (same CSS frameworks, same image hashes, etc.)
+    const hasReact = htmlLower.includes('react') || htmlLower.includes('__next');
+    const hasLogin = visibleText.includes('log in') || visibleText.includes('sign in') || visibleText.includes('login');
+    const hasCryptoWallet = visibleText.includes('phantom') || visibleText.includes('solflare') || visibleText.includes('metamask');
+
+    // Calculate impersonation confidence (0-100)
+    let confidence = 0;
+    const brandMatches: string[] = [];
+
+    if (titleHasBrand) { confidence += 25; brandMatches.push('title_contains_brand'); }
+    if (metaHasBrand) { confidence += 15; brandMatches.push('meta_contains_brand'); }
+    if (referencesRealDomain) { confidence += 15; brandMatches.push('references_real_domain'); }
+    if (foundPhishing.length > 0) { confidence += 20 * Math.min(foundPhishing.length, 2); brandMatches.push(`phishing_phrases:${foundPhishing.join(',')}`); }
+    if (hasLogin) { confidence += 10; brandMatches.push('has_login_form'); }
+    if (hasCryptoWallet) { confidence += 15; brandMatches.push('crypto_wallet_connect'); }
+
+    // Extract a snippet around the brand name
+    const brandIdx = visibleText.indexOf(brandLower);
+    if (brandIdx >= 0) {
+      const start = Math.max(0, brandIdx - 60);
+      const end = Math.min(visibleText.length, brandIdx + brandLower.length + 60);
+      result.content_snippet = visibleText.substring(start, end).trim();
+    }
+
+    result.has_brand_content = confidence > 0;
+    result.impersonation_confidence = Math.min(100, confidence);
+    result.brand_matches = brandMatches;
+
+  } catch {
+    // Domain not reachable or other error — that's fine
+  }
+
+  return result;
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
 type VercelResponse = ServerResponse & {
@@ -301,6 +484,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   // Generate variants
   const variants = generateDomainVariants(domain, limit);
+
+  // ── Enrich variants with domain age & active page checks ──────────────────
+  const brandName = (body.brand_name as string) || domain.split('.')[0];
+  const checkActive = body.check_active !== false; // default true
+
+  // Run enrichment in parallel (with concurrency limit)
+  const CONCURRENCY = 5;
+  const topVariants = variants.slice(0, Math.min(limit, 20)); // Check top 20 highest-risk variants
+
+  for (let i = 0; i < topVariants.length; i += CONCURRENCY) {
+    const batch = topVariants.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (v) => {
+        // Domain age lookup
+        const age = await lookupDomainAge(v.domain);
+        v.domain_age = age;
+
+        // Active page check + impersonation detection
+        if (checkActive) {
+          const activePage = await checkActiveImpersonation(v.domain, brandName, domain);
+          v.active_page = activePage;
+        }
+
+        // Recalculate risk score with new factors
+        let bonusScore = 0;
+
+        // Domain age scoring: newer = more suspicious
+        if (age?.is_new) {
+          bonusScore += 15;
+          v.evidence.push(`New domain: registered ${age.days} days ago (${age.created_date})`);
+        } else if (age?.days !== undefined && age.days < 180) {
+          bonusScore += 8;
+          v.evidence.push(`Recent domain: ${age.days} days old`);
+        } else if (age?.days !== undefined && age.days > 365) {
+          bonusScore -= 3; // Older domains slightly less suspicious
+        }
+
+        // Active page scoring
+        if (v.active_page?.is_active) {
+          bonusScore += 5; // Any active page on a lookalike is worth noting
+          if (v.active_page.impersonation_confidence > 50) {
+            bonusScore += 20;
+            v.evidence.push(`Active impersonation page (confidence: ${v.active_page.impersonation_confidence}%)`);
+          } else if (v.active_page.impersonation_confidence > 20) {
+            bonusScore += 10;
+            v.evidence.push(`Possible brand content detected (confidence: ${v.active_page.impersonation_confidence}%)`);
+          }
+          if (v.active_page.has_brand_content) {
+            bonusScore += 10;
+            v.evidence.push(`Brand name found on active page`);
+          }
+          if (v.active_page.brand_matches?.some(m => m.startsWith('phishing_phrases'))) {
+            bonusScore += 10;
+            v.evidence.push(`Phishing wallet-connect language detected`);
+          }
+        }
+
+        v.risk_score = Math.min(100, Math.max(0, v.risk_score + bonusScore));
+
+        // Recalculate risk level based on updated score
+        if (v.risk_score >= 70) {
+          v.risk_level = 'CRITICAL'; v.threat_type = 'Active phishing domain'; v.takedown_priority = 'Urgent'; v.takedown_action = 'File abuse report with registrar + submit to phishing databases';
+        } else if (v.risk_score >= 45) {
+          v.risk_level = 'HIGH'; v.threat_type = 'Probable lookalike domain'; v.takedown_priority = 'High'; v.takedown_action = 'File abuse report + monitor for active content';
+        } else if (v.risk_score >= 25) {
+          v.risk_level = 'MEDIUM'; v.threat_type = 'Possible lookalike domain'; v.takedown_priority = 'Medium'; v.takedown_action = 'Monitor weekly and file abuse report if site becomes active';
+        } else if (v.risk_score >= 10) {
+          v.risk_level = 'LOW'; v.threat_type = 'Unlikely threat'; v.takedown_priority = 'Monitor'; v.takedown_action = 'Add to periodic monitoring';
+        } else {
+          v.risk_level = 'MINIMAL'; v.threat_type = 'No significant risk'; v.takedown_priority = 'Monitor'; v.takedown_action = 'Add to periodic monitoring';
+        }
+
+        return v;
+      })
+    );
+    // Apply results back to variants array
+    results.forEach((r, idx) => {
+      if (r.status === 'fulfilled') {
+        Object.assign(batch[idx], r.value);
+      }
+    });
+  }
+
+  // Re-sort by updated risk score
+  variants.sort((a, b) => b.risk_score - a.risk_score);
 
   // Build result
   const result = {
