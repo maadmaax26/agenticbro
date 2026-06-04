@@ -17,6 +17,7 @@ import {
 import { WalletSimulator } from '../components/wallet-simulator';
 import { ApprovalManager, QuickCheck } from '../components/WalletProtector';
 import type { TransactionRecord } from '../lib/wallet-proxy/useWalletSimulator';
+import { ContactUs } from '../components/ContactUs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,6 +168,9 @@ export function WalletProtectionPage({ onBack }: WalletProtectionPageProps) {
           </p>
           <p className="text-xs text-gray-600 mt-1">
             Educational purposes only. Not financial advice. Always DYOR.
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            <ContactUs />
           </p>
         </div>
       </footer>
