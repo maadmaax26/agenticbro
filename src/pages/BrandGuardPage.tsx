@@ -1720,6 +1720,39 @@ n            </p>
 
               {dashboardTab === 'monitoring' ? (
                 <div> {/* ── Monitoring Dashboard ─────────────────────────────── */}
+                  {/* ── What We Monitor Overview ──────────────────────────────── */}
+                  <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '14px' }}>🛡️ What We Monitor</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                      {[
+                        { icon: '🔍', label: 'Impersonator Scan', desc: 'Fake accounts mimicking your brand on X, Instagram, TikTok, Facebook, LinkedIn & Telegram', active: true },
+                        { icon: '🌐', label: 'Domain Sweep', desc: 'Typosquat domains, domain age (new domains flagged), active impersonation pages with brand content detection', active: true },
+                        { icon: '📧', label: 'Email Spoof Check', desc: 'SPF, DKIM, DMARC configuration — can attackers send emails pretending to be you?', active: true },
+                        { icon: '🔗', label: 'Link Scanner', desc: 'Check any URL for brand impersonation, phishing, or scam indicators', active: true },
+                        { icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk analysis — connects threats across social, domain, email & phone', active: true },
+                        { icon: '📞', label: 'Vendor Verify', desc: 'Phone number fraud checks — VOIP, spoofing, disposable numbers, scam databases', active: true },
+                        { icon: '🛍️', label: 'Marketplace Scanner', desc: 'Shopify & Etsy stores impersonating your brand — product listing fraud detection', active: true },
+                        { icon: '🖼️', label: 'Visual Fingerprints', desc: 'Register & monitor your brand logos and images for unauthorized use online', active: true },
+                      ].map(item => (
+                        <div key={item.label} style={{ display: 'flex', gap: '10px', padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${item.active ? 'rgba(34,197,94,0.2)' : 'rgba(139,92,246,0.1)'}` }}>
+                          <div style={{ fontSize: '20px', lineHeight: 1.2 }}>{item.icon}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{item.label}</span>
+                              {item.active && <span style={{ fontSize: '10px', fontWeight: 700, color: dark.green, background: 'rgba(34,197,94,0.15)', padding: '1px 6px', borderRadius: '4px' }}>ACTIVE</span>}
+                            </div>
+                            <div style={{ fontSize: '11px', color: dark.textMuted, lineHeight: 1.4 }}>{item.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: '14px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                      <div style={{ fontSize: '12px', color: '#c4b5fd' }}>
+                        <strong>Scan Frequency:</strong> {activeBrand?.platforms?.length ? activeBrand.platforms.join(', ').toUpperCase() : 'X, INSTAGRAM, TIKTOK'} • <strong>Schedule:</strong> {activeBrand?.scan_frequency === 'daily' ? 'Daily' : activeBrand?.scan_frequency === 'weekly' ? 'Weekly' : 'On-demand'}
+                        {activeBrand?.scan_frequency !== 'daily' && <span style={{ color: '#f59e0b', marginLeft: '8px' }}>⚡ Upgrade to daily for real-time protection</span>}
+                      </div>
+                    </div>
+                  </div>
                   {monitoringLoading && !monitoringData ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
                       <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
