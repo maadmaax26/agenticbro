@@ -111,6 +111,9 @@
     },
     "api/contact.ts": {
       "maxDuration": 15
+    },
+    "api/brand-guard/admin.ts": {
+      "maxDuration": 15
     }
   },
   "rewrites": [

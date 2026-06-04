@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // Query the admin view
     let query = serviceClient
-      .from('brand_guard_admin_users')
+      .from('brand_guard_admin_all_users')
       .select('*')
       .order('user_created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -104,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // Get total count
     const { count: totalCount } = await serviceClient
-      .from('brand_guard_admin_users')
+      .from('brand_guard_admin_all_users')
       .select('*', { count: 'exact', head: true });
 
     res.status(200).json({
@@ -275,7 +275,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  res.status(404).json({ error: 'Not found. Available: GET /users, GET /stats, POST /grant-credits' });
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /notifications — Admin notification feed
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/notifications') {
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const unreadOnly = url.searchParams.get('unread') === 'true';
+    const typeFilter = url.searchParams.get('type') || '';
+
+    let query = serviceClient
+      .from('admin_notifications')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (unreadOnly) query = query.eq('read', false);
+    if (typeFilter) query = query.eq('type', typeFilter);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      res.status(500).json({ error: 'Failed to fetch notifications', details: error.message });
+      return;
+    }
+
+    // Get unread count
+    const { count: unreadCount } = await serviceClient
+      .from('admin_notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('read', false);
+
+    res.status(200).json({
+      success: true,
+      notifications: data || [],
+      total: count || 0,
+      unread: unreadCount || 0,
+      limit,
+      offset,
+    });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /notifications/mark-read — Mark notifications as read
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/notifications/mark-read') {
+    const body = await parseBody(req);
+    const ids = body.ids as string[] | null;
+    const markAll = body.mark_all as boolean;
+
+    if (markAll) {
+      await serviceClient.from('admin_notifications').update({ read: true }).eq('read', false);
+    } else if (ids && ids.length > 0) {
+      await serviceClient.from('admin_notifications').update({ read: true }).in('id', ids);
+    }
+
+    res.status(200).json({ success: true });
+    return;
+  }
+
+  res.status(404).json({ error: 'Not found. Available: GET /users, GET /stats, GET /notifications, POST /grant-credits, POST /notifications/mark-read' });
 }
 
 export const config = {
