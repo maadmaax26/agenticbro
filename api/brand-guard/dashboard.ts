@@ -73,6 +73,7 @@ interface BrandHealthScore {
     phone_health: number;
     web_reputation: number;
   };
+  improvement_tips: Record<string, string[]>;
   trend: 'improving' | 'stable' | 'declining';
   last_scan: string;
   recommendations: string[];
@@ -136,8 +137,11 @@ function calculateHealthScore(
   score -= Math.min(20, criticalCount * 10);
   score -= Math.min(15, highCount * 5);
 
-  // Domain threats: -1 per threat (variants inflated count, so use smaller penalty)
-  score -= Math.min(20, domainThreats * 1);
+  // Domain threats: weighted by severity (not raw count, since variants inflate numbers)
+  score -= Math.min(25, domainCriticalCount * 15);
+  score -= Math.min(15, domainHighCount * 5);
+  score -= Math.min(10, domainMediumCount);
+  score -= Math.min(5, domainLowCount);
 
   // Email threats: -5 per threat (spoofable domains are serious)
   score -= Math.min(20, emailThreats * 5);
@@ -172,16 +176,66 @@ function calculateHealthScore(
   if (socialThreats > 5) recommendations.push('Consider increasing scan frequency to daily for this brand');
   if (phoneThreats > 0) recommendations.push('Set up call screening for reported phone numbers');
 
+  // Calculate severity-weighted domain penalty
+  // Critical domains hurt 15pts each, high 5pts, medium 1pt, low/minimal are noise
+  const domainCriticalCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'critical').length;
+  const domainHighCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'high').length;
+  const domainMediumCount = threats.filter((t: ThreatItem) => t.type === 'domain_lookalike' && t.severity === 'medium').length;
+  const domainLowCount = Math.max(0, domainThreats - domainCriticalCount - domainHighCount - domainMediumCount);
+
+  // Generate per-category improvement tips
+  const improvement_tips: Record<string, string[]> = {};
+  const socialHealth = Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15));
+  const domainHealth = Math.max(0, 100 - Math.min(25, domainCriticalCount * 15) - Math.min(15, domainHighCount * 5) - Math.min(10, domainMediumCount) - Math.min(5, domainLowCount));
+  const emailHealth = Math.max(0, 100 - Math.min(70, emailThreats * 10));
+  const phoneHealth = Math.max(0, 100 - Math.min(40, phoneThreats * 10));
+  const webRep = Math.max(0, 100 - Math.min(50, webReputationFlags * 10));
+
+  if (socialHealth < 80) {
+    improvement_tips.social = [];
+    if (socialThreats > 0) improvement_tips.social.push('Report fake accounts on each platform to reduce active impersonators');
+    if (criticalCount > 0) improvement_tips.social.push('File urgent abuse reports — critical threats drag your score down 15pts each');
+    improvement_tips.social.push('Verify official accounts on all platforms to establish authenticity');
+    improvement_tips.social.push('Increase scan frequency to catch new impersonators faster');
+  }
+  if (domainHealth < 80) {
+    improvement_tips.domain = [];
+    improvement_tips.domain.push('Register top .com, .net, .org, .io variants of your domain');
+    improvement_tips.domain.push('File abuse reports with registrars for phishing domains');
+    improvement_tips.domain.push('Set up DNS monitoring to catch new registrations immediately');
+    if (domainThreats > 10) improvement_tips.domain.push('Focus on CRITICAL/HIGH variants first — they hurt your score most');
+  }
+  if (emailHealth < 80) {
+    improvement_tips.email = [];
+    improvement_tips.email.push('Set up DMARC with p=reject policy to block spoofed emails');
+    improvement_tips.email.push('Publish DKIM records for all sending domains');
+    improvement_tips.email.push('Configure SPF to authorize only your mail servers');
+    improvement_tips.email.push('Monitor CertStream for lookalike domain registrations');
+  }
+  if (phoneHealth < 80) {
+    improvement_tips.phone = [];
+    improvement_tips.phone.push('Report scam numbers to the FTC and carrier abuse lines');
+    improvement_tips.phone.push('Set up call screening for reported numbers');
+    improvement_tips.phone.push('Add scam numbers to your brand\'s block list');
+  }
+  if (webRep < 80) {
+    improvement_tips.web = [];
+    improvement_tips.web.push('Claim and verify your business on Google, Trustpilot, and BBB');
+    improvement_tips.web.push('Respond to negative reviews to improve reputation signals');
+    improvement_tips.web.push('Submit takedown requests for scam listings impersonating your brand');
+  }
+
   return {
     overall_score: score,
     overall_level: level,
     breakdown: {
-      social_health: Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15)),
-      domain_health: Math.max(0, 100 - Math.min(70, domainThreats * 3)),
-      email_health: Math.max(0, 100 - Math.min(70, emailThreats * 10)),
-      phone_health: Math.max(0, 100 - Math.min(40, phoneThreats * 10)),
-      web_reputation: Math.max(0, 100 - Math.min(50, webReputationFlags * 10)),
+      social_health: socialHealth,
+      domain_health: domainHealth,
+      email_health: emailHealth,
+      phone_health: phoneHealth,
+      web_reputation: webRep,
     },
+    improvement_tips,
     trend: trend as 'improving' | 'stable' | 'declining',
     last_scan: new Date().toISOString(),
     recommendations,
@@ -436,7 +490,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         if (emailSec.spoofable === true) {
           threats.push({
             id: `es-${esc.scan_id}`,
-            type: 'domain_lookalike',
+            type: 'email',
             severity: 'high',
             platform: 'email',
             target: esc.domain || 'unknown',
@@ -453,7 +507,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         for (const dt of newDomainThreats.slice(0, 10)) {
           threats.push({
             id: `es-dt-${esc.scan_id}-${dt.domain}`,
-            type: 'domain_lookalike',
+            type: 'email',
             severity: (dt.riskLevel === 'CRITICAL' || dt.riskLevel === 'HIGH') ? 'high' : (dt.riskLevel === 'MEDIUM') ? 'medium' : 'low',
             platform: 'email',
             target: (dt.domain as string) || 'unknown',
