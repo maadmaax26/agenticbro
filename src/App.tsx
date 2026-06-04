@@ -26,6 +26,7 @@ import PaymentModal from './components/PaymentModal'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
 import { BrandGuardPage } from './pages/BrandGuardPage'
 import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
+import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -157,9 +158,15 @@ class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError:
 
 function App() {
   const location = useLocation()
-  // Brand Guard has its own full-page layout
+  // Brand Guard: show pricing page (public) or dashboard (authenticated)
   if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
-    return <BrandGuardPage />
+    // If user has a ?plan= param (clicked Get Started), show auth/dashboard
+    const searchParams = new URLSearchParams(location.search);
+    const planParam = searchParams.get('plan');
+    if (planParam) {
+      return <BrandGuardPage />
+    }
+    return <BrandGuardPricingPage />
   }
 
   // Brand Guard Admin — restricted to agenticbro@agenticbro.app
