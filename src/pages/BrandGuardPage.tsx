@@ -2593,7 +2593,7 @@ n            </p>
                             website: activeBrand.brand_domain || ''
                           }}
                           violator={{
-                            platform: 'shopify',
+                            platform: '',
                             url: '',
                           }}
                           user={{
@@ -2601,6 +2601,7 @@ n            </p>
                             email: '',
                             companyName: activeBrand.brand_name
                           }}
+                          standalone={true}
                         />
                       )}
 
