@@ -1140,7 +1140,10 @@ n            </p>
             )}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <div style={{ textAlign: 'center', marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <button onClick={() => navigate('/brand-guard')} style={{ color: dark.accent, background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline' }}>
+              View Plans & Pricing
+            </button>
             <button onClick={() => navigate('/')} style={{ color: dark.textMuted, background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}>
               ← Back to Agentic Bro
             </button>
