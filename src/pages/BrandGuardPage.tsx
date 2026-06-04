@@ -662,7 +662,7 @@ export function BrandGuardPage() {
         }),
         fetch(`${API_BASE}/domain-monitor`, {
           method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-          body: JSON.stringify({ domain: activeBrand.brand_domain || activeBrand.brand_handle, limit: 30 }),
+          body: JSON.stringify({ domain: activeBrand.brand_domain || activeBrand.brand_handle, limit: 30, brand_name: activeBrand.brand_name }),
         }),
       ]);
       // Refund the extra credits — the health refresh only costs 1, not per-scan
@@ -737,6 +737,7 @@ export function BrandGuardPage() {
           domain: activeBrand.brand_domain || activeBrand.brand_handle,
           limit: 50,
           monitoring: 'once',
+          brand_name: activeBrand.brand_name,
         };
       } else if (type === 'threat') {
         endpoint = `${API_BASE}/threat-correlate`;
@@ -2235,12 +2236,48 @@ n            </p>
                           </div>
                           {Array.isArray(scanResult.variants) && scanResult.variants.length > 0 && (
                             <div style={{ display: 'grid', gap: '8px' }}>
-                              {scanResult.variants.slice(0, 5).map((v: Record<string, unknown>, i: number) => (
-                                <div key={i} style={{ padding: '10px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                  <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{String(v.domain || v.name || '?')}</div>
-                                  <div style={{ color: dark.textMuted, fontSize: '11px', marginTop: '2px' }}>{String(v.type || v.risk || 'Lookalike')}</div>
-                                </div>
-                              ))}
+                              {scanResult.variants.slice(0, 5).map((v: Record<string, unknown>, i: number) => {
+                                const vAge = v.domain_age as Record<string, unknown> | undefined;
+                                const vActive = v.active_page as Record<string, unknown> | undefined;
+                                const ageDays = vAge?.days as number | undefined;
+                                const isNew = vAge?.is_new as boolean | undefined;
+                                const isActive = vActive?.is_active as boolean | undefined;
+                                const hasBrand = vActive?.has_brand_content as boolean | undefined;
+                                const impConf = vActive?.impersonation_confidence as number | undefined;
+                                const vTitle = vActive?.title as string | undefined;
+                                return (
+                                  <div key={i} style={{ padding: '10px', borderRadius: '8px',
+                                    background: impConf && impConf > 50 ? 'rgba(239,68,68,0.15)' : impConf && impConf > 20 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                                    border: impConf && impConf > 50 ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(239,68,68,0.2)'
+                                  }}>
+                                    <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{String(v.domain || v.name || '?')}</div>
+                                    <div style={{ color: dark.textMuted, fontSize: '11px', marginTop: '2px' }}>
+                                      {String(v.type || v.risk || 'Lookalike')}
+                                      {v.risk_level && <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
+                                        background: v.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : v.risk_level === 'HIGH' ? 'rgba(245,158,11,0.2)' : 'rgba(139,92,246,0.2)',
+                                        color: v.risk_level === 'CRITICAL' ? '#ef4444' : v.risk_level === 'HIGH' ? '#f59e0b' : '#8b5cf6'
+                                      }}>{String(v.risk_level)}</span>}
+                                    </div>
+                                    {ageDays !== undefined && (
+                                      <div style={{ color: isNew ? '#f59e0b' : '#64748b', fontSize: '11px', marginTop: '3px' }}>
+                                        {isNew ? '🆕' : '📅'} Domain age: {ageDays < 30 ? `${ageDays} days` : ageDays < 365 ? `${Math.round(ageDays/30)} months` : `${Math.round(ageDays/365)} years`}
+                                        {isNew && <span style={{ color: '#f59e0b', fontWeight: 600 }}> (NEW!)</span>}
+                                      </div>
+                                    )}
+                                    {isActive && (
+                                      <div style={{ color: hasBrand ? '#ef4444' : '#64748b', fontSize: '11px', marginTop: '2px' }}>
+                                        {hasBrand ? '🚨' : '🌐'} Active page{hasBrand ? ' with brand content' : ''}
+                                        {impConf > 0 && <span style={{ fontWeight: 600 }}> ({impConf}% impersonation)</span>}
+                                      </div>
+                                    )}
+                                    {vTitle && (
+                                      <div style={{ color: '#475569', fontSize: '10px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        Page title: {vTitle}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </>
