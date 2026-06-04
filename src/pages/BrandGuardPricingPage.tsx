@@ -465,13 +465,7 @@ export function BrandGuardPricingPage() {
             })}
           </div>
 
-          {/* $AGNTCBRO holder perk */}
-          <div className="mt-8 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-center max-w-2xl mx-auto">
-            <p className="text-purple-300 text-sm">
-              <span className="font-bold">💰 $AGNTCBRO Holder Perk:</span> Hold $100+ of $AGNTCBRO and get 50 free scans/month 
-              on the Free tier — no subscription needed. Just connect your wallet.
-            </p>
-          </div>
+
         </div>
       </section>
 
