@@ -1810,8 +1810,9 @@ n            </p>
                                 {[
                                   { label: '👤 Social', value: breakdown?.social_health ?? 0 },
                                   { label: '🌐 Domain', value: breakdown?.domain_health ?? 0 },
+                                  { label: '📧 Email', value: breakdown?.email_health ?? 0 },
                                   { label: '📞 Phone', value: breakdown?.phone_health ?? 0 },
-                                  { label: '🌐 Web Reputation', value: breakdown?.web_reputation ?? 100 },
+                                  { label: '🌐 Web Rep', value: breakdown?.web_reputation ?? 100 },
                                 ].map(item => (
                                   <div key={item.label}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
@@ -1857,40 +1858,46 @@ n            </p>
                                   <div style={{ fontSize: '13px' }}>No threats detected. Run a scan to check.</div>
                                 </div>
                               ) : (
-                                <div style={{ display: 'grid', gap: '8px' }}>
+                                <div style={{ display: 'grid', gap: '10px' }}>
                                   {threats.slice(0, 15).map((t: Record<string, unknown>, i: number) => {
                                     const sev = (t.severity as string) || 'low';
                                     const sevIcon = sev === 'critical' ? '🚨' : sev === 'high' ? '⚠️' : sev === 'medium' ? 'ℹ️' : '✅';
                                     const typeLabel = (t.type as string) === 'social_impersonator' ? 'Impersonator' : (t.type as string) === 'domain_lookalike' ? 'Lookalike Domain' : (t.type as string) === 'phone_scam' ? 'Phone Scam' : (t.type as string) === 'cross_channel' ? 'Cross-channel' : (t.type as string) === 'email' ? 'Email Spoof' : 'Unknown';
-                                    const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : '🕵️';
+                                    const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : (t.type as string) === 'email' ? '📧' : '🕵️';
                                     const sevColor = sev === 'critical' ? dark.red : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : dark.green;
                                     const sevBg = sev === 'critical' ? 'rgba(239,68,68,0.1)' : sev === 'high' ? 'rgba(249,115,22,0.1)' : sev === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)';
                                     const evidence = (t.evidence as string[]) || [];
                                     const score = Number(t.risk_score ?? 0);
-                                    const scoreDisplay = score > 0 ? `${score}/10` : '—';
+                                    const scoreDisplay = score > 0 ? `${score}/100` : '—';
+                                    const platform = String(t.platform || '');
                                     return (
-                                      <div key={i} style={{ padding: '12px', borderRadius: '8px', background: sevBg, border: `1px solid ${sevColor}30` }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                          <span style={{ fontSize: '14px' }}>{sevIcon}</span>
-                                          <span style={{ fontSize: '14px' }}>{typeIcon}</span>
+                                      <div key={i} style={{ padding: isMobile ? '12px' : '14px', borderRadius: '10px', background: sevBg, border: `1px solid ${sevColor}30` }}>
+                                        {/* Row 1: Icon + Target + Score badge */}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                          <div style={{ fontSize: isMobile ? '18px' : '16px', lineHeight: 1, flexShrink: 0, marginTop: '2px' }}>{typeIcon}</div>
                                           <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(t.target || 'Unknown')}</div>
-                                          </div>
-                                          <div style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
-                                            {scoreDisplay}
-                                          </div>
-                                          <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
-                                            {String(t.status || 'new').toUpperCase()}
+                                            <div style={{ fontSize: isMobile ? '15px' : '14px', fontWeight: 700, color: '#fff', wordBreak: 'break-all', marginBottom: '4px' }}>
+                                              {String(t.target || 'Unknown')}
+                                            </div>
+                                            {/* Type + Platform row */}
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginBottom: evidence.length > 0 ? '6px' : '0' }}>
+                                              <span style={{ fontSize: '11px', color: dark.textMuted, fontWeight: 600 }}>{typeLabel}</span>
+                                              {platform && platform !== 'domain' && <span style={{ fontSize: '11px', color: dark.textMuted }}>· {platform}</span>}
+                                              <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
+                                                {scoreDisplay}
+                                              </span>
+                                              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
+                                                {String(t.status || 'new').toUpperCase()}
+                                              </span>
+                                            </div>
+                                            {/* Evidence */}
+                                            {evidence.length > 0 && (
+                                              <div style={{ fontSize: '12px', color: sevColor, fontStyle: 'italic' }}>
+                                                {evidence.slice(0, 2).join(' · ')}
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
-                                        <div style={{ fontSize: '11px', color: dark.textMuted, marginTop: '2px' }}>
-                                          {typeLabel} · {String(t.platform || 'unknown')}
-                                        </div>
-                                        {evidence.length > 0 && (
-                                          <div style={{ fontSize: '11px', color: sevColor, marginTop: '4px', fontStyle: 'italic' }}>
-                                            {evidence[0]}
-                                          </div>
-                                        )}
                                       </div>
                                     );
                                   })}
