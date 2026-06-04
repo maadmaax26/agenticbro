@@ -24,6 +24,7 @@ import UserMenu from './components/UserMenu'
 import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
+import { ContactUs } from './components/ContactUs'
 import { BrandGuardPage } from './pages/BrandGuardPage'
 import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
@@ -1207,6 +1208,8 @@ function App() {
             <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
             {' '}•{' '}
             <a href="/AgenticBro_WhitePaper.pdf" target="_blank" className="hover:text-white transition-colors" style={{color: '#39ff14'}}>White Paper</a>
+            {' '}•{' '}
+            <ContactUs />
           </p>
         </footer>
       )}

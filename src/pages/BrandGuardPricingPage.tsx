@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ContactUs } from '../components/ContactUs';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Plan Data
@@ -589,6 +590,8 @@ export function BrandGuardPricingPage() {
           <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300 transition-colors">
             Telegram
           </a>
+          {' '}•{' '}
+          <ContactUs />
           {' '}•{' '}
           <span className="text-gray-500">$AGNTCBRO on Solana</span>
         </p>

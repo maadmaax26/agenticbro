@@ -13,6 +13,7 @@ import { FingerprintManager } from '../components/brand-guard/FingerprintManager
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
 import { SubscriptionManager } from '../components/brand-guard/SubscriptionManager';
+import { ContactUs } from '../components/ContactUs';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Mobile Detection Hook
@@ -2794,6 +2795,17 @@ n            </p>
           </div>
         </div>
       )}
+      {/* Footer */}
+      <footer style={{ textAlign: 'center', padding: '16px 12px', borderTop: `1px solid ${dark.border}`, background: 'rgba(10,10,15,0.6)', color: dark.textMuted, fontSize: '13px' }}>
+        <p style={{ margin: 0 }}>
+          Built for brands, by degens •{' '}
+          <a href="https://twitter.com/AgenticBro11" target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'none' }}>@AgenticBro11</a>
+          {' '}•{' '}
+          <a href="https://t.me/Agenticbro1" target="_blank" rel="noopener noreferrer" style={{ color: '#06b6d4', textDecoration: 'none' }}>Telegram</a>
+          {' '}•{' '}
+          <ContactUs />
+        </p>
+      </footer>
     </div>
   );
 }
