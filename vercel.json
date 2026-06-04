@@ -108,6 +108,9 @@
     },
     "api/brand-guard/stripe/checkout.ts": {
       "maxDuration": 15
+    },
+    "api/contact.ts": {
+      "maxDuration": 15
     }
   },
   "rewrites": [
