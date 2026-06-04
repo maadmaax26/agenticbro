@@ -1805,25 +1805,44 @@ n            </p>
                                   </div>
                                 </div>
                               </div>
-                              {/* Breakdown bars */}
+                              {/* Breakdown bars with improvement tips */}
                               <div style={{ display: 'grid', gap: '10px', marginBottom: recs.length > 0 ? '16px' : '0' }}>
                                 {[
-                                  { label: '👤 Social', value: breakdown?.social_health ?? 0 },
-                                  { label: '🌐 Domain', value: breakdown?.domain_health ?? 0 },
-                                  { label: '📧 Email', value: breakdown?.email_health ?? 0 },
-                                  { label: '📞 Phone', value: breakdown?.phone_health ?? 0 },
-                                  { label: '🌐 Web Rep', value: breakdown?.web_reputation ?? 100 },
-                                ].map(item => (
-                                  <div key={item.label}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                      <span style={{ fontSize: '12px', color: dark.text }}>{item.label}</span>
-                                      <span style={{ fontSize: '12px', fontWeight: 600, color: dark.text }}>{item.value}%</span>
+                                  { label: '👤 Social', value: breakdown?.social_health ?? 0, key: 'social' },
+                                  { label: '🌐 Domain', value: breakdown?.domain_health ?? 0, key: 'domain' },
+                                  { label: '📧 Email', value: breakdown?.email_health ?? 0, key: 'email' },
+                                  { label: '📞 Phone', value: breakdown?.phone_health ?? 0, key: 'phone' },
+                                  { label: '🌐 Web Rep', value: breakdown?.web_reputation ?? 100, key: 'web' },
+                                ].map(item => {
+                                  const tips = ((health?.improvement_tips as Record<string, string[]>) || {})[item.key] || [];
+                                  const needsImprovement = item.value < 80;
+                                  const barColor = item.value >= 80 ? dark.green : item.value >= 60 ? '#f59e0b' : item.value >= 40 ? '#f97316' : dark.red;
+                                  return (
+                                    <div key={item.label}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                        <span style={{ fontSize: '12px', color: dark.text, fontWeight: needsImprovement ? 700 : 400 }}>{item.label}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          {needsImprovement && <span style={{ fontSize: '10px', color: barColor, fontWeight: 600 }}>⚠️</span>}
+                                          <span style={{ fontSize: '12px', fontWeight: 600, color: needsImprovement ? barColor : dark.text }}>{item.value}%</span>
+                                        </div>
+                                      </div>
+                                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', width: `${item.value}%`, background: barColor, borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                                      </div>
+                                      {/* Improvement tips - shown when score < 80% */}
+                                      {needsImprovement && tips.length > 0 && (
+                                        <div style={{ marginTop: '4px', padding: '6px 8px', background: 'rgba(0,0,0,0.25)', borderRadius: '4px', borderLeft: `2px solid ${barColor}` }}>
+                                          <div style={{ fontSize: '10px', fontWeight: 700, color: barColor, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>How to improve</div>
+                                          {tips.slice(0, 3).map((tip: string, ti: number) => (
+                                            <div key={ti} style={{ fontSize: '11px', color: dark.textMuted, lineHeight: 1.4 }}>
+                                              ✦ {tip}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                      <div style={{ height: '100%', width: `${item.value}%`, background: item.value >= 80 ? dark.green : item.value >= 60 ? '#f59e0b' : item.value >= 40 ? '#f97316' : dark.red, borderRadius: '3px' }} />
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                               {recs.length > 0 && (
                                 <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
