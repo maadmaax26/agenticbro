@@ -1719,263 +1719,283 @@ n            </p>
               </div>
 
               {dashboardTab === 'monitoring' ? (
-                <div> {/* ── Monitoring Dashboard ─────────────────────────────── */}
-                  {/* ── What We Monitor Overview ──────────────────────────────── */}
-                  <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '14px' }}>🛡️ What We Monitor</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                <div> {/* ── Monitoring Dashboard — Cyberpunk HUD ─────────────── */}
+                  {/* ── Header ─────────────────────────────────────────────── */}
+                  <div style={{ textAlign: 'center', marginBottom: '20px', padding: isMobile ? '16px 0' : '20px 0' }}>
+                    <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: '#39FF14', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>◆ AGENTICBRO ◆</div>
+                    <div style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 900, color: '#fff', textShadow: '0 0 20px rgba(57,255,20,0.3), 0 0 40px rgba(57,255,20,0.1)', letterSpacing: '2px' }}>BRAND GUARD</div>
+                    <div style={{ fontSize: '11px', color: '#8B8B8B', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '4px' }}>AI-Powered Monitoring & Protection</div>
+                    <div style={{ width: '100%', height: '1px', background: 'linear-gradient(90deg, transparent, #39FF14, #BF00FF, transparent)', marginTop: '16px' }} />
+                  </div>
+
+                  {/* ── What We Monitor — Scanner Grid ───────────────────── */}
+                  <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#39FF14', letterSpacing: '2px', textTransform: 'uppercase' }}>◆ Scanner Matrix</div>
+                      <div style={{ flex: 1, height: '1px', background: 'rgba(57,255,20,0.2)' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#39FF14', boxShadow: '0 0 6px #39FF14' }} />
+                        <span style={{ fontSize: '10px', color: '#39FF14', fontWeight: 600 }}>ALL ONLINE</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '8px' }}>
                       {[
-                        { icon: '🔍', label: 'Impersonator Scan', desc: 'Fake accounts mimicking your brand on X, Instagram, TikTok, Facebook, LinkedIn & Telegram', active: true },
-                        { icon: '🌐', label: 'Domain Sweep', desc: 'Typosquat domains, domain age (new domains flagged), active impersonation pages with brand content detection', active: true },
-                        { icon: '📧', label: 'Email Spoof Check', desc: 'SPF, DKIM, DMARC configuration — can attackers send emails pretending to be you?', active: true },
-                        { icon: '🔗', label: 'Link Scanner', desc: 'Check any URL for brand impersonation, phishing, or scam indicators', active: true },
-                        { icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk analysis — connects threats across social, domain, email & phone', active: true },
-                        { icon: '📞', label: 'Vendor Verify', desc: 'Phone number fraud checks — VOIP, spoofing, disposable numbers, scam databases', active: true },
-                        { icon: '🛍️', label: 'Marketplace Scanner', desc: 'Shopify & Etsy stores impersonating your brand — product listing fraud detection', active: true },
-                        { icon: '🖼️', label: 'Visual Fingerprints', desc: 'Register & monitor your brand logos and images for unauthorized use online', active: true },
+                        { icon: '🔍', label: 'Impersonator', desc: 'X, IG, TikTok, FB', active: true },
+                        { icon: '🌐', label: 'Domain Sweep', desc: 'Typosquat + age + pages', active: true },
+                        { icon: '📧', label: 'Email Spoof', desc: 'SPF/DKIM/DMARC', active: true },
+                        { icon: '🔗', label: 'Link Scanner', desc: 'URL phishing check', active: true },
+                        { icon: '⚡', label: 'Threat Correlate', desc: 'Cross-channel risk', active: true },
+                        { icon: '📞', label: 'Vendor Verify', desc: 'Phone fraud check', active: true },
+                        { icon: '🛍️', label: 'Marketplace', desc: 'Shopify & Etsy', active: true },
+                        { icon: '🖼️', label: 'Visual FP', desc: 'Logo monitoring', active: true },
                       ].map(item => (
-                        <div key={item.label} style={{ display: 'flex', gap: '10px', padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${item.active ? 'rgba(34,197,94,0.2)' : 'rgba(139,92,246,0.1)'}` }}>
-                          <div style={{ fontSize: '20px', lineHeight: 1.2 }}>{item.icon}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{item.label}</span>
-                              {item.active && <span style={{ fontSize: '10px', fontWeight: 700, color: dark.green, background: 'rgba(34,197,94,0.15)', padding: '1px 6px', borderRadius: '4px' }}>ACTIVE</span>}
-                            </div>
-                            <div style={{ fontSize: '11px', color: dark.textMuted, lineHeight: 1.4 }}>{item.desc}</div>
+                        <div key={item.label} style={{ padding: '8px', borderRadius: '6px', background: 'rgba(5,5,16,0.5)', border: '1px solid rgba(57,255,20,0.15)', textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', marginBottom: '2px' }}>{item.icon}</div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{item.label}</div>
+                          <div style={{ fontSize: '9px', color: '#8B8B8B', lineHeight: 1.2 }}>{item.desc}</div>
+                          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#39FF14', boxShadow: '0 0 4px #39FF14' }} />
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: '14px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                      <div style={{ fontSize: '12px', color: '#c4b5fd' }}>
-                        <strong>Scan Frequency:</strong> {activeBrand?.platforms?.length ? activeBrand.platforms.join(', ').toUpperCase() : 'X, INSTAGRAM, TIKTOK'} • <strong>Schedule:</strong> {activeBrand?.scan_frequency === 'daily' ? 'Daily' : activeBrand?.scan_frequency === 'weekly' ? 'Weekly' : 'On-demand'}
-                        {activeBrand?.scan_frequency !== 'daily' && <span style={{ color: '#f59e0b', marginLeft: '8px' }}>⚡ Upgrade to daily for real-time protection</span>}
+                    <div style={{ marginTop: '10px', padding: '8px 10px', borderRadius: '4px', background: 'rgba(57,255,20,0.05)', borderLeft: '2px solid #39FF14' }}>
+                      <div style={{ fontSize: '10px', color: '#39FF14', fontFamily: 'monospace' }}>
+                        SCAN FREQUENCY: {activeBrand?.scan_frequency === 'daily' ? 'DAILY' : activeBrand?.scan_frequency === 'weekly' ? 'WEEKLY' : 'ON-DEMAND'}
+                        {activeBrand?.scan_frequency !== 'daily' && <span style={{ color: '#FFAA00', marginLeft: '8px' }}>⚡ UPGRADE TO DAILY</span>}
                       </div>
                     </div>
                   </div>
+
+                  {/* ── Monitoring Content ──────────────────────────────── */}
                   {monitoringLoading && !monitoringData ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
-                      <div style={{ color: dark.textMuted, fontSize: '14px' }}>Loading monitoring data...</div>
+                      <div style={{ fontSize: '32px', marginBottom: '12px', animation: 'pulse 2s infinite' }}>⏳</div>
+                      <div style={{ color: '#39FF14', fontSize: '12px', fontFamily: 'monospace', letterSpacing: '2px' }}>INITIALIZING SCANNERS...</div>
                     </div>
                   ) : monitoringData ? (
-                    <> {/* Health Score */}
-                      {(() => {
-                        const health = monitoringData.health_score as Record<string, unknown> | undefined;
-                        const summary = monitoringData.summary as Record<string, number> | undefined;
-                        const threats = (monitoringData.threats || []) as Record<string, unknown>[];
-                        const brand = monitoringData.brand as Record<string, string> | undefined;
-                        const score = (health?.overall_score as number) ?? 0;
-                        const level = (health?.overall_level as string) ?? 'UNKNOWN';
-                        const trend = (health?.trend as string) ?? 'stable';
-                        const breakdown = health?.breakdown as Record<string, number> | undefined;
-                        const recs = (health?.recommendations as string[]) ?? [];
-                        const scoreColor = score >= 80 ? dark.green : score >= 60 ? '#f59e0b' : score >= 40 ? '#f97316' : dark.red;
-                        return (
-                          <>
-                            {/* Health Score Card */}
-                            <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>📊 Brand Health Score</div>
-                                <button
-                                  onClick={refreshHealthScore}
-                                  disabled={refreshingHealth}
-                                  style={{
-                                    padding: '6px 14px', borderRadius: '8px', border: 'none',
-                                    background: refreshingHealth ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
-                                    color: '#fff', fontSize: '12px', fontWeight: 600, cursor: refreshingHealth ? 'not-allowed' : 'pointer',
-                                  }}
-                                >
-                                  {refreshingHealth ? '⟳ Refreshing...' : '⟳ Refresh (1 credit)'}
-                                </button>
+                    <> {(() => {
+                      const health = monitoringData.health_score as Record<string, unknown> | undefined;
+                      const summary = monitoringData.summary as Record<string, number> | undefined;
+                      const threats = (monitoringData.threats || []) as Record<string, unknown>[];
+                      const score = (health?.overall_score as number) ?? 0;
+                      const level = (health?.overall_level as string) ?? 'UNKNOWN';
+                      const trend = (health?.trend as string) ?? 'stable';
+                      const breakdown = health?.breakdown as Record<string, number> | undefined;
+                      const recs = (health?.recommendations as string[]) ?? [];
+                      const scoreColor = score >= 80 ? '#39FF14' : score >= 60 ? '#FFAA00' : score >= 40 ? '#f97316' : '#FF073A';
+                      const scoreGlow = score >= 80 ? '0 0 15px rgba(57,255,20,0.4)' : score >= 60 ? '0 0 15px rgba(255,170,0,0.4)' : score >= 40 ? '0 0 15px rgba(249,115,22,0.4)' : '0 0 15px rgba(255,7,58,0.4)';
+                      return (
+                        <>
+                          {/* ── Health Score — Main Gauge ──────────────────── */}
+                          <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '20px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 700, color: '#39FF14', letterSpacing: '2px', textTransform: 'uppercase' }}>◆ System Status</div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' }}>
-                                <div style={{
-                                  width: '80px', height: '80px', borderRadius: '50%',
-                                  border: `4px solid ${scoreColor}`,
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                  <span style={{ fontSize: '24px', fontWeight: 800, color: scoreColor }}>{score}</span>
-                                  <span style={{ fontSize: '10px', color: dark.textMuted }}>/100</span>
+                              <button
+                                onClick={refreshHealthScore}
+                                disabled={refreshingHealth}
+                                style={{
+                                  padding: '5px 12px', borderRadius: '4px', border: '1px solid rgba(57,255,20,0.3)',
+                                  background: refreshingHealth ? 'rgba(57,255,20,0.1)' : 'transparent',
+                                  color: '#39FF14', fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', cursor: refreshingHealth ? 'not-allowed' : 'pointer',
+                                  letterSpacing: '1px', textTransform: 'uppercase',
+                                }}
+                              >
+                                {refreshingHealth ? '⟳ SCANNING...' : '⟳ REFRESH'}
+                              </button>
+                            </div>
+
+                            {/* Main score circle */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '20px' }}>
+                              <div style={{
+                                width: isMobile ? '90px' : '100px', height: isMobile ? '90px' : '100px', borderRadius: '50%',
+                                border: `3px solid ${scoreColor}`, boxShadow: scoreGlow,
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(5,5,16,0.6)', flexShrink: 0,
+                              }}>
+                                <div style={{ fontSize: isMobile ? '28px' : '32px', fontWeight: 900, color: scoreColor, fontFamily: 'monospace', textShadow: scoreGlow }}>{score}</div>
+                                <div style={{ fontSize: '9px', color: '#8B8B8B', fontFamily: 'monospace', letterSpacing: '1px' }}>/100</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: scoreColor, letterSpacing: '2px', textShadow: scoreGlow }}>{level}</div>
+                                <div style={{ fontSize: '11px', color: '#8B8B8B', marginTop: '4px', fontFamily: 'monospace' }}>
+                                  TREND: {trend === 'improving' ? '📈 IMPROVING' : trend === 'declining' ? '📉 DECLINING' : '➡️ STABLE'}
                                 </div>
-                                <div>
-                                  <div style={{ fontSize: '16px', fontWeight: 700, color: scoreColor }}>{level}</div>
-                                  <div style={{ fontSize: '12px', color: dark.textMuted, marginTop: '2px' }}>
-                                    Trend: {trend === 'improving' ? '📈 Improving' : trend === 'declining' ? '📉 Declining' : '➡️ Stable'}
+                                <div style={{ fontSize: '10px', color: '#39FF14', fontFamily: 'monospace', marginTop: '4px' }}>
+                                  ● 24/7 MONITORING ACTIVE
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Health bars — HUD style */}
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                              {[
+                                { label: 'SOCIAL', icon: '👤', value: breakdown?.social_health ?? 0, key: 'social' },
+                                { label: 'DOMAIN', icon: '🌐', value: breakdown?.domain_health ?? 0, key: 'domain' },
+                                { label: 'EMAIL', icon: '📧', value: breakdown?.email_health ?? 0, key: 'email' },
+                                { label: 'PHONE', icon: '📞', value: breakdown?.phone_health ?? 0, key: 'phone' },
+                                { label: 'WEB REP', icon: '🌐', value: breakdown?.web_reputation ?? 100, key: 'web' },
+                              ].map(item => {
+                                const tips = ((health?.improvement_tips as Record<string, string[]>) || {})[item.key] || [];
+                                const needsImprovement = item.value < 80;
+                                const barColor = item.value >= 80 ? '#39FF14' : item.value >= 60 ? '#FFAA00' : item.value >= 40 ? '#f97316' : '#FF073A';
+                                const barGlow = item.value >= 80 ? '0 0 6px rgba(57,255,20,0.3)' : item.value >= 60 ? '0 0 6px rgba(255,170,0,0.3)' : item.value >= 40 ? '0 0 6px rgba(249,115,22,0.3)' : '0 0 6px rgba(255,7,58,0.3)';
+                                return (
+                                  <div key={item.label} style={{ padding: '8px', borderRadius: '4px', background: 'rgba(5,5,16,0.4)', border: needsImprovement ? `1px solid ${barColor}40` : '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '12px' }}>{item.icon}</span>
+                                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#fff', letterSpacing: '1.5px', fontFamily: 'monospace' }}>{item.label}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {needsImprovement && <span style={{ fontSize: '10px', color: barColor }}>⚠</span>}
+                                        <span style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', color: barColor, textShadow: barGlow }}>{item.value}%</span>
+                                      </div>
+                                    </div>
+                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                                      <div style={{ height: '100%', width: `${item.value}%`, background: barColor, borderRadius: '2px', boxShadow: barGlow, transition: 'width 0.5s ease' }} />
+                                    </div>
+                                    {needsImprovement && tips.length > 0 && (
+                                      <div style={{ marginTop: '6px', padding: '6px 8px', background: 'rgba(5,5,16,0.5)', borderRadius: '4px', borderLeft: `2px solid ${barColor}` }}>
+                                        <div style={{ fontSize: '9px', fontWeight: 700, color: barColor, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '3px', fontFamily: 'monospace' }}>HOW TO IMPROVE</div>
+                                        {tips.slice(0, 2).map((tip: string, ti: number) => (
+                                          <div key={ti} style={{ fontSize: '10px', color: '#b0b0b0', lineHeight: 1.4 }}>◆ {tip}</div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
+                                );
+                              })}
+                            </div>
+
+                            {recs.length > 0 && (
+                              <div style={{ marginTop: '12px', padding: '10px', background: 'rgba(5,5,16,0.5)', borderRadius: '4px', borderLeft: '2px solid #BF00FF' }}>
+                                <div style={{ fontSize: '9px', fontWeight: 700, color: '#BF00FF', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '4px', fontFamily: 'monospace' }}>◆ RECOMMENDATIONS</div>
+                                {recs.map((r: string, i: number) => <div key={i} style={{ fontSize: '11px', color: '#d0d0d0', marginBottom: '2px' }}>→ {r}</div>)}
                               </div>
-                              {/* Breakdown bars with improvement tips */}
-                              <div style={{ display: 'grid', gap: '10px', marginBottom: recs.length > 0 ? '16px' : '0' }}>
-                                {[
-                                  { label: '👤 Social', value: breakdown?.social_health ?? 0, key: 'social' },
-                                  { label: '🌐 Domain', value: breakdown?.domain_health ?? 0, key: 'domain' },
-                                  { label: '📧 Email', value: breakdown?.email_health ?? 0, key: 'email' },
-                                  { label: '📞 Phone', value: breakdown?.phone_health ?? 0, key: 'phone' },
-                                  { label: '🌐 Web Rep', value: breakdown?.web_reputation ?? 100, key: 'web' },
-                                ].map(item => {
-                                  const tips = ((health?.improvement_tips as Record<string, string[]>) || {})[item.key] || [];
-                                  const needsImprovement = item.value < 80;
-                                  const barColor = item.value >= 80 ? dark.green : item.value >= 60 ? '#f59e0b' : item.value >= 40 ? '#f97316' : dark.red;
+                            )}
+                          </div>
+
+                          {/* ── Threat Count — HUD style ─────────────────── */}
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                            {[
+                              { label: 'TOTAL', value: summary?.total_threats ?? 0, color: '#00F0FF', bg: 'rgba(0,240,255,0.08)', border: 'rgba(0,240,255,0.2)' },
+                              { label: 'CRITICAL', value: summary?.critical_threats ?? 0, color: '#FF073A', bg: 'rgba(255,7,58,0.08)', border: 'rgba(255,7,58,0.25)' },
+                              { label: 'HIGH', value: summary?.high_threats ?? 0, color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.25)' },
+                              { label: 'MEDIUM', value: summary?.medium_threats ?? 0, color: '#FFAA00', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.2)' },
+                              { label: 'LOW', value: summary?.low_threats ?? 0, color: '#39FF14', bg: 'rgba(57,255,20,0.08)', border: 'rgba(57,255,20,0.2)' },
+                            ].map(card => (
+                              <div key={card.label} style={{ padding: '12px 8px', borderRadius: '6px', background: card.bg, border: `1px solid ${card.border}`, textAlign: 'center', boxShadow: `0 0 8px ${card.border}` }}>
+                                <div style={{ fontSize: isMobile ? '22px' : '24px', fontWeight: 900, color: card.color, fontFamily: 'monospace', textShadow: `0 0 10px ${card.border}` }}>{card.value}</div>
+                                <div style={{ fontSize: '9px', color: card.color, fontWeight: 700, marginTop: '2px', letterSpacing: '1.5px', fontFamily: 'monospace' }}>{card.label}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* ── Threat Feed — Neon card style ────────────── */}
+                          <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: 700, color: '#FF073A', letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'monospace' }}>◆ Threat Monitor</div>
+                              <div style={{ flex: 1, height: '1px', background: 'rgba(255,7,58,0.2)' }} />
+                              <div style={{ fontSize: '10px', color: '#8B8B8B', fontFamily: 'monospace' }}>{threats.length} DETECTED</div>
+                            </div>
+                            {threats.length === 0 ? (
+                              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                                <div style={{ fontSize: '24px', marginBottom: '8px' }}>✅</div>
+                                <div style={{ fontSize: '12px', color: '#39FF14', fontFamily: 'monospace', letterSpacing: '1px' }}>ALL CLEAR — NO THREATS DETECTED</div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'grid', gap: '8px', maxHeight: isMobile ? '400px' : '500px', overflowY: 'auto' }}>
+                                {threats.slice(0, 15).map((t: Record<string, unknown>, i: number) => {
+                                  const sev = (t.severity as string) || 'low';
+                                  const typeLabel = (t.type as string) === 'social_impersonator' ? 'IMP' : (t.type as string) === 'domain_lookalike' ? 'DOMAIN' : (t.type as string) === 'phone_scam' ? 'PHONE' : (t.type as string) === 'cross_channel' ? 'X-CHAN' : (t.type as string) === 'email' ? 'EMAIL' : 'UNKNOWN';
+                                  const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : (t.type as string) === 'email' ? '📧' : '🕵️';
+                                  const sevColor = sev === 'critical' ? '#FF073A' : sev === 'high' ? '#f97316' : sev === 'medium' ? '#FFAA00' : '#39FF14';
+                                  const sevBg = sev === 'critical' ? 'rgba(255,7,58,0.08)' : sev === 'high' ? 'rgba(249,115,22,0.08)' : sev === 'medium' ? 'rgba(255,170,0,0.06)' : 'rgba(57,255,20,0.06)';
+                                  const sevBorder = sev === 'critical' ? 'rgba(255,7,58,0.3)' : sev === 'high' ? 'rgba(249,115,22,0.25)' : sev === 'medium' ? 'rgba(255,170,0,0.2)' : 'rgba(57,255,20,0.15)';
+                                  const evidence = (t.evidence as string[]) || [];
+                                  const score = Number(t.risk_score ?? 0);
+                                  const scoreDisplay = score > 0 ? `${score}` : '—';
                                   return (
-                                    <div key={item.label}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                                        <span style={{ fontSize: '12px', color: dark.text, fontWeight: needsImprovement ? 700 : 400 }}>{item.label}</span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {needsImprovement && <span style={{ fontSize: '10px', color: barColor, fontWeight: 600 }}>⚠️</span>}
-                                          <span style={{ fontSize: '12px', fontWeight: 600, color: needsImprovement ? barColor : dark.text }}>{item.value}%</span>
+                                    <div key={i} style={{ padding: '10px 12px', borderRadius: '6px', background: sevBg, border: `1px solid ${sevBorder}`, boxShadow: `0 0 4px ${sevBorder}` }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '16px' }}>{typeIcon}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', wordBreak: 'break-all' }}>{String(t.target || 'Unknown')}</div>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', marginTop: '3px' }}>
+                                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#8B8B8B', letterSpacing: '1px', fontFamily: 'monospace' }}>{typeLabel}</span>
+                                            {evidence.length > 0 && <span style={{ fontSize: '10px', color: sevColor, fontStyle: 'italic' }}>{evidence[0]}</span>}
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+                                          <span style={{ fontSize: '14px', fontWeight: 900, color: sevColor, fontFamily: 'monospace', textShadow: `0 0 6px ${sevBorder}` }}>{scoreDisplay}</span>
+                                          <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '2px', background: sevBorder, color: sevColor, fontWeight: 700, letterSpacing: '0.5px', fontFamily: 'monospace' }}>{sev.toUpperCase()}</span>
                                         </div>
                                       </div>
-                                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: `${item.value}%`, background: barColor, borderRadius: '3px', transition: 'width 0.3s ease' }} />
-                                      </div>
-                                      {/* Improvement tips - shown when score < 80% */}
-                                      {needsImprovement && tips.length > 0 && (
-                                        <div style={{ marginTop: '4px', padding: '6px 8px', background: 'rgba(0,0,0,0.25)', borderRadius: '4px', borderLeft: `2px solid ${barColor}` }}>
-                                          <div style={{ fontSize: '10px', fontWeight: 700, color: barColor, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>How to improve</div>
-                                          {tips.slice(0, 3).map((tip: string, ti: number) => (
-                                            <div key={ti} style={{ fontSize: '11px', color: dark.textMuted, lineHeight: 1.4 }}>
-                                              ✦ {tip}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
                                     </div>
                                   );
                                 })}
                               </div>
-                              {recs.length > 0 && (
-                                <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
-                                  <div style={{ fontSize: '10px', fontWeight: 700, color: dark.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>Recommendations</div>
-                                  {recs.map((r: string, i: number) => <div key={i} style={{ fontSize: '12px', color: dark.text, marginBottom: '2px' }}>→ {r}</div>)}
-                                </div>
-                              )}
-                            </div>
+                            )}
+                          </div>
 
-                            {/* Summary Cards */}
-                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                              {[
-                                { label: 'Total', value: summary?.total_threats ?? 0, color: dark.textMuted, bg: 'rgba(255,255,255,0.05)' },
-                                { label: 'Critical', value: summary?.critical_threats ?? 0, color: dark.red, bg: 'rgba(239,68,68,0.1)' },
-                                { label: 'High', value: summary?.high_threats ?? 0, color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
-                                { label: 'Medium', value: summary?.medium_threats ?? 0, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                                { label: 'Low', value: summary?.low_threats ?? 0, color: dark.green, bg: 'rgba(34,197,94,0.1)' },
-                              ].map(card => (
-                                <div key={card.label} style={{ padding: '12px', borderRadius: '8px', background: card.bg, border: `1px solid ${card.color}30`, textAlign: 'center' }}>
-                                  <div style={{ fontSize: '20px', fontWeight: 800, color: card.color }}>{card.value}</div>
-                                  <div style={{ fontSize: '10px', color: card.color, marginTop: '2px', fontWeight: 600, textTransform: 'uppercase' }}>{card.label}</div>
+                          {/* ── Takedown Center ────────────────────────────── */}
+                          {(() => {
+                            const takedowns = (monitoringData?.takedown_actions || []) as Record<string, unknown>[];
+                            const pending = takedowns.filter(t => t.status === 'pending');
+                            const inProgress = takedowns.filter(t => ['submitted', 'acknowledged'].includes(String(t.status)));
+                            const completed = takedowns.filter(t => ['removed', 'rejected'].includes(String(t.status)));
+                            return (
+                              <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#00F0FF', letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'monospace' }}>◆ Takedown Center</div>
+                                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,240,255,0.2)' }} />
                                 </div>
-                              ))}
-                            </div>
-
-                            {/* Threat Feed */}
-                            <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-                              <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>⚠️ Threat Feed</div>
-                              {threats.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '32px 0', color: dark.textMuted }}>
-                                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔍</div>
-                                  <div style={{ fontSize: '13px' }}>No threats detected. Run a scan to check.</div>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                  <div style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(255,170,0,0.08)', border: '1px solid rgba(255,170,0,0.2)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#FFAA00', fontFamily: 'monospace' }}>{pending.length}</div>
+                                    <div style={{ fontSize: '9px', color: '#FFAA00', fontWeight: 700, letterSpacing: '1px', fontFamily: 'monospace' }}>PENDING</div>
+                                  </div>
+                                  <div style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(0,240,255,0.08)', border: '1px solid rgba(0,240,255,0.2)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#00F0FF', fontFamily: 'monospace' }}>{inProgress.length}</div>
+                                    <div style={{ fontSize: '9px', color: '#00F0FF', fontWeight: 700, letterSpacing: '1px', fontFamily: 'monospace' }}>IN PROGRESS</div>
+                                  </div>
+                                  <div style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.2)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#39FF14', fontFamily: 'monospace' }}>{completed.length}</div>
+                                    <div style={{ fontSize: '9px', color: '#39FF14', fontWeight: 700, letterSpacing: '1px', fontFamily: 'monospace' }}>COMPLETED</div>
+                                  </div>
                                 </div>
-                              ) : (
-                                <div style={{ display: 'grid', gap: '10px' }}>
-                                  {threats.slice(0, 15).map((t: Record<string, unknown>, i: number) => {
-                                    const sev = (t.severity as string) || 'low';
-                                    const sevIcon = sev === 'critical' ? '🚨' : sev === 'high' ? '⚠️' : sev === 'medium' ? 'ℹ️' : '✅';
-                                    const typeLabel = (t.type as string) === 'social_impersonator' ? 'Impersonator' : (t.type as string) === 'domain_lookalike' ? 'Lookalike Domain' : (t.type as string) === 'phone_scam' ? 'Phone Scam' : (t.type as string) === 'cross_channel' ? 'Cross-channel' : (t.type as string) === 'email' ? 'Email Spoof' : 'Unknown';
-                                    const typeIcon = (t.type as string) === 'social_impersonator' ? '👤' : (t.type as string) === 'domain_lookalike' ? '🌐' : (t.type as string) === 'phone_scam' ? '📞' : (t.type as string) === 'cross_channel' ? '🔗' : (t.type as string) === 'email' ? '📧' : '🕵️';
-                                    const sevColor = sev === 'critical' ? dark.red : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : dark.green;
-                                    const sevBg = sev === 'critical' ? 'rgba(239,68,68,0.1)' : sev === 'high' ? 'rgba(249,115,22,0.1)' : sev === 'medium' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)';
-                                    const evidence = (t.evidence as string[]) || [];
-                                    const score = Number(t.risk_score ?? 0);
-                                    const scoreDisplay = score > 0 ? `${score}/100` : '—';
-                                    const platform = String(t.platform || '');
-                                    return (
-                                      <div key={i} style={{ padding: isMobile ? '12px' : '14px', borderRadius: '10px', background: sevBg, border: `1px solid ${sevColor}30` }}>
-                                        {/* Row 1: Icon + Target + Score badge */}
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                                          <div style={{ fontSize: isMobile ? '18px' : '16px', lineHeight: 1, flexShrink: 0, marginTop: '2px' }}>{typeIcon}</div>
-                                          <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: isMobile ? '15px' : '14px', fontWeight: 700, color: '#fff', wordBreak: 'break-all', marginBottom: '4px' }}>
-                                              {String(t.target || 'Unknown')}
-                                            </div>
-                                            {/* Type + Platform row */}
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginBottom: evidence.length > 0 ? '6px' : '0' }}>
-                                              <span style={{ fontSize: '11px', color: dark.textMuted, fontWeight: 600 }}>{typeLabel}</span>
-                                              {platform && platform !== 'domain' && <span style={{ fontSize: '11px', color: dark.textMuted }}>· {platform}</span>}
-                                              <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, color: '#fff', background: sevColor }}>
-                                                {scoreDisplay}
-                                              </span>
-                                              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '3px', background: t.status === 'new' ? 'rgba(245,158,11,0.2)' : t.status === 'reported' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)', color: t.status === 'new' ? '#f59e0b' : t.status === 'reported' ? '#3b82f6' : dark.green, fontWeight: 600 }}>
-                                                {String(t.status || 'new').toUpperCase()}
-                                              </span>
-                                            </div>
-                                            {/* Evidence */}
-                                            {evidence.length > 0 && (
-                                              <div style={{ fontSize: '12px', color: sevColor, fontStyle: 'italic' }}>
-                                                {evidence.slice(0, 2).join(' · ')}
-                                              </div>
-                                            )}
-                                          </div>
+                                {takedowns.length === 0 ? (
+                                  <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                    <div style={{ fontSize: '11px', color: '#8B8B8B', fontFamily: 'monospace', letterSpacing: '1px' }}>NO TAKEDOWN ACTIONS YET</div>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'grid', gap: '6px' }}>
+                                    {takedowns.slice(0, 8).map((t: Record<string, unknown>, i: number) => (
+                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '4px', background: 'rgba(5,5,16,0.4)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.priority === 'urgent' ? '#FF073A' : t.priority === 'high' ? '#f97316' : '#FFAA00', boxShadow: t.priority === 'urgent' ? '0 0 4px #FF073A' : 'none' }} />
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{String(t.priority || 'medium').toUpperCase()} · {String(t.platform || 'unknown').toUpperCase()}</div>
+                                          <div style={{ fontSize: '10px', color: '#8B8B8B' }}>{String(t.action_type || 'report')} → {String(t.target || 'unknown')}</div>
                                         </div>
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Takedown Center */}
-                            {(() => {
-                              const takedowns = (monitoringData?.takedown_actions || []) as Record<string, unknown>[];
-                              const pending = takedowns.filter(t => t.status === 'pending');
-                              const inProgress = takedowns.filter(t => ['submitted', 'acknowledged'].includes(String(t.status)));
-                              const completed = takedowns.filter(t => ['removed', 'rejected'].includes(String(t.status)));
-                              return (
-                                <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '12px', padding: '16px' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>📋 Takedown Center</div>
-                                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.15)' }}>
-                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#92400e' }}>{pending.length}</span>
-                                      <span style={{ fontSize: '11px', color: '#92400e', marginLeft: '4px' }}>Pending</span>
-                                    </div>
-                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)' }}>
-                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#1e40af' }}>{inProgress.length}</span>
-                                      <span style={{ fontSize: '11px', color: '#1e40af', marginLeft: '4px' }}>In Progress</span>
-                                    </div>
-                                    <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(34,197,94,0.15)' }}>
-                                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#065f46' }}>{completed.length}</span>
-                                      <span style={{ fontSize: '11px', color: '#065f46', marginLeft: '4px' }}>Completed</span>
-                                    </div>
+                                    ))}
                                   </div>
-                                  {takedowns.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '24px 0', color: dark.textMuted }}>
-                                      <div style={{ fontSize: '13px' }}>No takedown actions yet. Run a scan to detect threats.</div>
-                                    </div>
-                                  ) : (
-                                    <div style={{ display: 'grid', gap: '6px' }}>
-                                      {takedowns.slice(0, 8).map((t: Record<string, unknown>, i: number) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}` }}>
-                                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.priority === 'urgent' ? dark.red : t.priority === 'high' ? '#f97316' : '#f59e0b' }} />
-                                          <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{String(t.priority || 'medium').toUpperCase()} · {String(t.platform || 'unknown')}</div>
-                                            <div style={{ fontSize: '11px', color: dark.textMuted }}>{String(t.action_type || 'report')} → {String(t.target || 'unknown')}</div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </>
-                        );
-                      })()}
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </>
+                      );
+                    })()}
                     </>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
                       <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
-                      <div style={{ color: dark.textMuted, fontSize: '14px' }}>No monitoring data available.</div>
-                      <div style={{ color: dark.textMuted, fontSize: '12px', marginTop: '4px' }}>Run a scan or refresh your health score to populate the dashboard.</div>
+                      <div style={{ color: '#8B8B8B', fontSize: '12px', fontFamily: 'monospace', letterSpacing: '1px' }}>NO MONITORING DATA AVAILABLE</div>
+                      <div style={{ color: '#8B8B8B', fontSize: '11px', marginTop: '4px' }}>Run a scan or refresh your health score to populate the dashboard.</div>
                     </div>
                   )}
                 </div>
