@@ -69,6 +69,7 @@ interface BrandHealthScore {
   breakdown: {
     social_health: number;
     domain_health: number;
+    email_health: number;
     phone_health: number;
     web_reputation: number;
   };
@@ -121,6 +122,7 @@ interface DashboardData {
 function calculateHealthScore(
   socialThreats: number,
   domainThreats: number,
+  emailThreats: number,
   phoneThreats: number,
   webReputationFlags: number,
   criticalCount: number,
@@ -137,10 +139,13 @@ function calculateHealthScore(
   // Domain threats: -1 per threat (variants inflated count, so use smaller penalty)
   score -= Math.min(20, domainThreats * 1);
 
+  // Email threats: -5 per threat (spoofable domains are serious)
+  score -= Math.min(20, emailThreats * 5);
+
   // Phone threats: -2 per threat
   score -= Math.min(10, phoneThreats * 2);
 
-  // Web reputation flags: -5 per flag (ScamAdviser warnings, negative search signals)
+  // Web reputation flags: -5 per flag
   score -= Math.min(20, webReputationFlags * 5);
 
   // Floor at 0
@@ -154,7 +159,7 @@ function calculateHealthScore(
   else if (score >= 20) level = 'POOR';
   else level = 'CRITICAL';
 
-  // Determine trend (would need historical data in production)
+  // Determine trend
   const trend: string = score >= 60 ? 'stable' : 'declining';
 
   // Generate recommendations
@@ -162,6 +167,7 @@ function calculateHealthScore(
   if (criticalCount > 0) recommendations.push('File urgent abuse reports for all critical threats');
   if (highCount > 0) recommendations.push('Monitor high-threat profiles and file abuse reports within 48 hours');
   if (domainThreats > 0) recommendations.push('Register key domain variants to prevent typosquatting');
+  if (emailThreats > 0) recommendations.push('Set up DMARC p=reject and DKIM to prevent email spoofing');
   if (webReputationFlags > 0) recommendations.push('Check ScamAdviser and review any negative web reputation signals');
   if (socialThreats > 5) recommendations.push('Consider increasing scan frequency to daily for this brand');
   if (phoneThreats > 0) recommendations.push('Set up call screening for reported phone numbers');
@@ -172,6 +178,7 @@ function calculateHealthScore(
     breakdown: {
       social_health: Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15)),
       domain_health: Math.max(0, 100 - Math.min(70, domainThreats * 3)),
+      email_health: Math.max(0, 100 - Math.min(70, emailThreats * 10)),
       phone_health: Math.max(0, 100 - Math.min(40, phoneThreats * 10)),
       web_reputation: Math.max(0, 100 - Math.min(50, webReputationFlags * 10)),
     },
@@ -499,6 +506,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const healthScore = calculateHealthScore(
     threats.filter(t => t.type === 'social_impersonator').length,
     threats.filter(t => t.type === 'domain_lookalike').length,
+    threats.filter(t => t.type === 'email').length,
     threats.filter(t => t.type === 'phone_scam').length,
     threats.filter(t => t.type === 'cross_channel').length,
     criticalCount,
