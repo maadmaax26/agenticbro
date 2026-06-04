@@ -61,7 +61,9 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications'>('users');
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -124,8 +126,36 @@ export function BrandGuardAdminPage() {
     } catch { /* ignore */ }
   }, [authToken, isAdmin]);
 
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!authToken || !isAdmin) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/notifications?limit=100`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unread || 0);
+      }
+    } catch { /* ignore */ }
+  }, [authToken, isAdmin]);
+
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  // Realtime subscription for new notifications
+  useEffect(() => {
+    if (!supabase || !authToken || !isAdmin) return;
+    const channel = supabase
+      .channel('admin-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_notifications' }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [authToken, isAdmin]);
 
   // Grant credits
   const handleGrantCredits = async (userId: string) => {
@@ -147,6 +177,18 @@ export function BrandGuardAdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     }
+  };
+
+  const handleMarkRead = async (ids?: string[]) => {
+    if (!authToken) return;
+    try {
+      await fetch(`${API_BASE}/admin/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify(ids ? { ids } : { mark_all: true }),
+      });
+      fetchNotifications();
+    } catch { /* ignore */ }
   };
 
   if (loading) {
@@ -250,6 +292,15 @@ export function BrandGuardAdminPage() {
               color: activeTab === 'activity' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
             }}
           >🕐 Activity</button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'notifications' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
+              background: activeTab === 'notifications' ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: activeTab === 'notifications' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+              position: 'relative',
+            }}
+          >🔔 Notifications{unreadCount > 0 && <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>}</button>
         </div>
 
         {error && (
@@ -438,6 +489,65 @@ export function BrandGuardAdminPage() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'notifications' && (
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {/* Mark all read button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#9ca3af' }}>{notifications.length} notification{notifications.length !== 1 ? 's' : ''} • {unreadCount} unread</div>
+              {unreadCount > 0 && (
+                <button onClick={() => handleMarkRead()} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '13px', cursor: 'pointer' }}>Mark all read</button>
+              )}
+            </div>
+
+            {notifications.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔕</div>
+                <div>No notifications yet</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>New user signups and brand creations will appear here</div>
+              </div>
+            ) : (
+              notifications.map((n: any) => {
+                const typeIcons: Record<string, string> = { new_user: '👤', new_brand: '🏢', new_subscription: '💎', high_risk_scan: '🚨' };
+                const typeColors: Record<string, string> = { new_user: '#3b82f6', new_brand: '#22c55e', new_subscription: '#8b5cf6', high_risk_scan: '#ef4444' };
+                const typeLabels: Record<string, string> = { new_user: 'New User', new_brand: 'New Brand', new_subscription: 'New Subscription', high_risk_scan: 'High Risk' };
+                const icon = typeIcons[n.type] || '📌';
+                const color = typeColors[n.type] || '#9ca3af';
+                const label = typeLabels[n.type] || n.type;
+                const data = n.data || {};
+                return (
+                  <div key={n.id} style={{
+                    display: 'flex', gap: '12px', padding: '14px', borderRadius: '10px',
+                    background: n.read ? 'rgba(15,15,25,0.5)' : 'rgba(15,15,25,0.9)',
+                    border: n.read ? '1px solid rgba(139,92,246,0.1)' : `1px solid ${color}40`,
+                    opacity: n.read ? 0.7 : 1,
+                  }}>
+                    <div style={{ fontSize: '24px', lineHeight: 1 }}>{icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>{n.title}</div>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: `${color}20`, color, border: `1px solid ${color}40` }}>{label}</span>
+                          {!n.read && (
+                            <button onClick={() => handleMarkRead([n.id])} style={{ padding: '2px 6px', borderRadius: '4px', border: 'none', background: 'rgba(139,92,246,0.2)', color: '#8b5cf6', fontSize: '10px', cursor: 'pointer' }}>✓</button>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '6px' }}>{n.message}</div>
+                      {data.email && <div style={{ fontSize: '12px', color: '#64748b' }}>📧 {data.email}</div>}
+                      {data.brand_name && <div style={{ fontSize: '12px', color: '#64748b' }}>🏢 {data.brand_name} (@{data.brand_handle})</div>}
+                      {data.plan_id && <div style={{ fontSize: '12px', color: '#64748b' }}>💎 {data.plan_id} • {data.monthly_credits} credits/mo</div>}
+                      {data.platforms && <div style={{ fontSize: '12px', color: '#64748b' }}>📱 {Array.isArray(data.platforms) ? data.platforms.join(', ') : data.platforms}</div>}
+                      {data.domain && <div style={{ fontSize: '12px', color: '#64748b' }}>🌐 {data.domain}</div>}
+                      {!n.email_sent && <div style={{ fontSize: '11px', color: '#f59e0b' }}>⚠️ Email pending</div>}
+                      <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '4px' }}>{new Date(n.created_at).toLocaleString()}</div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         )}
