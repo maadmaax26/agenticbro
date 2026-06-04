@@ -26,6 +26,8 @@ interface TakedownModalProps {
     email: string;
     companyName: string;
   };
+  /** If true, show a form to collect violator details before generating */
+  standalone?: boolean;
 }
 
 const PLATFORMS = [
@@ -43,11 +45,11 @@ const PLATFORMS = [
 
 export function TakedownModal({
   isOpen, onClose, scanId, scanType, riskScore, riskLevel,
-  evidence, brand, violator, user
+  evidence, brand, violator, user, standalone = false
 }: TakedownModalProps) {
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(standalone ? 0 : 1);
+  const [selectedPlatform, setSelectedPlatform] = useState(violator?.platform || '');
   const [reportContent, setReportContent] = useState('');
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [platformFormUrl, setPlatformFormUrl] = useState('');
@@ -55,11 +57,22 @@ export function TakedownModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Standalone form fields
+  const [violatorUrl, setViolatorUrl] = useState(violator?.url || '');
+  const [violatorName, setViolatorName] = useState(violator?.name || '');
+  const [violatorHandle, setViolatorHandle] = useState(violator?.handle || '');
+  const [violatorDesc, setViolatorDesc] = useState(evidence?.descriptions || '');
+  const [violatorUrls, setViolatorUrls] = useState<string[]>(evidence?.urls?.length ? evidence.urls : []);
+  const [urlInput, setUrlInput] = useState('');
+
   if (!isOpen) return null;
 
   const API_BASE = '/api/brand-guard';
 
   async function generateReport() {
+    if (!violatorUrl && standalone) {
+      return; // Need at least a URL
+    }
     setIsGenerating(true);
     try {
       const response = await fetch(`${API_BASE}/takedown/generate`, {
@@ -67,7 +80,19 @@ export function TakedownModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scanId, scanType, platform: selectedPlatform,
-          riskScore, riskLevel, evidence, brand, violator, user
+          riskScore, riskLevel,
+          evidence: {
+            urls: standalone ? violatorUrls : evidence.urls,
+            descriptions: standalone ? violatorDesc : evidence.descriptions,
+          },
+          brand, 
+          violator: {
+            platform: selectedPlatform || violator.platform,
+            url: standalone ? violatorUrl : violator.url,
+            handle: standalone ? violatorHandle : violator.handle,
+            name: standalone ? violatorName : violator.name,
+          },
+          user
         })
       });
       const data = await response.json();
@@ -104,6 +129,98 @@ export function TakedownModal({
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
         </div>
+
+        {/* Step 0: Collect violator details (standalone mode only) */}
+        {step === 0 && (
+          <div className="p-6 overflow-y-auto flex-1">
+            <p className="text-gray-300 mb-4 font-medium">Tell us about the impersonator you want to report.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 font-medium mb-1 block">
+                  Impersonator URL <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="url"
+                  value={violatorUrl}
+                  onChange={e => setViolatorUrl(e.target.value)}
+                  placeholder="e.g. https://fake-brand.myshopify.com"
+                  className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-green-400 focus:outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 font-medium mb-1 block">
+                  Store / Account Name
+                </label>
+                <input
+                  type="text"
+                  value={violatorName}
+                  onChange={e => setViolatorName(e.target.value)}
+                  placeholder="e.g. Fake Brand Store"
+                  className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-green-400 focus:outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 font-medium mb-1 block">
+                  Handle / Username (optional)
+                </label>
+                <input
+                  type="text"
+                  value={violatorHandle}
+                  onChange={e => setViolatorHandle(e.target.value)}
+                  placeholder="e.g. @fakebrandshop"
+                  className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-green-400 focus:outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 font-medium mb-1 block">
+                  Description of Violation
+                </label>
+                <textarea
+                  value={violatorDesc}
+                  onChange={e => setViolatorDesc(e.target.value)}
+                  placeholder="e.g. This store is using our brand name, logo, and product images without authorization..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-green-400 focus:outline-none placeholder:text-gray-600 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 font-medium mb-1 block">
+                  Evidence URLs (optional)
+                </label>
+                {violatorUrls.map((u, i) => (
+                  <div key={i} className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs text-gray-500 truncate flex-1">{u}</span>
+                    <button onClick={() => setViolatorUrls(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={e => setUrlInput(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-green-400 focus:outline-none placeholder:text-gray-600"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && urlInput.trim()) {
+                        setViolatorUrls(prev => [...prev, urlInput.trim()]);
+                        setUrlInput('');
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (urlInput.trim()) {
+                        setViolatorUrls(prev => [...prev, urlInput.trim()]);
+                        setUrlInput('');
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg bg-gray-700 text-gray-300 hover:text-white text-sm"
+                  >Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Step 1: Platform selector */}
         {step === 1 && (
@@ -150,6 +267,22 @@ export function TakedownModal({
 
         {/* Footer actions */}
         <div className="p-6 border-t border-gray-700 flex gap-3 flex-wrap">
+          {step === 0 && (
+            <>
+              <button onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white">
+                Cancel
+              </button>
+              <button
+                onClick={() => setStep(1)}
+                disabled={!violatorUrl.trim()}
+                className="ml-auto px-6 py-2 bg-green-500 text-black font-bold rounded-lg
+                  hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next: Choose Platform →
+              </button>
+            </>
+          )}
+
           {step === 1 && (
             <>
               <button onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white">
@@ -168,8 +301,8 @@ export function TakedownModal({
 
           {step === 2 && (
             <>
-              <button onClick={() => setStep(1)} className="px-4 py-2 text-gray-400 hover:text-white">
-                ← Back
+              <button onClick={() => setStep(standalone ? 0 : 1)} className="px-4 py-2 text-gray-400 hover:text-white">
+                ← {standalone ? 'Back' : 'Cancel'}
               </button>
               <button
                 onClick={copyToClipboard}
