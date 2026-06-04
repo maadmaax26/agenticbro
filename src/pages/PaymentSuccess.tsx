@@ -32,6 +32,17 @@ export default function PaymentSuccess({ sessionId, onClose }: PaymentSuccessPro
       if (result?.credits) {
         setCredits(result.credits);
         addScanCredits(result.credits);
+
+        // Fire Google Ads purchase conversion
+        const alreadyFired = sessionStorage.getItem('gads_purchase_conversion');
+        if (!alreadyFired && typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'conversion', {
+            send_to: 'AW-18179207888/QWLaCJqZi7kcENDlwtxD',
+            value: 1.0,
+            currency: 'USD',
+          });
+          sessionStorage.setItem('gads_purchase_conversion', '1');
+        }
       }
     };
 

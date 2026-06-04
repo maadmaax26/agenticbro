@@ -150,6 +150,22 @@ export function BrandGuardPage() {
 
   // Check for payment success redirect
   const paymentSuccess = searchParams.get('payment') === 'success';
+
+  // Fire Google Ads purchase conversion on successful payment
+  useEffect(() => {
+    if (paymentSuccess && typeof window !== 'undefined' && (window as any).gtag) {
+      const alreadyFired = sessionStorage.getItem('gads_purchase_conversion');
+      if (!alreadyFired) {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-18179207888/QWLaCJqZi7kcENDlwtxD',
+          value: 1.0,
+          currency: 'USD',
+        });
+        sessionStorage.setItem('gads_purchase_conversion', '1');
+      }
+    }
+  }, [paymentSuccess]);
+
   // Store realtime subscriptions for cleanup
   const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
   
@@ -1623,7 +1639,7 @@ n            </p>
         </div>
       </div>
 
-      {/* Payment success banner */}
+      {/* Payment success banner + Google Ads purchase conversion */}
       {paymentSuccess && (
         <div style={{
           margin: '16px auto', maxWidth: '800px', padding: '16px', borderRadius: '12px',
