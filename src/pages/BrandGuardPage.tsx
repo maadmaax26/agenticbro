@@ -13,6 +13,7 @@ import { FingerprintManager } from '../components/brand-guard/FingerprintManager
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
 import { SubscriptionManager } from '../components/brand-guard/SubscriptionManager';
+import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
 import { ContactUs } from '../components/ContactUs';
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -624,7 +625,7 @@ export function BrandGuardPage() {
   };
 
   // ── Monitoring Dashboard ──────────────────────────────────────────────────
-  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns'>('scans');
+  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns' | 'outreach'>('scans');
   const [monitoringData, setMonitoringData] = useState<Record<string, unknown> | null>(null);
   const [takedownStandalone, setTakedownStandalone] = useState(false);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
@@ -1716,6 +1717,15 @@ n            </p>
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >📋 Takedowns</button>
+                <button
+                  onClick={() => setDashboardTab('outreach')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    background: dashboardTab === 'outreach' ? dark.accent : 'transparent',
+                    color: dashboardTab === 'outreach' ? '#fff' : dark.textMuted,
+                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >🎯 Outreach</button>
               </div>
 
               {dashboardTab === 'monitoring' ? (
@@ -2843,6 +2853,13 @@ n            </p>
           )}
         </div>
       </div>
+
+      {/* Outreach Tab */}
+      {dashboardTab === 'outreach' && (
+        <div style={{ marginTop: '0' }}>
+          <BrandGuardProspectHunter />
+        </div>
+      )}
 
       {/* Credit Purchase Modal */}
       {showPurchase && (
