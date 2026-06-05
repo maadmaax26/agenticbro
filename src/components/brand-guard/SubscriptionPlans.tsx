@@ -120,6 +120,11 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectPlan = async (planId: string) => {
+    if (planId === 'free') {
+      setError('Free tier requires no subscription');
+      return;
+    }
+
     if (planId === currentPlanId) {
       setError('You are already on this plan');
       return;
@@ -138,7 +143,7 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
       const userId = user?.id || walletAddress || 'anonymous';
       const userEmail = email || user?.email || '';
 
-      // Call Stripe checkout API
+      // Call Stripe checkout API (with 7-day free trial, no credit card required)
       const response = await fetch('/api/brand-guard/stripe-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,6 +152,7 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
           userEmail,
           planId,
           currentPlanId,
+          trial_days: 7,
         }),
       });
 
@@ -245,6 +251,17 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
                 <div className={`text-sm font-semibold mt-1 ${PLAN_ACCENT[plan.id as keyof typeof PLAN_ACCENT]}`}>
                   {plan.scans === -1 ? 'Unlimited scans' : `${plan.scans} scans/month`}
                 </div>
+                {/* Free trial badge for paid plans */}
+                {plan.price > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded-full">
+                      7-DAY FREE TRIAL
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      No credit card required
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Features */}
@@ -289,7 +306,7 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
                       }
                 }
               >
-                {isCurrent ? 'Current Plan' : isProcessing ? 'Processing...' : 'Select Plan'}
+                {isCurrent ? 'Current Plan' : isProcessing ? 'Processing...' : 'Start Free Trial'}
               </button>
             </div>
           );

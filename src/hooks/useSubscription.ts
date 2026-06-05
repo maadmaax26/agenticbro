@@ -12,7 +12,7 @@ import { useAuth } from '../AuthContext';
 export interface Subscription {
   id: string;
   plan_id: 'free' | 'guardian' | 'sentinel' | 'fortress';
-  status: 'active' | 'past_due' | 'canceled' | 'expired' | 'unpaid';
+  status: 'active' | 'past_due' | 'canceled' | 'expired' | 'unpaid' | 'trialing' | 'trial_ending';
   current_period_start: string;
   current_period_end: string;
   scan_limit: number;
@@ -212,6 +212,10 @@ export function useSubscription() {
     credits: data.credits,
     loading,
     error,
+    isTrialing: data.subscription?.status === 'trialing' || data.subscription?.status === 'trial_ending',
+    trialEndsAt: data.subscription?.status === 'trialing' || data.subscription?.status === 'trial_ending' 
+      ? data.subscription.current_period_end 
+      : null,
     createCheckoutSession,
     createPortalSession,
     cancelSubscription,
