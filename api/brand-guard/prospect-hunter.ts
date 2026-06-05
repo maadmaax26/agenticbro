@@ -1,14 +1,8 @@
 /**
- * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
- * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
- * Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
- */
-
-/**
  * api/brand-guard/prospect-hunter.ts — Brand Guard Prospect Hunter AI
  * ========================================================================
  * Server-side AI endpoints for the Brand Guard Prospect Hunter CRM.
- * Moves Claude API calls out of the browser to protect the API key.
+ * Uses local Ollama models (glm-5, qwen3-coder) — no external API keys.
  *
  * POST /api/brand-guard/prospect-hunter
  *   Body: { action: "hunt" | "email" | "research", ...params }
@@ -22,8 +16,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+// Local Ollama — no API keys needed, runs on the same machine
+const OLLAMA_BASE = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_PROSPECT_MODEL || 'glm5:cloud';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface HuntRequest {
@@ -57,33 +52,37 @@ interface ResearchRequest {
 
 type ProspectRequest = HuntRequest | EmailRequest | ResearchRequest;
 
-// ── Claude API Call ────────────────────────────────────────────────────────────
-async function callClaude(prompt: string, maxTokens = 1500): Promise<string> {
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
-  }
-
-  const response = await fetch(ANTHROPIC_API_URL, {
+// ── Ollama API Call ────────────────────────────────────────────────────────────
+async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
+  const response = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
+      model: OLLAMA_MODEL,
       messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      options: {
+        num_predict: maxTokens,
+        temperature: 0.7,
+      },
     }),
   });
 
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(data.error.message || 'Claude API error');
+  if (!response.ok) {
+    const errText = await response.text().catch(() => 'unknown error');
+    throw new Error(`Ollama ${OLLAMA_MODEL} error: ${response.status} — ${errText}`);
   }
 
-  return data.content?.[0]?.text || '';
+  const data = await response.json();
+
+  // Ollama chat format: { message: { content: "..." } }
+  const text = data?.message?.content || data?.response || '';
+
+  if (!text) {
+    throw new Error('Empty response from Ollama');
+  }
+
+  return text;
 }
 
 // ── Action: Hunt ──────────────────────────────────────────────────────────────
@@ -135,7 +134,7 @@ Return ONLY a JSON array. No markdown. No explanation. Just the array:
 Only return companies where the incident is publicly documented. Be specific — no generic examples.`;
 
   try {
-    const raw = await callClaude(prompt, 2000);
+    const raw = await callAI(prompt, 2000);
 
     let parsed;
     try {
@@ -202,7 +201,7 @@ The AgenticBro Brand Guard Team
 agenticbro.app/brand-guard`;
 
   try {
-    const result = await callClaude(prompt, 800);
+    const result = await callAI(prompt, 800);
     res.status(200).json({ email: result });
   } catch (error) {
     console.error('[prospect-hunter] Email generation error:', error);
@@ -238,7 +237,7 @@ TIMING: Why now is the right moment to reach out
 Max 180 words. Labelled sections, no bullet points within sections.`;
 
   try {
-    const result = await callClaude(prompt, 600);
+    const result = await callAI(prompt, 600);
     res.status(200).json({ research: result });
   } catch (error) {
     console.error('[prospect-hunter] Research error:', error);
