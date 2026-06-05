@@ -182,7 +182,8 @@ async function createStripeCheckoutSession(
   price_id: string,
   success_url: string,
   cancel_url: string,
-  promo_code?: string
+  promo_code?: string,
+  trial_days?: number
 ): Promise<{ session_id: string; url: string }> {
   const stripe = getStripe();
 
@@ -202,6 +203,23 @@ async function createStripeCheckoutSession(
     metadata: {
       plan_id: price_id,
       source: 'brand_guard',
+    },
+    // ── Free Trial: No credit card required ──────────────────────────────────
+    // Users can sign up with just email and start a 7-day free trial.
+    // Stripe only collects payment when the trial ends.
+    // If no payment method is added by trial end, subscription cancels (not pauses).
+    payment_method_collection: 'if_required',
+    subscription_data: {
+      trial_period_days: trial_days || 7,
+      trial_settings: {
+        end_behavior: {
+          missing_payment_method: 'cancel',
+        },
+      },
+      metadata: {
+        plan_id: price_id,
+        source: 'brand_guard',
+      },
     },
   };
 
@@ -256,13 +274,16 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse): Promise<
     return;
   }
 
-  const { plan_id, brand_monitor_id, promo_code, redirect_url } = body;
+  const { plan_id, brand_monitor_id, promo_code, redirect_url, trial_days } = body;
 
   // Validate plan_id
   if (!plan_id || !PLANS[plan_id]) {
     res.status(400).json({ error: 'Invalid plan_id' });
     return;
   }
+
+  // Default to 7-day free trial if not explicitly set
+  const effectiveTrialDays = trial_days !== undefined ? trial_days : 7;
 
   const plan = PLANS[plan_id];
 
@@ -308,13 +329,14 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse): Promise<
     // Get or create Stripe customer
     const { customer_id } = await getOrCreateStripeCustomer(supabase, userId, email);
 
-    // Create checkout session
+    // Create checkout session (with free trial — no credit card required)
     const { session_id, url } = await createStripeCheckoutSession(
       customer_id,
       plan.stripe_price_id,
       redirect_url || `${process.env.NEXT_PUBLIC_APP_URL}/brand-guard?payment=success`,
       `${process.env.NEXT_PUBLIC_APP_URL}/brand-guard`,
-      promo_code
+      promo_code,
+      effectiveTrialDays
     );
 
     res.status(200).json({
