@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
 
 const API_BASE = '/api/brand-guard';
 
@@ -61,7 +62,7 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'outreach'>('users');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -301,6 +302,14 @@ export function BrandGuardAdminPage() {
               position: 'relative',
             }}
           >🔔 Notifications{unreadCount > 0 && <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>}</button>
+          <button
+            onClick={() => setActiveTab('outreach')}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'outreach' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
+              background: activeTab === 'outreach' ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: activeTab === 'outreach' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >🎯 Outreach</button>
         </div>
 
         {error && (
@@ -549,6 +558,11 @@ export function BrandGuardAdminPage() {
                 );
               })
             )}
+          </div>
+        )}
+        {activeTab === 'outreach' && (
+          <div>
+            <BrandGuardProspectHunter />
           </div>
         )}
       </div>

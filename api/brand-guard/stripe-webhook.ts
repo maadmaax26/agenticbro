@@ -57,21 +57,41 @@ const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_cre
 
 // ── Credit Package Lookup ─────────────────────────────────────────────────────
 // Maps Stripe price_id → { credits, package_name, type }
-const PRICE_MAP: Record<string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }> = {
-  // Pay-as-you-go credit packages (prices will be set in Stripe Dashboard)
-  [process.env.STRIPE_BG_STARTER_PRICE_ID || 'price_bg_starter']: { credits: 5, name: 'Brand Guard Starter', type: 'credits' },
-  [process.env.STRIPE_BG_BASIC_PRICE_ID || 'price_bg_basic']: { credits: 10, name: 'Brand Guard Basic', type: 'credits' },
-  [process.env.STRIPE_BG_PRO_PRICE_ID || 'price_bg_pro']: { credits: 25, name: 'Brand Guard Pro', type: 'credits' },
-  [process.env.STRIPE_BG_WHALE_PRICE_ID || 'price_bg_whale']: { credits: 110, name: 'Brand Guard Whale (100+10 bonus)', type: 'credits' },
-  // Subscription plans
-  [process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_bg_guardian']: { credits: 50, name: 'Guardian Monthly', type: 'subscription', plan_id: 'guardian' },
-  [process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_bg_sentinel']: { credits: 200, name: 'Sentinel Monthly', type: 'subscription', plan_id: 'sentinel' },
-  [process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_bg_fortress']: { credits: -1, name: 'Fortress Monthly (unlimited)', type: 'subscription', plan_id: 'fortress' },
-  // Brand Guard Subscription plans (via new checkout flow)
-  [GUARDIAN_PRICE_ID]: { credits: 50, name: 'Guardian ($29/mo)', type: 'subscription', plan_id: 'guardian' },
-  [SENTINEL_PRICE_ID]: { credits: 200, name: 'Sentinel ($99/mo)', type: 'subscription', plan_id: 'sentinel' },
-  [FORTRESS_PRICE_ID]: { credits: -1, name: 'Fortress ($299/mo, unlimited)', type: 'subscription', plan_id: 'fortress' },
-};
+// NOTE: Subscription price IDs are resolved at runtime from STRIPE_*_PRICE_ID
+//   env vars. The GUARDIAN/SENTINEL/FORTRESS_PRICE_ID aliases below ensure
+//   both the `STRIPE_BG_GUARDIAN_PRICE_ID` and `STRIPE_GUARDIAN_PRICE_ID`
+//   env var patterns are covered without duplication.
+
+function buildPriceMap(): Record<string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }> {
+  const map: Record<string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }> = {
+    // Pay-as-you-go credit packages
+    [process.env.STRIPE_BG_STARTER_PRICE_ID || 'price_bg_starter']: { credits: 5, name: 'Brand Guard Starter', type: 'credits' },
+    [process.env.STRIPE_BG_BASIC_PRICE_ID || 'price_bg_basic']: { credits: 10, name: 'Brand Guard Basic', type: 'credits' },
+    [process.env.STRIPE_BG_PRO_PRICE_ID || 'price_bg_pro']: { credits: 25, name: 'Brand Guard Pro', type: 'credits' },
+    [process.env.STRIPE_BG_WHALE_PRICE_ID || 'price_bg_whale']: { credits: 110, name: 'Brand Guard Whale (100+10 bonus)', type: 'credits' },
+    // Subscription plans (STRIPE_BG_* pattern)
+    [process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_bg_guardian']: { credits: 50, name: 'Guardian Monthly', type: 'subscription', plan_id: 'guardian' },
+    [process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_bg_sentinel']: { credits: 200, name: 'Sentinel Monthly', type: 'subscription', plan_id: 'sentinel' },
+    [process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_bg_fortress']: { credits: -1, name: 'Fortress Monthly (unlimited)', type: 'subscription', plan_id: 'fortress' },
+  };
+
+  // Add STRIPE_* pattern aliases (Guardian/Sentinel/Fortress) if different from BG_* keys
+  const aliases: Array<[string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }]> = [
+    [GUARDIAN_PRICE_ID, { credits: 50, name: 'Guardian ($29/mo)', type: 'subscription' as const, plan_id: 'guardian' }],
+    [SENTINEL_PRICE_ID, { credits: 200, name: 'Sentinel ($99/mo)', type: 'subscription' as const, plan_id: 'sentinel' }],
+    [FORTRESS_PRICE_ID, { credits: -1, name: 'Fortress ($299/mo, unlimited)', type: 'subscription' as const, plan_id: 'fortress' }],
+  ];
+
+  for (const [key, val] of aliases) {
+    if (!map[key]) {
+      map[key] = val;
+    }
+  }
+
+  return map;
+}
+
+const PRICE_MAP = buildPriceMap();
 
 // ── Supabase Client ────────────────────────────────────────────────────────────
 function getSupabase() {
@@ -198,6 +218,33 @@ function resolveCredits(
   return { credits: 0, packageId: metaPackageId || 'unknown', type: 'credits' };
 }
 
+// ── Subscription Status Mapping ───────────────────────────────────────────────
+// Maps Stripe subscription.status to our Supabase status values.
+// Stripe statuses: active, past_due, canceled, unpaid, trialing, incomplete,
+//   incomplete_expired, paused
+// Our statuses: active, trialing, trial_ending, past_due, canceled, expired
+
+function mapSubscriptionStatus(
+  stripeStatus: string,
+  cancelAtPeriodEnd?: boolean
+): string {
+  switch (stripeStatus) {
+    case 'trialing':
+      return 'trialing';
+    case 'active':
+      return cancelAtPeriodEnd ? 'canceled' : 'active';
+    case 'past_due':
+      return 'past_due';
+    case 'canceled':
+    case 'unpaid':
+      return 'expired';
+    case 'paused':
+      return 'canceled';
+    default:
+      return stripeStatus; // passthrough for unknown statuses
+  }
+}
+
 // ── Webhook Handler ───────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -246,7 +293,8 @@ export default async function handler(
   // ── Route by event type ───────────────────────────────────────────────
   switch (event.type) {
     // ══════════════════════════════════════════════════════════════════════
-    // checkout.session.completed — One-time credit purchase
+    // checkout.session.completed — Unified handler for credit purchases +
+    //   subscription signups (including no-card trial flow)
     // ══════════════════════════════════════════════════════════════════════
     case 'checkout.session.completed': {
       const session = event.data.object;
@@ -254,7 +302,11 @@ export default async function handler(
       const customerEmail = session.customer_email || session.customer_details?.email;
       const paymentStatus = session.payment_status;
 
-      if (paymentStatus !== 'paid') {
+      // For trial signups (payment_method_collection: 'if_required'),
+      // payment_status may be 'no_payment_required' during trial — treat as success.
+      const isPaidOrTrial = paymentStatus === 'paid' || paymentStatus === 'no_payment_required';
+
+      if (!isPaidOrTrial) {
         console.log(`[bg-webhook] Session not paid yet: ${session.id} (status: ${paymentStatus})`);
         return res.status(200).json({ received: true, skipped: 'not_paid' });
       }
@@ -264,21 +316,105 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing user_id in metadata' });
       }
 
-      // Resolve credits from metadata or price lookup
+      // Resolve credits and plan info from metadata or price lookup
       const lineItems = session.line_items?.data || [];
-      const { credits, packageId, type } = resolveCredits(session.metadata || {}, lineItems);
+      const { credits, packageId, type, planId } = resolveCredits(session.metadata || {}, lineItems);
+      const supabase = getSupabase();
 
+      // ── Subscription checkout (Guardian / Sentinel / Fortress) ───────────
+      if (type === 'subscription' && planId) {
+        const planConfig = Object.values(PLAN_CONFIG).find(p => p.plan_id === planId);
+        if (!planConfig) {
+          console.error(`[bg-webhook] Unknown plan_id in subscription checkout: ${planId}`);
+          return res.status(400).json({ error: 'Unknown subscription plan' });
+        }
+
+        const stripeCustomerId = session.customer;
+        const stripeSubscriptionId = session.subscription;
+
+        // Check if subscription already exists (upgrade)
+        const { data: existingSub } = await supabase
+          .from('brand_guard_subscriptions')
+          .select('*')
+          .eq('owner_id', userId)
+          .eq('plan_id', planId)
+          .maybeSingle();
+
+        if (existingSub && existingSub.stripe_subscription_id) {
+          // Upgrade or update existing subscription
+          const { error: updateError } = await supabase
+            .from('brand_guard_subscriptions')
+            .update({
+              status: paymentStatus === 'no_payment_required' ? 'trialing' : 'active',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('owner_id', userId)
+            .eq('plan_id', planId);
+
+          if (updateError) {
+            console.error(`[bg-webhook] Failed to update subscription: ${updateError.message}`);
+          } else {
+            console.log(`[bg-webhook] ✅ Updated existing ${planConfig.name} subscription for ${userId}`);
+          }
+        } else {
+          // Create new subscription record
+          // Note: period dates come from the subscription.created event, not the checkout session.
+          // We set them here as placeholders; the subscription.created handler will update them.
+          const { error: subError } = await supabase
+            .from('brand_guard_subscriptions')
+            .insert({
+              owner_id: userId,
+              brand_monitor_id: session.metadata?.brand_monitor_id || null,
+              plan_id: planId,
+              status: paymentStatus === 'no_payment_required' ? 'trialing' : 'active',
+              monthly_credits_included: planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits,
+              monthly_credits_used: 0,
+              brands_included: planConfig.brands_included === -1 ? 999 : planConfig.brands_included,
+              stripe_customer_id: stripeCustomerId,
+              stripe_subscription_id: stripeSubscriptionId as string,
+              stripe_price_id: packageId,
+              created_at: new Date().toISOString(),
+            });
+
+          if (subError) {
+            console.error(`[bg-webhook] Failed to create subscription: ${subError.message}`);
+          } else {
+            console.log(`[bg-webhook] ✅ Created new ${planConfig.name} subscription for ${userId}`);
+          }
+        }
+
+        // Grant initial or renewal monthly credits
+        const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
+        if (monthlyCredits > 0) {
+          const { error: creditError } = await supabase.rpc('add_brand_guard_credits', {
+            p_owner_id: userId,
+            p_amount: monthlyCredits,
+            p_transaction_type: 'subscription_grant',
+            p_payment_method: 'stripe',
+            p_payment_reference: stripeSubscriptionId as string,
+            p_amount_usd: planConfig.price_usd,
+            p_description: `${planConfig.name} subscription — ${monthlyCredits === 999999 ? 'unlimited' : monthlyCredits} monthly credits`,
+          });
+          if (creditError) {
+            console.error('[bg-webhook] Failed to grant subscription credits:', creditError);
+          } else {
+            console.log(`[bg-webhook] ✅ Granted ${monthlyCredits} initial credits for ${planConfig.name}`);
+          }
+        }
+
+        break;
+      }
+
+      // ── One-time credit purchase ───────────────────────────────────────
       if (credits <= 0) {
         console.error(`[bg-webhook] Could not resolve credits for session ${session.id}`);
         return res.status(400).json({ error: 'Could not resolve credit amount' });
       }
 
-      // Add credits via Supabase function
-      const supabase = getSupabase();
       const { data, error } = await supabase.rpc('add_brand_guard_credits', {
         p_owner_id: userId,
         p_amount: credits,
-        p_transaction_type: type === 'subscription' ? 'subscription_grant' : 'purchase',
+        p_transaction_type: 'purchase',
         p_payment_method: 'stripe',
         p_payment_reference: session.id,
         p_amount_usd: session.amount_total ? session.amount_total / 100 : null,
@@ -317,7 +453,7 @@ export default async function handler(
           owner_id: subUserId,
           brand_monitor_id: subscription.metadata?.brand_monitor_id || null,
           plan_id: planInfo.plan_id || 'free',
-          status: 'active',
+          status: mapSubscriptionStatus(subscription.status, false),
           current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
           current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
           monthly_credits_included: planInfo.credits === -1 ? 999999 : (planInfo.credits || 0),
@@ -378,7 +514,7 @@ export default async function handler(
         .from('brand_guard_subscriptions')
         .update({
           plan_id: planInfo.plan_id || 'free',
-          status: subscription.status === 'active' ? 'active' : subscription.status === 'trialing' ? 'trialing' : subscription.cancel_at_period_end ? 'canceled' : subscription.status,
+          status: mapSubscriptionStatus(subscription.status, subscription.cancel_at_period_end),
           current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
           current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end || false,
@@ -500,157 +636,7 @@ export default async function handler(
       break;
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // checkout.session.completed — Brand Guard subscription signup (new flow)
-    // ══════════════════════════════════════════════════════════════════════
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      const userId = session.metadata?.user_id;
-      const customerEmail = session.customer_email || session.customer_details?.email;
-      const paymentStatus = session.payment_status;
 
-      if (paymentStatus !== 'paid') {
-        console.log(`[bg-webhook] Session not paid yet: ${session.id} (status: ${paymentStatus})`);
-        return res.status(200).json({ received: true, skipped: 'not_paid' });
-      }
-
-      if (!userId) {
-        console.error('[bg-webhook] Missing user_id in session metadata');
-        return res.status(400).json({ error: 'Missing user_id in metadata' });
-      }
-
-      const lineItems = session.line_items?.data || [];
-      const { credits, packageId, type, planId } = resolveCredits(session.metadata || {}, lineItems);
-
-      // Check if this is a subscription plan
-      if (type === 'subscription' && planId) {
-        // Handle subscription checkout (Guardian/Sentinel/Fortress plans)
-        const planConfig = Object.values(PLAN_CONFIG).find(p => p.plan_id === planId);
-        if (!planConfig) {
-          console.error(`[bg-webhook] Unknown plan_id in subscription checkout: ${planId}`);
-          return res.status(400).json({ error: 'Unknown subscription plan' });
-        }
-
-        const supabase = getSupabase();
-        const stripeCustomerId = session.customer;
-        const stripeSubscriptionId = session.subscription;
-
-        // Check if subscription already exists
-        const { data: existingSub } = await supabase
-          .from('brand_guard_subscriptions')
-          .select('*')
-          .eq('owner_id', userId)
-          .eq('plan_id', planId)
-          .maybeSingle();
-
-        if (existingSub && existingSub.stripe_subscription_id) {
-          // Upgrade or update existing subscription
-          const { error: updateError } = await supabase
-            .from('brand_guard_subscriptions')
-            .update({
-              status: 'active',
-              current_period_start: new Date(session.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(session.current_period_end * 1000).toISOString(),
-              cancel_at_period_end: false,
-              stripe_customer_id: stripeCustomerId,
-              stripe_subscription_id: stripeSubscriptionId as string,
-              stripe_price_id: packageId,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('owner_id', userId)
-            .eq('plan_id', planId);
-
-          if (updateError) {
-            console.error(`[bg-webhook] Failed to update subscription: ${updateError.message}`);
-          }
-
-          // Grant renewal credits if period restarted
-          const previousAttributes = event.data.previous_attributes;
-          if (previousAttributes?.current_period_start &&
-              previousAttributes.current_period_start !== session.current_period_start) {
-            const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
-            await supabase.rpc('add_brand_guard_credits', {
-              p_owner_id: userId,
-              p_amount: monthlyCredits,
-              p_transaction_type: 'subscription_grant',
-              p_payment_method: 'stripe',
-              p_payment_reference: stripeSubscriptionId as string,
-              p_amount_usd: planConfig.price_usd,
-              p_description: `${planConfig.name} subscription renewal — ${monthlyCredits === 999999 ? 'unlimited' : monthlyCredits} monthly credits`,
-            });
-            console.log(`[bg-webhook] ✅ Granted ${monthlyCredits} renewal credits for ${planConfig.name}`);
-          }
-        } else {
-          // Create new subscription
-          const { error: subError } = await supabase
-            .from('brand_guard_subscriptions')
-            .insert({
-              owner_id: userId,
-              brand_monitor_id: session.metadata?.brand_monitor_id || null,
-              plan_id: planId,
-              status: 'active',
-              current_period_start: new Date(session.current_period_start * 1000).toISOString(),
-              current_period_end: new Date(session.current_period_end * 1000).toISOString(),
-              cancel_at_period_end: false,
-              monthly_credits_included: planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits,
-              monthly_credits_used: 0,
-              brands_included: planConfig.brands_included === -1 ? 999 : planConfig.brands_included,
-              stripe_customer_id: stripeCustomerId,
-              stripe_subscription_id: stripeSubscriptionId as string,
-              stripe_price_id: packageId,
-              created_at: new Date().toISOString(),
-            });
-
-          if (subError) {
-            console.error(`[bg-webhook] Failed to create subscription: ${subError.message}`);
-          } else {
-            console.log(`[bg-webhook] ✅ Created new ${planConfig.name} subscription for ${userId}`);
-          }
-
-          // Grant initial monthly credits
-          const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
-          if (monthlyCredits > 0) {
-            await supabase.rpc('add_brand_guard_credits', {
-              p_owner_id: userId,
-              p_amount: monthlyCredits,
-              p_transaction_type: 'subscription_grant',
-              p_payment_method: 'stripe',
-              p_payment_reference: stripeSubscriptionId as string,
-              p_amount_usd: planConfig.price_usd,
-              p_description: `${planConfig.name} subscription — ${monthlyCredits === 999999 ? 'unlimited' : monthlyCredits} monthly credits`,
-            });
-            console.log(`[bg-webhook] ✅ Granted ${monthlyCredits} initial credits for ${planConfig.name}`);
-          }
-        }
-      } else {
-        // One-time credit purchase (existing logic)
-        if (credits <= 0) {
-          console.error(`[bg-webhook] Could not resolve credits for session ${session.id}`);
-          return res.status(400).json({ error: 'Could not resolve credit amount' });
-        }
-
-        // Add credits via Supabase function
-        const supabase = getSupabase();
-        const { data, error } = await supabase.rpc('add_brand_guard_credits', {
-          p_owner_id: userId,
-          p_amount: credits,
-          p_transaction_type: type === 'subscription' ? 'subscription_grant' : 'purchase',
-          p_payment_method: 'stripe',
-          p_payment_reference: session.id,
-          p_amount_usd: session.amount_total ? session.amount_total / 100 : null,
-          p_description: `Purchased ${credits} Brand Guard credits via Stripe (${packageId})`,
-        });
-
-        if (error) {
-          console.error('[bg-webhook] Failed to add credits:', error);
-          return res.status(500).json({ error: 'Failed to add credits', details: error.message });
-        }
-
-        console.log(`[bg-webhook] ✅ Added ${credits} Brand Guard credits to ${userId}:`, data);
-      }
-
-      break;
-    }
 
     // ══════════════════════════════════════════════════════════════════════
     // customer.subscription.trial_will_end — Trial ending soon (3 days before)
