@@ -53,16 +53,21 @@ interface ResearchRequest {
 type ProspectRequest = HuntRequest | EmailRequest | ResearchRequest;
 
 // ── Ollama API Call ────────────────────────────────────────────────────────────
+// Uses local Ollama models. Handles both thinking-enabled models (glm-5, kimi)
+// and standard models (qwen3-coder-next). Thinking content is stripped from output.
 async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
+  // Force JSON output by appending explicit instruction for non-thinking models
+  const enhancedPrompt = `${prompt}\n\nIMPORTANT: Output ONLY the raw JSON. Start with [ and end with ]. No thinking tags, no markdown fences, no explanation.`;
+
   const response = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: OLLAMA_MODEL,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: enhancedPrompt }],
       stream: false,
       options: {
-        num_predict: maxTokens,
+        num_predict: maxTokens * 2, // Extra buffer for thinking tokens
         temperature: 0.7,
       },
     }),
@@ -75,14 +80,40 @@ async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
 
   const data = await response.json();
 
-  // Ollama chat format: { message: { content: "..." } }
-  const text = data?.message?.content || data?.response || '';
+  // Ollama chat format: { message: { content: "...", thinking: "..." } }
+  // Some models put the actual output in content, others in response
+  let text = data?.message?.content || data?.response || '';
 
-  if (!text) {
-    throw new Error('Empty response from Ollama');
+  // If content is empty but thinking exists, the model used all tokens for thinking.
+  // This can happen with glm-5:cloud — fall back to trying qwen3-coder-next.
+  if (!text && data?.message?.thinking) {
+    console.warn(`[prospect-hunter] ${OLLAMA_MODEL} returned empty content (thinking consumed tokens). Falling back to qwen3-coder-next:cloud.`);
+    const fallbackResponse = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'qwen3-coder-next:cloud',
+        messages: [{ role: 'user', content: prompt }],
+        stream: false,
+        options: { num_predict: maxTokens, temperature: 0.7 },
+      }),
+    });
+
+    if (fallbackResponse.ok) {
+      const fallbackData = await fallbackResponse.json();
+      text = fallbackData?.message?.content || fallbackData?.response || '';
+    }
   }
 
-  return text;
+  if (!text) {
+    throw new Error('Empty response from Ollama (model may have used all tokens for thinking)');
+  }
+
+  // Strip any remaining thinking tags or markdown fences
+  text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+  text = text.replace(/```json\n?/g, '').replace(/```/g, '');
+
+  return text.trim();
 }
 
 // ── Action: Hunt ──────────────────────────────────────────────────────────────
