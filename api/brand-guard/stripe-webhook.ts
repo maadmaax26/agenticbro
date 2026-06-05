@@ -378,7 +378,7 @@ export default async function handler(
         .from('brand_guard_subscriptions')
         .update({
           plan_id: planInfo.plan_id || 'free',
-          status: subscription.status === 'active' ? 'active' : subscription.cancel_at_period_end ? 'canceled' : subscription.status,
+          status: subscription.status === 'active' ? 'active' : subscription.status === 'trialing' ? 'trialing' : subscription.cancel_at_period_end ? 'canceled' : subscription.status,
           current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
           current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end || false,
@@ -649,6 +649,83 @@ export default async function handler(
         console.log(`[bg-webhook] ✅ Added ${credits} Brand Guard credits to ${userId}:`, data);
       }
 
+      break;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // customer.subscription.trial_will_end — Trial ending soon (3 days before)
+    // ══════════════════════════════════════════════════════════════════════
+    case 'customer.subscription.trial_will_end': {
+      const subscription = event.data.object;
+      const subUserId = subscription.metadata?.user_id;
+      const priceId = subscription.items?.data?.[0]?.price?.id;
+      const planInfo = PRICE_MAP[priceId] || { name: 'Unknown', plan_id: 'free' };
+
+      if (!subUserId) {
+        console.error('[bg-webhook] Missing user_id in trial_will_end');
+        break;
+      }
+
+      // Update subscription status to trial_ending in Supabase
+      const supabase = getSupabase();
+      await supabase
+        .from('brand_guard_subscriptions')
+        .update({
+          status: 'trial_ending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('stripe_subscription_id', subscription.id)
+        .eq('owner_id', subUserId);
+
+      // Send trial-ending email via Resend
+      try {
+        const { data: userData } = await supabase
+          .from('auth.users')  // eslint-disable-line
+          .select('email')
+          .eq('id', subUserId)
+          .single();
+
+        if (userData?.email) {
+          const resendUrl = process.env.RESEND_API_KEY
+            ? 'https://api.resend.com/emails'
+            : null;
+
+          if (resendUrl) {
+            await fetch(resendUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: process.env.RESEND_FROM_EMAIL || 'alerts@agenticbro.app',
+                to: userData.email,
+                subject: `Your Brand Guard ${planInfo.name} trial ends in 3 days`,
+                html: `
+                  <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f59e0b;">⏰ Your free trial is ending soon</h2>
+                    <p>Your Brand Guard <strong>${planInfo.name}</strong> trial ends in 3 days. 
+                    Add a payment method to keep your brand protection active.</p>
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://agenticbro.app'}/brand-guard/settings" 
+                       style="display: inline-block; padding: 12px 24px; background: #8b5cf6; color: white; 
+                              text-decoration: none; border-radius: 8px; margin: 16px 0;">
+                      Add Payment Method
+                    </a>
+                    <p style="color: #9ca3af; font-size: 14px; margin-top: 24px;">
+                      If no payment method is added, your subscription will cancel automatically — no charges, no surprises.
+                    </p>
+                  </div>
+                `,
+              }),
+            });
+            console.log(`[bg-webhook] ✅ Sent trial-ending email to ${userData.email}`);
+          }
+        }
+      } catch (emailError) {
+        console.error('[bg-webhook] Failed to send trial-ending email:', emailError);
+      }
+
+      console.log(`[bg-webhook] ⏰ Trial ending soon for subscription ${subscription.id} (plan: ${planInfo.name})`);
       break;
     }
 
