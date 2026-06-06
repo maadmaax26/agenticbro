@@ -238,11 +238,15 @@ function parseDMARC(raw: string): DMARCRecord {
 
 // ── DKIM Check (common selectors) ────────────────────────────────────────────
 const COMMON_DKIM_SELECTORS = [
-  'default', 'google', 'selector1', 'selector2', 'mail', 's1', 's2',
-  'k1', 'k2', 'dkim', 'selector', '20161001', '20170101', '20180101',
+  // Batch 1: Most common modern selectors
+  'default', 'google', 's1', 's2', 'selector1', 'selector2',
+  'zoho', 'amazonses', 'sendgrid', 'mail',
+  // Batch 2: Secondary / provider-specific selectors
+  'dkim', 'k1', 'k2', 'selector', 'sg', 'mandrill', 'mailgun',
+  'azurecomm', 'postmark', 'protonmail',
+  // Batch 3: Date-based selectors (older patterns)
+  'yandex', '20161001', '20170101', '20180101',
   '20190101', '20200101', '20210101', '20220101', '20230101', '20240101',
-  'sendgrid', 'sg', 'mandrill', 'mailgun', 'amazonses', 'azurecomm',
-  'postmark', 'zoho', 'yandex', 'protonmail',
 ];
 
 async function checkDKIM(domain: string): Promise<DKIMResult> {
@@ -276,6 +280,24 @@ async function checkDKIM(domain: string): Promise<DKIMResult> {
     );
 
     for (const r of results2) {
+      if (r.records.length > 0) {
+        foundSelectors.push(r.selector);
+        records.push(...r.records);
+      }
+    }
+  }
+
+  // Check remaining selectors (batch 3)
+  if (foundSelectors.length === 0) {
+    const batch3 = COMMON_DKIM_SELECTORS.slice(20);
+    const results3 = await Promise.all(
+      batch3.map(async (sel) => {
+        const txtRecords = await dnsLookup(`${sel}._domainkey.${domain}`, 'TXT');
+        return { selector: sel, records: txtRecords };
+      })
+    );
+
+    for (const r of results3) {
       if (r.records.length > 0) {
         foundSelectors.push(r.selector);
         records.push(...r.records);
