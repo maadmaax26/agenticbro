@@ -754,7 +754,7 @@ function App() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
-                        { icon: '🔍', title: 'Priority Scans', desc: '25 free wallet/channel/token scans' },
+                        { icon: '🔍', title: 'Priority Scans', desc: '5 free wallet/channel/token scans' },
                         { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
@@ -1003,7 +1003,7 @@ function App() {
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-              <p className="text-gray-400">25 free scans for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
+              <p className="text-gray-400">First 5 scans free for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
@@ -1163,7 +1163,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
                   <span>🎁</span>
-                  <span>25 free scans when you connect your wallet — no token required</span>
+                  <span>First 5 scans free when you connect your wallet — no token required</span>
                 </div>
               </div>
             </div>

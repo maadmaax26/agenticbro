@@ -9,7 +9,7 @@
  * 
  * Track credits by wallet address or email
  * 
- * Free tier: 25 free scans per user (tracked in localStorage)
+ * Free tier: 5 free scans per user (tracked in localStorage)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -252,7 +252,7 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
 
 export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(25);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
   const [loading, setLoading] = useState(true);
 
   // Storage key based on wallet or email
@@ -286,9 +286,9 @@ export function useCredits(userId: string | null, email: string | null, walletAd
       if (storedFree) {
         setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
       } else {
-        // New user gets 25 free scans
-        setFreeScansRemaining(25);
-        localStorage.setItem(`agenticbro_free_${storageKey}`, '25');
+        // New user gets 5 free scans
+        setFreeScansRemaining(5);
+        localStorage.setItem(`agenticbro_free_${storageKey}`, '5');
       }
       
       setLoading(false);
