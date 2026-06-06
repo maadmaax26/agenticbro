@@ -3,7 +3,7 @@
  *
  * Manages monthly scan credits for Holder and Whale tier users.
  * 
- * Free Tier: 25 free scans
+ * Free Tier: 5 free scans
  * Holder Tier ($100+ AGNTCBRO): 50 ALL scans/month (Profile, Phone, Token, Channel, Priority)
  * Whale Tier ($1,000+ AGNTCBRO): Unlimited scans
  * 
