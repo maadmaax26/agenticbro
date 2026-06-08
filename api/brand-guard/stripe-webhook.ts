@@ -36,12 +36,18 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// Initialize Stripe SDK
+const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-04-30.basil',
+});
 
 // Stripe Subscription Price IDs (set in Stripe Dashboard, then copy here)
 const GUARDIAN_PRICE_ID = process.env.STRIPE_GUARDIAN_PRICE_ID || 'price_guardian_12345';
@@ -96,87 +102,6 @@ const PRICE_MAP = buildPriceMap();
 // ── Supabase Client ────────────────────────────────────────────────────────────
 function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-// ── Stripe Signature Verification ──────────────────────────────────────────────
-// Verifies the webhook signature using the raw body and signing secret.
-// Uses Web Crypto API (available in Node 18+ and Vercel Edge) instead of
-// the stripe npm package to keep the bundle small.
-
-async function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string
-): Promise<{ verified: boolean; event: any | null; error?: string }> {
-  if (!sigHeader) {
-    return { verified: false, event: null, error: 'Missing stripe-signature header' };
-  }
-
-  // Parse the signature header
-  const elements = sigHeader.split(',');
-  const sigMap: Record<string, string> = {};
-  for (const element of elements) {
-    const [key, value] = element.split('=');
-    sigMap[key.trim()] = value.trim();
-  }
-
-  const timestamp = sigMap['t'];
-  const signature = sigMap['v1'];
-
-  if (!timestamp || !signature) {
-    return { verified: false, event: null, error: 'Invalid signature format' };
-  }
-
-  // Reconstruct the signed payload
-  const signedPayload = `${timestamp}.${payload}`;
-
-  // Compute HMAC-SHA256
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const msgData = encoder.encode(signedPayload);
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const hmacBuffer = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
-  const computedSig = Array.from(new Uint8Array(hmacBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  // Compare signatures (constant-time comparison)
-  if (computedSig.length !== signature.length) {
-    return { verified: false, event: null, error: 'Signature mismatch' };
-  }
-
-  let mismatch = 0;
-  for (let i = 0; i < computedSig.length; i++) {
-    mismatch |= computedSig.charCodeAt(i) ^ signature.charCodeAt(i);
-  }
-
-  if (mismatch !== 0) {
-    return { verified: false, event: null, error: 'Signature verification failed' };
-  }
-
-  // Check timestamp (reject events older than 5 minutes)
-  const eventTime = parseInt(timestamp, 10) * 1000;
-  const currentTime = Date.now();
-  const tolerance = 5 * 60 * 1000; // 5 minutes
-
-  if (Math.abs(currentTime - eventTime) > tolerance) {
-    return { verified: false, event: null, error: 'Event timestamp too old' };
-  }
-
-  try {
-    const event = JSON.parse(payload);
-    return { verified: true, event };
-  } catch (err) {
-    return { verified: false, event: null, error: 'Failed to parse event JSON' };
-  }
 }
 
 // ── Credit Package Resolution ──────────────────────────────────────────────────
@@ -258,34 +183,27 @@ export default async function handler(
 
   const sigHeader = req.headers['stripe-signature'] as string;
 
-  // ── Development mode: skip signature verification ──────────────────────
-  const isDev = !webhookSecret || process.env.NODE_ENV !== 'production';
+  if (!sigHeader) {
+    console.error('[bg-webhook] No stripe-signature header');
+    return res.status(400).json({ error: 'Missing signature' });
+  }
 
-  let event: any;
+  if (!webhookSecret) {
+    console.error('[bg-webhook] STRIPE_WEBHOOK_SECRET not configured');
+    return res.status(500).json({ error: 'Webhook secret not configured' });
+  }
 
-  if (!isDev && sigHeader) {
-    // Production: verify signature
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    const verification = await verifyStripeSignature(rawBody, sigHeader, webhookSecret);
+  // Get raw body for signature verification
+  const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
-    if (!verification.verified) {
-      console.error('[bg-webhook] Signature verification failed:', verification.error);
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
+  let event: Stripe.Event;
 
-    event = verification.event;
-  } else {
-    // Development: parse body directly
-    event = typeof req.body === 'object' ? req.body : JSON.parse(typeof req.body === 'string' ? req.body : '{}');
-
-    if (!isDev && !sigHeader) {
-      console.error('[bg-webhook] No stripe-signature header');
-      return res.status(400).json({ error: 'Missing signature' });
-    }
-
-    if (isDev) {
-      console.warn('[bg-webhook] Development mode: skipping signature verification');
-    }
+  try {
+    // Use Stripe SDK to verify signature and construct event
+    event = stripe.webhooks.constructEvent(rawBody, sigHeader, webhookSecret);
+  } catch (err: any) {
+    console.error('[bg-webhook] Signature verification failed:', err.message);
+    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 
   console.log(`[bg-webhook] Received event: ${event.type}`);
