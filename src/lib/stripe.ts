@@ -56,7 +56,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     price: 20,
     bonus: 5,
     popular: true,
-    description: '25 scans + 5 bonus for $20',
+    description: '5 scans + 5 bonus for $20',
   },
   {
     id: 'whale',
