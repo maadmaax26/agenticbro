@@ -614,7 +614,7 @@ function App() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 25 scans. Hold tokens to unlock more.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 5 scans. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">

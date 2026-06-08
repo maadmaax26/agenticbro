@@ -29,13 +29,13 @@
     "routes/verify.ts",
     "clients/**/*",
     "utils/**/*",
-    "middleware/**/*"
+    "middleware/**/*",
+    "workers/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "workers",
     "db"
   ]
 }
