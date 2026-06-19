@@ -118,7 +118,7 @@ async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
 
 // ── Action: Hunt ──────────────────────────────────────────────────────────────
 async function handleHunt(req: VercelRequest, res: VercelResponse): Promise<void> {
-  // eslint-disable-next-line no-void
+
   const { vertical, query } = req.body as HuntRequest;
   const searchTerm = query?.trim() || (vertical ? `${vertical} businesses` : '');
 
@@ -192,7 +192,7 @@ Only return companies where the incident is publicly documented. Be specific —
 
 // ── Action: Generate Email ─────────────────────────────────────────────────────
 async function handleEmail(req: VercelRequest, res: VercelResponse): Promise<void> {
-  // eslint-disable-next-line no-void
+
   const body = req.body as EmailRequest;
   const { company, website, email: contactEmail, contactRole, vertical, scanSummary, threatType, urgency, source, aiResearch } = body;
 
@@ -242,7 +242,7 @@ agenticbro.app/brand-guard`;
 
 // ── Action: Generate Research ──────────────────────────────────────────────────
 async function handleResearch(req: VercelRequest, res: VercelResponse): Promise<void> {
-  // eslint-disable-next-line no-void
+
   const body = req.body as ResearchRequest;
   const { company, website, vertical, scanSummary, threatType } = body;
 

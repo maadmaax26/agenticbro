@@ -73,7 +73,7 @@ interface MarketCache {
   fetchedAt: number
 }
 
-let CACHE: MarketCache = { prices: [], funding: [], fetchedAt: 0 }
+const CACHE: MarketCache = { prices: [], funding: [], fetchedAt: 0 }
 const CACHE_TTL = 30_000
 
 async function refreshCache(): Promise<void> {

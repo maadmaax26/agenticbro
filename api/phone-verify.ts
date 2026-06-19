@@ -283,7 +283,7 @@ interface FTCComplaint {
 }
 
 // Cache for FTC complaint lookups (in-memory, per-request)
-let ftcComplaintCache: Map<string, FTCComplaint[]> = new Map();
+const ftcComplaintCache: Map<string, FTCComplaint[]> = new Map();
 
 async function queryFTCDNC(phone: string): Promise<{ complaints: FTCComplaint[]; total: number; lastComplaintDate: string | null }> {
   const apiKey = process.env.FTC_API_KEY;

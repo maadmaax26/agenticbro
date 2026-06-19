@@ -57,7 +57,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     credits, 
     freeScansRemaining, 
     hasScans, 
-    useCredit
+    useCredit: consumeCredit
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
   // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
@@ -81,7 +81,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     setResult(null);
 
     // Use a credit (free first, then paid)
-    const creditResult = useCredit();
+    const creditResult = consumeCredit();
     if (!creditResult.success) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);

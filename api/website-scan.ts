@@ -955,7 +955,7 @@ async function checkDomainAge(domain: string): Promise<DomainInfo> {
       'info': 'https://rdap.afilias.net/rdap/domain/',
     };
     
-    let rdapBase = rdapUrls[tld] || `https://rdap.${tld}/v1/domain/`;
+    const rdapBase = rdapUrls[tld] || `https://rdap.${tld}/v1/domain/`;
     
     const response = await fetch(`${rdapBase}${domain}`, {
       headers: { 'Accept': 'application/rdap+json' },

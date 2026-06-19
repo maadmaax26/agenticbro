@@ -48,7 +48,7 @@ export function useBrandGuardAlerts(userId: string | null) {
   const [alerts, setAlerts] = useState<BrandGuardAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<Array<{ id: string; alert: BrandGuardAlert; timestamp: number }>>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const channelRef: any = null;
 
   // ── Fetch initial alerts ─────────────────────────────────────────────────

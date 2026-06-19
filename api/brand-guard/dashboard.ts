@@ -267,9 +267,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   // ── Fetch brand data from Supabase ────────────────────────────────────────
   let brand: Record<string, unknown> | null = null;
-  let threats: ThreatItem[] = [];
+  const threats: ThreatItem[] = [];
   let takedownActions: TakedownAction[] = [];
-  let alerts: AlertItem[] = [];
+  const alerts: AlertItem[] = [];
   let scanHistory: Array<Record<string, unknown>> = [];
 
   if (supabase) {

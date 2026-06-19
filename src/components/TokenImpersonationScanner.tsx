@@ -125,7 +125,7 @@ export default function TokenImpersonationScanner() {
     credits, 
     freeScansRemaining, 
     hasScans, 
-    useCredit 
+    useCredit: consumeCredit
   } = useCredits(null, null, walletAddress);
 
   // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
@@ -149,7 +149,7 @@ export default function TokenImpersonationScanner() {
     setResult(null);
 
     // Use a credit (free first, then paid)
-    const creditResult = useCredit();
+    const creditResult = consumeCredit();
     if (!creditResult.success) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);

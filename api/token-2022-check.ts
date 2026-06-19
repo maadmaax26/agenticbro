@@ -155,7 +155,7 @@ function parseTokenExtensions(data: Buffer): TokenExtension[] {
   try {
     // Skip to extension data
     // This is a simplified parser - real implementation would need full SPL Token-2022 parsing
-    let offset = 0;
+    const offset = 0;
     
     // Minimum mint size is 82 bytes for legacy, more for Token-2022
     if (data.length < 82) {

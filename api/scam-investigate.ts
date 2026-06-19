@@ -631,7 +631,6 @@ function computeRiskScore(
     if (level === 'verified' || level === 'high risk' || level === 'legitimate') {
       // Known scammer or verified safe
       if (level === 'high risk' || level === 'verified') score += 4  // Known scammer - high boost
-      else if (level === 'verified') score += 2  // Verified scammer
       else if (level === 'legitimate') score -= 3  // Known safe
     } else if (level === 'partially verified') {
       score += 1.5

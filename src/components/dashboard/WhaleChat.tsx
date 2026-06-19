@@ -371,7 +371,7 @@ export default function WhaleChat() {
         },
       );
     }
-  }, [agent, input, loading, walletAddress]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [agent, input, loading, walletAddress]);
 
   const handleClearSession = useCallback(async () => {
     if (!walletAddress) return;

@@ -74,7 +74,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
   const walletAddress = publicKey?.toBase58() || null;
   
   // Get credits
-  const { credits, freeScansRemaining, hasScans, useCredit, isTestWallet } = useCredits(null, null, walletAddress);
+  const { credits, freeScansRemaining, hasScans, useCredit: consumeCredit, isTestWallet } = useCredits(null, null, walletAddress);
   const isAuthenticated = !!walletAddress;
 
   // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
@@ -111,7 +111,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
     setResult(null);
 
     // Use a credit
-    const creditResult = useCredit();
+    const creditResult = consumeCredit();
     if (!creditResult.success && !isTestWallet) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);
