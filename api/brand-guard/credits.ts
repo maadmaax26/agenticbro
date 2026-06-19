@@ -80,6 +80,9 @@ async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null
 
 // ── Parse body ────────────────────────────────────────────────────────────────
 function parseBody(req: VercelRequest): Promise<Record<string, unknown>> {
+  if (req.body && typeof req.body === 'object') {
+    return Promise.resolve(req.body);
+  }
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -364,7 +367,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         'customer_email': email || '',
         'metadata[user_id]': userId || '',
         'metadata[plan_id]': planId,
-        'metadata[type]': 'brand_guard_subscription',
+        'metadata[package_id]': plan.stripe_price_id,
+        'metadata[type]': 'subscription',
         'subscription_data[trial_period_days]': '7',
         'subscription_data[metadata][user_id]': userId || '',
         'subscription_data[metadata][plan_id]': planId,
@@ -415,7 +419,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .from('brand_guard_subscriptions')
         .select('*')
         .eq('owner_id', userId)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing', 'trial_ending'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

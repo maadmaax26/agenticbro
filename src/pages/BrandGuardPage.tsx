@@ -487,7 +487,7 @@ export function BrandGuardPage() {
     if (!authToken) { return; }
     setSubscriptionLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/subscription`, {
+      const res = await fetch(`${API_BASE}/credits/subscription`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await res.json();
@@ -505,7 +505,7 @@ export function BrandGuardPage() {
   const handleManageBilling = useCallback(async () => {
     if (!authToken) { setSubscriptionError('Please sign in first'); return; }
     try {
-      const res = await fetch(`${API_BASE}/stripe-portal`, {
+      const res = await fetch(`${API_BASE}/credits/stripe-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       });
@@ -534,7 +534,7 @@ export function BrandGuardPage() {
     if (!authToken) { setSubscriptionError('Please sign in first'); return; }
     setSubscriptionLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/cancel-subscription`, {
+      const res = await fetch(`${API_BASE}/credits/cancel-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       });
@@ -2944,20 +2944,25 @@ n            </p>
               onSelectPlan={async (planId) => {
                 if (authToken) {
                   try {
-                    const res = await fetch('/api/brand-guard/stripe-checkout', {
+                    const res = await fetch(`${API_BASE}/credits/subscribe`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-                      body: JSON.stringify({ planId, currentPlanId: subscription?.plan_id || 'free' }),
+                      body: JSON.stringify({ plan_id: planId }),
                     });
                     const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    } else if (data.sessionId) {
+                    if (!res.ok) {
+                      throw new Error(data.error || 'Failed to create checkout session');
+                    }
+                    if (data.checkout_url) {
+                      window.location.href = data.checkout_url;
+                    } else if (data.session_id) {
                       const stripe = (window as any).stripe;
                       if (stripe) {
-                        const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+                        const { error } = await stripe.redirectToCheckout({ sessionId: data.session_id });
                         if (error) throw new Error(error.message);
                       }
+                    } else {
+                      throw new Error('Invalid checkout response');
                     }
                     setShowPlansModal(false);
                   } catch (err) {
