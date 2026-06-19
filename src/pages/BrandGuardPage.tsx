@@ -5,7 +5,7 @@
  * Handles onboarding, dashboard, and credit management for brand impersonation detection.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
 import { TakedownModal } from '../components/brand-guard/TakedownModal';
@@ -132,7 +132,9 @@ export function BrandGuardPage() {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const checkoutStartedRef = useRef(false);
 
   // Alert bell state
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
@@ -150,7 +152,8 @@ export function BrandGuardPage() {
   const [onboardError, setOnboardError] = useState<string | null>(null);
 
   // Check for payment success redirect
-  const paymentSuccess = searchParams.get('payment') === 'success';
+  const selectedPlan = searchParams.get('plan');
+  const paymentSuccess = searchParams.get('checkout') === 'success' || searchParams.get('payment') === 'success';
 
   // Fire Google Ads purchase conversion on successful payment
   useEffect(() => {
@@ -484,7 +487,7 @@ export function BrandGuardPage() {
 
   // ── Fetch subscription ──────────────────────────────────────────────────────
   const fetchSubscription = useCallback(async () => {
-    if (!authToken) { return; }
+    if (!authToken) { setSubscriptionChecked(false); return; }
     setSubscriptionLoading(true);
     try {
       const res = await fetch(`${API_BASE}/credits/subscription`, {
@@ -496,10 +499,49 @@ export function BrandGuardPage() {
       setSubscriptionError(err instanceof Error ? err.message : 'Failed to fetch subscription');
     } finally {
       setSubscriptionLoading(false);
+      setSubscriptionChecked(true);
     }
   }, [authToken]);
 
   useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
+
+  const startSubscriptionCheckout = useCallback(async (planId: string) => {
+    if (!authToken) throw new Error('Please sign in first');
+
+    const res = await fetch(`${API_BASE}/credits/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ plan_id: planId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create checkout session');
+
+    if (data.checkout_url) {
+      window.location.href = data.checkout_url;
+      return;
+    }
+    if (data.session_id) {
+      const stripe = (window as any).stripe;
+      if (!stripe) throw new Error('Stripe checkout is unavailable');
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.session_id });
+      if (error) throw new Error(error.message);
+      return;
+    }
+    throw new Error('Invalid checkout response');
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken || !subscriptionChecked || subscriptionLoading || checkoutStartedRef.current) return;
+    if (!selectedPlan || !['guardian', 'sentinel', 'fortress'].includes(selectedPlan)) return;
+    if (subscription?.plan_id === selectedPlan) return;
+
+    checkoutStartedRef.current = true;
+    startSubscriptionCheckout(selectedPlan).catch((err) => {
+      checkoutStartedRef.current = false;
+      setSubscriptionError(err instanceof Error ? err.message : 'Failed to create checkout session');
+      setShowPlansModal(true);
+    });
+  }, [authToken, selectedPlan, startSubscriptionCheckout, subscription, subscriptionChecked, subscriptionLoading]);
 
   // ── Subscription management handlers ────────────────────────────────────────
   const handleManageBilling = useCallback(async () => {
@@ -1043,7 +1085,7 @@ export function BrandGuardPage() {
             <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Brand Guard</h1>
             <p style={{ color: dark.textMuted, fontSize: '15px' }}>
               AI-powered brand impersonation detection across X, Instagram, TikTok, Facebook, Telegram & LinkedIn
-n            </p>
+            </p>
           </div>
 
           <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '20px' : '28px', backdropFilter: 'blur(12px)' }}>
@@ -1629,7 +1671,7 @@ n            </p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {alerts.slice(0, 10).map((alert: any) => (
+                      {alerts.map((alert: any) => (
                         <div
                           key={alert.id}
                           onClick={() => {
@@ -1654,33 +1696,6 @@ n            </p>
                         </div>
                       ))}
                     </div>
-                  )}
-                  {alerts.length > 10 && (
-                    <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                      +{alerts.length - 10} more alerts
-                    </div>
-                  )}
-                  {alerts.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setShowAlertsDropdown(false);
-                        window.location.href = '/brand-guard/alerts';
-                      }}
-                      style={{
-                        marginTop: '12px',
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        background: 'rgba(139,92,246,0.2)',
-                        border: '1px solid rgba(139,92,246,0.3)',
-                        color: '#8b5cf6',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      View All Alerts
-                    </button>
                   )}
                 </div>
               )}
@@ -2942,33 +2957,7 @@ n            </p>
             <SubscriptionPlans
               currentPlanId={subscription?.plan_id || 'free'}
               onSelectPlan={async (planId) => {
-                if (authToken) {
-                  try {
-                    const res = await fetch(`${API_BASE}/credits/subscribe`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-                      body: JSON.stringify({ plan_id: planId }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) {
-                      throw new Error(data.error || 'Failed to create checkout session');
-                    }
-                    if (data.checkout_url) {
-                      window.location.href = data.checkout_url;
-                    } else if (data.session_id) {
-                      const stripe = (window as any).stripe;
-                      if (stripe) {
-                        const { error } = await stripe.redirectToCheckout({ sessionId: data.session_id });
-                        if (error) throw new Error(error.message);
-                      }
-                    } else {
-                      throw new Error('Invalid checkout response');
-                    }
-                    setShowPlansModal(false);
-                  } catch (err) {
-                    alert(err instanceof Error ? err.message : 'Failed to create checkout session');
-                  }
-                }
+                await startSubscriptionCheckout(planId);
               }}
             />
           </div>

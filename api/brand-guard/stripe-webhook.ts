@@ -27,8 +27,8 @@
  *   - Brand Guard Pro (25 credits / $25)     → price: price_bg_pro
  *   - Brand Guard Whale (100+10 / $100)      → price: price_bg_whale
  *   - Guardian Plan ($29/mo)                 → price: price_bg_guardian
- *   - Sentinel Plan ($79/mo)                 → price: price_bg_sentinel
- *   - Fortress Plan ($199/mo)                → price: price_bg_fortress
+ *   - Sentinel Plan ($99/mo)                 → price: price_bg_sentinel
+ *   - Fortress Plan ($299/mo)                → price: price_bg_fortress
  *
  * Idempotency:
  *   Every event is logged to stripe_processed_events (keyed by event.id).
@@ -268,11 +268,16 @@ export default async function handler(
   }
 
   const sigHeader = req.headers['stripe-signature'] as string;
-  const isDev = !webhookSecret || process.env.NODE_ENV !== 'production';
+  const isDevelopment = process.env.NODE_ENV === 'development' && process.env.VERCEL_ENV !== 'production';
+
+  if (!isDevelopment && !webhookSecret) {
+    console.error('[bg-webhook] STRIPE_WEBHOOK_SECRET is not configured');
+    return res.status(503).json({ error: 'Webhook verification is not configured' });
+  }
 
   let event: any;
 
-  if (!isDev) {
+  if (!isDevelopment) {
     // Production: verify signature using raw body
     if (!sigHeader) {
       console.error('[bg-webhook] No stripe-signature header');
