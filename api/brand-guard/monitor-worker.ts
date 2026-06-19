@@ -26,6 +26,15 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+// ── Vercel type shim ─────────────────────────────────────────────────────────
+type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+};
+
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -72,8 +81,8 @@ async function runEmailSpoofScan(domain: string, brandMonitorId: string, brandNa
   threats: number;
   result: Record<string, any>;
 }> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.API_BASE_URL || 'http://localhost:3002';
 
   try {
@@ -114,8 +123,8 @@ async function runImpersonatorScan(brandName: string, brandHandle: string, brand
   highRisk: number;
   result: Record<string, any>;
 }> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.API_BASE_URL || 'http://localhost:3002';
 
   try {
@@ -158,8 +167,8 @@ async function runDomainMonitorScan(domain: string, brandMonitorId: string, bran
   threats: number;
   result: Record<string, any>;
 }> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : process.env.API_BASE_URL || 'http://localhost:3002';
 
   try {
@@ -279,12 +288,12 @@ async function createAlerts(
 }
 
 // ── Main Handler ─────────────────────────────────────────────────────────────
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -404,13 +413,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       // ── Fetch previous scan for delta detection ────────────────────────
       let previousScan: Record<string, any> | null = null;
       if (monitor.brand_domain) {
+        // .range(1, 1) = OFFSET 1 LIMIT 1 → second most recent scan (before current)
+        // Note: do NOT add .limit() here — range() handles both offset and limit
         const { data: prevScan } = await supabase
           .from('email_spoof_checks')
           .select('result')
           .eq('brand_monitor_id', monitor.id)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .range(1, 1);  // Get the SECOND most recent (the one before current)
+          .range(1, 1);
 
         if (prevScan && prevScan.length > 0) {
           previousScan = prevScan[0].result;
@@ -427,6 +437,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         previousScan
       );
       totalAlerts += alertCount;
+
+      // ── Trigger alert delivery for new alerts (fire-and-forget) ──────────
+      if (alertCount > 0) {
+        const alertBaseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : process.env.API_BASE_URL || 'http://localhost:3002';
+        fetch(`${alertBaseUrl}/api/brand-guard/alert-delivery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_monitor_id: monitor.id }),
+        }).catch(err => console.error('[Monitor Worker] Alert delivery trigger failed:', err));
+      }
 
       // ── Update monitor's last_scan_at ───────────────────────────────────
       await supabase
