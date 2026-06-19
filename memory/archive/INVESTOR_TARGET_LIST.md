@@ -1,7 +1,7 @@
 # JEEEVS Seed Investor Target List
 
-**Date:** April 3, 2026
-**Purpose:** Potential seed round investors for AgenticBro ($JEEEVS)
+**Date:** April 3, 2026 (updated May 27, 2026)
+**Purpose:** Potential seed round investors for Agentic Insights LLC / Jeeevs Security Protocol
 **Sector:** AI-Agentic Security / DePIN / Crypto Infrastructure
 
 ---
@@ -10,7 +10,24 @@
 
 These investors have explicit DePIN thesis and funds. Highest priority for AgenticBro's DePIN narrative.
 
-### 1. Borderless Capital
+### 1. EV3 (Escape Velocity) ⭐ TOP TARGET
+| Field | Value |
+|-------|-------|
+| **Focus** | DePIN/DeWi, AI, compute — thesis-driven |
+| **Fund** | $61.74M Fund II (closed Dec 2024) |
+| **Check** | $500K–$3M (pre-seed/seed, leads or co-leads) |
+| **Key Contact** | Salvador Gala (co-founder & GP), @salvadorcgala |
+| **How to Pitch** | Send deck/memo direct — 48hr response promise |
+| **Thesis Fit** | ⭐⭐⭐⭐⭐ PERFECT — Sal wrote the DePIN report, organized DePIN Summit, built DePIN Pulse |
+| **Notes** | Forbes 30 Under 30 2026. Goldman Sachs → Ribbit Capital → EV3. Invested in MachineFi, Opacity, XNET, 375ai, Prodia. Security is the missing piece in their DePIN portfolio. |
+
+**Why Target:** EV3 IS the DePIN fund. Sal literally defined the category. Our product is DePIN security infrastructure — the exact thesis they published. 48-hour response promise = fastest path to a term sheet.
+
+**Pitch Angle:** "You wrote the DePIN report. We're building DePIN security infrastructure on Solana. 261+ scammers indexed, live today, zero funding. Mac Studio nodes running local inference. Not an API wrapper — real DePIN hardware."
+
+---
+
+### 2. Borderless Capital
 | Field | Value |
 |-------|-------|
 | **Focus** | DePIN-specialized VC |
@@ -218,7 +235,17 @@ Founder, AgenticBro
 
 ---
 
-## Key Talking Points for Investor Calls
+## Outreach Log
+
+| Date | Who | Handle/Contact | Type | Status | Notes |
+|------|-----|---------------|------|--------|-------|
+| 2026-05-27 | EV3 (Escape Velocity) | Salvador Gala (GP), sal@ev3.xyz | Cold email — seed pitch | Sent | Pitch email + memo + PDF sent. Sal wrote the DePIN report, organized DePIN Summit. 48hr response promise. BEST FIT. Follow-up cadence: Day 2, 5, 10, 14, 21. |
+| 2026-05-26 | Pantera Capital | pitch@panteracapital.com | Cold email — seed pitch | Sent | Full pitch email sent with v2.3 whitepaper + investor brief v6 attached. DePIN + Solana security infrastructure thesis alignment. |
+| 2026-05-26 | S◎L Big Brain | @SOLBigBrain (X/Telegram) | Warm intro path / Solana ecosystem connector | Sent | Pitched AgenticBro via DM — traction, token utility, DePIN roadmap. Video links included. Connected to DoubleZero Foundation. |
+| 2026-05-27 | Coinbase Ventures | ventures@coinbase.com | Cold email — seed pitch | Sent | Referenced 2026 thesis (AI agents + DePIN + Agentic Payments). Coinbase distribution fit (Wallet, USDC, Base). Executive summary + whitepaper attached. Also apply via Echo platform. Follow-up cadence: Day 5, 10, 14. |
+| 2026-05-27 | Borderless Capital | Álvaro Gracia (DePIN Fund III Partner), alvaro@borderlesscapital.io | Cold email — seed pitch | Sent | DePIN Thesis 2.0 reference, Fund III thesis alignment. Executive summary + whitepaper v2.3 attached. Follow-up cadence: Day 5, 10, 14, 21. |
+| 2026-05-27 | Borderless Capital | Alpen Sheth (Investment Partner, Head of Policy & Research), alpen@borderlesscapital.io | Cold email — seed pitch | Sent | DePIN Thesis 2.0 co-author, framed as "security inference" new DePIN vertical. Executive summary + whitepaper v2.3 attached. Follow-up cadence: Day 5, 10, 14, 21. |
+| 2026-05-27 | Entrée Capital | Tomer Niv (Crypto & Web3 Investor), tomern@entreecapital.vc | Cold email — seed pitch | Sent | Pitch email + whitepaper v2.3 sent. LinkedIn connection + note sent same day. eToro background = consumer crypto fit. Follow-up cadence: Day 3, 7, 14. |
 
 ### 1. "Proven Utility" (Not Vaporware)
 
@@ -256,12 +283,13 @@ Founder, AgenticBro
 
 ## Next Steps
 
-1. [ ] Finalize $JEEEVS token contract (Token-2022)
-2. [ ] Prepare investor deck (10 slides max)
-3. [ ] Schedule Borderless Capital intro call
-4. [ ] Apply to Solana Ventures contact form
-5. [ ] Network for warm intros to Multicoin/Dragonfly
-6. [ ] Update one-pager with latest metrics
+1. [ ] **SEND EV3 PITCH THIS WEEK** — 48hr response, highest fit, top priority
+2. [ ] Finalize $JEEEVS token contract (Token-2022)
+3. [ ] Prepare investor deck (10 slides max)
+4. [ ] Schedule Borderless Capital intro call
+5. [ ] Apply to Solana Ventures contact form
+6. [ ] Network for warm intros to Multicoin/Dragonfly
+7. [ ] Update one-pager with latest metrics
 
 ---
 

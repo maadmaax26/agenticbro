@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-20T18:30:07.189Z",
+  "updatedAt": "2026-06-05T13:13:57.148Z",
   "entries": {
     "memory:memory/2026-03-29.md:164:217": {
       "key": "memory:memory/2026-03-29.md:164:217",
@@ -3206,6 +3206,244 @@
         "integration",
         "added",
         "vercel"
+      ]
+    },
+    "memory:memory/archive/2026-05-03.md:22:43": {
+      "key": "memory:memory/archive/2026-05-03.md:22:43",
+      "path": "memory/archive/2026-05-03.md",
+      "startLine": 22,
+      "endLine": 43,
+      "source": "memory",
+      "snippet": "Searched X/Twitter for capabilities the SOL ecosystem should have. Identified 11 enhancement opportunities for Agentic Bro: ### Critical (No competitors exist) - **TOCTOU Attack Detector** — Detect state manipulation between simulation and signing - **Durable Nonce Risk Scanner** — Scan wallets for dormant pre-signed transactions (Drift exploit used this) - **Agentic Drainer Defense** — AI-vs-AI defense against malicious AI agents targeting wallets ### High Priority - **Approval Crasher Detector** — Flag \"Sign All\" requests that bypass simulation errors - **Honeypot 2.0 Scanner** — Detect hidden Tax Modifiers, Balance Overlays behind \"renounced\" mint authority - **Account Poisoning / Dust",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.36239956617355346,
+      "maxScore": 0.36239956617355346,
+      "firstRecalledAt": "2026-05-28T00:50:04.418Z",
+      "lastRecalledAt": "2026-05-28T00:50:04.418Z",
+      "queryHashes": [
+        "28b8c8ecfbb2"
+      ],
+      "recallDays": [
+        "2026-05-27"
+      ],
+      "conceptTags": [
+        "x/twitter",
+        "pre-signed",
+        "ai-vs-ai",
+        "2.0",
+        "searched",
+        "twitter",
+        "capabilities",
+        "sol"
+      ]
+    },
+    "memory:memory/2026-05-28.md:69:95": {
+      "key": "memory:memory/2026-05-28.md:69:95",
+      "path": "memory/2026-05-28.md",
+      "startLine": 69,
+      "endLine": 95,
+      "source": "memory",
+      "snippet": "- Built auto-confirm endpoint (/api/brand-guard/auto-confirm) — bypasses broken email redirect by confirming users server-side via admin API - Added onAuthStateChange listener so sessions are picked up after email confirmation redirect - Fixed Supabase API key: moved from revoked VITE_SUPABASE_ANON_KEY to active VITE_SUPABASE_PUBLISHABLE_KEY ### Scan Types Added to Dashboard (5 total) 1. 🔍 Impersonator Scan — fake accounts mimicking brand 2. 🌐 Domain Monitor — lookalike domains & phishing sites 3. 🌍 Website Scan — scans any URL for threats/phishing/malware (prompts for URL input) 4. ⚡ Threat Correlate — cross-channel risk correlation 5. 📞 Vendor Verify — phone number fraud check (prompt",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.6233234276300845,
+      "maxScore": 0.6478142896828378,
+      "firstRecalledAt": "2026-05-29T14:01:03.157Z",
+      "lastRecalledAt": "2026-05-30T11:23:30.773Z",
+      "queryHashes": [
+        "529460461899",
+        "2044d9cce92a",
+        "8722bff7fcd7"
+      ],
+      "recallDays": [
+        "2026-05-29",
+        "2026-05-30"
+      ],
+      "conceptTags": [
+        "auto-confirm",
+        "api/brand-guard/auto-confirm",
+        "server-side",
+        "vite-supabase-anon-key",
+        "vite-supabase-publishable-key",
+        "threats/phishing/malware",
+        "cross-channel",
+        "built"
+      ]
+    },
+    "memory:memory/2026-05-28.md:1:28": {
+      "key": "memory:memory/2026-05-28.md:1:28",
+      "path": "memory/2026-05-28.md",
+      "startLine": 1,
+      "endLine": 28,
+      "source": "memory",
+      "snippet": "# Memory — 2026-05-28 ## Brand Guard — Major Progress ### Credit/Billing System (COMPLETE) - Supabase schema deployed: brand_guard_credits, brand_guard_credit_transactions, brand_guard_subscriptions tables + 6 functions + RLS - Stripe integration: 7 products/prices created, webhook endpoint live (we_1TcC8t1lUBogdwcDUurqcIEv) - API endpoints all live: credits, brands, impersonator-scan, stripe-webhook, auto-confirm - Payment methods: Stripe card, USDC Solana, USDC Base, AGNTCBRO token ### Auth Fixes - Fixed Supabase Site URL: changed from localhost:3000 → https://agenticbro.app/brand-guard - Added redirect URLs: https://agenticbro.app/**, https://agenticbro.app/brand-guard - Built auto-con",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.2245793445079869,
+      "maxScore": 0.613749159104802,
+      "firstRecalledAt": "2026-05-30T11:23:30.773Z",
+      "lastRecalledAt": "2026-05-30T15:48:49.627Z",
+      "queryHashes": [
+        "8722bff7fcd7",
+        "2c2d021baa70"
+      ],
+      "recallDays": [
+        "2026-05-30"
+      ],
+      "conceptTags": [
+        "credit/billing",
+        "brand-guard-credits",
+        "brand-guard-credit-transactions",
+        "brand-guard-subscriptions",
+        "products/prices",
+        "we-1tcc8t1lubogdwcduurqciev",
+        "impersonator-scan",
+        "stripe-webhook"
+      ]
+    },
+    "memory:memory/2026-05-28.md:22:51": {
+      "key": "memory:memory/2026-05-28.md:22:51",
+      "path": "memory/2026-05-28.md",
+      "startLine": 22,
+      "endLine": 51,
+      "source": "memory",
+      "snippet": "4. 📞 Vendor Verify — phone number fraud check (prompts for phone + country input) ### Mobile Responsive (COMPLETE) - useIsMobile() hook via matchMedia at 768px breakpoint - Single-column layout on mobile (stack panels vertically) - Touch-friendly buttons (min 44px), 16px font-size inputs (no iOS zoom) - Compact header, flex-wrap, overflow-x hidden - Responsive credit purchase modal - Single-column onboarding platform grid on mobile ### Security Fixes (Supabase Linter) - Enabled RLS on domain_lookalikes and vendor_verifications tables - Changed 6 views from SECURITY DEFINER → SECURITY INVOKER: recent_scans_summary, recent_scammers, recent_scan_results, high_risk_scammers, confirmed_scammer",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3774542331695556,
+      "maxScore": 0.3774542331695556,
+      "firstRecalledAt": "2026-05-30T11:23:30.773Z",
+      "lastRecalledAt": "2026-05-30T11:23:30.773Z",
+      "queryHashes": [
+        "8722bff7fcd7"
+      ],
+      "recallDays": [
+        "2026-05-30"
+      ],
+      "conceptTags": [
+        "single-column",
+        "touch-friendly",
+        "font-size",
+        "flex-wrap",
+        "overflow-x",
+        "domain-lookalikes",
+        "vendor-verifications",
+        "recent-scans-summary"
+      ]
+    },
+    "memory:memory/2026-05-28.md:44:72": {
+      "key": "memory:memory/2026-05-28.md:44:72",
+      "path": "memory/2026-05-28.md",
+      "startLine": 44,
+      "endLine": 72,
+      "source": "memory",
+      "snippet": "- Fixed: frontend now sends brand_id, brand_name, brand_handle, brand_domain, platforms ### Test Account - agenticbro@agenticbro.app → 999,999 free + 999,999 paid credits (unlimited) ### Still TODO - Wire CreditBalance/CreditGate components into dashboard - End-to-end test: signup → auto-confirm → create brand → scan → credit deduct → Stripe checkout - Subscription activation (Guardian $29/mo, Sentinel $79/mo, Fortress $199/mo) - Domain monitoring cron (schema ready, worker not built) - Takedown template automation - Alert notifications (email/Telegram) # Memory — 2026-05-28 ## Brand Guard — Major Progress ### Credit/Billing System (COMPLETE) - Supabase schema deployed: brand_guard_credi",
+      "recallCount": 5,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 2.289681018563011,
+      "maxScore": 0.6537180614632152,
+      "firstRecalledAt": "2026-05-30T11:23:42.251Z",
+      "lastRecalledAt": "2026-06-05T13:13:57.148Z",
+      "queryHashes": [
+        "1e5833983cd0",
+        "2c2d021baa70",
+        "c5060d78859f",
+        "0d95104ca067",
+        "51607bb58bc7"
+      ],
+      "recallDays": [
+        "2026-05-30",
+        "2026-06-03",
+        "2026-06-05"
+      ],
+      "conceptTags": [
+        "brand-id",
+        "brand-name",
+        "brand-handle",
+        "brand-domain",
+        "agenticbro.app",
+        "creditbalance/creditgate",
+        "end-to-end",
+        "auto-confirm"
+      ]
+    },
+    "memory:memory/2026-05-28.md:110:118": {
+      "key": "memory:memory/2026-05-28.md:110:118",
+      "path": "memory/2026-05-28.md",
+      "startLine": 110,
+      "endLine": 118,
+      "source": "memory",
+      "snippet": "- agenticbro@agenticbro.app → 999,999 free + 999,999 paid credits (unlimited) ### Still TODO - Wire CreditBalance/CreditGate components into dashboard - End-to-end test: signup → auto-confirm → create brand → scan → credit deduct → Stripe checkout - Subscription activation (Guardian $29/mo, Sentinel $79/mo, Fortress $199/mo) - Domain monitoring cron (schema ready, worker not built) - Takedown template automation - Alert notifications (email/Telegram)",
+      "recallCount": 6,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 2.1727722346782685,
+      "maxScore": 0.3761007100343704,
+      "firstRecalledAt": "2026-05-30T11:23:42.251Z",
+      "lastRecalledAt": "2026-06-05T13:13:57.148Z",
+      "queryHashes": [
+        "1e5833983cd0",
+        "86f746a2f216",
+        "ecfff56a9945",
+        "6d09f60c1ea8",
+        "0d95104ca067",
+        "51607bb58bc7"
+      ],
+      "recallDays": [
+        "2026-05-30",
+        "2026-06-03",
+        "2026-06-04",
+        "2026-06-05"
+      ],
+      "conceptTags": [
+        "agenticbro.app",
+        "creditbalance/creditgate",
+        "end-to-end",
+        "auto-confirm",
+        "29/mo",
+        "79/mo",
+        "199/mo",
+        "email/telegram"
+      ]
+    },
+    "memory:memory/2026-05-28.md:88:115": {
+      "key": "memory:memory/2026-05-28.md:88:115",
+      "path": "memory/2026-05-28.md",
+      "startLine": 88,
+      "endLine": 115,
+      "source": "memory",
+      "snippet": "- Single-column layout on mobile (stack panels vertically) - Touch-friendly buttons (min 44px), 16px font-size inputs (no iOS zoom) - Compact header, flex-wrap, overflow-x hidden - Responsive credit purchase modal - Single-column onboarding platform grid on mobile ### Security Fixes (Supabase Linter) - Enabled RLS on domain_lookalikes and vendor_verifications tables - Changed 6 views from SECURITY DEFINER → SECURITY INVOKER: recent_scans_summary, recent_scammers, recent_scan_results, high_risk_scammers, confirmed_scammers, verified_legitimate - Tightened scan_events policies: removed public WITH CHECK (true) insert ### Domain Monitor Test - Ran domain monitor scan for agenticbro.app → foun",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.078186309337616,
+      "maxScore": 0.36533258557319637,
+      "firstRecalledAt": "2026-06-04T03:25:09.855Z",
+      "lastRecalledAt": "2026-06-05T13:13:57.148Z",
+      "queryHashes": [
+        "ecfff56a9945",
+        "0d95104ca067",
+        "51607bb58bc7"
+      ],
+      "recallDays": [
+        "2026-06-03",
+        "2026-06-05"
+      ],
+      "conceptTags": [
+        "single-column",
+        "touch-friendly",
+        "font-size",
+        "flex-wrap",
+        "overflow-x",
+        "domain-lookalikes",
+        "vendor-verifications",
+        "recent-scans-summary"
       ]
     }
   }
