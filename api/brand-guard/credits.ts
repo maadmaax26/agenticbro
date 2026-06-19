@@ -21,12 +21,9 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createClient } from '@supabase/supabase-js';
+import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 
 // ── Stripe Price IDs (created 2026-05-28) ─────────────────────────────────────
@@ -66,17 +63,6 @@ type VercelResponse = ServerResponse & {
   setHeader: (name: string, value: string) => VercelResponse;
   end: () => void;
 };
-
-// ── Auth helper ───────────────────────────────────────────────────────────────
-async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.substring(7);
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return user.id;
-}
 
 // ── Parse body ────────────────────────────────────────────────────────────────
 function parseBody(req: VercelRequest): Promise<Record<string, unknown>> {
@@ -119,13 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // ── Auth check ──────────────────────────────────────────────────────────
-  const userId = await getAuthenticatedUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Authentication required. Send Bearer token from Supabase Auth.' });
-    return;
-  }
-
-  const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+  const entitlement = await requireBrandGuardEntitlement(req, res, 'credits');
+  if (!entitlement) return;
+  const userId = entitlement.ownerId;
+  const serviceClient = entitlement.db;
 
   // ══════════════════════════════════════════════════════════════════════════
   // GET / — Get credit balance

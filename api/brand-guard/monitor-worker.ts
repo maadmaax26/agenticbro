@@ -346,11 +346,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const lastScan = new Date(monitor.last_scan_at);
-    const intervalMs = {
+    const intervalMs = ({
       'daily': 24 * 60 * 60 * 1000,
       'weekly': 7 * 24 * 60 * 60 * 1000,
       'monthly': 30 * 24 * 60 * 60 * 1000,
-    }[monitor.scan_frequency] || 7 * 24 * 60 * 60 * 1000;
+    } as Record<string, number>)[String(monitor.scan_frequency)] || 7 * 24 * 60 * 60 * 1000;
 
     if (now.getTime() - lastScan.getTime() >= intervalMs) {
       dueMonitors.push(monitor);
@@ -445,7 +445,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : process.env.API_BASE_URL || 'http://localhost:3002';
         fetch(`${alertBaseUrl}/api/brand-guard/alert-delivery`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET || ''}` },
           body: JSON.stringify({ brand_monitor_id: monitor.id }),
         }).catch(err => console.error('[Monitor Worker] Alert delivery trigger failed:', err));
       }

@@ -26,6 +26,8 @@ interface TakedownModalProps {
     email: string;
     companyName: string;
   };
+  authToken: string;
+  brandMonitorId?: string;
   /** If true, show a form to collect violator details before generating */
   standalone?: boolean;
 }
@@ -45,7 +47,7 @@ const PLATFORMS = [
 
 export function TakedownModal({
   isOpen, onClose, scanId, scanType, riskScore, riskLevel,
-  evidence, brand, violator, user, standalone = false
+  evidence, brand, violator, user, authToken, brandMonitorId, standalone = false
 }: TakedownModalProps) {
 
   const [step, setStep] = useState<0 | 1 | 2 | 3>(standalone ? 0 : 1);
@@ -56,6 +58,8 @@ export function TakedownModal({
   const [, setReportId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [autoSubmit, setAutoSubmit] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState('');
 
   // Standalone form fields
   const [violatorUrl, setViolatorUrl] = useState(violator?.url || '');
@@ -77,7 +81,7 @@ export function TakedownModal({
     try {
       const response = await fetch(`${API_BASE}/takedown/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           scanId, scanType, platform: selectedPlatform,
           riskScore, riskLevel,
@@ -92,14 +96,18 @@ export function TakedownModal({
             handle: standalone ? violatorHandle : violator.handle,
             name: standalone ? violatorName : violator.name,
           },
-          user
+          user,
+          brandMonitorId,
+          autoSubmit,
         })
       });
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate takedown report');
       setReportContent(data.renderedMarkdown);
       setMissingFields(data.missingFields || []);
       setPlatformFormUrl(data.platformFormUrl);
       setReportId(data.reportId);
+      setSubmissionStatus(data.submissionStatus || 'draft');
       setStep(2);
     } catch (err) {
       console.error('Failed to generate report', err);
@@ -241,12 +249,29 @@ export function TakedownModal({
                 </button>
               ))}
             </div>
+            <label className="mt-5 flex items-start gap-3 rounded-lg border border-gray-700 bg-gray-800/60 p-3">
+              <input
+                type="checkbox"
+                checked={autoSubmit}
+                onChange={event => setAutoSubmit(event.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium text-white">Submit and track automatically</span>
+                <span className="block text-xs text-gray-400">Queues this report with the configured takedown provider and tracks acknowledgement through removal or rejection.</span>
+              </span>
+            </label>
           </div>
         )}
 
         {/* Step 2: Review report */}
         {step === 2 && (
           <div className="p-6 overflow-y-auto flex-1">
+            {submissionStatus === 'queued' && (
+              <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 mb-4 text-blue-200 text-sm">
+                Submission queued. Progress will appear in the Takedown Center.
+              </div>
+            )}
             {missingFields.length > 0 && (
               <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 mb-4">
                 <p className="text-yellow-400 font-medium mb-2">

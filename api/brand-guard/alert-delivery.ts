@@ -337,6 +337,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
+  if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
 
   const body = req.body || {};
   const alertId = body.alert_id || null;

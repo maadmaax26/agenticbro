@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
 import { TakedownModal } from '../components/brand-guard/TakedownModal';
+import { DeliverySettings } from '../components/brand-guard/DeliverySettings';
 import { FingerprintManager } from '../components/brand-guard/FingerprintManager';
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
@@ -107,7 +108,7 @@ export function BrandGuardPage() {
   // Auth
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  const [, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
   // Login form state
@@ -666,7 +667,7 @@ export function BrandGuardPage() {
   };
 
   // ── Monitoring Dashboard ──────────────────────────────────────────────────
-  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns' | 'outreach'>('scans');
+  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns' | 'delivery' | 'outreach'>('scans');
   const [monitoringData, setMonitoringData] = useState<Record<string, unknown> | null>(null);
   const [takedownStandalone, setTakedownStandalone] = useState(false);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
@@ -1781,6 +1782,15 @@ export function BrandGuardPage() {
                   }}
                 >📋 Takedowns</button>
                 <button
+                  onClick={() => setDashboardTab('delivery')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    background: dashboardTab === 'delivery' ? dark.accent : 'transparent',
+                    color: dashboardTab === 'delivery' ? '#fff' : dark.textMuted,
+                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Delivery</button>
+                <button
                   onClick={() => setDashboardTab('outreach')}
                   style={{
                     flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
@@ -2072,6 +2082,8 @@ export function BrandGuardPage() {
                     </div>
                   )}
                 </div>
+              ) : dashboardTab === 'delivery' ? (
+                <DeliverySettings authToken={authToken || ''} brandMonitorId={activeBrand.id} />
               ) : dashboardTab === 'takedowns' ? (
                 <div>
                   {/* ── Takedowns Tab ─────────────────────────────── */}
@@ -2782,10 +2794,12 @@ export function BrandGuardPage() {
                               name: Array.isArray(scanResult.variants) && scanResult.variants[0]?.domain ? String(scanResult.variants[0].domain) : ''
                             }}
                             user={{
-                              id: authToken || '',
+                              id: userId || '',
                               email: '',
                               companyName: activeBrand?.brand_name || ''
                             }}
+                            authToken={authToken || ''}
+                            brandMonitorId={activeBrand?.id}
                           />
                         </>
                       )}
@@ -2809,10 +2823,12 @@ export function BrandGuardPage() {
                             url: '',
                           }}
                           user={{
-                            id: authToken || '',
+                            id: userId || '',
                             email: '',
                             companyName: activeBrand.brand_name
                           }}
+                          authToken={authToken || ''}
+                          brandMonitorId={activeBrand.id}
                           standalone={true}
                         />
                       )}

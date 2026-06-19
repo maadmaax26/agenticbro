@@ -103,6 +103,24 @@
     "api/brand-guard/domain-monitor-worker.ts": {
       "maxDuration": 60
     },
+    "api/brand-guard/queue-scheduler.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/api-keys.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/delivery.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/enterprise.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/weekly-briefing-worker.ts": {
+      "maxDuration": 300
+    },
+    "api/v1/brand-guard.ts": {
+      "maxDuration": 15
+    },
     "api/brand-guard/alerts/deliver.ts": {
       "maxDuration": 30
     },
@@ -126,6 +144,12 @@
     { "source": "/api/brand-guard/brands/:path*", "destination": "/api/brand-guard/brands.ts" },
     { "source": "/api/brand-guard/dashboard/:path*", "destination": "/api/brand-guard/dashboard.ts" },
     { "source": "/api/brand-guard/admin/:path*", "destination": "/api/brand-guard/admin.ts" },
+    { "source": "/api/brand-guard/api-keys", "destination": "/api/brand-guard/api-keys.ts" },
+    { "source": "/api/brand-guard/delivery", "destination": "/api/brand-guard/delivery.ts" },
+    { "source": "/api/brand-guard/delivery/:path*", "destination": "/api/brand-guard/delivery.ts" },
+    { "source": "/api/brand-guard/enterprise", "destination": "/api/brand-guard/enterprise.ts" },
+    { "source": "/api/brand-guard/enterprise/:path*", "destination": "/api/brand-guard/enterprise.ts" },
+    { "source": "/api/v1/brand-guard/:path*", "destination": "/api/v1/brand-guard.ts" },
     { "source": "/api/brand-guard/impersonator-scan/:path*", "destination": "/api/brand-guard/impersonator-scan.ts" },
     { "source": "/api/brand-guard/takedown/:path*", "destination": "/api/brand-guard/takedown.ts" },
     { "source": "/api/brand-guard/fingerprint/:path*", "destination": "/api/brand-guard/fingerprint.ts" },
@@ -144,6 +168,14 @@
     {
       "path": "/api/brand-guard/alert-delivery",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/queue-scheduler",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/weekly-briefing-worker",
+      "schedule": "0 13 * * 1"
     }
   ]
 }

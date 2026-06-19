@@ -304,6 +304,10 @@ async function handleAlertDeliver(req: VercelRequest, res: VercelResponse): Prom
     res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
+  if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
 
   const supabase = getSupabase();
 

@@ -27,12 +27,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createClient } from '@supabase/supabase-js';
-
-// ── Supabase Client ──────────────────────────────────────────────────────────
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ThreatItem {
@@ -257,6 +252,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
+  const entitlement = await requireBrandGuardEntitlement(req, res, 'dashboard');
+  if (!entitlement) return;
+  const supabase = entitlement.db;
+
   const brandId = (req.url?.split('brand_id=')[1]?.split('&')[0]) || '';
   const section = (req.url?.split('section=')[1]?.split('&')[0]) || 'all';
 
@@ -272,14 +271,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const alerts: AlertItem[] = [];
   let scanHistory: Array<Record<string, unknown>> = [];
 
-  if (supabase) {
+  {
     // Fetch brand
     const { data: brandData } = await supabase
       .from('brand_monitors')
       .select('*')
       .eq('id', brandId)
+      .eq('owner_id', entitlement.ownerId)
       .single();
     brand = brandData;
+    if (!brand) {
+      res.status(404).json({ error: 'Brand not found' });
+      return;
+    }
 
     // Fetch impersonator threats from brand_guard_scans (primary source)
     // Falls back to brand_impersonators if available

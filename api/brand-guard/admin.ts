@@ -56,7 +56,7 @@ function parseBody(req: VercelRequest): Promise<Record<string, unknown>> {
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -335,7 +335,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  res.status(404).json({ error: 'Not found. Available: GET /users, GET /stats, GET /notifications, POST /grant-credits, POST /notifications/mark-read' });
+  // Enterprise account-manager operations.
+  if (req.method === 'GET' && path === '/account-managers') {
+    const [managers, assignments, cases] = await Promise.all([
+      serviceClient.from('brand_guard_account_managers').select('*').order('name'),
+      serviceClient.from('brand_guard_account_assignments').select('*, manager:brand_guard_account_managers(id, name, email)').eq('status', 'active'),
+      serviceClient.from('brand_guard_account_cases').select('*').in('status', ['open', 'in_progress', 'waiting_customer']).order('priority', { ascending: false }).order('created_at'),
+    ]);
+    res.status(200).json({ managers: managers.data || [], assignments: assignments.data || [], open_cases: cases.data || [] });
+    return;
+  }
+
+  if (req.method === 'GET' && path === '/delivery-monitoring') {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [queued, delivered, dead, failedEndpoints, jobs, letters] = await Promise.all([
+      serviceClient.from('brand_guard_delivery_jobs').select('*', { count: 'exact', head: true }).in('status', ['queued', 'leased']),
+      serviceClient.from('brand_guard_delivery_jobs').select('*', { count: 'exact', head: true }).eq('status', 'delivered').gte('delivered_at', since),
+      serviceClient.from('brand_guard_delivery_dead_letters').select('*', { count: 'exact', head: true }).is('resolved_at', null),
+      serviceClient.from('brand_guard_delivery_endpoints').select('*', { count: 'exact', head: true }).gt('consecutive_failures', 0),
+      serviceClient.from('brand_guard_delivery_jobs').select('id, owner_id, endpoint_id, event_type, status, attempt_count, last_error, last_status_code, created_at, delivered_at').order('created_at', { ascending: false }).limit(100),
+      serviceClient.from('brand_guard_delivery_dead_letters').select('id, original_job_id, owner_id, endpoint_id, final_error, attempt_count, resolved_at, created_at').order('created_at', { ascending: false }).limit(100),
+    ]);
+    res.status(200).json({
+      summary: { queued: queued.count || 0, delivered_24h: delivered.count || 0, unresolved_dead_letters: dead.count || 0, degraded_endpoints: failedEndpoints.count || 0 },
+      jobs: jobs.data || [], dead_letters: letters.data || [],
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && path === '/account-managers') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const { data, error } = await serviceClient.from('brand_guard_account_managers').insert({
+      name: String(body.name || '').trim(), email: String(body.email || '').trim().toLowerCase(), max_accounts: Number(body.max_accounts || 25),
+    }).select('*').single();
+    if (error) res.status(500).json({ error: error.message });
+    else res.status(201).json({ manager: data });
+    return;
+  }
+
+  if (req.method === 'POST' && path === '/account-assignments') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const ownerId = String(body.owner_id || '');
+    const managerId = String(body.manager_id || '');
+    const { data: fortressSubscription } = await serviceClient.from('brand_guard_subscriptions').select('id')
+      .eq('owner_id', ownerId).eq('plan_id', 'fortress').eq('status', 'active').maybeSingle();
+    if (!fortressSubscription) { res.status(403).json({ error: 'Active Fortress subscription required' }); return; }
+    const { data, error } = await serviceClient.from('brand_guard_account_assignments').upsert({
+      owner_id: ownerId, manager_id: managerId, status: 'active', next_review_at: body.next_review_at || null,
+      notes: body.notes || null, updated_at: new Date().toISOString(),
+    }, { onConflict: 'owner_id' }).select('*').single();
+    if (!error) await serviceClient.from('brand_guard_sla_policies').upsert({ owner_id: ownerId }, { onConflict: 'owner_id' });
+    if (error) res.status(500).json({ error: error.message });
+    else res.status(200).json({ assignment: data });
+    return;
+  }
+
+  if (req.method === 'PATCH' && path === '/account-cases') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const caseId = String(body.case_id || '');
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const field of ['status', 'priority', 'due_at']) if (body[field] !== undefined) updates[field] = body[field];
+    if (body.status === 'resolved' || body.status === 'closed') updates.resolved_at = new Date().toISOString();
+    const { data, error } = await serviceClient.from('brand_guard_account_cases').update(updates).eq('id', caseId).select('*').maybeSingle();
+    if (data) await serviceClient.from('brand_guard_account_case_events').insert({
+      case_id: caseId, actor_id: authResult.id, event_type: 'manager_update', message: body.message || null, metadata: updates,
+    });
+    if (error) res.status(500).json({ error: error.message });
+    else if (!data) res.status(404).json({ error: 'Case not found' });
+    else res.status(200).json({ case: data });
+    return;
+  }
+
+  if (req.method === 'POST' && path === '/delivery-dead-letters/replay') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const deadLetterId = String(body.dead_letter_id || '');
+    const { data: letter } = await serviceClient.from('brand_guard_delivery_dead_letters')
+      .select('id, original_job_id').eq('id', deadLetterId).is('resolved_at', null).maybeSingle();
+    if (!letter) { res.status(404).json({ error: 'Dead letter not found' }); return; }
+    const now = new Date().toISOString();
+    const { error } = await serviceClient.from('brand_guard_delivery_jobs').update({
+      status: 'queued', attempt_count: 0, available_at: now, last_error: null,
+      last_status_code: null, locked_by: null, locked_until: null, lease_token: null, updated_at: now,
+    }).eq('id', letter.original_job_id);
+    if (!error) await serviceClient.from('brand_guard_delivery_dead_letters').update({ resolved_at: now, resolution_notes: 'Replayed by admin' }).eq('id', letter.id);
+    if (error) res.status(500).json({ error: error.message });
+    else res.status(202).json({ replayed: letter.original_job_id });
+    return;
+  }
+
+  res.status(404).json({ error: 'Not found' });
 }
 
 export const config = {

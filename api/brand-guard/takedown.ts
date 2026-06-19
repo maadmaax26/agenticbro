@@ -19,6 +19,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { ownerHasFeature, requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Vercel type shim ─────────────────────────────────────────────────────────
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
@@ -65,6 +66,8 @@ interface TakedownInput {
     companyName: string;
     address?: string;
   };
+  brandMonitorId?: string;
+  autoSubmit?: boolean;
 }
 
 interface TakedownReport {
@@ -74,6 +77,8 @@ interface TakedownReport {
   missingFields: string[];
   platformFormUrl: string;
   confidence: number;
+  actionId?: string;
+  submissionStatus?: string;
 }
 
 // ── Platform form URLs ────────────────────────────────────────────────────────
@@ -406,6 +411,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.end(JSON.stringify({ error: 'Database not configured' }));
   }
 
+  const entitlement = await requireBrandGuardEntitlement(req, res, 'takedown_templates');
+  if (!entitlement) return;
+  const ownerId = entitlement.ownerId;
+  const ownerEmail = entitlement.email;
+
   const url = req.url || '/';
   const parts = url.split('/').filter(Boolean);
   // /api/brand-guard/takedown/generate
@@ -415,7 +425,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // POST /generate (supports both /takedown/generate and /takedown)
     if (req.method === 'POST') {
-      const input: TakedownInput = await parseBody(req);
+      const input = (req.body && Object.keys(req.body).length > 0
+        ? req.body
+        : await parseBody(req)) as unknown as TakedownInput;
+      if (input.user && !input.user.email) input.user.email = ownerEmail;
+      if (input.autoSubmit && !ownerHasFeature(entitlement, 'automated_takedowns')) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'entitlement_required', feature: 'automated_takedowns', required_plan: 'sentinel' }));
+      }
       if (!input.evidence) input.evidence = { urls: [], descriptions: '' };
 
       if (!input.platform || !input.brand || !input.user) {
@@ -445,7 +462,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         confidence,
         status: 'draft',
       };
-      if (input.user?.id) insertData.user_id = input.user.id;
+      insertData.owner_id = ownerId;
+      if (input.brandMonitorId) insertData.brand_monitor_id = input.brandMonitorId;
 
       const { data, error } = await supabase
         .from('brand_guard_reports')
@@ -460,20 +478,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Also insert into takedown_actions so it shows in the Takedown Center
-      // Note: brand_monitor_id is left null here — scanId is not a valid FK reference.
-      // Callers that have a brand_monitor_id should pass it in the input if needed.
-      const takedownAction: any = {
-        brand_monitor_id: null,
+      // Link the generated report to its lifecycle action without treating scanId as a UUID FK.
+      const takedownAction: Record<string, unknown> = {
+        owner_id: ownerId,
+        brand_monitor_id: input.brandMonitorId || null,
+        report_id: data.id,
         platform: input.platform,
         action_type: 'report',
-        status: 'pending',
+        status: input.autoSubmit ? 'queued' : 'draft',
         evidence_url: input.violator?.url || '',
+        submission_provider: input.autoSubmit ? 'gateway' : null,
+        submission_payload: {
+          target_url: input.violator?.url || '',
+          claim: input.scanType,
+          evidence: input.evidence,
+          brand: input.brand,
+          contact: input.user,
+          report_id: data.id,
+        },
+        next_attempt_at: input.autoSubmit ? new Date().toISOString() : null,
         notes: `Auto-generated ${input.platform} takedown report (Risk: ${input.riskLevel}, Score: ${input.riskScore})`,
       };
-      if (input.user?.id) takedownAction.user_id = input.user.id;
-
+      let actionId: string | undefined;
       try {
-        await supabase.from('takedown_actions').insert(takedownAction);
+        const { data: action } = await supabase.from('takedown_actions').insert(takedownAction).select('id').single();
+        actionId = action?.id;
       } catch (err) {
         console.error('[Takedown] Failed to insert takedown_action (non-blocking):', (err as Error).message);
       }
@@ -485,6 +514,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         missingFields: missing,
         platformFormUrl: PLATFORM_FORM_URLS[input.platform],
         confidence,
+        actionId,
+        submissionStatus: input.autoSubmit ? 'queued' : 'draft',
       };
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -498,6 +529,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('brand_guard_reports')
         .select('*')
         .eq('scan_id', scanId)
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -516,6 +548,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('brand_guard_reports')
         .select('*')
         .eq('id', reportId)
+        .eq('owner_id', ownerId)
         .single();
 
       if (error || !data) {
