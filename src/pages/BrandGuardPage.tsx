@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
 import { TakedownModal } from '../components/brand-guard/TakedownModal';
@@ -673,9 +674,9 @@ export function BrandGuardPage() {
   const [monitoringLoading, setMonitoringLoading] = useState(false);
   const [refreshingHealth, setRefreshingHealth] = useState(false);
 
-  const fetchMonitoring = useCallback(async () => {
+  const fetchMonitoring = useCallback(async (silent = false) => {
     if (!authToken || !activeBrand) return;
-    setMonitoringLoading(true);
+    if (!silent) setMonitoringLoading(true);
     try {
       const res = await fetch(`${API_BASE}/dashboard?brand_id=${activeBrand.id}`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -687,7 +688,7 @@ export function BrandGuardPage() {
     } catch {
       // Non-blocking: monitoring data failure shouldn't break the dashboard
     } finally {
-      setMonitoringLoading(false);
+      if (!silent) setMonitoringLoading(false);
     }
   }, [authToken, activeBrand]);
 
@@ -728,8 +729,10 @@ export function BrandGuardPage() {
   useEffect(() => {
     if (authToken && activeBrand && dashboardTab === 'monitoring') {
       fetchMonitoring();
+      const interval = window.setInterval(() => void fetchMonitoring(true), 30_000);
+      return () => window.clearInterval(interval);
     }
-  }, [authToken, activeBrand, dashboardTab]);
+  }, [authToken, activeBrand, dashboardTab, fetchMonitoring]);
 
   // ── Run scans ────────────────────────────────────────────────────────────────
   const [scanning, setScanning] = useState<string | null>(null); // scan type being run
@@ -1976,6 +1979,67 @@ export function BrandGuardPage() {
                               </div>
                             ))}
                           </div>
+
+                          {/* Live premium intelligence streams */}
+                          {(() => {
+                            const feeds = monitoringData.live_feeds as Record<string, unknown> | undefined;
+                            const dns = (feeds?.dns || []) as Record<string, unknown>[];
+                            const dmarc = (feeds?.dmarc || []) as Record<string, unknown>[];
+                            const intel = (feeds?.threat_intel || []) as Record<string, unknown>[];
+                            const updatedAt = feeds?.updated_at ? new Date(String(feeds.updated_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'WAITING';
+                            const feedCard = (title: string, color: string, count: number, content: ReactNode) => (
+                              <div style={{ minWidth: 0, padding: '14px', borderRadius: '8px', background: 'rgba(5,5,16,0.62)', border: `1px solid ${color}35`, boxShadow: `0 0 8px ${color}16` }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+                                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, boxShadow: `0 0 7px ${color}` }} />
+                                  <div style={{ fontSize: '10px', fontWeight: 800, color, letterSpacing: '1.5px', fontFamily: 'monospace' }}>{title}</div>
+                                  <div style={{ marginLeft: 'auto', fontSize: '9px', color: '#8B8B8B', fontFamily: 'monospace' }}>{count} EVENTS</div>
+                                </div>
+                                {content}
+                              </div>
+                            );
+                            const empty = <div style={{ padding: '18px 4px', textAlign: 'center', color: '#666', fontSize: '10px', fontFamily: 'monospace' }}>AWAITING TELEMETRY</div>;
+                            return (
+                              <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(0,240,255,0.25)', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#00F0FF', letterSpacing: '2px', fontFamily: 'monospace' }}>◆ LIVE INTELLIGENCE STREAMS</div>
+                                  <div style={{ flex: 1, height: '1px', minWidth: '24px', background: 'rgba(0,240,255,0.2)' }} />
+                                  <div style={{ fontSize: '9px', color: '#8B8B8B', fontFamily: 'monospace' }}>AUTO 30S · {updatedAt}</div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                                  {feedCard('DNS TRANSITIONS', '#00F0FF', dns.length, dns.length ? (
+                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                      {dns.slice(0, 8).map(row => <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(0,240,255,0.04)', borderLeft: `2px solid ${row.resolves ? '#39FF14' : '#8B8B8B'}` }}>
+                                        <div style={{ color: '#fff', fontSize: '11px', fontWeight: 700, wordBreak: 'break-all' }}>{String(row.domain)}</div>
+                                        <div style={{ color: row.resolves ? '#39FF14' : '#8B8B8B', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px' }}>{row.resolves ? 'ACTIVE DNS' : 'NO RESOLUTION'} · {((row.mx_records as string[]) || []).length} MX</div>
+                                        <div style={{ color: '#666', fontSize: '9px', marginTop: '2px' }}>{new Date(String(row.checked_at)).toLocaleString()}</div>
+                                      </div>)}
+                                    </div>
+                                  ) : empty)}
+                                  {feedCard('DMARC AUTH', '#BF00FF', dmarc.length, dmarc.length ? (
+                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                      {dmarc.slice(0, 8).map(row => {
+                                        const failed = Number(row.failed_count || 0);
+                                        return <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(191,0,255,0.04)', borderLeft: `2px solid ${failed ? '#FFAA00' : '#39FF14'}` }}>
+                                          <div style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{String(row.reporter)}</div>
+                                          <div style={{ color: failed ? '#FFAA00' : '#39FF14', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px' }}>{Number(row.message_count || 0)} MAIL · {failed} FAILED · {Number(row.unauthorized_sources || 0)} UNAUTH</div>
+                                          <div style={{ color: '#666', fontSize: '9px', marginTop: '2px' }}>{new Date(String(row.period_end)).toLocaleString()}</div>
+                                        </div>;
+                                      })}
+                                    </div>
+                                  ) : empty)}
+                                  {feedCard('THREAT INTEL', '#FF073A', intel.length, intel.length ? (
+                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                      {intel.slice(0, 8).map(row => <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(255,7,58,0.04)', borderLeft: `2px solid ${Number(row.severity) >= 4 ? '#FF073A' : '#FFAA00'}` }}>
+                                        <div style={{ color: '#fff', fontSize: '11px', fontWeight: 700, wordBreak: 'break-all' }}>{String(row.target)}</div>
+                                        <div style={{ color: '#FFAA00', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px' }}>{String(row.threat_type).toUpperCase()} · {String(row.job_status || row.status).toUpperCase()} · {Number(row.confidence)}%</div>
+                                        <div style={{ color: '#666', fontSize: '9px', marginTop: '2px' }}>{row.fingerprint ? `FP ${String(row.fingerprint).slice(0, 14)}` : new Date(String(row.updated_at)).toLocaleString()}</div>
+                                      </div>)}
+                                    </div>
+                                  ) : empty)}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* ── Threat Feed — Neon card style ────────────── */}
                           <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>

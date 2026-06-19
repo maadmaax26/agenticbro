@@ -9,6 +9,7 @@
     "dev:vite": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:premium": "node --experimental-test-coverage --import tsx --test server/lib/domain-watch-utils.test.ts api/_lib/dmarc-parser.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -29,11 +30,13 @@
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
     "express": "^4.22.1",
+    "fflate": "^0.8.3",
     "lucide-react": "^0.469.0",
     "openai": "^4.83.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.16.0",
+    "saxes": "^6.0.0",
     "sharp": "^0.34.5",
     "stripe": "^22.2.0",
     "tailwind-merge": "^2.6.0",

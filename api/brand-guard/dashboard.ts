@@ -112,6 +112,37 @@ interface DashboardData {
     scan_date: string;
     results_count: number;
   }>;
+  live_feeds: {
+    updated_at: string;
+    dns: Array<{
+      id: string;
+      domain: string;
+      resolves: boolean;
+      ip_addresses: string[];
+      mx_records: string[];
+      checked_at: string;
+    }>;
+    dmarc: Array<{
+      id: string;
+      reporter: string;
+      message_count: number;
+      failed_count: number;
+      unauthorized_sources: number;
+      period_end: string;
+    }>;
+    threat_intel: Array<{
+      id: string;
+      target: string;
+      threat_type: string;
+      status: string;
+      job_status: string;
+      attempt_count: number;
+      confidence: number;
+      severity: number;
+      fingerprint: string | null;
+      updated_at: string;
+    }>;
+  };
 }
 
 // ── Brand Health Score Calculation ────────────────────────────────────────────
@@ -270,6 +301,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   let takedownActions: TakedownAction[] = [];
   const alerts: AlertItem[] = [];
   let scanHistory: Array<Record<string, unknown>> = [];
+  let liveFeeds: DashboardData['live_feeds'] = {
+    updated_at: new Date().toISOString(),
+    dns: [],
+    dmarc: [],
+    threat_intel: [],
+  };
 
   {
     // Fetch brand
@@ -284,6 +321,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(404).json({ error: 'Brand not found' });
       return;
     }
+
+    // Premium live feeds. Each query is scoped to the already-authorized brand.
+    // Missing tables during a rolling migration intentionally produce empty feeds.
+    const [dnsResult, dmarcResult, dmarcSourcesResult, detectedThreatsResult] = await Promise.all([
+      supabase.from('brand_guard_dns_observations')
+        .select('id, domain, resolves, ip_addresses, mx_records, checked_at')
+        .eq('brand_monitor_id', brandId).order('checked_at', { ascending: false }).limit(20),
+      supabase.from('brand_guard_dmarc_reports')
+        .select('id, reporter, message_count, failed_count, period_end, created_at')
+        .eq('brand_monitor_id', brandId).order('period_end', { ascending: false }).limit(12),
+      supabase.from('brand_guard_dmarc_sources')
+        .select('report_id, unauthorized').eq('brand_monitor_id', brandId).eq('unauthorized', true).limit(500),
+      supabase.from('brand_guard_detected_threats')
+        .select('id, target, threat_type, status, confidence, severity, phishing_kit_fingerprint, updated_at')
+        .eq('brand_monitor_id', brandId).order('updated_at', { ascending: false }).limit(20),
+    ]);
+
+    const unauthorizedByReport = new Map<string, number>();
+    for (const source of dmarcSourcesResult.data || []) {
+      const reportId = String(source.report_id || '');
+      unauthorizedByReport.set(reportId, (unauthorizedByReport.get(reportId) || 0) + 1);
+    }
+    const threatIds = (detectedThreatsResult.data || []).map(row => String(row.id));
+    const intelJobsResult = threatIds.length
+      ? await supabase.from('brand_guard_threat_intel_jobs')
+        .select('threat_id, status, attempt_count, updated_at').in('threat_id', threatIds)
+      : { data: [] as Array<Record<string, unknown>> };
+    const intelJobsByThreat = new Map((intelJobsResult.data || []).map(job => [String(job.threat_id), job]));
+    liveFeeds = {
+      updated_at: new Date().toISOString(),
+      dns: (dnsResult.data || []).map(row => ({
+        id: String(row.id), domain: String(row.domain), resolves: Boolean(row.resolves),
+        ip_addresses: Array.isArray(row.ip_addresses) ? row.ip_addresses.map(String) : [],
+        mx_records: Array.isArray(row.mx_records) ? row.mx_records.map(String) : [],
+        checked_at: String(row.checked_at),
+      })),
+      dmarc: (dmarcResult.data || []).map(row => ({
+        id: String(row.id), reporter: String(row.reporter || 'Unknown reporter'),
+        message_count: Number(row.message_count || 0), failed_count: Number(row.failed_count || 0),
+        unauthorized_sources: unauthorizedByReport.get(String(row.id)) || 0,
+        period_end: String(row.period_end || row.created_at),
+      })),
+      threat_intel: (detectedThreatsResult.data || []).map(row => {
+        const job = intelJobsByThreat.get(String(row.id));
+        return {
+          id: String(row.id), target: String(row.target), threat_type: String(row.threat_type),
+          status: String(row.status), job_status: String(job?.status || 'not_queued'),
+          attempt_count: Number(job?.attempt_count || 0), confidence: Number(row.confidence || 0),
+          severity: Number(row.severity || 1),
+          fingerprint: row.phishing_kit_fingerprint ? String(row.phishing_kit_fingerprint) : null,
+          updated_at: String(job?.updated_at || row.updated_at),
+        };
+      }),
+    };
 
     // Fetch impersonator threats from brand_guard_scans (primary source)
     // Falls back to brand_impersonators if available
@@ -597,6 +688,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     alerts,
     summary,
     scan_history: scanHistory as DashboardData['scan_history'],
+    live_feeds: liveFeeds,
   };
 
   // ── Return section or full dashboard ──────────────────────────────────────
