@@ -118,6 +118,9 @@
     "api/brand-guard/weekly-briefing-worker.ts": {
       "maxDuration": 300
     },
+    "api/brand-guard/dmarc-ingest.ts": {
+      "maxDuration": 30
+    },
     "api/v1/brand-guard.ts": {
       "maxDuration": 15
     },

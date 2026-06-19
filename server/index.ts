@@ -10,6 +10,8 @@ import { startBrandGuardWorker } from './lib/brand-guard-worker.js';
 import { startBrandGuardQueueWorker } from './lib/brand-guard-queue-worker.js';
 import { startTakedownWorker } from './lib/takedown-worker.js';
 import { startDeliveryWorker } from './lib/delivery-worker.js';
+import { startDomainWatcherWorker } from './lib/domain-watcher-worker.js';
+import { startThreatIntelDispatchWorker } from './lib/threat-intel-dispatch-worker.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +30,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 startBrandGuardQueueWorker(supabase);
 startTakedownWorker(supabase);
 startDeliveryWorker(supabase);
+startDomainWatcherWorker(supabase);
+startThreatIntelDispatchWorker(supabase);
 
 app.use(cors());
 app.use(express.json());

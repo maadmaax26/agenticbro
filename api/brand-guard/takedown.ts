@@ -452,6 +452,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const { body, missing } = templateFn(input);
       const confidence = Math.max(0, input.riskScore - missing.length * 10);
+      const autoSubmitApproved = Boolean(input.autoSubmit && confidence >= 99 && missing.length === 0);
 
       const insertData: Record<string, unknown> = {
         scan_id: input.scanId,
@@ -485,9 +486,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         report_id: data.id,
         platform: input.platform,
         action_type: 'report',
-        status: input.autoSubmit ? 'queued' : 'draft',
+        status: autoSubmitApproved ? 'queued' : input.autoSubmit ? 'pending' : 'draft',
         evidence_url: input.violator?.url || '',
-        submission_provider: input.autoSubmit ? 'gateway' : null,
+        submission_provider: autoSubmitApproved ? 'gateway' : null,
         submission_payload: {
           target_url: input.violator?.url || '',
           claim: input.scanType,
@@ -496,8 +497,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           contact: input.user,
           report_id: data.id,
         },
-        next_attempt_at: input.autoSubmit ? new Date().toISOString() : null,
-        notes: `Auto-generated ${input.platform} takedown report (Risk: ${input.riskLevel}, Score: ${input.riskScore})`,
+        next_attempt_at: autoSubmitApproved ? new Date().toISOString() : null,
+        notes: input.autoSubmit && !autoSubmitApproved
+          ? `Pending admin review: automated dispatch requires 99% confidence and no missing fields (calculated ${confidence}%).`
+          : `Auto-generated ${input.platform} takedown report (Risk: ${input.riskLevel}, Score: ${input.riskScore})`,
       };
       let actionId: string | undefined;
       try {
@@ -515,7 +518,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         platformFormUrl: PLATFORM_FORM_URLS[input.platform],
         confidence,
         actionId,
-        submissionStatus: input.autoSubmit ? 'queued' : 'draft',
+        submissionStatus: autoSubmitApproved ? 'queued' : input.autoSubmit ? 'pending_review' : 'draft',
       };
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
