@@ -6,11 +6,15 @@
 
 set -uo pipefail
 
+# Source RPC load balancer (Chainstack primary, public fallback)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/solana-rpc.sh"
+
 WALLET="${1:-}"
 SCAN_DATE=$(date '+%Y-%m-%d')
 TIMESTAMP=$(date '+%Y-%m-%d %I:%M %p %Z')
 AGNTCBRO_MINT="52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
-SOLANA_RPC="https://api.mainnet-beta.solana.com"
+SOLANA_RPC=$(get_solana_rpc)
 
 if [ -z "$WALLET" ]; then
     echo "Usage: bash scan-wallet.sh <wallet_address>"
@@ -29,23 +33,19 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Check Solana RPC connectivity
-RPC_CHECK=$(curl -s -X POST "${SOLANA_RPC}" \
-    -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' 2>/dev/null)
+# Check Solana RPC connectivity (round-robin load balanced)
+RPC_CHECK=$(solana_rpc_call "getHealth" '[]' 1 2>/dev/null)
 
 if echo "$RPC_CHECK" | grep -q '"result":"ok"'; then
-    echo "✅ Solana RPC: Connected"
+    echo "✅ Solana RPC: Connected (load balanced)"
     echo ""
 else
     echo "⚠️  Solana RPC: Connection issue"
     echo ""
 fi
 
-# Fetch wallet balance
-BALANCE=$(curl -s -X POST "${SOLANA_RPC}" \
-    -H "Content-Type: application/json" \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"${WALLET}\"]}" 2>/dev/null)
+# Fetch wallet balance (load balanced)
+BALANCE=$(solana_rpc_call "getBalance" "[\"${WALLET}\"]" 2>/dev/null)
 
 if echo "$BALANCE" | grep -q '"result"'; then
     LAMPORTS=$(echo "$BALANCE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('value',0))" 2>/dev/null)
@@ -59,10 +59,8 @@ else
     echo "💰 SOL Balance: Unable to fetch"
 fi
 
-# Fetch token accounts for this wallet
-TOKENS=$(curl -s -X POST "${SOLANA_RPC}" \
-    -H "Content-Type: application/json" \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTokenAccountsByOwner\",\"params\":[\"${WALLET}\",{\"mint\":\"${AGNTCBRO_MINT}\"},{\"encoding\":\"jsonParsed\"}]}" 2>/dev/null)
+# Fetch token accounts (load balanced)
+TOKENS=$(solana_rpc_call "getTokenAccountsByOwner" "[\"${WALLET}\",{\"mint\":\"${AGNTCBRO_MINT}\"},{\"encoding\":\"jsonParsed\"}]" 2>/dev/null)
 
 echo ""
 echo "🔍 AGNTCBRO Holdings:"
@@ -80,10 +78,8 @@ else
     echo "   Holdings: 0 AGNTCBRO (no position found)"
 fi
 
-# Check recent signers (transaction signatures)
-SIGNATURES=$(curl -s -X POST "${SOLANA_RPC}" \
-    -H "Content-Type: application/json" \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getSignaturesForAddress\",\"params\":[\"${WALLET}\",{\"limit\":5}]}" 2>/dev/null)
+# Check recent transactions (load balanced)
+SIGNATURES=$(solana_rpc_call "getSignaturesForAddress" "[\"${WALLET}\",{\"limit\":5}]" 2>/dev/null)
 
 echo ""
 echo "📋 Recent Transactions (last 5):"

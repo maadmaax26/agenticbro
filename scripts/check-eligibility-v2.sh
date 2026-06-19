@@ -1,7 +1,10 @@
 #!/bin/bash
 # Check all 21 wallets with 4s delay between calls
+# Uses RPC load balancer (Chainstack primary, public fallback)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/solana-rpc.sh"
+
 MINT="52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
-RPC="https://api.mainnet-beta.solana.com"
 
 WALLETS=(
 "6aSrey36pvkAKAVvsKL84X4CkDEY4bQCp5hFh8NVcN4j:Diamond:91367587"
@@ -43,10 +46,7 @@ for entry in "${WALLETS[@]}"; do
   
   printf "%-12s (%-7s snap:%-12s) " "${addr:0:10}" "$tier" "$snapshot"
   
-  RESP=$(curl -s -X POST "$RPC" \
-    -H "Content-Type: application/json" \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTokenAccountsByOwner\",\"params\":[\"$addr\",{\"mint\":\"$MINT\"},{\"encoding\":\"jsonParsed\"}]}" \
-    --max-time 15 2>/dev/null)
+  RESP=$(solana_rpc_call "getTokenAccountsByOwner" "[\"$addr\",{\"mint\":\"$MINT\"},{\"encoding\":\"jsonParsed\"}]" 2>/dev/null)
   
   BAL=$(echo "$RESP" | python3 -c "
 import sys,json

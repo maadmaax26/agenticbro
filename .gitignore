@@ -27,6 +27,7 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.vercel
 
 # OS
 .DS_Store
@@ -43,3 +44,17 @@ dist/
 build/
 .vercel
 .env*.local
+
+# Local runtime and generated artifacts
+.openclaw/trajectory-exports/
+backups/
+output/
+scan_results/
+data/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+
+# Machine-local service configuration
+config.json
+openrouter-plugin.conf
