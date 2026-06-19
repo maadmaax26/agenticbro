@@ -393,8 +393,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── 3. Get unique owner_ids to fetch user emails ───────────────────────
   const ownerIds = [...new Set(monitors?.map((m: BrandMonitor) => m.owner_id).filter(Boolean) || [])];
 
-  // Fetch user emails from auth.users via admin API (service role key has access)
-  const { data: users } = await supabase.auth.admin.listUsers();
+  // Fetch user emails from auth.users via admin API (service role key has access).
+  // perPage: 1000 avoids silently truncating at the default 50-user page limit.
+  const { data: users } = await supabase.auth.admin.listUsers({ perPage: 1000 });
 
   const userMap = new Map<string, UserProfile>();
   if (users?.users) {
@@ -461,8 +462,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       result.email_error = 'No email on file for owner';
     }
 
-    // Mark alert as read after delivery attempt
-    if (!dryRun) {
+    // Mark alert as read only after at least one delivery channel succeeded.
+    // If email was attempted and failed, leave the alert unread so it retries.
+    const deliverySucceeded = result.email_sent || (!owner?.email && result.push_sent);
+    if (!dryRun && deliverySucceeded) {
       await supabase
         .from('brand_guard_alerts')
         .update({ read: true })

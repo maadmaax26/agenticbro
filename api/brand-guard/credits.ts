@@ -15,7 +15,6 @@
  * POST   /api/brand-guard/credits/add                 — Add credits (purchase/admin)
  * GET    /api/brand-guard/credits/history              — Get transaction history
  * POST   /api/brand-guard/credits/stripe-checkout      — Create Stripe checkout session
- * POST   /api/brand-guard/credits/crypto-confirm        — Confirm crypto payment
  *
  * Credit priority: Free credits used first → Paid credits second
  * All operations are scoped to the authenticated user via Supabase Auth.
@@ -39,17 +38,13 @@ const STRIPE_PRICES = {
   'bg-guardian': process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_1TcC6Z1lUBogdwcDetJfQtGS', // $29/mo
   'bg-sentinel': process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_1TcC6Z1lUBogdwcDzNKnTEkh', // $79/mo
   'bg-fortress': process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_1TcC6Z1lUBogdwcDgTFlMRFf', // $199/mo
-  // Brand Guard Subscription plans (new)
-  'guardian':    process.env.STRIPE_GUARDIAN_PRICE_ID    || 'price_guardian_12345', // $29/mo
-  'sentinel':    process.env.STRIPE_SENTINEL_PRICE_ID    || 'price_sentinel_67890', // $99/mo
-  'fortress':    process.env.STRIPE_FORTRESS_PRICE_ID    || 'price_fortress_abcde', // $299/mo
 } as const;
 
 // ── Brand Guard Subscription Plans ────────────────────────────────────────────
 const SUBSCRIPTION_PLANS = [
-  { id: 'guardian', name: 'Guardian', price_usd: 29, monthly_credits: 50, brands_included: 3, stripe_price_id: STRIPE_PRICES['guardian'] },
-  { id: 'sentinel', name: 'Sentinel', price_usd: 99, monthly_credits: 200, brands_included: 10, stripe_price_id: STRIPE_PRICES['sentinel'] },
-  { id: 'fortress', name: 'Fortress', price_usd: 299, monthly_credits: -1, brands_included: -1, stripe_price_id: STRIPE_PRICES['fortress'] }, // -1 = unlimited
+  { id: 'guardian', name: 'Guardian', price_usd: 29, monthly_credits: 50, brands_included: 3, stripe_price_id: STRIPE_PRICES['bg-guardian'] },
+  { id: 'sentinel', name: 'Sentinel', price_usd: 99, monthly_credits: 200, brands_included: 10, stripe_price_id: STRIPE_PRICES['bg-sentinel'] },
+  { id: 'fortress', name: 'Fortress', price_usd: 299, monthly_credits: -1, brands_included: -1, stripe_price_id: STRIPE_PRICES['bg-fortress'] }, // -1 = unlimited
 ];
 
 // ── Credit Packages (mirrors social scan pricing) ────────────────────────────
@@ -62,11 +57,6 @@ const CREDIT_PACKAGES = [
 
 const FREE_CREDITS_DEFAULT = 25;
 const PRICE_PER_SCAN_USD = 1.00;
-
-// Payment wallets (same as social scans)
-const PAYMENT_WALLET_SOLANA = '9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F';
-const PAYMENT_WALLET_BASE = '0x1c793592adf512dfe590817225c3b2b6bd913fac';
-const AGNTCBRO_MINT = '52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
@@ -121,11 +111,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       packages: CREDIT_PACKAGES,
       price_per_scan: PRICE_PER_SCAN_USD,
       free_credits: FREE_CREDITS_DEFAULT,
-      payment_wallets: {
-        solana: PAYMENT_WALLET_SOLANA,
-        base: PAYMENT_WALLET_BASE,
-        agntcbro_mint: AGNTCBRO_MINT,
-      },
     });
     return;
   }
@@ -237,8 +222,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (!paymentMethod || !['stripe', 'usdc_solana', 'usdc_base', 'agntcbro', 'subscription', 'admin', 'refund', 'health_refresh'].includes(paymentMethod)) {
-      res.status(400).json({ error: 'Invalid payment_method. Must be: stripe, usdc_solana, usdc_base, agntcbro, subscription, admin, or refund' });
+    if (!paymentMethod || !['stripe', 'subscription', 'admin', 'refund', 'health_refresh'].includes(paymentMethod)) {
+      res.status(400).json({ error: 'Invalid payment_method. Must be: stripe, subscription, admin, or refund' });
       return;
     }
 
@@ -349,57 +334,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const message = err instanceof Error ? err.message : 'Payment processing failed';
       res.status(500).json({ error: message });
     }
-    return;
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // POST /crypto-confirm — Confirm crypto payment and add credits
-  // ══════════════════════════════════════════════════════════════════════════
-  if (req.method === 'POST' && path === '/crypto-confirm') {
-    const body = await parseBody(req);
-    const paymentMethod = body.payment_method as string;  // usdc_solana | usdc_base | agntcbro
-    const txSignature = body.tx_signature as string;
-    const packageId = body.package_id as string;
-
-    if (!['usdc_solana', 'usdc_base', 'agntcbro'].includes(paymentMethod)) {
-      res.status(400).json({ error: 'Invalid payment_method for crypto. Use usdc_solana, usdc_base, or agntcbro' });
-      return;
-    }
-
-    if (!txSignature) {
-      res.status(400).json({ error: 'tx_signature is required' });
-      return;
-    }
-
-    const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
-    if (!pkg) {
-      res.status(400).json({ error: 'Invalid package_id' });
-      return;
-    }
-
-    const credits = pkg.credits + (pkg.bonus || 0);
-
-    // Add credits immediately (in production, verify on-chain transaction first)
-    const { data, error } = await serviceClient.rpc('add_brand_guard_credits', {
-      p_owner_id: userId,
-      p_amount: credits,
-      p_transaction_type: 'purchase',
-      p_payment_method: paymentMethod,
-      p_payment_reference: txSignature,
-      p_amount_usd: pkg.price_usd,
-      p_description: `Purchased ${credits} Brand Guard credits via ${paymentMethod} (${pkg.name} package)`,
-    });
-
-    if (error) {
-      res.status(500).json({ error: 'Failed to add credits', details: error.message });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      ...(data as Record<string, unknown>),
-      message: `${credits} credits added successfully`,
-    });
     return;
   }
 
@@ -647,7 +581,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, POST /subscribe, GET /subscription, POST /stripe-portal, POST /cancel-subscription, POST /crypto-confirm' });
+  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, POST /subscribe, GET /subscription, POST /stripe-portal, POST /cancel-subscription' });
 }
 
 export const config = {
