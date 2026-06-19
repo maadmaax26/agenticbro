@@ -1,296 +1,235 @@
 /**
  * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
  * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
- * Commercial use restricted — contact agenticbro@agenticbro.app for licensing.
+ * Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
  */
 
 /**
- * api/brand-guard/domain-monitor-worker.ts — Domain Lookalike Detection Worker
+ * api/brand-guard/domain-monitor-worker.ts — Domain Monitoring Cron Job
  * ========================================================================
- * Background worker that runs crt.sh Certificate Transparency lookalike detection
- * on schedule for active domain_monitors.
+ * Processes active domain_monitors subscriptions and verifies whether
+ * registered lookalike domains have become active threats since last scan.
+ *
+ * Runs every 6 hours via Vercel Cron.
+ * Uses the same three-layer verification as domain-monitor.ts:
+ *   Layer 1 — DNS:     Does it resolve?
+ *   Layer 2 — HTTP:    Is the site live?
+ *   Layer 3 — Content: Brand mentions? Phishing signals?
+ *
+ * New confirmed threats trigger alerts via the brand_guard_alerts table.
  *
  * GET /api/brand-guard/domain-monitor-worker
- *   Returns: Processing report with counts
+ *   (Called by Vercel Cron or manually by admin)
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { IncomingMessage, ServerResponse } from 'http';
+import { createClient } from '@supabase/supabase-js';
+import { verifyDomainActive } from './domain-monitor.js';
 
-// ── Config ────────────────────────────────────────────────────────────────────
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
-// ── Types ────────────────────────────────────────────────────────────────────
-interface DomainVariant {
+// ── Config ─────────────────────────────────────────────────────────────────────
+const MAX_MONITORS_PER_RUN = 10;      // process at most this many monitors per cron tick
+const VERIFY_TOP_N = 10;             // verify the top N variants per monitor
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface StoredVariant {
   domain: string;
-  similarity: number;
-  variant_type: string;
   risk_score: number;
-  risk_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'MINIMAL';
-  threat_type: string;
-  evidence: string[];
-  registeredDate: string | null;
-  issuer: string | null;
-  source: 'certstream' | 'crt.sh' | 'generated';
+  risk_level: string;
+  variant_type: string;
 }
 
-// ── Utility Functions ─────────────────────────────────────────────────────────
-
-function isScanStale(last_scan_at: string | null, scan_frequency: string, now: Date): boolean {
-  if (!last_scan_at) return true;
-  const diffHours = (now.getTime() - new Date(last_scan_at).getTime()) / (1000 * 60 * 60);
-  switch (scan_frequency) {
-    case 'daily': return diffHours >= 24;
-    case 'weekly': return diffHours >= 168;
-    case 'monthly': return diffHours >= 720;
-    case 'once': return false;
-    default: return true;
-  }
+interface DomainMonitorRow {
+  id: string;
+  owner_id: string | null;
+  brand_monitor_id: string | null;
+  domain: string;
+  variants: StoredVariant[] | null;
+  scan_frequency: 'daily' | 'weekly' | 'monthly' | 'once';
+  last_scan_at: string | null;
+  is_active: boolean;
 }
 
-/**
- * Query crt.sh for certificates matching a domain pattern.
- * Returns an array of distinct domain names found.
- */
-async function queryCrtSh(domain: string): Promise<string[]> {
-  try {
-    const url = `https://crt.sh/?q=%25.${domain}&output=json`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'AgenticBro-BrandGuard/1.0' },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) {
-      console.error(`[domain-monitor] crt.sh returned ${res.status} for ${domain}`);
-      return [];
-    }
-    const data = await res.json();
-    const domains = new Set<string>();
-    for (const entry of data) {
-      if (entry.name_value) {
-        for (const name of entry.name_value.split('\n')) {
-          const trimmed = name.trim().toLowerCase();
-          // Filter out wildcards and the exact domain itself
-          if (trimmed && !trimmed.startsWith('*') && trimmed !== domain && trimmed !== `www.${domain}`) {
-            domains.add(trimmed);
-          }
-        }
-      }
-    }
-    return Array.from(domains);
-  } catch (err) {
-    console.error('[domain-monitor] crt.sh query error:', err);
-    return [];
-  }
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Score a lookalike domain for risk.
- */
-function scoreLookalike(baseDomain: string, lookalike: string): DomainVariant {
-  const base = baseDomain.toLowerCase();
-  const look = lookalike.toLowerCase();
-
-  // Compute simple similarity (Levenshtein-style heuristic)
-  const baseParts = base.split('.');
-  const lookParts = look.split('.');
-  const baseName = baseParts[0];
-  const lookName = lookParts[0];
-
-  const lengthDiff = Math.abs(baseName.length - lookName.length);
-  let matchChars = 0;
-  const minLen = Math.min(baseName.length, lookName.length);
-  for (let i = 0; i < minLen; i++) {
-    if (baseName[i] === lookName[i]) matchChars++;
-  }
-  const similarity = minLen > 0 ? Math.round((matchChars / Math.max(baseName.length, lookName.length)) * 100) : 0;
-
-  // Detect variant type
-  const phishingKeywords = ['login', 'signin', 'secure', 'verify', 'update', 'auth', 'wallet', 'claim', 'bonus', 'free', 'reward', 'account', 'support', 'help', 'service', 'portal', 'app'];
-  const hasPhishingKeyword = phishingKeywords.some(kw => look.includes(kw));
-  const isHomoglyph = lookName.length === baseName.length && similarity >= 80 && lookName !== baseName;
-  const isTyposquat = lengthDiff <= 2 && similarity >= 60 && lookName !== baseName;
-  const isSubdomain = look.endsWith(`.${base}`);
-
-  let variantType = 'unknown';
-  let threatType = 'Lookalike';
-  let riskScore = 30;
-  let riskLevel: DomainVariant['risk_level'] = 'LOW';
-  const evidence: string[] = [];
-
-  if (hasPhishingKeyword) {
-    variantType = 'phishing_keyword';
-    threatType = 'Phishing';
-    riskScore = 85;
-    riskLevel = 'HIGH';
-    evidence.push(`Contains phishing keyword in domain`);
-  } else if (isHomoglyph) {
-    variantType = 'homoglyph';
-    threatType = 'Homoglyph attack';
-    riskScore = 90;
-    riskLevel = 'CRITICAL';
-    evidence.push('Visually similar domain (homoglyph)');
-  } else if (isTyposquat) {
-    variantType = 'typosquat';
-    threatType = 'Typosquatting';
-    riskScore = 70;
-    riskLevel = 'HIGH';
-    evidence.push('Typo-like domain variation');
-  } else if (isSubdomain) {
-    variantType = 'subdomain';
-    threatType = 'Subdomain takeover';
-    riskScore = 50;
-    riskLevel = 'MEDIUM';
-    evidence.push('Subdomain of monitored domain');
-  } else if (similarity >= 60) {
-    variantType = 'similar';
-    threatType = 'Domain impersonation';
-    riskScore = similarity;
-    riskLevel = similarity >= 80 ? 'HIGH' : similarity >= 60 ? 'MEDIUM' : 'LOW';
-    evidence.push(`${similarity}% similar to ${base}`);
-  } else {
-    variantType = 'related';
-    riskScore = 20;
-    riskLevel = 'MINIMAL';
-    evidence.push(`Found in CT logs for ${base}`);
-  }
-
-  return {
-    domain: look,
-    similarity,
-    variant_type: variantType,
-    risk_score: riskScore,
-    risk_level: riskLevel,
-    threat_type: threatType,
-    evidence,
-    registeredDate: null,
-    issuer: null,
-    source: 'crt.sh',
+function isDue(monitor: DomainMonitorRow): boolean {
+  if (!monitor.last_scan_at) return true;
+  const last = new Date(monitor.last_scan_at).getTime();
+  const now = Date.now();
+  const intervals: Record<string, number> = {
+    daily:   24 * 60 * 60 * 1000,
+    weekly:  7 * 24 * 60 * 60 * 1000,
+    monthly: 30 * 24 * 60 * 60 * 1000,
+    once:    Infinity,
   };
+  const interval = intervals[monitor.scan_frequency] ?? Infinity;
+  return now - last >= interval;
+}
+
+function extractBrandKeywords(domain: string): string[] {
+  // Strip TLD and split on hyphens/dots to get brand words
+  const base = domain.replace(/\.[^.]+$/, '').replace(/^www\./, '');
+  const words = base.split(/[-.]/).filter(w => w.length > 2);
+  return [base, domain.replace(/\.[^.]+$/, ''), ...words].filter(Boolean);
 }
 
 // ── Main Handler ──────────────────────────────────────────────────────────────
 
+type VercelRequest = IncomingMessage & { method?: string; headers: Record<string, string | string[] | undefined> };
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method Not Allowed' });
-    return;
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+  if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+  // Vercel Cron provides Authorization: Bearer <CRON_SECRET>
+  // We also allow manual admin calls with the same token
+  const authHeader = req.headers['authorization'] || '';
+  const token = Array.isArray(authHeader) ? authHeader[0] : authHeader;
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && req.headers['authorization'] !== `Bearer ${cronSecret}`) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+  if (cronSecret && token !== `Bearer ${cronSecret}`) {
+    res.status(401).json({ error: 'Unauthorized' }); return;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!supabase) {
+    res.status(503).json({ error: 'Supabase not configured' }); return;
+  }
 
-  const report = {
-    total_processed: 0,
-    total_scanned: 0,
-    alerts_created: 0,
-    successful: 0,
-    failed: 0,
-    errors: [] as string[],
-  };
+  const startedAt = Date.now();
+  const results: Array<{
+    domain: string;
+    new_threats: number;
+    checked_variants: number;
+    error?: string;
+  }> = [];
 
-  try {
-    const now = new Date();
+  // ── Fetch active monitors ──────────────────────────────────────────────────
+  const { data: monitors, error: fetchErr } = await supabase
+    .from('domain_monitors')
+    .select('id, owner_id, brand_monitor_id, domain, variants, scan_frequency, last_scan_at, is_active')
+    .eq('is_active', true)
+    .neq('scan_frequency', 'once')
+    .order('last_scan_at', { ascending: true, nullsFirst: true })
+    .limit(MAX_MONITORS_PER_RUN);
 
-    const { data: monitors, error: monitorsError } = await supabase
-      .from('domain_monitors')
-      .select('id, owner_id, brand_monitor_id, domain, last_scan_at, scan_frequency, is_active')
-      .eq('is_active', true);
+  if (fetchErr) {
+    console.error('[Domain Worker] Failed to fetch monitors:', fetchErr.message);
+    res.status(500).json({ error: fetchErr.message }); return;
+  }
 
-    if (monitorsError) {
-      throw new Error(`Failed to fetch domain monitors: ${monitorsError.message}`);
-    }
+  const dueMonitors = (monitors || []).filter(isDue) as DomainMonitorRow[];
+  console.log(`[Domain Worker] ${dueMonitors.length} monitors due for verification`);
 
-    if (!monitors || monitors.length === 0) {
-      res.status(200).json({ ...report, message: 'No active domain monitors found' });
-      return;
-    }
+  // ── Process each monitor ───────────────────────────────────────────────────
+  for (const monitor of dueMonitors) {
+    const { id, domain, owner_id, brand_monitor_id, variants } = monitor;
+    const brandKeywords = extractBrandKeywords(domain);
 
-    for (const monitor of monitors) {
-      if (!isScanStale(monitor.last_scan_at, monitor.scan_frequency, now)) {
+    try {
+      // Take the stored high-risk variants and re-verify them
+      const storedVariants = (variants || []) as StoredVariant[];
+      const toCheck = storedVariants
+        .filter(v => v.risk_score >= 35)
+        .sort((a, b) => b.risk_score - a.risk_score)
+        .slice(0, VERIFY_TOP_N)
+        .map(v => v.domain);
+
+      if (toCheck.length === 0) {
+        console.log(`[Domain Worker] No high-risk variants for ${domain}, skipping`);
+        await supabase.from('domain_monitors').update({ last_scan_at: new Date().toISOString() }).eq('id', id);
         continue;
       }
 
-      report.total_processed++;
-      report.total_scanned++;
+      console.log(`[Domain Worker] Verifying ${toCheck.length} variants for ${domain}`);
 
-      try {
-        const domain = monitor.domain.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      // Verify in parallel with a reasonable timeout
+      const verifications = await Promise.allSettled(
+        toCheck.map(d => verifyDomainActive(d, brandKeywords))
+      );
 
-        // Query crt.sh for lookalike domains
-        const lookalikes = await queryCrtSh(domain);
+      const newThreats: Array<{ domain: string; signals: string[]; brand_mentioned: boolean; risk: string }> = [];
 
-        // Score each lookalike
-        const variants: DomainVariant[] = lookalikes.slice(0, 50).map(look => scoreLookalike(domain, look));
+      for (let i = 0; i < toCheck.length; i++) {
+        const settled = verifications[i];
+        if (settled.status !== 'fulfilled') continue;
 
-        // Filter for dangerous variants only
-        const dangerousVariants = variants.filter(v => v.risk_level === 'CRITICAL' || v.risk_level === 'HIGH');
+        const v = settled.value;
+        if (!v.verified_threat) continue;
 
-        // Create alerts for dangerous lookalikes
-        let alertsCreated = 0;
-        for (const variant of dangerousVariants) {
-          const { data: alertData, error: alertErr } = await supabase
-            .from('brand_guard_alerts')
-            .insert({
-              brand_monitor_id: monitor.brand_monitor_id,
-              alert_type: 'new_threat',
-              severity: variant.risk_level === 'CRITICAL' ? 'critical' : 'high',
-              title: `Dangerous Lookalike Domain: ${variant.domain}`,
-              message: `Potential ${variant.threat_type.toLowerCase()} domain ${variant.domain} detected for ${domain}. Risk: ${variant.risk_level}`,
-              threat_id: `lookalike_${variant.domain}_${Date.now()}`,
-              target: domain,
-              platform: 'domain',
-              risk_score: variant.risk_score,
-              risk_level: variant.risk_level,
-              evidence: variant.evidence,
-            })
-            .select('id')
-            .single();
-
-          if (!alertErr && alertData) alertsCreated++;
-        }
-
-        // Store scan results in domain_lookalikes
-        await supabase.from('domain_lookalikes').insert({
-          scan_id: `lookalike_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          domain,
-          total_variants: variants.length,
-          summary: {
-            critical_count: variants.filter(v => v.risk_level === 'CRITICAL').length,
-            high_count: variants.filter(v => v.risk_level === 'HIGH').length,
-            medium_count: variants.filter(v => v.risk_level === 'MEDIUM').length,
-            low_count: variants.filter(v => v.risk_level === 'LOW').length,
-            min_count: variants.filter(v => v.risk_level === 'MINIMAL').length,
-          },
-          variants: variants,
-          created_at: new Date().toISOString(),
+        const storedVariant = storedVariants.find(sv => sv.domain === toCheck[i]);
+        newThreats.push({
+          domain: toCheck[i],
+          signals: v.content_signals,
+          brand_mentioned: v.brand_mentioned,
+          risk: storedVariant?.risk_level || 'HIGH',
         });
-
-        // Update last_scan_at
-        await supabase
-          .from('domain_monitors')
-          .update({ last_scan_at: now.toISOString(), updated_at: now.toISOString() })
-          .eq('id', monitor.id);
-
-        report.successful++;
-        report.alerts_created += alertsCreated;
-      } catch (error) {
-        report.failed++;
-        report.errors.push(`Domain scan error for ${monitor.domain}: ${String(error)}`);
       }
-    }
 
-    res.status(200).json({
-      ...report,
-      message: `Processed ${report.total_processed} domain monitors, ${report.total_scanned} scanned, ${report.alerts_created} alerts created`,
-    });
-  } catch (error) {
-    console.error('[domain-monitor-worker] Fatal error:', error);
-    res.status(500).json({ error: String(error) });
+      // ── Create alerts for new verified threats ──────────────────────────
+      if (newThreats.length > 0 && (owner_id || brand_monitor_id)) {
+        const alertRows = newThreats.map(threat => ({
+          owner_id,
+          brand_monitor_id,
+          alert_type: 'domain_threat',
+          severity: threat.risk === 'CRITICAL' ? 'critical' : 'high',
+          title: `Active lookalike domain detected: ${threat.domain}`,
+          message: [
+            `The domain ${threat.domain} is live and appears to be targeting your brand.`,
+            threat.brand_mentioned ? 'Your brand name was found on the page.' : null,
+            threat.signals.length > 0 ? `Phishing signals: ${threat.signals.join(', ')}.` : null,
+            'Consider filing an abuse report with the domain registrar.',
+          ].filter(Boolean).join(' '),
+          data: { threat_domain: threat.domain, signals: threat.signals, brand_mentioned: threat.brand_mentioned },
+          is_read: false,
+          created_at: new Date().toISOString(),
+        }));
+
+        const { error: alertErr } = await supabase.from('brand_guard_alerts').insert(alertRows);
+        if (alertErr) {
+          console.error(`[Domain Worker] Failed to insert alerts for ${domain}:`, alertErr.message);
+        }
+      }
+
+      // ── Update monitor's last_scan_at ────────────────────────────────────
+      await supabase
+        .from('domain_monitors')
+        .update({ last_scan_at: new Date().toISOString() })
+        .eq('id', id);
+
+      results.push({ domain, new_threats: newThreats.length, checked_variants: toCheck.length });
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Domain Worker] Error processing ${domain}:`, msg);
+      results.push({ domain, new_threats: 0, checked_variants: 0, error: msg });
+    }
   }
+
+  const durationMs = Date.now() - startedAt;
+  console.log(`[Domain Worker] Done in ${durationMs}ms — processed ${results.length} monitors`);
+
+  res.status(200).json({
+    success: true,
+    monitors_processed: results.length,
+    monitors_due: dueMonitors.length,
+    duration_ms: durationMs,
+    results,
+  });
 }
+
+export const config = {
+  maxDuration: 60,
+};

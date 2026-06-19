@@ -7,21 +7,30 @@
 /**
  * api/brand-guard/domain-monitor.ts — Website Lookalike Detector API
  * ========================================================================
- * Generates typosquatting domain variants and scores them for phishing risk.
- * Supports one-time scans and continuous monitoring subscriptions.
+ * Generates typosquatting domain variants, then VERIFIES which ones are
+ * actually registered and active before reporting them as threats.
+ *
+ * Without verification every scan was a false-positive factory — this fix
+ * adds three verification layers before flagging a domain as a real threat:
+ *
+ *   Layer 1 — DNS:     Does it resolve? (NXDOMAIN = theoretical, skip)
+ *   Layer 2 — HTTP:    Is the site live? (registered ≠ active phishing)
+ *   Layer 3 — Content: Does the page mention the brand? Phishing signals?
+ *                       Is it a parked/for-sale page?
  *
  * POST /api/brand-guard/domain-monitor
- *   Body: { domain: string, limit?: number, check_active?: boolean }
- *   Returns: { scan_id, domain, variants, summary }
+ *   Body: { domain: string, limit?: number, brand_keywords?: string[], monitoring?: string }
+ *   Returns: { scan_id, domain, variants, verified_threats, theoretical_threats, summary }
  *
  * GET /api/brand-guard/domain-monitor?scan_id=xxx
  *   Returns: Stored scan results
  *
- * GET /api/brand-guard/domain-monitor?domain=xxx&status=monitoring
+ * GET /api/brand-guard/domain-monitor?domain=xxx
  *   Returns: All monitoring subscriptions for a domain
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
+import * as dnsPromises from 'dns/promises';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase Client ──────────────────────────────────────────────────────────
@@ -30,12 +39,6 @@ const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SU
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // ── Types ────────────────────────────────────────────────────────────────────
-interface DomainMonitorRequest {
-  domain: string;
-  limit?: number;
-  check_active?: boolean;
-  monitoring?: 'once' | 'weekly' | 'daily';
-}
 
 interface DomainVariant {
   domain: string;
@@ -49,13 +52,25 @@ interface DomainVariant {
   evidence: string[];
   takedown_priority: string;
   takedown_action: string;
-  dns_info?: { resolves: boolean; ip_addresses?: string[]; has_www?: boolean };
-  ssl_info?: { has_ssl: boolean; issuer?: string; is_self_signed?: boolean; is_lets_encrypt?: boolean };
-  domain_age?: { days?: number; created_date?: string; registrar?: string; is_new?: boolean; source?: string };
-  active_page?: { is_active: boolean; status?: number; title?: string; has_brand_content: boolean; brand_matches?: string[]; impersonation_confidence: number; content_snippet?: string };
+  verification?: DomainVerification;
+}
+
+interface DomainVerification {
+  verified: boolean;           // true = we actually checked this
+  dns_resolves: boolean;       // DNS A record exists
+  ip_addresses: string[];      // resolved IPs
+  is_live: boolean;            // HTTP/HTTPS responded with non-5xx
+  has_ssl: boolean;            // HTTPS worked
+  is_parking_page: boolean;    // GoDaddy/Sedo/for-sale page
+  brand_mentioned: boolean;    // brand keywords found in page content
+  content_signals: string[];   // detected phishing signals
+  verified_threat: boolean;    // DNS + live + (brand_mentioned or phishing signals)
+  status: 'active_threat' | 'active_clean' | 'registered_inactive' | 'not_registered' | 'unverified';
+  checked_at: string;
 }
 
 // ── Domain Variant Generation ─────────────────────────────────────────────────
+
 const TLD_SWAPS = [
   '.com', '.net', '.org', '.io', '.co', '.app', '.xyz', '.dev',
   '.tech', '.finance', '.coin', '.crypto', '.site', '.online',
@@ -80,6 +95,26 @@ const HOMOGLYPHS: Record<string, string[]> = {
   l: ['1', 'i'], o: ['0'], s: ['5', '$'], t: ['7'],
 };
 
+// Parking page fingerprints — these domains are registered but not active threats
+const PARKING_PATTERNS = [
+  /sedo\.com/i, /godaddy\.com\/.*for-sale/i, /namecheap.*parking/i,
+  /this domain (is|has been) (parked|for sale)/i,
+  /domain for sale/i, /buy this domain/i,
+  /hugedomains\.com/i, /dan\.com/i, /afternic\.com/i,
+  /parking.*page/i, /underconstruction/i,
+];
+
+// Phishing content signals — things that should not appear on a lookalike site
+const PHISHING_SIGNALS: Array<{ pattern: RegExp; signal: string }> = [
+  { pattern: /connect.*wallet|wallet.*connect|metamask|phantom.*wallet/i, signal: 'wallet_connect_prompt' },
+  { pattern: /seed.?phrase|private.?key|recovery.?phrase/i, signal: 'seed_phrase_request' },
+  { pattern: /airdrop.*claim|claim.*airdrop|free.*token.*claim/i, signal: 'airdrop_scam' },
+  { pattern: /<form[^>]*>[\s\S]{0,500}password/i, signal: 'login_form' },
+  { pattern: /verify.*account|confirm.*identity|update.*billing/i, signal: 'account_verification_scam' },
+  { pattern: /you.ve been selected|congratulations.*winner/i, signal: 'lottery_scam' },
+  { pattern: /investment.*returns?|guaranteed.*profit|double.*your/i, signal: 'investment_scam' },
+];
+
 function extractDomainParts(domain: string): { base: string; tld: string; full: string } {
   let d = domain.toLowerCase().trim();
   d = d.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
@@ -97,14 +132,14 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
   function addVariant(
     variantDomain: string,
     type: string,
-    method: string,
+    _method: string,
     riskBoost: number,
     description: string
   ) {
     const vd = variantDomain.toLowerCase();
     if (vd !== full && !seen.has(vd) && variants.length < limit) {
       seen.add(vd);
-      // Calculate similarity
+
       const varBase = extractDomainParts(variantDomain).base;
       let similarity = 0;
       if (base.length > 0 && varBase.length > 0) {
@@ -117,26 +152,22 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
         similarity = matches / longer.length;
       }
 
-      // Calculate risk score
       let riskScore = 0;
       if (similarity >= 0.9) riskScore += 30;
       else if (similarity >= 0.75) riskScore += 22;
       else if (similarity >= 0.5) riskScore += 12;
       else if (similarity >= 0.3) riskScore += 5;
 
-      // Type risk
       const highRiskTypes = ['phishing_prefix', 'phishing_suffix', 'subdomain_phishing'];
       const mediumRiskTypes = ['homoglyph', 'tld_swap'];
       if (highRiskTypes.includes(type)) riskScore += 25;
       else if (mediumRiskTypes.includes(type)) riskScore += 15;
       else riskScore += 8;
 
-      // Risk boost
       if (riskBoost >= 0.7) riskScore += 15;
       else if (riskBoost >= 0.5) riskScore += 10;
       else if (riskBoost >= 0.3) riskScore += 5;
 
-      // Suspicious TLD
       const suspiciousTlds = ['.xyz', '.coin', '.crypto', '.site', '.online', '.tk', '.ml', '.ga', '.cf'];
       const varTld = '.' + variantDomain.split('.').pop();
       if (suspiciousTlds.includes(varTld)) riskScore += 10;
@@ -150,7 +181,7 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
       let takedownAction: string;
 
       if (riskScore >= 70) {
-        riskLevel = 'CRITICAL'; threatType = 'Active phishing domain';
+        riskLevel = 'CRITICAL'; threatType = 'Potential active phishing domain';
         takedownPriority = 'Urgent'; takedownAction = 'File abuse report with registrar + submit to phishing databases';
       } else if (riskScore >= 45) {
         riskLevel = 'HIGH'; threatType = 'Probable lookalike domain';
@@ -182,7 +213,6 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
     }
   }
 
-  // TLD swaps
   for (const swapTld of TLD_SWAPS) {
     if (swapTld !== tld) {
       const risk = ['.io', '.xyz', '.coin', '.crypto', '.site', '.online'].includes(swapTld) ? 0.5 : 0.3;
@@ -190,23 +220,19 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
     }
   }
 
-  // Phishing prefixes
   for (const prefix of PHISHING_PREFIXES) {
     addVariant(`${prefix}${base}${tld}`, 'phishing_prefix', `prefix_${prefix}`, 0.7, `Phishing prefix: "${prefix}" added`);
   }
 
-  // Phishing suffixes
   for (const suffix of PHISHING_SUFFIXES) {
     addVariant(`${base}${suffix}${tld}`, 'phishing_suffix', `suffix${suffix}`, 0.7, `Phishing suffix: "${suffix}" added`);
   }
 
-  // Character omission
   for (let i = 0; i < Math.min(base.length, 8); i++) {
     const variant = base.slice(0, i) + base.slice(i + 1);
     addVariant(`${variant}${tld}`, 'char_omission', `omit_pos${i}`, 0.3, `Missing character at position ${i}`);
   }
 
-  // Homoglyph substitution
   for (let i = 0; i < Math.min(base.length, 8); i++) {
     const char = base[i].toLowerCase();
     if (HOMOGLYPHS[char]) {
@@ -217,198 +243,223 @@ function generateDomainVariants(domain: string, limit: number = 50): DomainVaria
     }
   }
 
-  // Subdomain phishing
   for (const sub of ['login', 'signin', 'verify', 'secure', 'account']) {
     addVariant(`${base}.${sub}.com`, 'subdomain_phishing', `subdomain_${sub}`, 0.8, `Subdomain phishing: ${base}.${sub}.com`);
   }
 
-  // Sort by risk (highest first)
   variants.sort((a, b) => b.risk_score - a.risk_score);
   return variants.slice(0, limit);
 }
 
-// ── Domain Age Lookup (WHOIS via free APIs) ──────────────────────────────────────
+// ── Domain Verification ───────────────────────────────────────────────────────
 
-async function lookupDomainAge(domain: string): Promise<DomainVariant['domain_age']> {
-  try {
-    // Use whoisjson.com free tier (10 req/hr without key)
-    const res = await fetch(`https://whoisjson.com/api/v1/whois?domain=${encodeURIComponent(domain)}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return { source: 'whois_failed' };
-    const data = await res.json();
-
-    // Try multiple date fields
-    const createdStr = data.creation_date || data.created_date || data.creationDate || null;
-    const registrar = data.registrar || data.registrarName || null;
-
-    if (!createdStr) return { registrar, source: 'whois_no_date' };
-
-    // Parse date (handles ISO, RFC, and Unix timestamp formats)
-    let createdDate: Date | null = null;
-    if (typeof createdStr === 'string') {
-      createdDate = new Date(createdStr);
-    } else if (typeof createdStr === 'number') {
-      createdDate = new Date(createdStr * 1000); // Unix timestamp
-    } else if (Array.isArray(createdStr) && createdStr.length > 0) {
-      createdDate = new Date(createdStr[0]);
-    }
-
-    if (!createdDate || isNaN(createdDate.getTime())) return { registrar, source: 'whois_invalid_date' };
-
-    const days = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    const isNew = days < 90; // Less than 90 days = suspicious new domain
-
-    return {
-      days,
-      created_date: createdDate.toISOString().split('T')[0],
-      registrar: registrar || undefined,
-      is_new: isNew,
-      source: 'whois',
-    };
-  } catch {
-    // Fallback: try dns0.eu free API
-    try {
-      const res2 = await fetch(`https://dns0.eu/whois/${encodeURIComponent(domain)}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res2.ok) return { source: 'whois_unavailable' };
-      const text = await res2.text();
-      // Parse WHOIS text output for creation date
-      const dateMatch = text.match(/Creation Date:\s*(.+)/i) || text.match(/Created Date:\s*(.+)/i) || text.match(/Registered On:\s*(.+)/i);
-      if (dateMatch) {
-        const createdDate = new Date(dateMatch[1].trim());
-        if (!isNaN(createdDate.getTime())) {
-          const days = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-          return { days, created_date: createdDate.toISOString().split('T')[0], is_new: days < 90, source: 'whois_text' };
-        }
-      }
-      return { source: 'whois_no_date' };
-    } catch {
-      return { source: 'whois_unavailable' };
-    }
-  }
-}
-
-// ── Active Page & Impersonation Detection ──────────────────────────────────────
-
-async function checkActiveImpersonation(
+/**
+ * Verify whether a domain variant is actually active and threatening.
+ * Three-layer check: DNS → HTTP live → content analysis.
+ * Runs with per-check timeouts so a slow/dead domain doesn't block the scan.
+ */
+export async function verifyDomainActive(
   domain: string,
-  brandName: string,
-  brandDomain: string
-): Promise<DomainVariant['active_page']> {
-  const result: DomainVariant['active_page'] = {
-    is_active: false,
-    has_brand_content: false,
-    impersonation_confidence: 0,
+  brandKeywords: string[] = []
+): Promise<DomainVerification> {
+  const result: DomainVerification = {
+    verified: true,
+    dns_resolves: false,
+    ip_addresses: [],
+    is_live: false,
+    has_ssl: false,
+    is_parking_page: false,
+    brand_mentioned: false,
+    content_signals: [],
+    verified_threat: false,
+    status: 'not_registered',
+    checked_at: new Date().toISOString(),
   };
 
+  // ── Layer 1: DNS A record lookup ─────────────────────────────────────────
   try {
-    const urls = [`https://${domain}`, `http://${domain}`, `https://www.${domain}`];
-    let response: Response | null = null;
-    let finalUrl = '';
-
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(8000),
-          redirect: 'follow',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml',
-          },
-        });
-        if (res.ok) {
-          response = res;
-          finalUrl = res.url || url;
-          break;
-        }
-      } catch { /* try next URL */ }
+    const addrs = await Promise.race([
+      dnsPromises.resolve4(domain),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('dns_timeout')), 3000)),
+    ]);
+    result.dns_resolves = true;
+    result.ip_addresses = addrs as string[];
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'dns_timeout') {
+      // DNS timed out — treat as unresolved to avoid false positives
+      result.status = 'unverified';
+    } else {
+      result.status = 'not_registered'; // NXDOMAIN or similar
     }
-
-    if (!response) return result;
-
-    result.is_active = true;
-    result.status = response.status;
-
-    const html = await response.text();
-
-    // Extract title
-    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    result.title = titleMatch ? titleMatch[1].trim().substring(0, 200) : undefined;
-
-    // Check for brand name mentions in visible content
-    const visibleText = html
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .substring(0, 5000)
-      .toLowerCase();
-
-    const brandLower = brandName.toLowerCase();
-    const brandParts = brandLower.split(/\s+/).filter(p => p.length > 2);
-
-    // Check title for brand name
-    const titleLower = (result.title || '').toLowerCase();
-    const titleHasBrand = brandParts.some(p => titleLower.includes(p));
-
-    // Check meta tags for brand references
-    const metaMatches = html.match(/<meta[^>]*(?:content|property|name)=["'][^"']*?["'][^>]*>/gi) || [];
-    const metaText = metaMatches.join(' ').toLowerCase();
-    const metaHasBrand = brandParts.some(p => metaText.includes(p));
-
-    // Check for brand domain references (impersonators often reference the real site)
-    const domainLower = brandDomain.toLowerCase().replace(/^www\./, '');
-    const htmlLower = html.toLowerCase();
-    const referencesRealDomain = htmlLower.includes(domainLower);
-
-    // Check for login/wallet/connect phrases (common in crypto phishing)
-    const phishingPhrases = [
-      'connect wallet', 'connect your wallet', 'link wallet',
-      'claim airdrop', 'claim your', 'free claim', 'connect to claim',
-      'verify wallet', 'wallet verification', 'sync wallet',
-      'sign transaction', 'approve transaction',
-    ];
-    const foundPhishing = phishingPhrases.filter(p => visibleText.includes(p));
-
-    // Check for copied site indicators (same CSS frameworks, same image hashes, etc.)
-    const hasReact = htmlLower.includes('react') || htmlLower.includes('__next');
-    const hasLogin = visibleText.includes('log in') || visibleText.includes('sign in') || visibleText.includes('login');
-    const hasCryptoWallet = visibleText.includes('phantom') || visibleText.includes('solflare') || visibleText.includes('metamask');
-
-    // Calculate impersonation confidence (0-100)
-    let confidence = 0;
-    const brandMatches: string[] = [];
-
-    if (titleHasBrand) { confidence += 25; brandMatches.push('title_contains_brand'); }
-    if (metaHasBrand) { confidence += 15; brandMatches.push('meta_contains_brand'); }
-    if (referencesRealDomain) { confidence += 15; brandMatches.push('references_real_domain'); }
-    if (foundPhishing.length > 0) { confidence += 20 * Math.min(foundPhishing.length, 2); brandMatches.push(`phishing_phrases:${foundPhishing.join(',')}`); }
-    if (hasLogin) { confidence += 10; brandMatches.push('has_login_form'); }
-    if (hasCryptoWallet) { confidence += 15; brandMatches.push('crypto_wallet_connect'); }
-
-    // Extract a snippet around the brand name
-    const brandIdx = visibleText.indexOf(brandLower);
-    if (brandIdx >= 0) {
-      const start = Math.max(0, brandIdx - 60);
-      const end = Math.min(visibleText.length, brandIdx + brandLower.length + 60);
-      result.content_snippet = visibleText.substring(start, end).trim();
-    }
-
-    result.has_brand_content = confidence > 0;
-    result.impersonation_confidence = Math.min(100, confidence);
-    result.brand_matches = brandMatches;
-
-  } catch {
-    // Domain not reachable or other error — that's fine
+    return result; // No point checking HTTP if DNS fails
   }
+
+  result.status = 'registered_inactive';
+
+  // ── Layer 2: HTTP live check ──────────────────────────────────────────────
+  let pageBody = '';
+
+  const fetchWithTimeout = async (url: string, timeoutMs: number): Promise<Response> => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      return await fetch(url, {
+        signal: ctrl.signal,
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; BrandGuardBot/1.0; +https://agenticbro.app)',
+        },
+      });
+    } finally {
+      clearTimeout(t);
+    }
+  };
+
+  // Try HTTPS first
+  try {
+    const httpsRes = await fetchWithTimeout(`https://${domain}`, 4000);
+    if (httpsRes.status < 500) {
+      result.is_live = true;
+      result.has_ssl = true;
+      result.status = 'active_clean';
+      // Read up to 32KB of body for content analysis
+      const buffer = await httpsRes.arrayBuffer();
+      pageBody = new TextDecoder().decode(buffer.slice(0, 32768));
+    }
+  } catch {
+    // HTTPS failed — try plain HTTP
+    try {
+      const httpRes = await fetchWithTimeout(`http://${domain}`, 3000);
+      if (httpRes.status < 500) {
+        result.is_live = true;
+        result.has_ssl = false;
+        result.status = 'active_clean';
+        const buffer = await httpRes.arrayBuffer();
+        pageBody = new TextDecoder().decode(buffer.slice(0, 32768));
+      }
+    } catch {
+      // Not live at all
+      return result; // status remains 'registered_inactive'
+    }
+  }
+
+  if (!pageBody) return result;
+
+  // ── Layer 3: Content analysis ─────────────────────────────────────────────
+
+  // Parking page detection — registered but not an active threat
+  result.is_parking_page = PARKING_PATTERNS.some(p => p.test(pageBody));
+  if (result.is_parking_page) {
+    result.status = 'registered_inactive';
+    return result; // Parking pages are not active threats
+  }
+
+  // Brand keyword detection
+  const bodyLower = pageBody.toLowerCase();
+  result.brand_mentioned = brandKeywords.some(kw => bodyLower.includes(kw.toLowerCase()));
+
+  // Phishing signal detection
+  const signals: string[] = [];
+  for (const { pattern, signal } of PHISHING_SIGNALS) {
+    if (pattern.test(pageBody)) signals.push(signal);
+  }
+  result.content_signals = signals;
+
+  // A domain is a verified threat if:
+  // - It's live AND
+  // - It either mentions the brand OR has phishing signals
+  result.verified_threat = result.is_live && (result.brand_mentioned || signals.length > 0);
+  result.status = result.verified_threat ? 'active_threat' : 'active_clean';
 
   return result;
 }
 
+/**
+ * Re-score a variant after verification — bump scores for confirmed active threats,
+ * downgrade scores for parking pages and unregistered domains.
+ */
+function applyVerificationToScore(variant: DomainVariant, v: DomainVerification): DomainVariant {
+  let { risk_score, evidence } = variant;
+  const newEvidence = [...evidence];
+
+  if (!v.dns_resolves && v.status !== 'unverified') {
+    // Domain doesn't exist — clearly theoretical
+    risk_score = Math.round(risk_score * 0.2);
+    newEvidence.push('⚪ DNS: Not registered (theoretical)');
+  } else if (v.status === 'unverified') {
+    newEvidence.push('⚠️ DNS: Lookup timed out — could not verify');
+  } else if (v.is_parking_page) {
+    // Registered but parked — keep a modest score, it could become active
+    risk_score = Math.min(risk_score, 30);
+    newEvidence.push('🅿️ Active: Registered but currently parked/for-sale');
+  } else if (v.dns_resolves && !v.is_live) {
+    // Registered but no web server
+    risk_score = Math.round(risk_score * 0.5);
+    newEvidence.push(`🟡 Active: DNS resolves (${v.ip_addresses[0] || 'unknown'}) but no web server`);
+  } else if (v.is_live) {
+    // Live site — boost the base score
+    risk_score = Math.min(100, risk_score + 15);
+    newEvidence.push(`🔴 Active: Live website (${v.has_ssl ? 'HTTPS' : 'HTTP only'})`);
+
+    if (v.brand_mentioned) {
+      risk_score = Math.min(100, risk_score + 20);
+      newEvidence.push('🔴 Content: Brand name mentioned on the page');
+    }
+
+    for (const signal of v.content_signals) {
+      const label: Record<string, string> = {
+        wallet_connect_prompt: '🚨 Content: Wallet connection prompt detected',
+        seed_phrase_request: '🚨 Content: Seed phrase / private key request detected',
+        airdrop_scam: '🚨 Content: Airdrop or free token claim page',
+        login_form: '🟠 Content: Login form detected',
+        account_verification_scam: '🟠 Content: Account verification flow detected',
+        lottery_scam: '🚨 Content: Lottery / prize scam language detected',
+        investment_scam: '🚨 Content: Investment return scam language detected',
+      };
+      const pointBoost = signal.includes('seed_phrase') || signal.includes('wallet') ? 25 : 15;
+      risk_score = Math.min(100, risk_score + pointBoost);
+      newEvidence.push(label[signal] || `🟠 Content signal: ${signal}`);
+    }
+  }
+
+  // Recompute risk level
+  let risk_level: DomainVariant['risk_level'];
+  let threat_type: string;
+  let takedown_priority: string;
+  let takedown_action: string;
+
+  if (risk_score >= 70) {
+    risk_level = 'CRITICAL'; threat_type = 'Active phishing domain — immediate action required';
+    takedown_priority = 'Urgent'; takedown_action = 'File abuse report with registrar + submit to Google Safe Browsing + PhishTank';
+  } else if (risk_score >= 45) {
+    risk_level = 'HIGH'; threat_type = v.is_live ? 'Live lookalike domain' : 'Probable lookalike domain';
+    takedown_priority = 'High'; takedown_action = 'File abuse report + monitor for active phishing content';
+  } else if (risk_score >= 25) {
+    risk_level = 'MEDIUM'; threat_type = v.dns_resolves ? 'Registered lookalike domain' : 'Possible lookalike pattern';
+    takedown_priority = 'Medium'; takedown_action = 'Monitor weekly — file abuse report if site becomes active';
+  } else if (risk_score >= 10) {
+    risk_level = 'LOW'; threat_type = 'Low-risk variant';
+    takedown_priority = 'Monitor'; takedown_action = 'Add to periodic monitoring';
+  } else {
+    risk_level = 'MINIMAL'; threat_type = 'Theoretical pattern — domain not registered';
+    takedown_priority = 'None'; takedown_action = 'No action needed';
+  }
+
+  return {
+    ...variant,
+    risk_score: Math.round(risk_score),
+    risk_level,
+    threat_type,
+    evidence: newEvidence,
+    takedown_priority,
+    takedown_action,
+    verification: v,
+  };
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
+
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
 type VercelResponse = ServerResponse & {
   status: (code: number) => VercelResponse;
@@ -424,7 +475,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  // ── GET: Retrieve scan results ───────────────────────────────────────────
+  // ── GET: Retrieve scan results ────────────────────────────────────────────
   if (req.method === 'GET') {
     const scanId = (req.url?.split('scan_id=')[1]?.split('&')[0]) || '';
 
@@ -434,183 +485,167 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .select('*')
         .eq('scan_id', scanId)
         .single();
-      if (data && !error) {
-        res.status(200).json(data);
-        return;
-      }
+      if (data && !error) { res.status(200).json(data); return; }
     }
 
-    // List monitors for a domain
     const domainParam = (req.url?.split('domain=')[1]?.split('&')[0]) || '';
     if (domainParam && supabase) {
       const { data, error } = await supabase
         .from('domain_monitors')
         .select('*')
         .eq('domain', domainParam);
-      if (data && !error) {
-        res.status(200).json({ success: true, monitors: data });
-        return;
-      }
+      if (data && !error) { res.status(200).json({ success: true, monitors: data }); return; }
     }
 
     res.status(404).json({ error: 'Not found' });
     return;
   }
 
-  // ── POST: Run domain lookalike scan ──────────────────────────────────────
+  // ── POST: Run domain lookalike scan ───────────────────────────────────────
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    res.status(405).json({ error: 'Method not allowed' }); return;
   }
 
   const body = req.body || {};
   const domain = (body.domain as string) || '';
-  const limit = (body.limit as number) || 50;
+  const limit = Math.min((body.limit as number) || 50, 100);
   const monitoring = (body.monitoring as string) || 'once';
 
-  if (!domain) {
-    res.status(400).json({ error: 'domain is required' });
-    return;
-  }
+  // Brand keywords used for content-analysis verification.
+  // Defaults to the domain base name — callers can pass a richer list.
+  const { base: domainBase } = extractDomainParts(domain);
+  const brandKeywords = (body.brand_keywords as string[]) ||
+    [domainBase, domain.replace(/\.[^.]+$/, '')].filter(Boolean);
 
-  // Validate domain format
+  if (!domain) { res.status(400).json({ error: 'domain is required' }); return; }
+
   const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
-  if (!domainRegex.test(domain)) {
-    res.status(400).json({ error: 'Invalid domain format' });
-    return;
-  }
+  if (!domainRegex.test(domain)) { res.status(400).json({ error: 'Invalid domain format' }); return; }
 
   const scanId = `dl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  // Generate variants
-  const variants = generateDomainVariants(domain, limit);
+  // ── Step 1: Generate variants ──────────────────────────────────────────────
+  const rawVariants = generateDomainVariants(domain, limit);
 
-  // ── Enrich variants with domain age & active page checks ──────────────────
-  const brandName = (body.brand_name as string) || domain.split('.')[0];
-  const checkActive = body.check_active !== false; // default true
+  // ── Step 2: Verify top variants in parallel ────────────────────────────────
+  // Only verify variants with meaningful risk scores (saves time + avoids
+  // hammering DNS for clearly theoretical low-risk variants)
+  const VERIFY_LIMIT = 15;
+  const toVerify = rawVariants.filter(v => v.risk_score >= 35).slice(0, VERIFY_LIMIT);
+  const skipVerify = rawVariants.filter(v => !toVerify.includes(v));
 
-  // Run enrichment in parallel (with concurrency limit)
-  const CONCURRENCY = 5;
-  const topVariants = variants.slice(0, Math.min(limit, 20)); // Check top 20 highest-risk variants
+  console.log(`[Domain Monitor] Verifying ${toVerify.length} of ${rawVariants.length} variants for ${domain}`);
 
-  for (let i = 0; i < topVariants.length; i += CONCURRENCY) {
-    const batch = topVariants.slice(i, i + CONCURRENCY);
-    const results = await Promise.allSettled(
-      batch.map(async (v) => {
-        // Domain age lookup
-        const age = await lookupDomainAge(v.domain);
-        v.domain_age = age;
+  const verificationResults = await Promise.allSettled(
+    toVerify.map(v => verifyDomainActive(v.domain, brandKeywords))
+  );
 
-        // Active page check + impersonation detection
-        if (checkActive) {
-          const activePage = await checkActiveImpersonation(v.domain, brandName, domain);
-          v.active_page = activePage;
-        }
+  // Apply verification results back to variants
+  const verifiedVariants: DomainVariant[] = toVerify.map((variant, idx) => {
+    const settled = verificationResults[idx];
+    if (settled.status === 'fulfilled') {
+      return applyVerificationToScore(variant, settled.value);
+    }
+    // Verification threw — leave scores as-is but mark unverified
+    return {
+      ...variant,
+      evidence: [...variant.evidence, '⚠️ Verification error — scores are theoretical'],
+      verification: {
+        verified: false,
+        dns_resolves: false,
+        ip_addresses: [],
+        is_live: false,
+        has_ssl: false,
+        is_parking_page: false,
+        brand_mentioned: false,
+        content_signals: [],
+        verified_threat: false,
+        status: 'unverified' as const,
+        checked_at: new Date().toISOString(),
+      },
+    };
+  });
 
-        // Recalculate risk score with new factors
-        let bonusScore = 0;
+  // Combine verified + unverified (unverified keep their original theoretical scores)
+  const allVariants = [
+    ...verifiedVariants,
+    ...skipVerify,
+  ].sort((a, b) => b.risk_score - a.risk_score);
 
-        // Domain age scoring: newer = more suspicious
-        if (age?.is_new) {
-          bonusScore += 15;
-          v.evidence.push(`New domain: registered ${age.days} days ago (${age.created_date})`);
-        } else if (age?.days !== undefined && age.days < 180) {
-          bonusScore += 8;
-          v.evidence.push(`Recent domain: ${age.days} days old`);
-        } else if (age?.days !== undefined && age.days > 365) {
-          bonusScore -= 3; // Older domains slightly less suspicious
-        }
+  // ── Step 3: Separate confirmed threats from theoretical ones ──────────────
+  const verifiedThreats = allVariants.filter(v =>
+    v.verification?.verified_threat === true
+  );
+  const activeRegistered = allVariants.filter(v =>
+    v.verification?.dns_resolves && v.verification.is_live && !v.verification.verified_threat
+  );
+  const registeredInactive = allVariants.filter(v =>
+    v.verification?.dns_resolves && !v.verification.is_live && !v.verification.is_parking_page
+  );
+  const parked = allVariants.filter(v => v.verification?.is_parking_page);
+  const theoretical = allVariants.filter(v => !v.verification?.verified);
 
-        // Active page scoring
-        if (v.active_page?.is_active) {
-          bonusScore += 5; // Any active page on a lookalike is worth noting
-          if (v.active_page.impersonation_confidence > 50) {
-            bonusScore += 20;
-            v.evidence.push(`Active impersonation page (confidence: ${v.active_page.impersonation_confidence}%)`);
-          } else if (v.active_page.impersonation_confidence > 20) {
-            bonusScore += 10;
-            v.evidence.push(`Possible brand content detected (confidence: ${v.active_page.impersonation_confidence}%)`);
-          }
-          if (v.active_page.has_brand_content) {
-            bonusScore += 10;
-            v.evidence.push(`Brand name found on active page`);
-          }
-          if (v.active_page.brand_matches?.some(m => m.startsWith('phishing_phrases'))) {
-            bonusScore += 10;
-            v.evidence.push(`Phishing wallet-connect language detected`);
-          }
-        }
+  // ── Step 4: Build summary ─────────────────────────────────────────────────
+  const afterVerification = allVariants.filter(v => v.verification?.verified);
 
-        v.risk_score = Math.min(100, Math.max(0, v.risk_score + bonusScore));
+  const summary = {
+    // Post-verification counts (what actually matters)
+    verified_threats: verifiedThreats.length,
+    active_registered: activeRegistered.length,
+    registered_inactive: registeredInactive.length,
+    parked_domains: parked.length,
+    theoretical_variants: theoretical.length,
+    // Legacy risk level counts across all variants
+    critical: allVariants.filter(v => v.risk_level === 'CRITICAL').length,
+    high: allVariants.filter(v => v.risk_level === 'HIGH').length,
+    medium: allVariants.filter(v => v.risk_level === 'MEDIUM').length,
+    low: allVariants.filter(v => v.risk_level === 'LOW').length,
+    minimal: allVariants.filter(v => v.risk_level === 'MINIMAL').length,
+    domains_verified: afterVerification.length,
+    total_variants: allVariants.length,
+  };
 
-        // Recalculate risk level based on updated score
-        if (v.risk_score >= 70) {
-          v.risk_level = 'CRITICAL'; v.threat_type = 'Active phishing domain'; v.takedown_priority = 'Urgent'; v.takedown_action = 'File abuse report with registrar + submit to phishing databases';
-        } else if (v.risk_score >= 45) {
-          v.risk_level = 'HIGH'; v.threat_type = 'Probable lookalike domain'; v.takedown_priority = 'High'; v.takedown_action = 'File abuse report + monitor for active content';
-        } else if (v.risk_score >= 25) {
-          v.risk_level = 'MEDIUM'; v.threat_type = 'Possible lookalike domain'; v.takedown_priority = 'Medium'; v.takedown_action = 'Monitor weekly and file abuse report if site becomes active';
-        } else if (v.risk_score >= 10) {
-          v.risk_level = 'LOW'; v.threat_type = 'Unlikely threat'; v.takedown_priority = 'Monitor'; v.takedown_action = 'Add to periodic monitoring';
-        } else {
-          v.risk_level = 'MINIMAL'; v.threat_type = 'No significant risk'; v.takedown_priority = 'Monitor'; v.takedown_action = 'Add to periodic monitoring';
-        }
-
-        return v;
-      })
-    );
-    // Apply results back to variants array
-    results.forEach((r, idx) => {
-      if (r.status === 'fulfilled') {
-        Object.assign(batch[idx], r.value);
-      }
-    });
-  }
-
-  // Re-sort by updated risk score
-  variants.sort((a, b) => b.risk_score - a.risk_score);
-
-  // Build result
   const result = {
     scan_id: scanId,
     scan_date: new Date().toISOString(),
     domain,
-    total_variants: variants.length,
-    summary: {
-      critical: variants.filter(v => v.risk_level === 'CRITICAL').length,
-      high: variants.filter(v => v.risk_level === 'HIGH').length,
-      medium: variants.filter(v => v.risk_level === 'MEDIUM').length,
-      low: variants.filter(v => v.risk_level === 'LOW').length,
-      minimal: variants.filter(v => v.risk_level === 'MINIMAL').length,
-    },
-    top_threats: variants.slice(0, 10),
-    variants,
+    // Verified threats first — these are confirmed active risks
+    verified_threats: verifiedThreats,
+    // Split view for UI: real vs theoretical
+    active_registered: activeRegistered,
+    registered_inactive: registeredInactive,
+    parked_domains: parked,
+    theoretical_variants: theoretical.slice(0, 20), // cap theoretical list
+    // Legacy: all variants sorted by score (for backward compat)
+    top_threats: allVariants.slice(0, 10),
+    variants: allVariants,
+    summary,
     monitoring,
     disclaimer: 'Educational purposes only. Not financial advice. Not a guarantee of safety. Always verify independently.',
   };
 
-  // Store in Supabase
+  // ── Step 5: Store in Supabase ─────────────────────────────────────────────
   if (supabase) {
     try {
-      // Store scan result
       await supabase.from('domain_lookalikes').insert({
         scan_id: scanId,
         domain,
-        total_variants: variants.length,
-        summary: result.summary,
-        variants: variants.slice(0, 50), // Store top 50
+        total_variants: allVariants.length,
+        summary,
+        variants: allVariants.slice(0, 50),
         created_at: new Date().toISOString(),
       });
 
-      // If monitoring requested, create/update domain monitor
       if (monitoring !== 'once') {
         await supabase.from('domain_monitors').upsert({
           domain,
           scan_frequency: monitoring,
           is_active: true,
           last_scan_at: new Date().toISOString(),
-          variants: variants.slice(0, 20),
-          baseline_score: 0,
+          variants: allVariants.slice(0, 20),
+          baseline_score: verifiedThreats.length > 0
+            ? Math.max(...verifiedThreats.map(v => v.risk_score))
+            : 0,
         }, { onConflict: 'domain' });
       }
     } catch (err) {
