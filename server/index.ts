@@ -6,6 +6,7 @@
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
+import { startBrandGuardWorker } from './lib/brand-guard-worker.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -183,6 +184,10 @@ app.listen(PORT, () => {
   console.log(`Agentic Bro API server running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
   console.log(`Submit scan: POST http://localhost:${PORT}/api/scan`);
+
+  // Start Brand Guard background worker (polls Supabase for processing scans,
+  // runs real X impersonator checks via Chrome CDP at localhost:18801)
+  startBrandGuardWorker(supabase);
 });
 
 export default app;

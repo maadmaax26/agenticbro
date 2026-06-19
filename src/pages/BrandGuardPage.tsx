@@ -790,6 +790,54 @@ export function BrandGuardPage() {
 
       setScanResult(result);
       await fetchCredits();
+
+      // ── Poll for real results if scan is pending ──────────────────────────────
+      if (data.real_scan_pending && data.scan_id) {
+        const pollScanId = data.scan_id;
+        const pollInterval = (data.poll_interval || 10) * 1000;
+        const maxPolls = 30; // 5 minutes max (30 * 10s)
+        let pollCount = 0;
+
+        const pollForResults = async () => {
+          try {
+            const pollRes = await fetch(`${API_BASE}/impersonator-scan?scan_id=${pollScanId}`, {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            const pollData = await pollRes.json();
+
+            if (pollData.status === 'complete' && pollData.result?.real_scan) {
+              // Real scan results are in — update display
+              const realResult = pollData.result;
+              setScanResult(realResult);
+              setScanning(null);
+              return true; // Done polling
+            } else if (pollData.status === 'failed') {
+              // Scan failed
+              setScanResult({ ...result, error: pollData.result?.error || 'Real platform scan failed', real_scan_pending: false });
+              setScanning(null);
+              return true;
+            }
+            return false; // Still pending
+          } catch {
+            return false; // Network error, keep polling
+          }
+        };
+
+        // Initial short poll after 5 seconds
+        await new Promise(r => setTimeout(r, 5000));
+        let done = await pollForResults();
+
+        while (!done && pollCount < maxPolls) {
+          await new Promise(r => setTimeout(r, pollInterval));
+          pollCount++;
+          done = await pollForResults();
+        }
+
+        // If polling timed out, keep the preview results but mark as not-pending
+        if (!done) {
+          setScanResult(prev => prev ? { ...prev, real_scan_pending: false, poll_timeout: true } : prev);
+        }
+      }
     } catch (err) {
       // Network error — refund the deducted credit
       try {
@@ -1410,6 +1458,7 @@ n            </p>
 
   return (
     <div style={{ minHeight: '100vh', background: dark.bg, overflowX: 'hidden' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       {/* Header */}
       <div style={{
         padding: isMobile ? '10px 12px' : '12px 24px', borderBottom: `1px solid ${dark.border}`,
@@ -2259,6 +2308,12 @@ n            </p>
                   <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>
                     {scanType === 'domain' ? '🌐 Domain Sweep Results' : scanType === 'website' ? '🔗 Link Scanner Results' : scanType === 'threat' ? '⚡ Threat Correlation Results' : scanType === 'vendor' ? '📞 Vendor Verification Results' : scanType === 'email' ? '📧 Email Spoof Check Results' : '🔍 Impersonator Scan Results'}
                   </h3>
+                  {scanResult.real_scan_pending && (
+                    <div style={{ padding: '12px', marginBottom: '12px', borderRadius: '8px', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
+                      Checking real platforms for actual impersonator accounts... The preview below shows theoretical variants while we scan X, Instagram, TikTok, and more.
+                    </div>
+                  )}
                   {scanResult.error ? (
                     <div style={{ color: dark.red, fontSize: '14px' }}>{String(scanResult.error)}</div>
                   ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.email_security || scanResult.red_flags) ? (

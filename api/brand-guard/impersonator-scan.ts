@@ -407,15 +407,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  // ── Queue-based scan: create pending job, local worker processes it ─────────
   // Generate scan ID
   const scanId = `bg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  // Generate variants
-  const socialVariants = generateBrandVariants(brandHandle, variantLimit);
+  // Determine scan type from request
+  const scanType = (body.scan_type as string) || 'impersonator';
 
-  // Build scan result — return complete results synchronously
-  // Since there's no async worker, treat generated variants as potential impersonators
-  const potentialImpersonators = socialVariants.map((v, idx) => ({
+  // Generate quick variants for immediate preview (theoretical, for UX feedback)
+  const socialVariants = generateBrandVariants(brandHandle, variantLimit);
+  const previewImpersonators = socialVariants.map((v, idx) => ({
     handle: v.variant,
     platform: platforms[idx % platforms.length],
     risk_score: Math.round((0.3 + v.risk_boost) * 10),
@@ -425,7 +426,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     status: 'potential',
   }));
 
-  const result: BrandScanResult = {
+  // Build initial preview result (theoretical variants, not real scans)
+  const previewResult: BrandScanResult = {
     scan_id: scanId,
     scan_date: new Date().toISOString(),
     brand: {
@@ -434,10 +436,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       domain: brandDomain || undefined,
     },
     success: true,
-    total_found: potentialImpersonators.length,
-    risk_level: potentialImpersonators.some(p => p.risk_level === 'HIGH') ? 'HIGH' : potentialImpersonators.some(p => p.risk_level === 'MEDIUM') ? 'MEDIUM' : 'LOW',
+    total_found: previewImpersonators.length,
+    risk_level: previewImpersonators.some(p => p.risk_level === 'HIGH') ? 'HIGH' : previewImpersonators.some(p => p.risk_level === 'MEDIUM') ? 'MEDIUM' : 'LOW',
     platforms_scanned: platforms,
-    impersonators: potentialImpersonators,
+    impersonators: previewImpersonators,
     scam_patterns: socialVariants.filter(v => v.risk_boost >= 0.5).map(v => ({
       type: v.type,
       pattern: v.variant,
@@ -450,38 +452,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     summary: {
       platforms_scanned: platforms,
       variants_generated: socialVariants.length,
-      profiles_scanned: socialVariants.length,
-      impersonators_found: potentialImpersonators.length,
+      profiles_scanned: 0, // Will be updated by worker with real data
+      impersonators_found: previewImpersonators.length,
       scammer_db_matches: 0,
     },
-    impersonator_results: potentialImpersonators,
+    impersonator_results: previewImpersonators,
     disclaimer: 'Educational purposes only. Not financial advice. Not a guarantee of safety. Always verify independently.',
+    real_scan_pending: true, // Flag: real platform scans are pending
   };
 
-  // Store in Supabase
+  // Store as pending job in Supabase — local worker will pick it up
   if (supabase) {
     try {
       await supabase.from('brand_guard_scans').insert({
         scan_id: scanId,
+        brand_monitor_id: (body.brand_monitor_id as string) || null,
         brand_name: brandName,
         brand_handle: brandHandle,
         brand_domain: brandDomain || null,
-        status: 'completed',
+        status: 'processing', // Worker will change to 'complete' when done
         platforms: platforms,
         variants_generated: socialVariants.length,
-        impersonators_found: potentialImpersonators.length,
+        profiles_scanned: 0,
+        impersonators_found: 0,
+        scammer_db_matches: 0,
         created_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-        result: result,
+        result: {
+          ...previewResult,
+          scan_type: scanType,
+          real_scan_pending: true, // Tell frontend to poll for real results
+        },
       });
     } catch (err) {
       console.error('[Brand Guard] Supabase insert error:', err);
     }
   }
 
-  // Return complete results
+  // Return preview results immediately + scan_id for polling
   res.status(200).json({
     success: true,
-    ...result,
+    ...previewResult,
+    real_scan_pending: true, // Frontend should poll for updated results
+    poll_interval: 10, // seconds between polls
   });
 }

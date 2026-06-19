@@ -108,3 +108,4 @@ member-welcome-state.json
 # ── OpenClaw Internal ─────────────────────────────────────────
 .openclaw/
 .claude/***REMOVED****
+.env*.local
