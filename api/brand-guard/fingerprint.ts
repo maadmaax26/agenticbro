@@ -20,11 +20,11 @@ import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import https from 'https';
 import http from 'http';
+import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // ── Vercel type shim ─────────────────────────────────────────────────────────
@@ -35,18 +35,6 @@ type VercelResponse = ServerResponse & {
   setHeader: (name: string, value: string) => VercelResponse;
   end: () => void;
 };
-
-// ── Auth helper ───────────────────────────────────────────────────────────────
-async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.substring(7);
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-  const authClient = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error } = await authClient.auth.getUser(token);
-  if (error || !user) return null;
-  return user.id;
-}
 
 // ── SSRF guard ────────────────────────────────────────────────────────────────
 // Blocks requests to loopback, link-local, and private IP ranges (e.g. AWS metadata).
@@ -133,12 +121,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // ── Auth check (required for all write operations) ─────────────────────────
-  const authedUserId = await getAuthenticatedUserId(req);
-  if (!authedUserId && req.method !== 'GET') {
-    res.status(401).json({ error: 'Authentication required. Send Bearer token from Supabase Auth.' });
-    return;
-  }
+  const entitlement = await requireBrandGuardEntitlement(req, res, 'visual_fingerprints');
+  if (!entitlement) return;
+  const authedUserId = entitlement.ownerId;
 
   const url = req.url || '/';
   const parts = url.split('?')[0].split('/').filter(Boolean);
@@ -255,6 +240,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // GET /:brandId — list fingerprints
     if (req.method === 'GET' && parts.length >= 4 && !hasAutoDiscover) {
       const brandId = parts[3]; // /api/brand-guard/fingerprint/:brandId
+      const { data: ownedBrand } = await supabase.from('brand_monitors').select('id')
+        .eq('id', brandId).eq('owner_id', authedUserId).maybeSingle();
+      if (!ownedBrand) {
+        res.status(404).json({ error: 'Brand not found' });
+        return;
+      }
       const { data, error } = await supabase
         .from('brand_visual_fingerprints')
         .select('*')

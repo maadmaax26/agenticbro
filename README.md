@@ -159,6 +159,11 @@ Jeeevs (OpenClaw Agent — Mac Studio)
 | `/api/phone-verify` | Phone number verification |
 | `/api/phone-scan` | Phone risk scan (async) |
 | `/api/scan` | General scan (async, queued) |
+| `/api/v1/brand-guard/scans` | Durable developer scan queue |
+| `/api/v1/brand-guard/takedowns` | Automated takedown submissions and lifecycle |
+| `/api/v1/brand-guard/usage` | Developer API usage records |
+| `/api/brand-guard/delivery` | Slack/webhook destinations and delivery monitoring |
+| `/api/brand-guard/enterprise` | SLA reports, weekly briefings, and account-manager cases |
 | `/api/scan-report` | Scan report generation |
 | `/api/website-deep-scan` | Website security deep-scan |
 | `/api/brand-guard/email-spoof` | SPF/DKIM/DMARC + lookalike domain check |
@@ -173,6 +178,8 @@ Jeeevs (OpenClaw Agent — Mac Studio)
 | `/api/scam-investigate` | Deep scam investigation |
 | `/api/token-2022-check` | Token-2022 scam detection |
 | `/api/transaction-analyze` | Transaction risk analysis |
+
+Developer authentication, scopes, examples, rate limits, scheduling, and takedown provider contracts are documented in [docs/brand-guard-developer-api.md](docs/brand-guard-developer-api.md).
 
 ### Tech Stack
 
@@ -201,6 +208,13 @@ Jeeevs (OpenClaw Agent — Mac Studio)
 | `brand_impersonators` | Detected impersonators | Owner-scoped |
 | `brand_guard_credits` | User scan credits | Owner-scoped |
 | `takedown_actions` | DMCA/abuse actions | Owner-scoped + service_role |
+| `brand_guard_scan_queue` | Leased, retryable plan-scheduled scan jobs | Owner-scoped + service_role |
+| `brand_guard_api_keys` | Hashed developer credentials and scopes | Owner-scoped + service_role |
+| `brand_guard_api_usage_logs` | Rate, latency, and billing-unit audit trail | Owner-scoped + service_role |
+| `brand_guard_delivery_jobs` | Retryable Slack/webhook delivery queue | Owner-scoped + service_role |
+| `brand_guard_delivery_dead_letters` | Exhausted deliveries requiring operator action | Owner-scoped + service_role |
+| `brand_guard_enterprise_reports` | Weekly, SLA, and custom enterprise reports | Owner-scoped + service_role |
+| `brand_guard_account_cases` | Account-manager case workflow | Owner-scoped + service_role |
 | `threat_profiles` | Threat intelligence | Owner-scoped + service_role |
 | `email_spoof_checks` | SPF/DKIM/DMARC results | Public read, service_role write |
 | `vendor_verifications` | Vendor check results | Public read, service_role write |
@@ -226,6 +240,8 @@ Located in `supabase/migrations/`:
 | `005_security_fix_auth_users_and_rls.sql` | Auth view exposure + RLS fixes |
 | `20260528000000_brand_guard_full_schema.sql` | Brand Guard tables |
 | `20260529000000_brand_guard_promo_code.sql` | Promo code support |
+| `20260619000002_brand_guard_platform_api.sql` | Durable queue, developer API, and takedown lifecycle |
+| `20260619000003_enterprise_delivery.sql` | Customer delivery, DLQ, SLA reporting, and account management |
 | `20260529000001_email_spoof_checks.sql` | Email spoof checks |
 
 ---

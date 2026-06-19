@@ -297,7 +297,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     try {
       await fetch(`${baseUrl}/api/brand-guard/alerts/deliver`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET || ''}` },
         body: JSON.stringify({ all_unread: true, max_count: 50 }),
       });
     } catch (e) {

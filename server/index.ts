@@ -7,6 +7,9 @@ import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import { startBrandGuardWorker } from './lib/brand-guard-worker.js';
+import { startBrandGuardQueueWorker } from './lib/brand-guard-queue-worker.js';
+import { startTakedownWorker } from './lib/takedown-worker.js';
+import { startDeliveryWorker } from './lib/delivery-worker.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,6 +24,10 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+startBrandGuardQueueWorker(supabase);
+startTakedownWorker(supabase);
+startDeliveryWorker(supabase);
 
 app.use(cors());
 app.use(express.json());

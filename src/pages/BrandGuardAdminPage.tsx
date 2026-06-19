@@ -62,9 +62,10 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'outreach'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'outreach'>('users');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [operations, setOperations] = useState<any>(null);
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -142,9 +143,23 @@ export function BrandGuardAdminPage() {
     } catch { /* ignore */ }
   }, [authToken, isAdmin]);
 
+  const fetchOperations = useCallback(async () => {
+    if (!authToken || !isAdmin) return;
+    try {
+      const [deliveryResponse, managerResponse] = await Promise.all([
+        fetch(`${API_BASE}/admin/delivery-monitoring`, { headers: { Authorization: `Bearer ${authToken}` } }),
+        fetch(`${API_BASE}/admin/account-managers`, { headers: { Authorization: `Bearer ${authToken}` } }),
+      ]);
+      setOperations({ delivery: await deliveryResponse.json(), accounts: await managerResponse.json() });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load operations');
+    }
+  }, [authToken, isAdmin]);
+
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+  useEffect(() => { fetchOperations(); }, [fetchOperations]);
 
   // Realtime subscription for new notifications
   useEffect(() => {
@@ -302,6 +317,14 @@ export function BrandGuardAdminPage() {
               position: 'relative',
             }}
           >🔔 Notifications{unreadCount > 0 && <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>}</button>
+          <button
+            onClick={() => setActiveTab('operations')}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'operations' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
+              background: activeTab === 'operations' ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: activeTab === 'operations' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >⚙ Operations</button>
           <button
             onClick={() => setActiveTab('outreach')}
             style={{
@@ -558,6 +581,44 @@ export function BrandGuardAdminPage() {
                 );
               })
             )}
+          </div>
+        )}
+        {activeTab === 'operations' && operations && (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              {[
+                { label: 'Queued Deliveries', value: operations.delivery?.summary?.queued || 0, color: '#f59e0b' },
+                { label: 'Delivered (24h)', value: operations.delivery?.summary?.delivered_24h || 0, color: '#22c55e' },
+                { label: 'Dead Letters', value: operations.delivery?.summary?.unresolved_dead_letters || 0, color: '#ef4444' },
+                { label: 'Degraded Endpoints', value: operations.delivery?.summary?.degraded_endpoints || 0, color: '#f97316' },
+                { label: 'Account Managers', value: operations.accounts?.managers?.length || 0, color: '#8b5cf6' },
+                { label: 'Open Cases', value: operations.accounts?.open_cases?.length || 0, color: '#3b82f6' },
+              ].map(item => (
+                <div key={item.label} style={{ padding: '16px', borderRadius: '10px', background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                  <div style={{ fontSize: '26px', fontWeight: 700, color: item.color }}>{item.value}</div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase' }}>{item.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '20px' }}>
+              <h3 style={{ color: '#fff', marginBottom: '12px' }}>Delivery Queue</h3>
+              {(operations.delivery?.jobs || []).slice(0, 20).map((job: any) => (
+                <div key={job.id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 80px', gap: '12px', padding: '8px 0', borderBottom: '1px solid rgba(139,92,246,0.1)', fontSize: '12px' }}>
+                  <span style={{ color: '#d1d5db' }}>{job.event_type} · {job.id}</span>
+                  <span style={{ color: job.status === 'delivered' ? '#22c55e' : job.status === 'dead_letter' ? '#ef4444' : '#f59e0b' }}>{job.status}</span>
+                  <span style={{ color: '#9ca3af' }}>{job.attempt_count} tries</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '20px' }}>
+              <h3 style={{ color: '#fff', marginBottom: '12px' }}>Account Manager Cases</h3>
+              {(operations.accounts?.open_cases || []).map((item: any) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '9px 0', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
+                  <div><div style={{ color: '#fff', fontSize: '13px' }}>{item.subject}</div><div style={{ color: '#6b7280', fontSize: '11px' }}>{item.owner_id}</div></div>
+                  <div style={{ fontSize: '12px', color: item.priority === 'urgent' ? '#ef4444' : '#f59e0b' }}>{item.priority} · {item.status}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {activeTab === 'outreach' && (
