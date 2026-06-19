@@ -27,6 +27,15 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
+// ── Vercel type shim ─────────────────────────────────────────────────────────
+type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+};
+
 // ── Types ────────────────────────────────────────────────────────────────────
 interface SPFRecord {
   raw: string;
@@ -617,12 +626,12 @@ function buildRecommendations(
 }
 
 // ── Main Handler ─────────────────────────────────────────────────────────────
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
   // ── GET: Retrieve cached results ─────────────────────────────────────────
   if (req.method === 'GET') {

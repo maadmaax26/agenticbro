@@ -24,7 +24,46 @@ import http from 'http';
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+// ── Vercel type shim ─────────────────────────────────────────────────────────
+type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+};
+
+// ── Auth helper ───────────────────────────────────────────────────────────────
+async function getAuthenticatedUserId(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.substring(7);
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error } = await authClient.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
+
+// ── SSRF guard ────────────────────────────────────────────────────────────────
+// Blocks requests to loopback, link-local, and private IP ranges (e.g. AWS metadata).
+function isSafeUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try { parsed = new URL(rawUrl); } catch { return false; }
+  if (!['https:', 'http:'].includes(parsed.protocol)) return false;
+  const h = parsed.hostname.toLowerCase();
+  if (h === 'localhost' || h === '::1') return false;
+  if (/^127\./.test(h)) return false;          // loopback
+  if (/^169\.254\./.test(h)) return false;     // link-local / AWS + GCP metadata
+  if (/^10\./.test(h)) return false;           // RFC-1918 Class A
+  if (/^192\.168\./.test(h)) return false;     // RFC-1918 Class C
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;  // RFC-1918 Class B
+  if (/^fc00:/i.test(h) || /^fe80:/i.test(h)) return false; // IPv6 ULA / link-local
+  return true;
+}
 
 // ── Visual Comparator (inline for Vercel serverless) ─────────────────────────
 
@@ -68,7 +107,7 @@ async function generatePHash(imageUrl: string): Promise<string | null> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseBody(req: IncomingMessage): Promise<any> {
+function parseBody(req: VercelRequest): Promise<any> {
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', chunk => data += chunk);
@@ -82,19 +121,23 @@ function parseBody(req: IncomingMessage): Promise<any> {
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    return res.end();
-  }
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   if (!supabase) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: 'Database not configured' }));
+    res.status(500).json({ error: 'Database not configured' });
+    return;
+  }
+
+  // ── Auth check (required for all write operations) ─────────────────────────
+  const authedUserId = await getAuthenticatedUserId(req);
+  if (!authedUserId && req.method !== 'GET') {
+    res.status(401).json({ error: 'Authentication required. Send Bearer token from Supabase Auth.' });
+    return;
   }
 
   const url = req.url || '/';
@@ -107,12 +150,24 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     // POST /register (default POST when not auto-discover)
     if (req.method === 'POST' && !hasAutoDiscover) {
-      const { brandId, userId, images, imageUrl, imageType, label } = await parseBody(req);
+      const { brandId, images, imageUrl, imageType, label } = await parseBody(req);
       // Support single image or array
       const imageList = images?.length ? images : imageUrl ? [{ url: imageUrl, type: imageType || 'product', label }] : [];
       if (!brandId || !imageList.length) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ error: 'Missing brandId or images' }));
+        res.status(400).json({ error: 'Missing brandId or images' });
+        return;
+      }
+
+      // Verify authenticated user owns this brand
+      const { data: brand, error: brandErr } = await supabase
+        .from('brand_monitors')
+        .select('id')
+        .eq('id', brandId)
+        .eq('owner_id', authedUserId)
+        .maybeSingle();
+      if (brandErr || !brand) {
+        res.status(403).json({ error: 'Forbidden: brand not found or not owned by authenticated user' });
+        return;
       }
 
       const results = { registered: 0, failed: 0 };
@@ -123,7 +178,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
         const { error } = await supabase.from('brand_visual_fingerprints').insert({
           brand_id: brandId,
-          user_id: userId || null,
+          user_id: authedUserId,
           image_url: image.url,
           image_type: image.type || 'product',
           phash: hash,
@@ -132,16 +187,34 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         if (error) { results.failed++; } else { results.registered++; }
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify(results));
+      res.status(200).json(results);
+      return;
     }
 
     // POST /auto-discover
     if (req.method === 'POST' && hasAutoDiscover) {
-      const { brandId, userId, websiteUrl } = await parseBody(req);
+      const { brandId, websiteUrl } = await parseBody(req);
       if (!brandId || !websiteUrl) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ error: 'Missing brandId or websiteUrl' }));
+        res.status(400).json({ error: 'Missing brandId or websiteUrl' });
+        return;
+      }
+
+      // SSRF guard: reject private/loopback/link-local URLs before fetching
+      if (!isSafeUrl(websiteUrl)) {
+        res.status(400).json({ error: 'Invalid or disallowed websiteUrl. Must be a public https:// URL.' });
+        return;
+      }
+
+      // Verify authenticated user owns this brand
+      const { data: brand, error: brandErr } = await supabase
+        .from('brand_monitors')
+        .select('id')
+        .eq('id', brandId)
+        .eq('owner_id', authedUserId)
+        .maybeSingle();
+      if (brandErr || !brand) {
+        res.status(403).json({ error: 'Forbidden: brand not found or not owned by authenticated user' });
+        return;
       }
 
       const response = await fetch(websiteUrl, {
@@ -167,7 +240,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         if (!hash) continue;
         const { error } = await supabase.from('brand_visual_fingerprints').insert({
           brand_id: brandId,
-          user_id: userId || null,
+          user_id: authedUserId,
           image_url: imgUrl,
           image_type: registered === 0 ? 'logo' : 'product',
           phash: hash,
@@ -175,8 +248,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         if (!error) registered++;
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ discovered: imageUrls.length, registered, method: 'fetch' }));
+      res.status(200).json({ discovered: imageUrls.length, registered, method: 'fetch' });
+      return;
     }
 
     // GET /:brandId — list fingerprints
@@ -190,21 +263,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         .limit(50);
 
       if (error) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ error: error.message }));
+        res.status(500).json({ error: error.message });
+        return;
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify(data || []));
+      res.status(200).json(data || []);
+      return;
     }
 
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: 'Not found' }));
+    res.status(404).json({ error: 'Not found' });
 
   } catch (err: any) {
     console.error('[Fingerprint] Error:', err);
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: err.message || 'Internal error' }));
+    res.status(500).json({ error: err.message || 'Internal error' });
   }
 }
 
