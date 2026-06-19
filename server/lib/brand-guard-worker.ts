@@ -9,7 +9,7 @@
  * Flow:
  *   1. Poll Supabase every POLL_INTERVAL_MS for processing scans older than 30s
  *   2. For each scan: extract stored variants from preview result
- *   3. Run real X profile checks via CDP (scanVariantsOnX)
+ *   3. Run real X checks via CDP and local wrapper scans for other platforms
  *   4. Score each found profile using impersonation scoring
  *   5. Cross-reference scammer DB
  *   6. Insert real impersonators into brand_impersonators table
@@ -20,6 +20,11 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { scanVariantsOnX, type XProfile } from './x-impersonator-scanner.js';
+import {
+  scanVariantsLocally,
+  type LocalSocialPlatform,
+  type PlatformScanSummary,
+} from './local-social-scanner.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +32,15 @@ const POLL_INTERVAL_MS = 30_000;       // how often to poll for new jobs
 const CLAIM_DELAY_SECONDS = 30;        // only pick up scans older than this (preview was already returned)
 const MAX_VARIANTS_PER_SCAN = 20;      // top N variants to actually check on X
 const MIN_SCORE_TO_REPORT = 15;        // only include impersonators scoring above this
+
+type ScannableProfile = Pick<XProfile,
+  'username' | 'displayName' | 'followers' | 'verified' | 'bio' | 'profileUrl'
+> & {
+  platform: 'x' | LocalSocialPlatform;
+  scannerRiskScore?: number;
+  scannerRiskLevel?: string;
+  scannerEvidence?: string[];
+};
 
 // ── Scoring (mirrors api/brand-guard/impersonator-scan.ts) ───────────────────
 
@@ -66,7 +80,7 @@ interface ScoreResult {
 }
 
 function scoreImpersonation(
-  profile: XProfile,
+  profile: ScannableProfile,
   brandHandle: string,
   brandName: string,
   isScammerDbMatch: boolean
@@ -209,13 +223,53 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
     .slice(0, MAX_VARIANTS_PER_SCAN)
     .map(v => v.variant);
 
-  console.log(`[BG Worker] Will check ${prioritized.length} variants on X for @${brand_handle}`);
+  const normalizedPlatforms = Array.from(new Set((scan.platforms?.length ? scan.platforms : ['x'])
+    .map(platform => platform.toLowerCase() === 'twitter' ? 'x' : platform.toLowerCase())
+    .filter(platform => ['x', 'instagram', 'tiktok', 'facebook', 'telegram', 'linkedin'].includes(platform))));
+  const requestedPlatforms = normalizedPlatforms.length ? normalizedPlatforms : ['x'];
+  console.log(`[BG Worker] Checking ${prioritized.length} variants across ${requestedPlatforms.join(', ')}`);
 
-  // ── Step 2: Scan on X via CDP ────────────────────────────────────────────
-  const foundProfiles = await scanVariantsOnX(prioritized, {
-    maxVariants: MAX_VARIANTS_PER_SCAN,
-    rateDelayMs: 2500,
-  });
+  // ── Step 2: Run platform scanners ────────────────────────────────────────
+  const platformSummaries: Array<PlatformScanSummary | {
+    platform: 'x'; checked: number; found: ScannableProfile[]; inaccessible: number; errors: number;
+  }> = await Promise.all(requestedPlatforms.map(async platform => {
+    if (platform === 'x') {
+      const profiles = await scanVariantsOnX(prioritized, {
+        maxVariants: MAX_VARIANTS_PER_SCAN,
+        rateDelayMs: 2500,
+      });
+      return {
+        platform: 'x' as const,
+        checked: Math.min(prioritized.length, MAX_VARIANTS_PER_SCAN),
+        found: profiles.map(profile => ({ ...profile, platform: 'x' as const })),
+        inaccessible: 0,
+        errors: 0,
+      };
+    }
+
+    return scanVariantsLocally(platform as LocalSocialPlatform, prioritized, {
+      maxVariants: Number(process.env.BRAND_GUARD_LOCAL_VARIANTS || 5),
+      concurrency: Number(process.env.BRAND_GUARD_LOCAL_CONCURRENCY || 2),
+      timeoutMs: Number(process.env.BRAND_GUARD_SCANNER_TIMEOUT_MS || 45_000),
+    });
+  }));
+
+  const foundProfiles: ScannableProfile[] = platformSummaries.flatMap(summary =>
+    summary.found.map(profile => 'rawStatus' in profile
+      ? {
+          username: profile.username,
+          displayName: profile.displayName,
+          followers: profile.followers,
+          verified: profile.verified,
+          bio: profile.bio,
+          profileUrl: profile.profileUrl,
+          platform: profile.platform,
+          scannerRiskScore: profile.scannerRiskScore,
+          scannerRiskLevel: profile.scannerRiskLevel,
+          scannerEvidence: profile.evidence,
+        }
+      : profile)
+  );
 
   // ── Step 3: Cross-reference scammer DB ──────────────────────────────────
   const scammerHandles = new Set<string>();
@@ -233,7 +287,25 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
     .map(profile => {
       const isDbMatch = scammerHandles.has(profile.username.toLowerCase());
       const score = scoreImpersonation(profile, brand_handle, brand_name, isDbMatch);
-      return { ...profile, ...score, scammer_db_match: isDbMatch };
+      const combinedScore = Math.min(100, score.impersonation_score + (profile.scannerRiskScore || 0) * 2);
+      const risk_level: ScoreResult['risk_level'] = combinedScore >= 70 ? 'CRITICAL'
+        : combinedScore >= 45 ? 'HIGH'
+        : combinedScore >= 25 ? 'MEDIUM'
+        : combinedScore >= 10 ? 'LOW'
+        : 'MINIMAL';
+      return {
+        ...profile,
+        ...score,
+        impersonation_score: combinedScore,
+        risk_level,
+        threat_type: risk_level === 'CRITICAL' ? 'Confirmed brand impersonation'
+          : risk_level === 'HIGH' ? 'Probable brand impersonation'
+          : risk_level === 'MEDIUM' ? 'Possible brand impersonation'
+          : 'Unlikely brand impersonation',
+        takedown_recommended: risk_level === 'CRITICAL' || risk_level === 'HIGH',
+        evidence: [...score.evidence, ...(profile.scannerEvidence || [])].slice(0, 20),
+        scammer_db_match: isDbMatch,
+      };
     })
     .filter(r => r.impersonation_score >= MIN_SCORE_TO_REPORT)
     .sort((a, b) => b.impersonation_score - a.impersonation_score);
@@ -245,7 +317,7 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
     const impersonatorRows = scoredImpersonators.map(imp => ({
       scan_id: id,                            // FK to brand_guard_scans.id (UUID)
       brand_monitor_id,
-      platform: 'x',
+      platform: imp.platform,
       username: imp.username,
       display_name: imp.displayName,
       bio: imp.bio,
@@ -290,7 +362,7 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
     real_scan: true,
     real_scan_pending: false,
     scan_completed_at: new Date().toISOString(),
-    scan_source: 'cdp_x',
+    scan_source: 'local_multi_platform',
 
     // Override preview data with real data
     total_found: scoredImpersonators.length,
@@ -299,7 +371,7 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
     impersonators: scoredImpersonators.map(imp => ({
       username: imp.username,
       display_name: imp.displayName,
-      platform: 'x',
+      platform: imp.platform,
       followers: imp.followers,
       verified: imp.verified,
       bio: imp.bio,
@@ -315,8 +387,8 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
       takedown_recommended: imp.takedown_recommended,
     })),
     summary: {
-      platforms_scanned: ['x'],
-      variants_checked: prioritized.length,
+      platforms_scanned: requestedPlatforms,
+      variants_checked: platformSummaries.reduce((sum, platform) => sum + platform.checked, 0),
       profiles_found: foundProfiles.length,
       impersonators_found: scoredImpersonators.length,
       critical: criticalCount,
@@ -324,6 +396,13 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
       medium: scoredImpersonators.filter(i => i.risk_level === 'MEDIUM').length,
       low: scoredImpersonators.filter(i => i.risk_level === 'LOW').length,
       scammer_db_matches: scoredImpersonators.filter(i => i.scammer_db_match).length,
+      platform_status: platformSummaries.map(platform => ({
+        platform: platform.platform,
+        checked: platform.checked,
+        found: platform.found.length,
+        inaccessible: platform.inaccessible,
+        errors: platform.errors,
+      })),
     },
   };
 
@@ -342,7 +421,7 @@ async function processOneScan(scan: PendingScan, supabase: SupabaseClient): Prom
   if (updateErr) {
     console.error(`[BG Worker] Failed to update scan ${scan_id}:`, updateErr.message);
   } else {
-    console.log(`[BG Worker] ✓ Scan ${scan_id} complete — ${scoredImpersonators.length} real impersonators found on X`);
+    console.log(`[BG Worker] ✓ Scan ${scan_id} complete — ${scoredImpersonators.length} real impersonators found across ${requestedPlatforms.join(', ')}`);
   }
 }
 

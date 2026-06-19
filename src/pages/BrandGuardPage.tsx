@@ -100,13 +100,13 @@ const PAYMENT_WALLETS = {
 
 export function BrandGuardPage() {
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
   // Auth
   const [authToken, setAuthToken] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [, setUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 

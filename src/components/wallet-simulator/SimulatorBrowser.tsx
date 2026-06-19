@@ -177,7 +177,8 @@ export function SimulatorBrowser({
                 setLoadingState('loading');
                 setError(null);
                 if (iframeRef.current) {
-                  iframeRef.current.src = iframeRef.current.src;
+                  const currentSrc = iframeRef.current.src;
+                  iframeRef.current.src = currentSrc;
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors mx-auto"

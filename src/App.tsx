@@ -157,24 +157,7 @@ class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError:
   }
 }
 
-function App() {
-  const location = useLocation()
-  // Brand Guard: show pricing page (public) or dashboard (authenticated)
-  if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
-    // If user has a ?plan= param (clicked Get Started), show auth/dashboard
-    const searchParams = new URLSearchParams(location.search);
-    const planParam = searchParams.get('plan');
-    if (planParam) {
-      return <BrandGuardPage />
-    }
-    return <BrandGuardPricingPage />
-  }
-
-  // Brand Guard Admin — restricted to agenticbro@agenticbro.app
-  if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
-    return <BrandGuardAdminPage />
-  }
-
+function MainApp() {
   const { connected, publicKey } = useWallet()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
@@ -185,13 +168,12 @@ function App() {
   const [locale, setLocale] = useState<Locale>('en')
 
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
-  
-  // Use the same credits system as Profile Verifier
+
   const {
     freeScansRemaining: priorityScansRemaining,
     hasScans,
-    useCredit
-  } = useCredits(null, null, publicKey?.toString() || null);
+    useCredit: consumeCredit,
+  } = useCredits(null, null, publicKey?.toString() || null)
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -203,9 +185,6 @@ function App() {
   const [socialUsername, setSocialUsername] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
-  // Tier denial state removed — now scrolls to scan section
-
-  // Auth and Payment modals
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
@@ -400,7 +379,7 @@ function App() {
     }
 
     // Use credit from the shared credits system
-    const creditResult = useCredit();
+    const creditResult = consumeCredit();
     console.log('[runScan] Credit used:', creditResult, 'Remaining:', creditResult.remaining);
 
     setIsScanning(true)
@@ -583,7 +562,7 @@ function App() {
       setIsScanning(false)
     }
   }, [scanMode, walletInput, channelInput, tokenInput, hasScans, priorityScansRemaining,
-      holderTierUnlocked, useCredit, addMsg])
+      holderTierUnlocked, consumeCredit, addMsg])
 
   return (
     <AppErrorBoundary>
@@ -1229,6 +1208,22 @@ function App() {
     </div>
     </AppErrorBoundary>
   )
+}
+
+function App() {
+  const location = useLocation()
+
+  if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
+    return new URLSearchParams(location.search).get('plan')
+      ? <BrandGuardPage />
+      : <BrandGuardPricingPage />
+  }
+
+  if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
+    return <BrandGuardAdminPage />
+  }
+
+  return <MainApp />
 }
 
 export default App
