@@ -97,6 +97,10 @@ async function tick(db: SupabaseClient): Promise<void> {
   }
 }
 
+export async function runDomainWatcherTick(db: SupabaseClient): Promise<void> {
+  await tick(db);
+}
+
 export function startDomainWatcherWorker(db: SupabaseClient): void {
   console.log(`[DNS Watcher] Starting ${workerId} with batch=${batchSize}, variants=${variantLimit}`);
   void tick(db);
