@@ -51,9 +51,9 @@ const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SU
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 // Stripe Subscription Price IDs (set in Stripe Dashboard, then copy here)
-const GUARDIAN_PRICE_ID  = process.env.STRIPE_BG_GUARDIAN_PRICE_ID  || process.env.STRIPE_GUARDIAN_PRICE_ID  || 'price_bg_guardian';
-const SENTINEL_PRICE_ID  = process.env.STRIPE_BG_SENTINEL_PRICE_ID  || process.env.STRIPE_SENTINEL_PRICE_ID  || 'price_bg_sentinel';
-const FORTRESS_PRICE_ID  = process.env.STRIPE_BG_FORTRESS_PRICE_ID  || process.env.STRIPE_FORTRESS_PRICE_ID  || 'price_bg_fortress';
+const GUARDIAN_PRICE_ID  = process.env.STRIPE_BG_GUARDIAN_PRICE_ID  || process.env.STRIPE_GUARDIAN_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDetJfQtGS';
+const SENTINEL_PRICE_ID  = process.env.STRIPE_BG_SENTINEL_PRICE_ID  || process.env.STRIPE_SENTINEL_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDzNKnTEkh';
+const FORTRESS_PRICE_ID  = process.env.STRIPE_BG_FORTRESS_PRICE_ID  || process.env.STRIPE_FORTRESS_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDgTFlMRFf';
 
 // ── Plan Configuration ────────────────────────────────────────────────────────
 const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_credits: number; brands_included: number; plan_id: string }> = {
@@ -66,10 +66,10 @@ const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_cre
 // Maps Stripe price_id → { credits, package_name, type }
 const PRICE_MAP: Record<string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }> = {
   // Pay-as-you-go credit packages
-  [process.env.STRIPE_BG_STARTER_PRICE_ID || 'price_bg_starter']: { credits: 5,   name: 'Brand Guard Starter',                     type: 'credits' },
-  [process.env.STRIPE_BG_BASIC_PRICE_ID   || 'price_bg_basic']:   { credits: 10,  name: 'Brand Guard Basic',                       type: 'credits' },
-  [process.env.STRIPE_BG_PRO_PRICE_ID     || 'price_bg_pro']:     { credits: 25,  name: 'Brand Guard Pro',                         type: 'credits' },
-  [process.env.STRIPE_BG_WHALE_PRICE_ID   || 'price_bg_whale']:   { credits: 110, name: 'Brand Guard Whale (100+10 bonus)',         type: 'credits' },
+  [process.env.STRIPE_BG_STARTER_PRICE_ID || 'price_1TcC6R1lUBogdwcDsg8wYTgx']: { credits: 5,   name: 'Brand Guard Starter',                     type: 'credits' },
+  [process.env.STRIPE_BG_BASIC_PRICE_ID   || 'price_1TcC6S1lUBogdwcDuCMkWIJW']: { credits: 10,  name: 'Brand Guard Basic',                       type: 'credits' },
+  [process.env.STRIPE_BG_PRO_PRICE_ID     || 'price_1TcC6S1lUBogdwcDsI9CF0PD']: { credits: 25,  name: 'Brand Guard Pro',                         type: 'credits' },
+  [process.env.STRIPE_BG_WHALE_PRICE_ID   || 'price_1TcC6S1lUBogdwcDGonv0mZQ']: { credits: 110, name: 'Brand Guard Whale (100+10 bonus)',         type: 'credits' },
   // Subscription plans
   [GUARDIAN_PRICE_ID]: { credits: 50,  name: 'Guardian ($29/mo)',              type: 'subscription', plan_id: 'guardian' },
   [SENTINEL_PRICE_ID]: { credits: 200, name: 'Sentinel ($99/mo)',              type: 'subscription', plan_id: 'sentinel' },
@@ -107,6 +107,19 @@ async function markEventProcessed(
   }
 
   return { alreadyProcessed: false };
+}
+
+async function releaseProcessedEvent(
+  supabase: ReturnType<typeof createClient>,
+  eventId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('stripe_processed_events')
+    .delete()
+    .eq('event_id', eventId);
+  if (error) {
+    console.error('[bg-webhook] Could not release failed event:', error.message);
+  }
 }
 
 // ── Stripe Signature Verification ──────────────────────────────────────────────
@@ -233,7 +246,8 @@ function resolveCredits(
 
 function mapSubscriptionStatus(stripeStatus: string, cancelAtPeriodEnd = false): string {
   switch (stripeStatus) {
-    case 'trialing': return 'trialing';
+    // Trial access is active access in the current database status model.
+    case 'trialing': return 'active';
     case 'active': return cancelAtPeriodEnd ? 'canceled' : 'active';
     case 'past_due': return 'past_due';
     case 'canceled':
@@ -349,7 +363,7 @@ export default async function handler(
                 owner_id:                 userId,
                 brand_monitor_id:         session.metadata?.brand_monitor_id || null,
                 plan_id:                  planId,
-                status:                   paymentStatus === 'no_payment_required' ? 'trialing' : 'active',
+                status:                   'active',
                 current_period_start:     new Date((session.current_period_start || Date.now() / 1000) * 1000).toISOString(),
                 current_period_end:       new Date((session.current_period_end   || Date.now() / 1000 + 30*24*3600) * 1000).toISOString(),
                 cancel_at_period_end:     false,
@@ -361,12 +375,13 @@ export default async function handler(
                 stripe_price_id:          packageId,
                 updated_at:               new Date().toISOString(),
               },
-              { onConflict: 'owner_id,plan_id' }
+              { onConflict: 'owner_id' }
             );
 
           if (upsertError) {
             console.error(`[bg-webhook] Failed to upsert subscription: ${upsertError.message}`);
-            // Continue — try to grant credits even if sub record failed
+            await releaseProcessedEvent(supabase, eventId);
+            return res.status(500).json({ error: 'Failed to activate subscription', detail: upsertError.message });
           } else {
             console.log(`[bg-webhook] ✅ Upserted ${planConfig.name} subscription for ${userId}`);
           }
@@ -386,6 +401,7 @@ export default async function handler(
 
             if (creditError) {
               console.error('[bg-webhook] Failed to grant subscription credits:', creditError.message);
+              await releaseProcessedEvent(supabase, eventId);
               return res.status(500).json({ error: 'Failed to grant credits', detail: creditError.message });
             }
 
@@ -413,6 +429,7 @@ export default async function handler(
 
         if (creditError) {
           console.error('[bg-webhook] Failed to add credits:', creditError.message);
+          await releaseProcessedEvent(supabase, eventId);
           return res.status(500).json({ error: 'Failed to add credits', detail: creditError.message });
         }
 
@@ -457,11 +474,13 @@ export default async function handler(
               stripe_price_id:          priceId,
               updated_at:               new Date().toISOString(),
             },
-            { onConflict: 'owner_id,plan_id' }
+            { onConflict: 'owner_id' }
           );
 
         if (subError) {
           console.error('[bg-webhook] subscription.created upsert error:', subError.message);
+          await releaseProcessedEvent(supabase, eventId);
+          return res.status(500).json({ error: 'Failed to activate subscription', detail: subError.message });
         } else {
           console.log(`[bg-webhook] ✅ subscription.created — DB record ensured for ${subUserId} (no credits re-granted)`);
         }
@@ -608,6 +627,7 @@ export default async function handler(
 
         if (creditError) {
           console.error('[bg-webhook] Failed to grant renewal credits:', creditError.message);
+          await releaseProcessedEvent(supabase, eventId);
           return res.status(500).json({ error: 'Failed to grant renewal credits', detail: creditError.message });
         }
 
@@ -647,7 +667,7 @@ export default async function handler(
 
         await supabase
           .from('brand_guard_subscriptions')
-          .update({ status: 'trial_ending', updated_at: new Date().toISOString() })
+          .update({ status: 'active', updated_at: new Date().toISOString() })
           .eq('stripe_subscription_id', subscription.id)
           .eq('owner_id', subUserId);
 
@@ -671,7 +691,7 @@ export default async function handler(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[bg-webhook] Unhandled error processing ${eventType}:`, msg);
-    // Return 500 so Stripe retries — idempotency check at top will de-duplicate safely
+    await releaseProcessedEvent(supabase, eventId);
     return res.status(500).json({ error: 'Internal webhook error', detail: msg });
   }
 

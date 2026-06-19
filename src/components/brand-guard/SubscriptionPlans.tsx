@@ -114,8 +114,8 @@ const PLAN_ACCENT = {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
-  const { user, walletAddress, email } = useAuth();
+export function SubscriptionPlans({ currentPlanId, onSelectPlan }: SubscriptionPlansProps) {
+  const { walletAddress, email } = useAuth();
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,42 +139,7 @@ export function SubscriptionPlans({ currentPlanId }: SubscriptionPlansProps) {
     setError(null);
 
     try {
-      // Determine user identifier
-      const userId = user?.id || walletAddress || 'anonymous';
-      const userEmail = email || user?.email || '';
-
-      // Call Stripe checkout API (with 7-day free trial, no credit card required)
-      const response = await fetch('/api/brand-guard/stripe-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          userEmail,
-          planId,
-          currentPlanId,
-          trial_days: 7,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      if (data.url) {
-        // Redirect to Stripe
-        window.location.href = data.url;
-      } else if (data.sessionId) {
-        // For stripe elements flow
-        const { stripe } = window as any;
-        if (stripe) {
-          const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-          if (error) throw new Error(error.message);
-        }
-      } else {
-        throw new Error('Invalid checkout response');
-      }
+      await onSelectPlan(planId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
