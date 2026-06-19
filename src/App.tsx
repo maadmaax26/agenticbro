@@ -1214,7 +1214,8 @@ function App() {
   const location = useLocation()
 
   if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
-    return new URLSearchParams(location.search).get('plan')
+    const params = new URLSearchParams(location.search)
+    return params.get('plan') || params.get('checkout') || params.get('payment')
       ? <BrandGuardPage />
       : <BrandGuardPricingPage />
   }

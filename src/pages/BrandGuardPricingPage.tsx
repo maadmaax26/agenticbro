@@ -78,7 +78,7 @@ const PLANS: PlanTier[] = [
   {
     id: 'sentinel',
     name: 'Sentinel',
-    price: 79,
+    price: 99,
     scans: 200,
     description: 'For growing protocols & brands',
     features: [
@@ -101,7 +101,7 @@ const PLANS: PlanTier[] = [
   {
     id: 'fortress',
     name: 'Fortress',
-    price: 199,
+    price: 299,
     scans: -1,
     description: 'Enterprise-grade brand protection',
     features: [
@@ -161,13 +161,7 @@ const FAQS = [
 
 export function BrandGuardPricingPage() {
   const navigate = useNavigate();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const getPrice = (plan: PlanTier) => {
-    if (plan.price === 0) return 0;
-    return billingCycle === 'annual' ? Math.round(plan.price * 0.8) : plan.price;
-  };
 
   const handleGetStarted = (planId: string) => {
     // Navigate to brand-guard dashboard (login/signup will show)
@@ -369,35 +363,12 @@ export function BrandGuardPricingPage() {
               Start free. Upgrade when you need continuous monitoring and takedown support.
             </p>
 
-            {/* Billing toggle */}
-            <div className="inline-flex items-center gap-3 p-1 rounded-xl bg-white/5 border border-white/10">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  billingCycle === 'monthly'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  billingCycle === 'annual'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Annual <span className="text-green-400 text-xs ml-1">Save 20%</span>
-              </button>
-            </div>
           </div>
 
           {/* Plan cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {PLANS.map((plan) => {
-              const displayPrice = getPrice(plan);
+              const displayPrice = plan.price;
               return (
                 <div
                   key={plan.id}
@@ -435,11 +406,6 @@ export function BrandGuardPricingPage() {
                         ? `${plan.scans} scans total`
                         : `${plan.scans} scans / month`}
                     </div>
-                    {billingCycle === 'annual' && plan.price > 0 && (
-                      <div className="text-xs text-green-400 mt-1">
-                        Billed ${displayPrice * 12}/yr (save ${plan.price * 12 - displayPrice * 12}/yr)
-                      </div>
-                    )}
                   </div>
 
                   {/* Features */}
