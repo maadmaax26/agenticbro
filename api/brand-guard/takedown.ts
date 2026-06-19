@@ -20,6 +20,15 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
+// ── Vercel type shim ─────────────────────────────────────────────────────────
+type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+};
+
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -381,7 +390,7 @@ function parseBody(req: IncomingMessage): Promise<any> {
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────────
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -451,8 +460,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       }
 
       // Also insert into takedown_actions so it shows in the Takedown Center
+      // Note: brand_monitor_id is left null here — scanId is not a valid FK reference.
+      // Callers that have a brand_monitor_id should pass it in the input if needed.
       const takedownAction: any = {
-        brand_monitor_id: input.scanId || '',
+        brand_monitor_id: null,
         platform: input.platform,
         action_type: 'report',
         status: 'pending',

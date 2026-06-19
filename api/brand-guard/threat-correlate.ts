@@ -112,7 +112,7 @@ function calculateAggregateRisk(
   phoneResults: Array<{ risk_score: number; verification?: { score: number } }> | undefined,
   domainResults: Array<{ risk_score: number }> | undefined,
   scammerMatchCount: number,
-  channels?: Record<string, Array<Record<string, unknown>>
+  channels?: Record<string, Array<Record<string, unknown>>>
 ): { score: number; level: string; threatType: string; channelCount: number; crossBonus: number; riskScores: Record<string, unknown>; evidence: string[] } {
   const riskScores: Record<string, unknown> = {};
   const evidence: string[] = [];
@@ -171,7 +171,7 @@ function calculateAggregateRisk(
   // Cross-channel bonus
   let crossBonus = 0;
   // If no scan results were provided but we have channels with brand threats, calculate from channels
-  if (totalWeight === 0 && Object.keys(channels).length > 0) {
+  if (totalWeight === 0 && channels && Object.keys(channels).length > 0) {
     channelCount = Object.keys(channels).length;
     // Base risk from channel presence
     for (const [ch, items] of Object.entries(channels)) {
@@ -387,23 +387,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch (err) {
       console.error('[Brand Guard] Scammer DB query error:', err);
     }
-  }
-
-  // Add brand-specific cross-channel threat indicators even without explicit scan results
-  const brandThreats = [];
-  if (brandDomain) {
-    brandThreats.push({ type: 'domain_phishing', description: `Lookalike domains for ${brandDomain} could be used for phishing`, channel: 'domain', risk_score: 4 });
-    brandThreats.push({ type: 'domain_spoofing', description: `Typosquatting variants of ${brandDomain} may impersonate login pages`, channel: 'domain', risk_score: 3 });
-  }
-  brandThreats.push({ type: 'social_impersonation', description: `Fake accounts using variants of @${brandHandle} on social platforms`, channel: 'social', risk_score: 4 });
-  brandThreats.push({ type: 'telegram_scams', description: `Telegram groups/channels impersonating ${brandName} are common in crypto`, channel: 'telegram', risk_score: 5 });
-  if (brandDomain) {
-    brandThreats.push({ type: 'seo_poisoning', description: `Malicious sites may rank for "${brandName}" search terms`, channel: 'search', risk_score: 3 });
-  }
-  brandThreats.push({ type: 'dm_scam', description: `DM-based scams offering fake ${brandName} support or services`, channel: 'social', risk_score: 5 });
-  for (const threat of brandThreats) {
-    if (!channels[threat.channel]) channels[threat.channel] = [];
-    channels[threat.channel].push(threat as unknown as Record<string, unknown>);
   }
 
   // Calculate aggregate risk
