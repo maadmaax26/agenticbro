@@ -13,6 +13,8 @@
  * GET  /api/brand-guard/admin/users          — List all registered users with promo/credit info
  * GET  /api/brand-guard/admin/stats           — Aggregate stats (total users, scans, credits)
  * POST /api/brand-guard/admin/grant-credits   — Grant credits to a user (admin override)
+ * GET  /api/brand-guard/admin/review-queue    — Unreviewed outreach drafts awaiting human approval
+ * POST /api/brand-guard/admin/apply-approvals — Record human approve/reject decisions (no send)
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
@@ -53,6 +55,29 @@ function parseBody(req: VercelRequest): Promise<Record<string, unknown>> {
     req.on('error', reject);
   });
 }
+
+/**
+ * The outreach review-queue tables (prospects / outreach_drafts / signals /
+ * suppression_list) are defined in the brand-guard-agent project's db/schema.sql
+ * and may not yet be provisioned in every environment. This detects the
+ * "table/relation does not exist" family of Postgres/PostgREST errors so the
+ * admin endpoints can degrade gracefully instead of 500-ing.
+ */
+function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const code = error.code || '';
+  if (code === '42P01' || code === 'PGRST205' || code === 'PGRST202') return true;
+  const msg = (error.message || '').toLowerCase();
+  return (
+    msg.includes('does not exist') ||
+    msg.includes('could not find the table') ||
+    msg.includes('schema cache')
+  );
+}
+
+const TABLES_NOT_PROVISIONED =
+  'Outreach review tables are not provisioned in this database. Apply db/schema.sql ' +
+  'from the brand-guard-agent project to enable the review queue.';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -359,6 +384,197 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(200).json({
       summary: { queued: queued.count || 0, delivered_24h: delivered.count || 0, unresolved_dead_letters: dead.count || 0, degraded_endpoints: failedEndpoints.count || 0 },
       jobs: jobs.data || [], dead_letters: letters.data || [],
+    });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /review-queue — Unreviewed outreach drafts awaiting human approval
+  // Mirrors the Python store's _fetch_review_queue (db/store.py). Read-only.
+  // Returns { available:false, drafts:[] } if the outreach tables aren't set up.
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/review-queue') {
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+
+    // Load suppression list so already-suppressed prospects can be flagged.
+    const supEmails = new Set<string>();
+    const supDomains = new Set<string>();
+    const { data: supRows, error: supErr } = await serviceClient
+      .from('suppression_list')
+      .select('match_type, value');
+    if (supErr) {
+      if (isMissingTable(supErr)) {
+        res.status(200).json({ success: true, available: false, count: 0, drafts: [], message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to read suppression list', details: supErr.message });
+      return;
+    }
+    for (const s of (supRows || [])) {
+      const row = s as Record<string, unknown>;
+      const v = String(row.value || '').toLowerCase();
+      if (!v) continue;
+      if (row.match_type === 'email') supEmails.add(v);
+      else supDomains.add(v);
+    }
+
+    const { data: rows, error } = await serviceClient
+      .from('outreach_drafts')
+      .select('*, prospects(*, signals(*))')
+      .eq('approval', 'unreviewed')
+      .is('sent_at', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (isMissingTable(error)) {
+        res.status(200).json({ success: true, available: false, count: 0, drafts: [], message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to fetch review queue', details: error.message });
+      return;
+    }
+
+    const drafts = (rows || []).map((r: Record<string, unknown>) => {
+      const pr = (r.prospects as Record<string, unknown>) || {};
+      const email = String(pr.contact_email || '').toLowerCase();
+      const domain = String(pr.primary_domain || '').toLowerCase();
+      const channel = (r.channel as string) || '';
+      return {
+        draft_id: r.id,
+        company_name: pr.company_name ?? null,
+        primary_domain: pr.primary_domain ?? null,
+        vertical: pr.vertical ?? null,
+        company_size_band: pr.company_size_band ?? null,
+        compliance_region: pr.compliance_region ?? null,
+        compliance_ok: Boolean(pr.compliance_ok),
+        victim_score: (pr.victim_score as number) ?? 0,
+        score_breakdown: pr.score_breakdown ?? {},
+        channel,
+        routing_reason: r.routing_reason ?? null,
+        subject: r.subject ?? null,
+        body: (r.body as string) ?? '',
+        edited_body: r.edited_body ?? null,
+        opt_out_line: r.opt_out_line ?? null,
+        send_by_hand: channel === 'A' || channel === 'C',
+        findings_used: r.findings_used ?? {},
+        contact_channel: pr.contact_channel ?? null,
+        contact_email: pr.contact_email ?? null,
+        linkedin_url: pr.linkedin_url ?? null,
+        approval: r.approval ?? 'unreviewed',
+        suppressed:
+          Boolean(pr.suppressed) ||
+          (email !== '' && supEmails.has(email)) ||
+          (domain !== '' && supDomains.has(domain)),
+        created_at: r.created_at ?? null,
+        signals: pr.signals ?? [],
+      };
+    });
+
+    res.status(200).json({ success: true, available: true, count: drafts.length, drafts });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /apply-approvals — Record human approve/reject decisions on drafts
+  // Mirrors the Python store's apply_approvals (db/store.py). This is the ONLY
+  // place approval state changes. It does NOT send anything — approving a draft
+  // merely unlocks it for the existing (dry-run, suppression-aware) send worker.
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/apply-approvals') {
+    const body = await parseBody(req);
+    const raw = (body.decisions ?? body) as unknown;
+    const decisions = Array.isArray(raw) ? raw : [];
+    if (decisions.length === 0) {
+      res.status(400).json({ error: 'Request must include a non-empty "decisions" array.' });
+      return;
+    }
+
+    const fallbackApprover = (body.approved_by as string) || authResult.email || authResult.id;
+    const nowIso = new Date().toISOString();
+    const log: string[] = [];
+
+    for (const dRaw of decisions) {
+      const d = (dRaw || {}) as Record<string, unknown>;
+      const draftId = d.draft_id as string | undefined;
+      const decision = String(d.decision || '').toLowerCase();
+      const approvedBy = (d.approved_by as string) || fallbackApprover;
+
+      if (!draftId) { log.push('SKIP:missing_draft_id'); continue; }
+
+      const { data: draftRow, error: findErr } = await serviceClient
+        .from('outreach_drafts')
+        .select('id, prospect_id, channel, prospects(primary_domain)')
+        .eq('id', draftId)
+        .maybeSingle();
+
+      if (findErr) {
+        if (isMissingTable(findErr)) {
+          res.status(200).json({ success: true, available: false, applied: 0, skipped: log.length, log, message: TABLES_NOT_PROVISIONED });
+          return;
+        }
+        log.push(`SKIP:lookup_failed:${draftId}`);
+        continue;
+      }
+      if (!draftRow) { log.push(`SKIP:draft_not_found:${draftId}`); continue; }
+
+      const draft = draftRow as Record<string, unknown>;
+      const prospectId = draft.prospect_id as string | undefined;
+      const prospectObj = (draft.prospects as Record<string, unknown>) || {};
+      const domain = String(prospectObj.primary_domain || '?');
+
+      if (decision === 'approve') {
+        const draftUpdate: Record<string, unknown> = {
+          approval: 'approved',
+          approved_by: approvedBy,
+          approved_at: nowIso,
+        };
+        if (typeof d.edited_body === 'string') draftUpdate.edited_body = d.edited_body;
+        const newChannel = d.channel as string | undefined;
+        if (newChannel) draftUpdate.channel = newChannel;
+        await serviceClient.from('outreach_drafts').update(draftUpdate).eq('id', draftId);
+
+        if (prospectId) {
+          const prospectUpdate: Record<string, unknown> = { approval: 'approved', draft: 'approved' };
+          if (newChannel) prospectUpdate.routed_channel = newChannel;
+          await serviceClient.from('prospects').update(prospectUpdate).eq('id', prospectId);
+        }
+        const ch = newChannel || draft.channel || '?';
+        log.push(`approve:${draftId}:${domain}:${ch}`);
+      } else if (decision === 'reject') {
+        await serviceClient.from('outreach_drafts').update({
+          approval: 'rejected',
+          approved_by: approvedBy,
+          approved_at: nowIso,
+        }).eq('id', draftId);
+
+        if (prospectId) {
+          await serviceClient.from('prospects').update({ approval: 'rejected', draft: 'none' }).eq('id', prospectId);
+        }
+
+        const suppress = (d.suppress || {}) as Record<string, unknown>;
+        const supValue = suppress.value ? String(suppress.value) : '';
+        if (supValue) {
+          await serviceClient.from('suppression_list').upsert(
+            { match_type: (suppress.match_type as string) || 'domain', value: supValue, reason: 'manual' },
+            { onConflict: 'match_type,value' },
+          );
+          log.push(`reject+suppress:${draftId}:${supValue}`);
+        } else {
+          log.push(`reject:${draftId}:${domain}`);
+        }
+      } else {
+        log.push(`UNKNOWN_DECISION:${decision}:${draftId}`);
+      }
+    }
+
+    const skipped = log.filter(l => l.startsWith('SKIP') || l.startsWith('UNKNOWN'));
+    res.status(200).json({
+      success: true,
+      available: true,
+      applied: log.length - skipped.length,
+      skipped: skipped.length,
+      log,
     });
     return;
   }
