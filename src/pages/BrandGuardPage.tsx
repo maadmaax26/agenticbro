@@ -1720,9 +1720,9 @@ export function BrandGuardPage() {
       )}
 
       {/* Dashboard content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '24px' }}>
+      <div style={{ maxWidth: dashboardTab === 'monitoring' ? '1600px' : '1200px', margin: '0 auto', padding: isMobile ? '12px' : '24px', transition: 'max-width 180ms ease' }}>
         {activeBrand ? (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile || dashboardTab === 'monitoring' ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px' }}>
             {/* Left: Brand info + scan */}
             <div style={{ display: 'grid', gap: '16px' }}>
               {/* Brand card */}
@@ -1756,11 +1756,11 @@ export function BrandGuardPage() {
               </div>
 
               {/* Dashboard tabs */}
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '4px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '4px', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                 <button
                   onClick={() => setDashboardTab('scans')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '92px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
                     background: dashboardTab === 'scans' ? dark.accent : 'transparent',
                     color: dashboardTab === 'scans' ? '#fff' : dark.textMuted,
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -1769,7 +1769,7 @@ export function BrandGuardPage() {
                 <button
                   onClick={() => setDashboardTab('monitoring')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '110px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
                     background: dashboardTab === 'monitoring' ? dark.accent : 'transparent',
                     color: dashboardTab === 'monitoring' ? '#fff' : dark.textMuted,
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -1778,7 +1778,7 @@ export function BrandGuardPage() {
                 <button
                   onClick={() => setDashboardTab('takedowns')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '108px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
                     background: dashboardTab === 'takedowns' ? dark.accent : 'transparent',
                     color: dashboardTab === 'takedowns' ? '#fff' : dark.textMuted,
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -1787,7 +1787,7 @@ export function BrandGuardPage() {
                 <button
                   onClick={() => setDashboardTab('delivery')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '92px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
                     background: dashboardTab === 'delivery' ? dark.accent : 'transparent',
                     color: dashboardTab === 'delivery' ? '#fff' : dark.textMuted,
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -1796,7 +1796,7 @@ export function BrandGuardPage() {
                 <button
                   onClick={() => setDashboardTab('outreach')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '96px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
                     background: dashboardTab === 'outreach' ? dark.accent : 'transparent',
                     color: dashboardTab === 'outreach' ? '#fff' : dark.textMuted,
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
@@ -1807,15 +1807,20 @@ export function BrandGuardPage() {
               {dashboardTab === 'monitoring' ? (
                 <div> {/* ── Monitoring Dashboard — Cyberpunk HUD ─────────────── */}
                   {/* ── Header ─────────────────────────────────────────────── */}
-                  <div style={{ textAlign: 'center', marginBottom: '20px', padding: isMobile ? '16px 0' : '20px 0' }}>
-                    <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 700, color: '#39FF14', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>◆ AGENTICBRO ◆</div>
-                    <div style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 900, color: '#fff', textShadow: '0 0 20px rgba(57,255,20,0.3), 0 0 40px rgba(57,255,20,0.1)', letterSpacing: '2px' }}>BRAND GUARD</div>
-                    <div style={{ fontSize: '11px', color: '#8B8B8B', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '4px' }}>AI-Powered Monitoring & Protection</div>
-                    <div style={{ width: '100%', height: '1px', background: 'linear-gradient(90deg, transparent, #39FF14, #BF00FF, transparent)', marginTop: '16px' }} />
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', padding: isMobile ? '14px 0' : '12px 4px', borderBottom: '1px solid rgba(191,0,255,0.28)' }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 800, color: '#39FF14', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>◆ AGENTICBRO SECURITY OPERATIONS</div>
+                      <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 900, color: '#fff', textShadow: '0 0 20px rgba(57,255,20,0.25)', letterSpacing: '1.5px' }}>BRAND GUARD</div>
+                      <div style={{ fontSize: '11px', color: '#8B8B8B', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '3px' }}>Live monitoring and protection for {activeBrand.brand_name}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '7px', background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.22)' }}>
+                      <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#39FF14', boxShadow: '0 0 8px #39FF14' }} />
+                      <span style={{ color: '#39FF14', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', fontFamily: 'monospace' }}>LIVE · AUTO REFRESH 30S</span>
+                    </div>
                   </div>
 
                   {/* ── What We Monitor — Scanner Grid ───────────────────── */}
-                  <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                  <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: isMobile ? '12px' : '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                       <div style={{ fontSize: '10px', fontWeight: 700, color: '#39FF14', letterSpacing: '2px', textTransform: 'uppercase' }}>◆ Scanner Matrix</div>
                       <div style={{ flex: 1, height: '1px', background: 'rgba(57,255,20,0.2)' }} />
@@ -1824,7 +1829,7 @@ export function BrandGuardPage() {
                         <span style={{ fontSize: '10px', color: '#39FF14', fontWeight: 600 }}>ALL ONLINE</span>
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, minmax(128px, 1fr))' : 'repeat(8, minmax(0, 1fr))', gap: '8px', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? '4px' : 0, scrollSnapType: isMobile ? 'x proximity' : undefined, WebkitOverflowScrolling: 'touch' }}>
                       {[
                         { icon: '🔍', label: 'Impersonator', desc: 'X, IG, TikTok, FB', active: true },
                         { icon: '🌐', label: 'Domain Sweep', desc: 'Typosquat + age + pages', active: true },
@@ -1835,7 +1840,7 @@ export function BrandGuardPage() {
                         { icon: '🛍️', label: 'Marketplace', desc: 'Shopify & Etsy', active: true },
                         { icon: '🖼️', label: 'Visual FP', desc: 'Logo monitoring', active: true },
                       ].map(item => (
-                        <div key={item.label} style={{ padding: '8px', borderRadius: '6px', background: 'rgba(5,5,16,0.5)', border: '1px solid rgba(57,255,20,0.15)', textAlign: 'center' }}>
+                        <div key={item.label} style={{ padding: isMobile ? '10px 8px' : '8px', borderRadius: '6px', background: 'rgba(5,5,16,0.5)', border: '1px solid rgba(57,255,20,0.15)', textAlign: 'center', scrollSnapAlign: isMobile ? 'start' : undefined }}>
                           <div style={{ fontSize: '18px', marginBottom: '2px' }}>{item.icon}</div>
                           <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{item.label}</div>
                           <div style={{ fontSize: '9px', color: '#8B8B8B', lineHeight: 1.2 }}>{item.desc}</div>
@@ -1872,9 +1877,9 @@ export function BrandGuardPage() {
                       const scoreColor = score >= 80 ? '#39FF14' : score >= 60 ? '#FFAA00' : score >= 40 ? '#f97316' : '#FF073A';
                       const scoreGlow = score >= 80 ? '0 0 15px rgba(57,255,20,0.4)' : score >= 60 ? '0 0 15px rgba(255,170,0,0.4)' : score >= 40 ? '0 0 15px rgba(249,115,22,0.4)' : '0 0 15px rgba(255,7,58,0.4)';
                       return (
-                        <>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.75fr) minmax(340px, 0.85fr)', gridTemplateRows: 'auto auto auto 1fr', alignItems: 'start', gap: '16px' }}>
                           {/* ── Health Score — Main Gauge ──────────────────── */}
-                          <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '20px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                          <div style={{ gridColumn: isMobile ? '1' : '2', gridRow: isMobile ? 'auto' : '1', background: 'rgba(26,10,46,0.72)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '10px', padding: isMobile ? '14px' : '18px', boxShadow: '0 0 12px rgba(191,0,255,0.1)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div style={{ fontSize: '10px', fontWeight: 700, color: '#39FF14', letterSpacing: '2px', textTransform: 'uppercase' }}>◆ System Status</div>
@@ -1883,7 +1888,7 @@ export function BrandGuardPage() {
                                 onClick={refreshHealthScore}
                                 disabled={refreshingHealth}
                                 style={{
-                                  padding: '5px 12px', borderRadius: '4px', border: '1px solid rgba(57,255,20,0.3)',
+                                  minHeight: isMobile ? '40px' : undefined, padding: '5px 12px', borderRadius: '4px', border: '1px solid rgba(57,255,20,0.3)',
                                   background: refreshingHealth ? 'rgba(57,255,20,0.1)' : 'transparent',
                                   color: '#39FF14', fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', cursor: refreshingHealth ? 'not-allowed' : 'pointer',
                                   letterSpacing: '1px', textTransform: 'uppercase',
@@ -1965,7 +1970,7 @@ export function BrandGuardPage() {
                           </div>
 
                           {/* ── Threat Count — HUD style ─────────────────── */}
-                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                          <div style={{ gridColumn: isMobile ? '1' : '2', gridRow: isMobile ? 'auto' : '2', display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))', gap: '6px' }}>
                             {[
                               { label: 'TOTAL', value: summary?.total_threats ?? 0, color: '#00F0FF', bg: 'rgba(0,240,255,0.08)', border: 'rgba(0,240,255,0.2)' },
                               { label: 'CRITICAL', value: summary?.critical_threats ?? 0, color: '#FF073A', bg: 'rgba(255,7,58,0.08)', border: 'rgba(255,7,58,0.25)' },
@@ -1973,7 +1978,7 @@ export function BrandGuardPage() {
                               { label: 'MEDIUM', value: summary?.medium_threats ?? 0, color: '#FFAA00', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.2)' },
                               { label: 'LOW', value: summary?.low_threats ?? 0, color: '#39FF14', bg: 'rgba(57,255,20,0.08)', border: 'rgba(57,255,20,0.2)' },
                             ].map(card => (
-                              <div key={card.label} style={{ padding: '12px 8px', borderRadius: '6px', background: card.bg, border: `1px solid ${card.border}`, textAlign: 'center', boxShadow: `0 0 8px ${card.border}` }}>
+                              <div key={card.label} style={{ gridColumn: isMobile && card.label === 'TOTAL' ? '1 / -1' : undefined, padding: '12px 8px', borderRadius: '6px', background: card.bg, border: `1px solid ${card.border}`, textAlign: 'center', boxShadow: `0 0 8px ${card.border}` }}>
                                 <div style={{ fontSize: isMobile ? '22px' : '24px', fontWeight: 900, color: card.color, fontFamily: 'monospace', textShadow: `0 0 10px ${card.border}` }}>{card.value}</div>
                                 <div style={{ fontSize: '9px', color: card.color, fontWeight: 700, marginTop: '2px', letterSpacing: '1.5px', fontFamily: 'monospace' }}>{card.label}</div>
                               </div>
@@ -1988,7 +1993,7 @@ export function BrandGuardPage() {
                             const intel = (feeds?.threat_intel || []) as Record<string, unknown>[];
                             const updatedAt = feeds?.updated_at ? new Date(String(feeds.updated_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'WAITING';
                             const feedCard = (title: string, color: string, count: number, content: ReactNode) => (
-                              <div style={{ minWidth: 0, padding: '14px', borderRadius: '8px', background: 'rgba(5,5,16,0.62)', border: `1px solid ${color}35`, boxShadow: `0 0 8px ${color}16` }}>
+                              <div style={{ minWidth: 0, padding: isMobile ? '11px' : '14px', borderRadius: '8px', background: 'rgba(5,5,16,0.62)', border: `1px solid ${color}35`, boxShadow: `0 0 8px ${color}16` }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
                                   <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, boxShadow: `0 0 7px ${color}` }} />
                                   <div style={{ fontSize: '10px', fontWeight: 800, color, letterSpacing: '1.5px', fontFamily: 'monospace' }}>{title}</div>
@@ -1999,24 +2004,24 @@ export function BrandGuardPage() {
                             );
                             const empty = <div style={{ padding: '18px 4px', textAlign: 'center', color: '#666', fontSize: '10px', fontFamily: 'monospace' }}>AWAITING TELEMETRY</div>;
                             return (
-                              <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(0,240,255,0.25)', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                              <div style={{ gridColumn: isMobile ? '1' : '1', gridRow: isMobile ? 'auto' : '1 / span 4', background: 'rgba(26,10,46,0.68)', border: '1px solid rgba(191,0,255,0.36)', borderRadius: '10px', padding: isMobile ? '12px' : '16px', boxShadow: '0 0 14px rgba(191,0,255,0.1)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                                   <div style={{ fontSize: '10px', fontWeight: 700, color: '#00F0FF', letterSpacing: '2px', fontFamily: 'monospace' }}>◆ LIVE INTELLIGENCE STREAMS</div>
                                   <div style={{ flex: 1, height: '1px', minWidth: '24px', background: 'rgba(0,240,255,0.2)' }} />
                                   <div style={{ fontSize: '9px', color: '#8B8B8B', fontFamily: 'monospace' }}>AUTO 30S · {updatedAt}</div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                                   {feedCard('DNS TRANSITIONS', '#00F0FF', dns.length, dns.length ? (
-                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: '7px', maxHeight: '270px', overflowY: 'auto' }}>
                                       {dns.slice(0, 8).map(row => <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(0,240,255,0.04)', borderLeft: `2px solid ${row.resolves ? '#39FF14' : '#8B8B8B'}` }}>
                                         <div style={{ color: '#fff', fontSize: '11px', fontWeight: 700, wordBreak: 'break-all' }}>{String(row.domain)}</div>
-                                        <div style={{ color: row.resolves ? '#39FF14' : '#8B8B8B', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px' }}>{row.resolves ? 'ACTIVE DNS' : 'NO RESOLUTION'} · {((row.mx_records as string[]) || []).length} MX</div>
+                                        <div style={{ color: row.resolves ? '#39FF14' : '#8B8B8B', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px', overflowWrap: 'anywhere' }}>{row.resolves ? 'ACTIVE DNS' : 'NO RESOLUTION'} · IP {((row.ip_addresses as string[]) || [])[0] || '—'} · {((row.mx_records as string[]) || []).length} MX</div>
                                         <div style={{ color: '#666', fontSize: '9px', marginTop: '2px' }}>{new Date(String(row.checked_at)).toLocaleString()}</div>
                                       </div>)}
                                     </div>
                                   ) : empty)}
                                   {feedCard('DMARC AUTH', '#BF00FF', dmarc.length, dmarc.length ? (
-                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
                                       {dmarc.slice(0, 8).map(row => {
                                         const failed = Number(row.failed_count || 0);
                                         return <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(191,0,255,0.04)', borderLeft: `2px solid ${failed ? '#FFAA00' : '#39FF14'}` }}>
@@ -2028,7 +2033,7 @@ export function BrandGuardPage() {
                                     </div>
                                   ) : empty)}
                                   {feedCard('THREAT INTEL', '#FF073A', intel.length, intel.length ? (
-                                    <div style={{ display: 'grid', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: '7px', maxHeight: '250px', overflowY: 'auto' }}>
                                       {intel.slice(0, 8).map(row => <div key={String(row.id)} style={{ padding: '8px', background: 'rgba(255,7,58,0.04)', borderLeft: `2px solid ${Number(row.severity) >= 4 ? '#FF073A' : '#FFAA00'}` }}>
                                         <div style={{ color: '#fff', fontSize: '11px', fontWeight: 700, wordBreak: 'break-all' }}>{String(row.target)}</div>
                                         <div style={{ color: '#FFAA00', fontSize: '9px', fontFamily: 'monospace', marginTop: '3px' }}>{String(row.threat_type).toUpperCase()} · {String(row.job_status || row.status).toUpperCase()} · {Number(row.confidence)}%</div>
@@ -2042,7 +2047,7 @@ export function BrandGuardPage() {
                           })()}
 
                           {/* ── Threat Feed — Neon card style ────────────── */}
-                          <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                          <div style={{ gridColumn: isMobile ? '1' : '2', gridRow: isMobile ? 'auto' : '3', background: 'rgba(26,10,46,0.72)', border: '1px solid rgba(255,7,58,0.28)', borderRadius: '10px', padding: '16px', boxShadow: '0 0 10px rgba(255,7,58,0.08)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                               <div style={{ fontSize: '10px', fontWeight: 700, color: '#FF073A', letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'monospace' }}>◆ Threat Monitor</div>
                               <div style={{ flex: 1, height: '1px', background: 'rgba(255,7,58,0.2)' }} />
@@ -2081,6 +2086,12 @@ export function BrandGuardPage() {
                                           <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '2px', background: sevBorder, color: sevColor, fontWeight: 700, letterSpacing: '0.5px', fontFamily: 'monospace' }}>{sev.toUpperCase()}</span>
                                         </div>
                                       </div>
+                                      {['critical', 'high'].includes(sev) && (
+                                        <button
+                                          onClick={() => setDashboardTab('takedowns')}
+                                          style={{ marginTop: '8px', width: '100%', minHeight: isMobile ? '42px' : undefined, padding: '7px 10px', borderRadius: '5px', border: `1px solid ${sevBorder}`, background: 'rgba(255,255,255,0.025)', color: sevColor, fontSize: '9px', fontWeight: 800, letterSpacing: '1px', fontFamily: 'monospace', cursor: 'pointer' }}
+                                        >REVIEW TAKEDOWN OPTIONS</button>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -2095,7 +2106,7 @@ export function BrandGuardPage() {
                             const inProgress = takedowns.filter(t => ['submitted', 'acknowledged'].includes(String(t.status)));
                             const completed = takedowns.filter(t => ['removed', 'rejected'].includes(String(t.status)));
                             return (
-                              <div style={{ background: 'rgba(26,10,46,0.6)', border: '1px solid rgba(191,0,255,0.3)', borderRadius: '8px', padding: '16px', boxShadow: '0 0 8px rgba(191,0,255,0.1)' }}>
+                              <div style={{ gridColumn: isMobile ? '1' : '2', gridRow: isMobile ? 'auto' : '4', background: 'rgba(26,10,46,0.72)', border: '1px solid rgba(0,240,255,0.25)', borderRadius: '10px', padding: '16px', boxShadow: '0 0 10px rgba(0,240,255,0.08)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                   <div style={{ fontSize: '10px', fontWeight: 700, color: '#00F0FF', letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'monospace' }}>◆ Takedown Center</div>
                                   <div style={{ flex: 1, height: '1px', background: 'rgba(0,240,255,0.2)' }} />
@@ -2134,7 +2145,7 @@ export function BrandGuardPage() {
                               </div>
                             );
                           })()}
-                        </>
+                        </div>
                       );
                     })()}
                     </>
@@ -2351,7 +2362,7 @@ export function BrandGuardPage() {
             </div>
 
             {/* Right: Scan results / threats */}
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ display: dashboardTab === 'monitoring' ? 'none' : 'grid', gap: '16px' }}>
               {/* Marketplace Scanner Panel */}
               {showMarketplacePanel && activeBrand && (
                 <div style={{ background: dark.cardBg, border: `1px solid ${dark.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', backdropFilter: 'blur(12px)' }}>
@@ -2947,6 +2958,7 @@ export function BrandGuardPage() {
 
         {/* Credit Balance Details Panel */}
         <div style={{
+          display: dashboardTab === 'monitoring' ? 'none' : 'block',
           background: dark.cardBg,
           border: `1px solid ${dark.border}`,
           borderRadius: '16px',
