@@ -131,7 +131,7 @@ export function SubscriptionPlans({ currentPlanId, onSelectPlan }: SubscriptionP
     }
 
     if (!walletAddress && !email) {
-      setError('Please sign in or connect your wallet first');
+      setError('Please sign in first');
       return;
     }
 
