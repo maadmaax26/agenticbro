@@ -15,7 +15,6 @@ import { FingerprintManager } from '../components/brand-guard/FingerprintManager
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
 import { SubscriptionManager } from '../components/brand-guard/SubscriptionManager';
-import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
 import { ContactUs } from '../components/ContactUs';
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -668,7 +667,7 @@ export function BrandGuardPage() {
   };
 
   // ── Monitoring Dashboard ──────────────────────────────────────────────────
-  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns' | 'delivery' | 'outreach'>('scans');
+  const [dashboardTab, setDashboardTab] = useState<'scans' | 'monitoring' | 'takedowns' | 'delivery'>('scans');
   const [monitoringData, setMonitoringData] = useState<Record<string, unknown> | null>(null);
   const [takedownStandalone, setTakedownStandalone] = useState(false);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
@@ -1793,15 +1792,6 @@ export function BrandGuardPage() {
                     fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                   }}
                 >Delivery</button>
-                <button
-                  onClick={() => setDashboardTab('outreach')}
-                  style={{
-                    flex: isMobile ? '0 0 auto' : 1, minWidth: isMobile ? '96px' : undefined, minHeight: '42px', padding: '10px', borderRadius: '8px', border: 'none',
-                    background: dashboardTab === 'outreach' ? dark.accent : 'transparent',
-                    color: dashboardTab === 'outreach' ? '#fff' : dark.textMuted,
-                    fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                  }}
-                >🎯 Outreach</button>
               </div>
 
               {dashboardTab === 'monitoring' ? (
@@ -3014,13 +3004,6 @@ export function BrandGuardPage() {
           )}
         </div>
       </div>
-
-      {/* Outreach Tab */}
-      {dashboardTab === 'outreach' && (
-        <div style={{ marginTop: '0' }}>
-          <BrandGuardProspectHunter />
-        </div>
-      )}
 
       {/* Credit Purchase Modal */}
       {showPurchase && (
