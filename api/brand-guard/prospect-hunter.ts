@@ -14,11 +14,15 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 // Local Ollama — no API keys needed, runs on the same machine
 const OLLAMA_BASE = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_PROSPECT_MODEL || 'glm5:cloud';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface HuntRequest {
@@ -290,6 +294,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ') || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data, error } = await authClient.auth.getUser(auth.slice(7));
+  if (error || data.user?.email?.toLowerCase() !== ADMIN_EMAIL) {
+    res.status(403).json({ error: 'Admin access required.' });
     return;
   }
 

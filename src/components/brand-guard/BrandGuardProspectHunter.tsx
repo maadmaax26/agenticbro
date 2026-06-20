@@ -80,10 +80,10 @@ const API_URL = "/api/brand-guard/prospect-hunter";
 
 // ── API helpers ─────────────────────────────────────────────────────────────────
 
-async function apiCall(action: string, payload: Record<string, unknown>): Promise<unknown> {
+async function apiCall(action: string, payload: Record<string, unknown>, authToken: string): Promise<unknown> {
   const res = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
     body: JSON.stringify({ action, ...payload }),
   });
   const data = await res.json();
@@ -93,7 +93,7 @@ async function apiCall(action: string, payload: Record<string, unknown>): Promis
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function BrandGuardProspectHunter() {
+export default function BrandGuardProspectHunter({ authToken }: { authToken: string }) {
   const [screen, setScreen] = useState<"hunt" | "crm">("hunt");
   const [selectedVertical, setSelectedVertical] = useState<{ id: string; label: string } | null>(null);
   const [customQuery, setCustomQuery] = useState("");
@@ -132,14 +132,14 @@ export default function BrandGuardProspectHunter() {
       const data = await apiCall("hunt", {
         vertical: selectedVertical?.label,
         query,
-      }) as { results: HuntResult[] };
+      }, authToken) as { results: HuntResult[] };
 
       setHuntResults(data.results.map((r, i) => ({ ...r, _idx: i })));
     } catch (e: any) {
       setHuntError(e.message || "Search failed");
     }
     setHunting(false);
-  }, [customQuery, selectedVertical]);
+  }, [authToken, customQuery, selectedVertical]);
 
   // ── Add to CRM ──────────────────────────────────────────────────────────────
   function addToCRM(result: HuntResult) {
@@ -207,7 +207,7 @@ export default function BrandGuardProspectHunter() {
         urgency: selected.urgency,
         source: selected.source,
         aiResearch: selected.aiResearch,
-      }) as { email: string };
+      }, authToken) as { email: string };
 
       updateProspect(selected.id, { generatedEmail: data.email });
       showToast("Email ready");
@@ -215,7 +215,7 @@ export default function BrandGuardProspectHunter() {
       showToast("Email generation failed");
     }
     setGeneratingEmail(false);
-  }, [selected, generatingEmail]);
+  }, [authToken, selected, generatingEmail]);
 
   // ── Generate research ───────────────────────────────────────────────────────
   const generateResearch = useCallback(async () => {
@@ -228,7 +228,7 @@ export default function BrandGuardProspectHunter() {
         vertical: selected.vertical,
         scanSummary: selected.scanSummary,
         threatType: selected.threatType,
-      }) as { research: string };
+      }, authToken) as { research: string };
 
       updateProspect(selected.id, { aiResearch: data.research });
       showToast("Research complete");
@@ -236,7 +236,7 @@ export default function BrandGuardProspectHunter() {
       showToast("Research failed");
     }
     setGeneratingResearch(false);
-  }, [selected, generatingResearch]);
+  }, [authToken, selected, generatingResearch]);
 
   function copyEmail(p: Prospect) {
     navigator.clipboard.writeText(p.generatedEmail);

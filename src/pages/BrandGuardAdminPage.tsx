@@ -623,7 +623,7 @@ export function BrandGuardAdminPage() {
         )}
         {activeTab === 'outreach' && (
           <div>
-            <BrandGuardProspectHunter />
+            <BrandGuardProspectHunter authToken={authToken || ''} />
           </div>
         )}
       </div>
