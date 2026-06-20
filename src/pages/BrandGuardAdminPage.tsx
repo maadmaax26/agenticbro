@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
+import BrandGuardDraftsReview from '../components/brand-guard/BrandGuardDraftsReview';
 
 const API_BASE = '/api/brand-guard';
 
@@ -623,7 +623,7 @@ export function BrandGuardAdminPage() {
         )}
         {activeTab === 'outreach' && (
           <div>
-            <BrandGuardProspectHunter authToken={authToken || ''} />
+            <BrandGuardDraftsReview authToken={authToken} />
           </div>
         )}
       </div>
