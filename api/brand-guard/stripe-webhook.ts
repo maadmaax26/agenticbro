@@ -342,6 +342,27 @@ export default async function handler(
           return res.status(400).json({ error: 'Missing user_id in metadata' });
         }
 
+        // Main scan-credit purchases share this Stripe account and can be
+        // delivered to the Brand Guard endpoint. Keep the ledgers separate.
+        if (session.metadata?.type === 'scan_credits') {
+          const scanCredits = Number(session.metadata?.credits || 0);
+          if (!Number.isInteger(scanCredits) || scanCredits <= 0) {
+            await releaseProcessedEvent(supabase, eventId);
+            return res.status(400).json({ error: 'Invalid scan credit metadata' });
+          }
+          const { error: scanCreditError } = await supabase.rpc('add_scan_credits', {
+            p_owner_id: userId,
+            p_credits: scanCredits,
+            p_reference: session.id,
+            p_amount_usd: session.amount_total ? session.amount_total / 100 : null,
+          });
+          if (scanCreditError) {
+            await releaseProcessedEvent(supabase, eventId);
+            return res.status(500).json({ error: 'Failed to grant scan credits' });
+          }
+          break;
+        }
+
         const lineItems = session.line_items?.data || [];
         const { credits, packageId, type, planId } = resolveCredits(session.metadata || {}, lineItems);
 

@@ -6,8 +6,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '../lib/AuthContext';
-import { useStripePayment } from '../lib/stripe';
+import { useStripePayment } from '../lib/payments';
 
 interface PaymentSuccessProps {
   sessionId?: string;
@@ -15,7 +14,6 @@ interface PaymentSuccessProps {
 }
 
 export default function PaymentSuccess({ sessionId, onClose }: PaymentSuccessProps) {
-  const { addScanCredits } = useAuth();
   const { verifyPayment, loading, success, error } = useStripePayment();
   const [credits, setCredits] = useState<number | null>(null);
 
@@ -25,29 +23,38 @@ export default function PaymentSuccess({ sessionId, onClose }: PaymentSuccessPro
       return;
     }
 
-    // Verify payment and get credits
+    let cancelled = false;
     const verify = async () => {
-      const result = await verifyPayment(sessionId);
-      
-      if (result?.credits) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = await verifyPayment(sessionId);
+        if (cancelled) return;
+        if (!result?.verified) return;
+        if (!result.fulfilled) {
+          await new Promise(resolve => window.setTimeout(resolve, 1000));
+          continue;
+        }
+
         setCredits(result.credits);
-        addScanCredits(result.credits);
 
         // Fire Google Ads purchase conversion
-        const alreadyFired = sessionStorage.getItem('gads_purchase_conversion');
+        const conversionKey = `gads_purchase_conversion:${sessionId}`;
+        const alreadyFired = sessionStorage.getItem(conversionKey);
         if (!alreadyFired && typeof window !== 'undefined' && (window as any).gtag) {
           (window as any).gtag('event', 'conversion', {
             send_to: 'AW-18179207888/QWLaCJqZi7kcENDlwtxD',
-            value: 1.0,
+            value: result.amount_usd,
             currency: 'USD',
+            transaction_id: sessionId,
           });
-          sessionStorage.setItem('gads_purchase_conversion', '1');
+          sessionStorage.setItem(conversionKey, '1');
         }
+        return;
       }
     };
 
-    verify();
-  }, [sessionId, verifyPayment, addScanCredits]);
+    void verify();
+    return () => { cancelled = true; };
+  }, [sessionId, verifyPayment]);
 
   return (
     <div 

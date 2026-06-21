@@ -23,11 +23,13 @@ import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
 import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
+import { useAuth } from './lib/AuthContext'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
 import { ContactUs } from './components/ContactUs'
 import { BrandGuardPage } from './pages/BrandGuardPage'
 import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
+import PaymentSuccess from './pages/PaymentSuccess'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -159,6 +161,7 @@ class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError:
 
 function MainApp() {
   const { connected, publicKey } = useWallet()
+  const { user, email, walletAddress } = useAuth()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
@@ -173,7 +176,7 @@ function MainApp() {
     freeScansRemaining: priorityScansRemaining,
     hasScans,
     useCredit: consumeCredit,
-  } = useCredits(null, null, publicKey?.toString() || null)
+  } = useCredits(user?.id || null, email, publicKey?.toString() || walletAddress)
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -379,7 +382,7 @@ function MainApp() {
     }
 
     // Use credit from the shared credits system
-    const creditResult = consumeCredit();
+    const creditResult = await consumeCredit();
     console.log('[runScan] Credit used:', creditResult, 'Remaining:', creditResult.remaining);
 
     setIsScanning(true)
@@ -1212,6 +1215,11 @@ function MainApp() {
 
 function App() {
   const location = useLocation()
+
+  if (location.pathname === '/payment-success') {
+    const sessionId = new URLSearchParams(location.search).get('session_id') || ''
+    return <PaymentSuccess sessionId={sessionId} onClose={() => { window.location.href = '/' }} />
+  }
 
   if (location.pathname === '/brand-guard' || location.pathname === '/brand-guard/') {
     const params = new URLSearchParams(location.search)
