@@ -26,9 +26,9 @@ interface CreditPackage {
 
 const PACKAGES: Record<string, CreditPackage> = {
   'starter': { id: 'starter', name: 'Starter', credits: 5, price: 500 }, // $5.00 in cents
-  'basic': { id: 'basic', name: 'Basic', credits: 10, price: 900, bonus: 1 }, // $9.00
-  'pro': { id: 'pro', name: 'Pro', credits: 25, price: 2000, bonus: 5 }, // $20.00
-  'whale': { id: 'whale', name: 'Whale', credits: 100, price: 7500, bonus: 25 }, // $75.00
+  'basic': { id: 'basic', name: 'Basic', credits: 10, price: 1000 }, // $10.00
+  'pro': { id: 'pro', name: 'Pro', credits: 25, price: 2500 }, // $25.00
+  'whale': { id: 'whale', name: 'Whale', credits: 100, price: 10000, bonus: 10 }, // $100.00
 };
 
 // ─── Stripe Integration ───────────────────────────────────────────────────────
