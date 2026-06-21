@@ -111,7 +111,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
     setResult(null);
 
     // Use a credit
-    const creditResult = consumeCredit();
+    const creditResult = await consumeCredit();
     if (!creditResult.success && !isTestWallet) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);

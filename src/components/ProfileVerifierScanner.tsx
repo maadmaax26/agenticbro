@@ -392,7 +392,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     // Holder tier: 50 free scans/month (no credit deduction)
     // Whale tier: Unlimited free scans (no credit deduction)
     if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
-      const creditResult = consumeCredit();
+      const creditResult = await consumeCredit();
       if (!creditResult.success) {
         setError('Failed to use scan credit. Please try again.');
         setScanning(false);
@@ -746,7 +746,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     
     // Only use a credit for cross-platform scan if not in holder/whale tier
     if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
-      const creditResult = consumeCredit();
+      const creditResult = await consumeCredit();
       if (!creditResult.success) {
         setError('Failed to use scan credit. Please try again.');
         setScanning(false);

@@ -81,7 +81,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     setResult(null);
 
     // Use a credit (free first, then paid)
-    const creditResult = consumeCredit();
+    const creditResult = await consumeCredit();
     if (!creditResult.success) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);

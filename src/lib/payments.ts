@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,17 +154,17 @@ export function useStripePayment() {
   });
 
   const createCheckoutSession = useCallback(async (
-    packageId: string,
-    userId: string,
-    email: string
+    packageId: string
   ) => {
     setState({ loading: true, error: null, success: false });
 
     try {
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) throw new Error('Please sign in to purchase credits');
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId, userId, email }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ packageId }),
       });
 
       if (!response.ok) {
@@ -187,7 +188,11 @@ export function useStripePayment() {
     setState({ loading: true, error: null, success: false });
 
     try {
-      const response = await fetch(`/api/verify-payment?session_id=${sessionId}`);
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) throw new Error('Please sign in to verify payment');
+      const response = await fetch(`/api/verify-payment?session_id=${encodeURIComponent(sessionId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -254,6 +259,7 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   const [credits, setCredits] = useState(0);
   const [freeScansRemaining, setFreeScansRemaining] = useState(5);
   const [loading, setLoading] = useState(true);
+  const [remoteAuthToken, setRemoteAuthToken] = useState<string | null>(null);
 
   // Storage key based on wallet or email
   const getStorageKey = useCallback(() => {
@@ -275,12 +281,26 @@ export function useCredits(userId: string | null, email: string | null, walletAd
         setLoading(false);
         return;
       }
+
+      const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      let usingRemote = false;
+      if (session?.access_token) {
+        const response = await fetch('/api/scan-credits', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        if (response.ok) {
+          const data = await response.json();
+          usingRemote = true;
+          setRemoteAuthToken(session.access_token);
+          setCredits(data.paid_credits || 0);
+        }
+      } else {
+        setRemoteAuthToken(null);
+      }
       
       const storageKey = getStorageKey();
       const stored = localStorage.getItem(`agenticbro_credits_${storageKey}`);
       const storedFree = localStorage.getItem(`agenticbro_free_${storageKey}`);
       
-      if (stored) {
+      if (!usingRemote && stored) {
         setCredits(parseInt(stored, 10) || 0);
       }
       if (storedFree) {
@@ -311,7 +331,7 @@ export function useCredits(userId: string | null, email: string | null, walletAd
     setFreeScansRemaining(newFree);
   };
 
-  const useCredit = (): { success: boolean; remaining: number; type: 'free' | 'paid' } => {
+  const useCredit = async (): Promise<{ success: boolean; remaining: number; type: 'free' | 'paid' }> => {
     // Test wallet always succeeds
     if (isTestWallet) {
       return { success: true, remaining: 999999, type: 'free' };
@@ -326,6 +346,16 @@ export function useCredits(userId: string | null, email: string | null, walletAd
 
     // Use paid credits
     if (credits > 0) {
+      if (remoteAuthToken) {
+        const response = await fetch('/api/scan-credits?action=deduct', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${remoteAuthToken}` },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) return { success: false, remaining: credits, type: 'paid' };
+        setCredits(data.paid_credits);
+        return { success: true, remaining: data.paid_credits, type: 'paid' };
+      }
       const newCredits = credits - 1;
       saveCredits(newCredits);
       return { success: true, remaining: newCredits, type: 'paid' };

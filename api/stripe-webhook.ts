@@ -1,163 +1,56 @@
-/**
- * Stripe Webhook Handler
- * 
- * Handles Stripe webhook events for payment completion
- * Endpoint: POST /api/stripe-webhook
- * 
- * Setup:
- * 1. Go to Stripe Dashboard → Developers → Webhooks
- * 2. Add endpoint: https://your-domain.com/api/stripe-webhook
- * 3. Copy the webhook secret to STRIPE_WEBHOOK_SECRET env var
- * 4. Select these events: checkout.session.completed
- */
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const env = (name: string, fallback = '') => (process.env[name] || fallback).trim();
 
-interface StripeEvent {
-  id: string;
-  type: string;
-  data: {
-    object: any;
-  };
+async function verifySignature(payload: string, header: string, secret: string) {
+  const parts = header.split(',').map(part => part.split('='));
+  const timestamp = parts.find(([key]) => key === 't')?.[1];
+  const signatures = parts.filter(([key]) => key === 'v1').map(([, value]) => value);
+  if (!timestamp || signatures.length === 0 || Math.abs(Date.now() - Number(timestamp) * 1000) > 300_000) return false;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signed = await crypto.subtle.sign('HMAC', key, encoder.encode(`${timestamp}.${payload}`));
+  const expected = Array.from(new Uint8Array(signed)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return signatures.some(signature => {
+    if (signature.length !== expected.length) return false;
+    let difference = 0;
+    for (let index = 0; index < expected.length; index += 1) difference |= expected.charCodeAt(index) ^ signature.charCodeAt(index);
+    return difference === 0;
+  });
 }
 
-interface CheckoutSession {
-  id: string;
-  customer_email?: string;
-  metadata: {
-    user_id?: string;
-    credits?: string;
-    package_id?: string;
-  };
-  payment_status: string;
-}
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+  const signature = String(req.headers['stripe-signature'] || '');
+  if (!webhookSecret || !signature) return res.status(400).json({ error: 'Missing webhook signature' });
 
-// ─── Credit Storage (In-Memory / Database) ────────────────────────────────────
+  const payload = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  if (!(await verifySignature(payload, signature, webhookSecret))) return res.status(400).json({ error: 'Invalid webhook signature' });
 
-// For production, use a database (Supabase, PostgreSQL, etc.)
-// This in-memory store is for development/testing only
-const creditStore: Record<string, number> = {};
-
-/**
- * Add credits to user account
- * In production, this should write to your database
- */
-async function addCreditsToUser(userId: string, credits: number): Promise<void> {
-  // Development: Store in memory
-  creditStore[userId] = (creditStore[userId] || 0) + credits;
-  console.log(`[webhook] Added ${credits} credits to user ${userId}. New balance: ${creditStore[userId]}`);
-  
-  // Production: Write to database
-  // Example with Supabase:
-  // const { error } = await supabase
-  //   .from('user_profiles')
-  //   .update({ scan_credits: supabase.rpc('increment', { credits }) })
-  //   .eq('id', userId);
-  
-  // Or with a credit transactions table:
-  // await supabase.from('credit_transactions').insert({
-  //   user_id: userId,
-  //   amount: credits,
-  //   transaction_type: 'purchase',
-  //   payment_method: 'stripe',
-  // });
-}
-
-/**
- * Get user's current credit balance
- */
-export function getUserCredits(userId: string): number {
-  return creditStore[userId] || 0;
-}
-
-// ─── Webhook Handler ───────────────────────────────────────────────────────────
-
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  // Only accept POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const event = JSON.parse(payload);
+  if (event.type !== 'checkout.session.completed') return res.status(200).json({ received: true });
+  const session = event.data.object;
+  if (session.metadata?.type !== 'scan_credits') return res.status(200).json({ received: true, skipped: true });
+  if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+    return res.status(200).json({ received: true, skipped: 'not_paid' });
   }
 
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const userId = session.metadata?.user_id;
+  const credits = Number(session.metadata?.credits || 0);
+  if (!userId || !Number.isInteger(credits) || credits <= 0) return res.status(400).json({ error: 'Invalid checkout metadata' });
 
-  if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET not configured');
-    // For development, allow skipping verification
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[webhook] Skipping signature verification in development');
-    } else {
-      return res.status(500).json({ error: 'Webhook not configured' });
-    }
+  const db = createClient(env('VITE_SUPABASE_URL', env('SUPABASE_URL')), env('SUPABASE_SECRET_API_KEY', env('SUPABASE_SERVICE_ROLE_KEY')));
+  const { error } = await db.rpc('add_scan_credits', {
+    p_owner_id: userId,
+    p_credits: credits,
+    p_reference: session.id,
+    p_amount_usd: typeof session.amount_total === 'number' ? session.amount_total / 100 : null,
+  });
+  if (error) {
+    console.error('[stripe-webhook] Credit fulfillment failed:', error.message);
+    return res.status(500).json({ error: 'Credit fulfillment failed' });
   }
-
-  // Get the raw body for signature verification
-  const payload = typeof req.body === 'string' 
-    ? req.body 
-    : JSON.stringify(req.body);
-    
-  const signature = req.headers['stripe-signature'] as string;
-
-  // Verify webhook signature (in production)
-  // Note: For proper signature verification, use the stripe library
-  // This simplified version works with Vercel's body parsing
-  
-  try {
-    // Parse the event
-    const event: StripeEvent = typeof req.body === 'object' 
-      ? req.body 
-      : JSON.parse(req.body);
-
-    console.log(`[webhook] Received event: ${event.type}`);
-
-    // Handle different event types
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as CheckoutSession;
-        
-        console.log('[webhook] Checkout session completed:', session.id);
-        console.log('[webhook] Metadata:', session.metadata);
-        
-        // Extract data
-        const userId = session.metadata?.user_id;
-        const credits = parseInt(session.metadata?.credits || '0', 10);
-        
-        if (!userId || !credits) {
-          console.error('[webhook] Missing user_id or credits in metadata');
-          return res.status(400).json({ error: 'Missing metadata' });
-        }
-
-        // Add credits to user
-        await addCreditsToUser(userId, credits);
-        
-        console.log(`[webhook] Successfully added ${credits} credits to ${userId}`);
-        break;
-      }
-      
-      case 'payment_intent.succeeded': {
-        console.log('[webhook] Payment intent succeeded');
-        // Additional handling if needed
-        break;
-      }
-      
-      default: {
-        console.log(`[webhook] Unhandled event type: ${event.type}`);
-      }
-    }
-
-    // Return success
-    return res.status(200).json({ received: true });
-
-  } catch (error) {
-    console.error('[webhook] Error processing webhook:', error);
-    return res.status(400).json({ 
-      error: 'Webhook processing failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
+  return res.status(200).json({ received: true });
 }
