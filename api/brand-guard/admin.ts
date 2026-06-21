@@ -24,6 +24,14 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL ||
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
+// Outreach pipeline (prospects / signals / outreach_drafts / suppression_list) lives on a
+// SEPARATE Supabase project from the product DB, to isolate its Disk IO. The /review-queue and
+// /apply-approvals routes use these creds; everything else in this file stays on the product DB.
+// Falls back to the product creds when OUTREACH_* is unset, so behavior is unchanged until the
+// OUTREACH_SUPABASE_* env vars are configured in the deployment environment.
+const outreachUrl = process.env.OUTREACH_SUPABASE_URL || supabaseUrl;
+const outreachServiceKey = process.env.OUTREACH_SUPABASE_SECRET_API_KEY || process.env.OUTREACH_SUPABASE_SERVICE_ROLE_KEY || supabaseServiceKey;
+
 const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
 type VercelRequest = IncomingMessage & { body?: Record<string, unknown>; method?: string };
@@ -98,6 +106,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+  // Separate client for the outreach pipeline tables (may point at a different Supabase project).
+  const outreachClient = createClient(outreachUrl, outreachServiceKey);
   const url = new URL(req.url || '', 'https://brand-guard.local');
   const path = url.pathname.replace('/api/brand-guard/admin', '').replace(/\/$/, '');
 
@@ -399,7 +409,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Load suppression list so already-suppressed prospects can be flagged.
     const supEmails = new Set<string>();
     const supDomains = new Set<string>();
-    const { data: supRows, error: supErr } = await serviceClient
+    const { data: supRows, error: supErr } = await outreachClient
       .from('suppression_list')
       .select('match_type, value');
     if (supErr) {
@@ -418,7 +428,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       else supDomains.add(v);
     }
 
-    const { data: rows, error } = await serviceClient
+    const { data: rows, error } = await outreachClient
       .from('outreach_drafts')
       .select('*, prospects(*, signals(*))')
       .eq('approval', 'unreviewed')
@@ -502,7 +512,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
       if (!draftId) { log.push('SKIP:missing_draft_id'); continue; }
 
-      const { data: draftRow, error: findErr } = await serviceClient
+      const { data: draftRow, error: findErr } = await outreachClient
         .from('outreach_drafts')
         .select('id, prospect_id, channel, prospects(primary_domain)')
         .eq('id', draftId)
@@ -532,30 +542,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         if (typeof d.edited_body === 'string') draftUpdate.edited_body = d.edited_body;
         const newChannel = d.channel as string | undefined;
         if (newChannel) draftUpdate.channel = newChannel;
-        await serviceClient.from('outreach_drafts').update(draftUpdate).eq('id', draftId);
+        await outreachClient.from('outreach_drafts').update(draftUpdate).eq('id', draftId);
 
         if (prospectId) {
           const prospectUpdate: Record<string, unknown> = { approval: 'approved', draft: 'approved' };
           if (newChannel) prospectUpdate.routed_channel = newChannel;
-          await serviceClient.from('prospects').update(prospectUpdate).eq('id', prospectId);
+          await outreachClient.from('prospects').update(prospectUpdate).eq('id', prospectId);
         }
         const ch = newChannel || draft.channel || '?';
         log.push(`approve:${draftId}:${domain}:${ch}`);
       } else if (decision === 'reject') {
-        await serviceClient.from('outreach_drafts').update({
+        await outreachClient.from('outreach_drafts').update({
           approval: 'rejected',
           approved_by: approvedBy,
           approved_at: nowIso,
         }).eq('id', draftId);
 
         if (prospectId) {
-          await serviceClient.from('prospects').update({ approval: 'rejected', draft: 'none' }).eq('id', prospectId);
+          await outreachClient.from('prospects').update({ approval: 'rejected', draft: 'none' }).eq('id', prospectId);
         }
 
         const suppress = (d.suppress || {}) as Record<string, unknown>;
         const supValue = suppress.value ? String(suppress.value) : '';
         if (supValue) {
-          await serviceClient.from('suppression_list').upsert(
+          await outreachClient.from('suppression_list').upsert(
             { match_type: (suppress.match_type as string) || 'domain', value: supValue, reason: 'manual' },
             { onConflict: 'match_type,value' },
           );
