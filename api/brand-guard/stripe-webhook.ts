@@ -46,14 +46,15 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const env = (name: string, fallback = '') => (process.env[name] || fallback).trim();
+const supabaseUrl = env('VITE_SUPABASE_URL', env('SUPABASE_URL'));
+const supabaseServiceKey = env('SUPABASE_SECRET_API_KEY', env('SUPABASE_SERVICE_ROLE_KEY'));
+const webhookSecret = env('STRIPE_WEBHOOK_SECRET');
 
 // Stripe Subscription Price IDs (set in Stripe Dashboard, then copy here)
-const GUARDIAN_PRICE_ID  = process.env.STRIPE_BG_GUARDIAN_PRICE_ID  || process.env.STRIPE_GUARDIAN_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDetJfQtGS';
-const SENTINEL_PRICE_ID  = process.env.STRIPE_BG_SENTINEL_PRICE_ID  || process.env.STRIPE_SENTINEL_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDzNKnTEkh';
-const FORTRESS_PRICE_ID  = process.env.STRIPE_BG_FORTRESS_PRICE_ID  || process.env.STRIPE_FORTRESS_PRICE_ID  || 'price_1TcC6Z1lUBogdwcDgTFlMRFf';
+const GUARDIAN_PRICE_ID = env('STRIPE_BG_GUARDIAN_PRICE_ID', env('STRIPE_GUARDIAN_PRICE_ID', 'price_1TcC6Z1lUBogdwcDetJfQtGS'));
+const SENTINEL_PRICE_ID = env('STRIPE_BG_SENTINEL_PRICE_ID', env('STRIPE_SENTINEL_PRICE_ID', 'price_1TcC6Z1lUBogdwcDzNKnTEkh'));
+const FORTRESS_PRICE_ID = env('STRIPE_BG_FORTRESS_PRICE_ID', env('STRIPE_FORTRESS_PRICE_ID', 'price_1TcC6Z1lUBogdwcDgTFlMRFf'));
 
 // ── Plan Configuration ────────────────────────────────────────────────────────
 const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_credits: number; brands_included: number; plan_id: string }> = {
@@ -66,10 +67,10 @@ const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_cre
 // Maps Stripe price_id → { credits, package_name, type }
 const PRICE_MAP: Record<string, { credits: number; name: string; type: 'credits' | 'subscription'; plan_id?: string }> = {
   // Pay-as-you-go credit packages
-  [process.env.STRIPE_BG_STARTER_PRICE_ID || 'price_1TcC6R1lUBogdwcDsg8wYTgx']: { credits: 5,   name: 'Brand Guard Starter',                     type: 'credits' },
-  [process.env.STRIPE_BG_BASIC_PRICE_ID   || 'price_1TcC6S1lUBogdwcDuCMkWIJW']: { credits: 10,  name: 'Brand Guard Basic',                       type: 'credits' },
-  [process.env.STRIPE_BG_PRO_PRICE_ID     || 'price_1TcC6S1lUBogdwcDsI9CF0PD']: { credits: 25,  name: 'Brand Guard Pro',                         type: 'credits' },
-  [process.env.STRIPE_BG_WHALE_PRICE_ID   || 'price_1TcC6S1lUBogdwcDGonv0mZQ']: { credits: 110, name: 'Brand Guard Whale (100+10 bonus)',         type: 'credits' },
+  [env('STRIPE_BG_STARTER_PRICE_ID', 'price_1TcC6R1lUBogdwcDsg8wYTgx')]: { credits: 5,   name: 'Brand Guard Starter',                     type: 'credits' },
+  [env('STRIPE_BG_BASIC_PRICE_ID', 'price_1TcC6S1lUBogdwcDuCMkWIJW')]:   { credits: 10,  name: 'Brand Guard Basic',                       type: 'credits' },
+  [env('STRIPE_BG_PRO_PRICE_ID', 'price_1TcC6S1lUBogdwcDsI9CF0PD')]:     { credits: 25,  name: 'Brand Guard Pro',                         type: 'credits' },
+  [env('STRIPE_BG_WHALE_PRICE_ID', 'price_1TcC6S1lUBogdwcDGonv0mZQ')]:   { credits: 110, name: 'Brand Guard Whale (100+10 bonus)',         type: 'credits' },
   // Subscription plans
   [GUARDIAN_PRICE_ID]: { credits: 50,  name: 'Guardian ($29/mo)',              type: 'subscription', plan_id: 'guardian' },
   [SENTINEL_PRICE_ID]: { credits: 200, name: 'Sentinel ($99/mo)',              type: 'subscription', plan_id: 'sentinel' },

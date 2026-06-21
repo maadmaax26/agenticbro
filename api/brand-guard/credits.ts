@@ -12,7 +12,7 @@
  *
  * GET    /api/brand-guard/credits                    — Get user's credit balance
  * POST   /api/brand-guard/credits/deduct             — Deduct 1 credit for a scan
- * POST   /api/brand-guard/credits/add                 — Add credits (purchase/admin)
+ * POST   /api/brand-guard/credits/add                 — Refund one recently deducted credit
  * GET    /api/brand-guard/credits/history              — Get transaction history
  * POST   /api/brand-guard/credits/stripe-checkout      — Create Stripe checkout session
  *
@@ -24,17 +24,18 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+const env = (name: string, fallback = '') => (process.env[name] || fallback).trim();
+const stripeSecretKey = env('STRIPE_SECRET_KEY');
 
 // ── Stripe Price IDs (created 2026-05-28) ─────────────────────────────────────
 const STRIPE_PRICES = {
-  'bg-starter':  process.env.STRIPE_BG_STARTER_PRICE_ID  || 'price_1TcC6R1lUBogdwcDsg8wYTgx', // $5 / 5 credits
-  'bg-basic':    process.env.STRIPE_BG_BASIC_PRICE_ID    || 'price_1TcC6S1lUBogdwcDuCMkWIJW', // $10 / 10 credits
-  'bg-pro':      process.env.STRIPE_BG_PRO_PRICE_ID      || 'price_1TcC6S1lUBogdwcDsI9CF0PD', // $25 / 25 credits
-  'bg-whale':    process.env.STRIPE_BG_WHALE_PRICE_ID    || 'price_1TcC6S1lUBogdwcDGonv0mZQ', // $100 / 110 credits
-  'bg-guardian': process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_1TcC6Z1lUBogdwcDetJfQtGS', // $29/mo
-  'bg-sentinel': process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_1TcC6Z1lUBogdwcDzNKnTEkh', // $79/mo
-  'bg-fortress': process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_1TcC6Z1lUBogdwcDgTFlMRFf', // $199/mo
+  'bg-starter':  env('STRIPE_BG_STARTER_PRICE_ID', 'price_1TcC6R1lUBogdwcDsg8wYTgx'), // $5 / 5 credits
+  'bg-basic':    env('STRIPE_BG_BASIC_PRICE_ID', 'price_1TcC6S1lUBogdwcDuCMkWIJW'), // $10 / 10 credits
+  'bg-pro':      env('STRIPE_BG_PRO_PRICE_ID', 'price_1TcC6S1lUBogdwcDsI9CF0PD'), // $25 / 25 credits
+  'bg-whale':    env('STRIPE_BG_WHALE_PRICE_ID', 'price_1TcC6S1lUBogdwcDGonv0mZQ'), // $100 / 110 credits
+  'bg-guardian': env('STRIPE_BG_GUARDIAN_PRICE_ID', 'price_1TcC6Z1lUBogdwcDetJfQtGS'), // $29/mo
+  'bg-sentinel': env('STRIPE_BG_SENTINEL_PRICE_ID', 'price_1TcC6Z1lUBogdwcDzNKnTEkh'), // $99/mo
+  'bg-fortress': env('STRIPE_BG_FORTRESS_PRICE_ID', 'price_1TcC6Z1lUBogdwcDgTFlMRFf'), // $299/mo
 } as const;
 
 // ── Brand Guard Subscription Plans ────────────────────────────────────────────
@@ -97,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (req.method === 'GET' && path === '/packages') {
     res.status(200).json({
       success: true,
-      packages: CREDIT_PACKAGES,
+      packages: CREDIT_PACKAGES.map(({ stripe_price_id: _stripePriceId, ...pkg }) => pkg),
       price_per_scan: PRICE_PER_SCAN_USD,
       free_credits: FREE_CREDITS_DEFAULT,
     });
@@ -193,34 +194,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // POST /add — Add credits (after purchase confirmation)
+  // POST /add — Refund one real, recent deduction. Purchases are webhook-only.
   // ══════════════════════════════════════════════════════════════════════════
   if (req.method === 'POST' && path === '/add') {
     const body = await parseBody(req);
-    const amount = body.amount as number;
     const paymentMethod = body.payment_method as string;
-    const paymentReference = body.payment_reference as string | undefined;
-    const amountUsd = body.amount_usd as number | undefined;
-    const description = body.description as string | undefined;
-
-    if (!amount || amount <= 0) {
-      res.status(400).json({ error: 'amount must be a positive integer' });
+    if (body.amount !== 1 || paymentMethod !== 'refund') {
+      res.status(403).json({ error: 'Credits can only be granted by a verified payment webhook' });
       return;
     }
 
-    if (!paymentMethod || !['stripe', 'subscription', 'admin', 'refund', 'health_refresh'].includes(paymentMethod)) {
-      res.status(400).json({ error: 'Invalid payment_method. Must be: stripe, subscription, admin, or refund' });
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: debit } = await serviceClient
+      .from('brand_guard_credit_transactions')
+      .select('id')
+      .eq('owner_id', userId)
+      .in('transaction_type', ['free_usage', 'paid_usage'])
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!debit?.id) {
+      res.status(409).json({ error: 'No recent credit deduction is eligible for refund' });
+      return;
+    }
+
+    const paymentReference = `refund:${debit.id}`;
+    const { data: priorRefund } = await serviceClient
+      .from('brand_guard_credit_transactions')
+      .select('id')
+      .eq('owner_id', userId)
+      .eq('payment_reference', paymentReference)
+      .maybeSingle();
+
+    if (priorRefund) {
+      res.status(409).json({ error: 'That credit deduction has already been refunded' });
       return;
     }
 
     const { data, error } = await serviceClient.rpc('add_brand_guard_credits', {
       p_owner_id: userId,
-      p_amount: amount,
-      p_transaction_type: paymentMethod === 'subscription' ? 'subscription_grant' : 'purchase',
-      p_payment_method: paymentMethod,
-      p_payment_reference: paymentReference || null,
-      p_amount_usd: amountUsd || null,
-      p_description: description || `Added ${amount} Brand Guard credits via ${paymentMethod}`,
+      p_amount: 1,
+      p_transaction_type: 'refund',
+      p_payment_method: null,
+      p_payment_reference: paymentReference,
+      p_amount_usd: null,
+      p_description: 'Refund for failed Brand Guard scan',
     });
 
     if (error) {
@@ -286,14 +306,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         'mode': 'payment',
         'success_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         'cancel_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=cancelled`,
-        'customer_email': email || '',
         'metadata[user_id]': userId,
         'metadata[credits]': String(totalCredits),
         'metadata[package_id]': pkg.id,
-        'metadata[type]': 'brand_guard',
+        'metadata[type]': 'credits',
         'line_items[0][price]': priceId,
         'line_items[0][quantity]': '1',
       };
+      const customerEmail = (email || entitlement.email).trim();
+      if (customerEmail) checkoutParams.customer_email = customerEmail;
 
       // Create Stripe checkout session
       const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -323,6 +344,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  // GET /verify-checkout — Verify the paid session belongs to this user.
+  if (req.method === 'GET' && path === '/verify-checkout') {
+    const sessionId = url.searchParams.get('session_id')?.trim() || '';
+    if (!/^cs_(test_|live_)?[A-Za-z0-9]+$/.test(sessionId)) {
+      res.status(400).json({ error: 'Invalid checkout session' });
+      return;
+    }
+    if (!stripeSecretKey) {
+      res.status(503).json({ error: 'Stripe not configured' });
+      return;
+    }
+
+    const stripeResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+      headers: { Authorization: `Bearer ${stripeSecretKey}` },
+    });
+    const session = await stripeResponse.json();
+    if (!stripeResponse.ok || session.metadata?.user_id !== userId) {
+      res.status(404).json({ error: 'Checkout session not found' });
+      return;
+    }
+
+    const verified = session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+    const { data: transaction } = await serviceClient
+      .from('brand_guard_credit_transactions')
+      .select('id')
+      .eq('owner_id', userId)
+      .eq('payment_reference', sessionId)
+      .maybeSingle();
+    res.status(verified ? 200 : 402).json({
+      success: verified,
+      verified,
+      fulfilled: Boolean(transaction),
+      amount_usd: typeof session.amount_total === 'number' ? session.amount_total / 100 : 0,
+      credits: Number(session.metadata?.credits || 0),
+    });
+    return;
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // POST /subscribe — Create Stripe subscription checkout (recurring)
   // ══════════════════════════════════════════════════════════════════════════
@@ -347,7 +406,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         'mode': 'subscription',
         'success_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         'cancel_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=cancelled`,
-        'customer_email': email || '',
         'metadata[user_id]': userId || '',
         'metadata[plan_id]': planId,
         'metadata[package_id]': plan.stripe_price_id,
@@ -358,6 +416,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         'line_items[0][price]': plan.stripe_price_id,
         'line_items[0][quantity]': '1',
       };
+      const customerEmail = (email || entitlement.email).trim();
+      if (customerEmail) checkoutParams.customer_email = customerEmail;
 
       const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
         method: 'POST',
@@ -568,7 +628,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, POST /subscribe, GET /subscription, POST /stripe-portal, POST /cancel-subscription' });
+  res.status(404).json({ error: 'Not found. Available: GET /, POST /deduct, POST /add, GET /history, GET /packages, POST /stripe-checkout, GET /verify-checkout, POST /subscribe, GET /subscription, POST /stripe-portal, POST /cancel-subscription' });
 }
 
 export const config = {
