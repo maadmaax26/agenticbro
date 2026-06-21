@@ -379,9 +379,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // POST /run-scheduled
     if (req.method === 'POST' && hasRunScheduled) {
       const { data: brands } = await supabase
-        .from('brand_guard_brands')
-        .select('id, user_id, name, website')
-        .eq('subscription_active', true);
+        .from('brand_monitors')
+        .select('id, owner_id, brand_name, brand_domain')
+        .eq('is_active', true);
 
       if (!brands || brands.length === 0) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -391,9 +391,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       for (const brand of brands) {
         runMarketplaceScan({
           brandId: brand.id,
-          userId: brand.user_id,
-          brandName: brand.name,
-          brandWebsite: brand.website,
+          userId: brand.owner_id,
+          brandName: brand.brand_name,
+          brandWebsite: brand.brand_domain || '',
         }).catch(console.error);
       }
 
