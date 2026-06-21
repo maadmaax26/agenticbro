@@ -99,7 +99,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     credits: 25,
     price: 25,
     popular: true,
-    description: '5 scans for $25',
+    description: '25 scans for $25',
   },
   {
     id: 'whale',

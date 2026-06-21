@@ -118,7 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const currentUser = await getCurrentUser();
           if (currentUser) {
             const profile = await getUserProfile(currentUser.id);
-            setUser(profile);
+            setUser(profile || {
+              id: currentUser.id,
+              email: currentUser.email || undefined,
+              scan_credits: 0,
+              free_scans_used: 0,
+              created_at: currentUser.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
           }
         }
         // Check localStorage fallback
