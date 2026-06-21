@@ -154,22 +154,11 @@ export function BrandGuardPage() {
 
   // Check for payment success redirect
   const selectedPlan = searchParams.get('plan');
-  const paymentSuccess = searchParams.get('checkout') === 'success' || searchParams.get('payment') === 'success';
-
-  // Fire Google Ads purchase conversion on successful payment
-  useEffect(() => {
-    if (paymentSuccess && typeof window !== 'undefined' && (window as any).gtag) {
-      const alreadyFired = sessionStorage.getItem('gads_purchase_conversion');
-      if (!alreadyFired) {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18179207888/QWLaCJqZi7kcENDlwtxD',
-          value: 1.0,
-          currency: 'USD',
-        });
-        sessionStorage.setItem('gads_purchase_conversion', '1');
-      }
-    }
-  }, [paymentSuccess]);
+  const checkoutRequested = searchParams.get('checkout') === 'success';
+  const checkoutSessionId = searchParams.get('session_id');
+  const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>(
+    checkoutRequested ? 'verifying' : 'idle',
+  );
 
   // Store realtime subscriptions for cleanup
   const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
@@ -485,6 +474,51 @@ export function BrandGuardPage() {
   }, [authToken]);
 
   useEffect(() => { fetchCredits(); }, [fetchCredits]);
+
+  useEffect(() => {
+    if (!checkoutRequested || !checkoutSessionId) {
+      if (checkoutRequested) setCheckoutStatus('error');
+      return;
+    }
+    if (!authToken) return;
+
+    let cancelled = false;
+    const verifyCheckout = async () => {
+      setCheckoutStatus('verifying');
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          const res = await fetch(`${API_BASE}/credits/verify-checkout?session_id=${encodeURIComponent(checkoutSessionId)}`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          const data = await res.json();
+          if (!res.ok || !data.verified) throw new Error(data.error || 'Payment could not be verified');
+          if (data.fulfilled) {
+            if (cancelled) return;
+            setCheckoutStatus('success');
+            await fetchCredits();
+            const conversionKey = `gads_purchase_conversion:${checkoutSessionId}`;
+            if (typeof window !== 'undefined' && (window as any).gtag && !sessionStorage.getItem(conversionKey)) {
+              (window as any).gtag('event', 'conversion', {
+                send_to: 'AW-18179207888/QWLaCJqZi7kcENDlwtxD',
+                value: data.amount_usd,
+                currency: 'USD',
+                transaction_id: checkoutSessionId,
+              });
+              sessionStorage.setItem(conversionKey, '1');
+            }
+            return;
+          }
+        } catch {
+          if (attempt === 4 && !cancelled) setCheckoutStatus('error');
+          return;
+        }
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+      }
+      if (!cancelled) setCheckoutStatus('error');
+    };
+    void verifyCheckout();
+    return () => { cancelled = true; };
+  }, [authToken, checkoutRequested, checkoutSessionId, fetchCredits]);
 
   // ── Fetch subscription ──────────────────────────────────────────────────────
   const fetchSubscription = useCallback(async () => {
@@ -1707,14 +1741,17 @@ export function BrandGuardPage() {
         </div>
       </div>
 
-      {/* Payment success banner + Google Ads purchase conversion */}
-      {paymentSuccess && (
+      {/* Stripe checkout status */}
+      {checkoutStatus !== 'idle' && (
         <div style={{
           margin: '16px auto', maxWidth: '800px', padding: '16px', borderRadius: '12px',
-          background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-          textAlign: 'center', color: dark.green,
+          background: checkoutStatus === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+          border: `1px solid ${checkoutStatus === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          textAlign: 'center', color: checkoutStatus === 'success' ? dark.green : '#fbbf24',
         }}>
-          ✅ Payment successful! Credits have been added to your account.
+          {checkoutStatus === 'verifying' && 'Verifying payment and adding credits...'}
+          {checkoutStatus === 'success' && 'Payment verified. Credits have been added to your account.'}
+          {checkoutStatus === 'error' && 'We could not verify this checkout yet. Your card will only be credited after Stripe confirms payment.'}
         </div>
       )}
 
