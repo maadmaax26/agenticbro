@@ -255,7 +255,12 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
   'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
 ]);
 
-export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
+export function useCredits(
+  userId: string | null,
+  email: string | null,
+  walletAddress: string | null,
+  entitlementsOverride?: { totalRemaining: number; tier: string } | null,
+) {
   const [credits, setCredits] = useState(0);
   const [freeScansRemaining, setFreeScansRemaining] = useState(5);
   const [loading, setLoading] = useState(true);
@@ -268,6 +273,11 @@ export function useCredits(userId: string | null, email: string | null, walletAd
 
   // Check if this is a test wallet (unlimited scans)
   const isTestWallet = walletAddress && TEST_WALLETS_UNLIMITED.has(walletAddress);
+
+  // Entitlements from associated wallet token balance ($AGNTCBRO)
+  const hasEntitlements = entitlementsOverride !== undefined && entitlementsOverride !== null;
+  const entitlementTotal = entitlementsOverride?.totalRemaining;
+  const entitlementTier = entitlementsOverride?.tier;
 
   // Load credits from storage
   useEffect(() => {
@@ -331,10 +341,23 @@ export function useCredits(userId: string | null, email: string | null, walletAd
     setFreeScansRemaining(newFree);
   };
 
-  const useCredit = async (): Promise<{ success: boolean; remaining: number; type: 'free' | 'paid' }> => {
+  const useCredit = async (): Promise<{ success: boolean; remaining: number; type: 'free' | 'paid' | 'tier' }> => {
     // Test wallet always succeeds
     if (isTestWallet) {
       return { success: true, remaining: 999999, type: 'free' };
+    }
+
+    // If entitlements are available (from associated wallet), check those first
+    if (hasEntitlements) {
+      // Whale tier = unlimited
+      if (entitlementTier === 'whale' || entitlementTotal === -1) {
+        return { success: true, remaining: -1, type: 'tier' };
+      }
+      // Holder tier — use monthly tier scans
+      if (entitlementTier === 'holder' && entitlementTotal && entitlementTotal > 0) {
+        return { success: true, remaining: entitlementTotal - 1, type: 'tier' };
+      }
+      // Entitlements say no scans remaining — fall through to free/paid
     }
 
     // Try free scans first
@@ -371,19 +394,31 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   };
 
   // Test wallets always have scans available
-  const hasScans = isTestWallet || freeScansRemaining > 0 || credits > 0;
+  // Entitlements from associated wallet override local credit count
+  const hasScans = isTestWallet
+    || (hasEntitlements && (entitlementTotal === -1 || (entitlementTotal ?? 0) > 0))
+    || (!hasEntitlements && (freeScansRemaining > 0 || credits > 0));
+
+  // Effective total scans for display
+  const effectiveTotal = hasEntitlements && entitlementTotal === -1
+    ? 999999  // unlimited
+    : hasEntitlements && entitlementTotal !== undefined && entitlementTotal >= 0
+      ? Math.max(entitlementTotal, freeScansRemaining + credits)
+      : freeScansRemaining + credits;
 
   return {
     credits,
     freeScansRemaining,
-    totalScans: freeScansRemaining + credits,
+    totalScans: effectiveTotal,
     hasScans,
     loading,
     useCredit,
     addCredits,
     saveCredits,
     saveFreeScans,
-    isTestWallet, // Expose for UI display
+    isTestWallet,
+    tier: entitlementTier || 'free',
+    hasEntitlements,
   };
 }
 
