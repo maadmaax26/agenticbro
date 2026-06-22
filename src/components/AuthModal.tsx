@@ -27,12 +27,14 @@ export default function AuthModal({
   onSuccess,
   initialMode = 'login' 
 }: AuthModalProps) {
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
   const { 
     loginWithEmail, 
     registerWithEmail, 
     loading,
-    isAuthenticated 
+    isAuthenticated,
+    user,
+    linkWalletToEmailAccount,
   } = useAuth();
   
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -40,14 +42,24 @@ export default function AuthModal({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showWalletLink, setShowWalletLink] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkSuccess, setLinkSuccess] = useState(false);
 
-  // Close on success
+  // Close on success (but not if we're showing the wallet link step)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !showWalletLink) {
       onClose();
       onSuccess?.();
     }
-  }, [isAuthenticated, onClose, onSuccess]);
+  }, [isAuthenticated, onClose, onSuccess, showWalletLink]);
+
+  // Show wallet link step automatically after email auth if no wallet linked yet
+  useEffect(() => {
+    if (isAuthenticated && user && !user.wallet_address && !linkSuccess) {
+      setShowWalletLink(true);
+    }
+  }, [isAuthenticated, user, linkSuccess]);
 
   // Reset error when mode changes
   useEffect(() => {
@@ -55,6 +67,168 @@ export default function AuthModal({
   }, [mode]);
 
   if (!isOpen) return null;
+
+  // ── Wallet Link Step (shown after email auth if no wallet linked) ──────────
+  if (showWalletLink && isAuthenticated) {
+    const handleLinkWallet = async () => {
+      if (!connected || !publicKey) {
+        setError('Please connect your Solana wallet first');
+        return;
+      }
+      setLinking(true);
+      setError(null);
+      const walletAddr = publicKey.toBase58();
+      const { error: linkError } = await linkWalletToEmailAccount(walletAddr);
+      setLinking(false);
+      if (linkError) {
+        setError(linkError);
+      } else {
+        setLinkSuccess(true);
+        setTimeout(() => {
+          setShowWalletLink(false);
+          onClose();
+          onSuccess?.();
+        }, 2000);
+      }
+    };
+
+    const handleSkip = () => {
+      setShowWalletLink(false);
+      onClose();
+      onSuccess?.();
+    };
+
+    return (
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+        onClick={(e) => e.target === e.currentTarget && handleSkip()}
+      >
+        <div 
+          className="w-full max-w-md rounded-2xl p-6 relative"
+          style={{
+            background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 0, 0, 0.95) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          <button
+            onClick={handleSkip}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">💼</div>
+            <h2 className="text-2xl font-bold text-white">Link Your Solana Wallet</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Associate your wallet to unlock token-gated scan benefits
+            </p>
+          </div>
+
+          {/* Benefits */}
+          <div className="space-y-3 mb-6">
+            <div 
+              className="p-3 rounded-lg flex items-center gap-3"
+              style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)' }}
+            >
+              <span className="text-xl">💎</span>
+              <div>
+                <p className="text-white text-sm font-semibold">Holder Tier — 50 scans/month</p>
+                <p className="text-gray-500 text-xs">Hold $100+ in $AGNTCBRO</p>
+              </div>
+            </div>
+            <div 
+              className="p-3 rounded-lg flex items-center gap-3"
+              style={{ background: 'rgba(129, 140, 248, 0.08)', border: '1px solid rgba(129, 140, 248, 0.2)' }}
+            >
+              <span className="text-xl">🐋</span>
+              <div>
+                <p className="text-white text-sm font-semibold">Whale Tier — Unlimited scans</p>
+                <p className="text-gray-500 text-xs">Hold $1,000+ in $AGNTCBRO</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div 
+              className="mb-4 p-3 rounded-lg text-sm"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Success */}
+          {linkSuccess ? (
+            <div 
+              className="p-4 rounded-lg text-center"
+              style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                color: '#4ade80',
+              }}
+            >
+              ✅ Wallet linked successfully! Loading your entitlements…
+            </div>
+          ) : (
+            <>
+              {/* Wallet Connect Button */}
+              <div className="space-y-3">
+                <div className="flex justify-center">
+                  <WalletMultiButton 
+                    style={{ 
+                      background: connected ? 'rgba(34, 197, 94, 0.15)' : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                      border: connected ? '1px solid rgba(34, 197, 94, 0.4)' : 'none',
+                      borderRadius: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      fontWeight: 600,
+                      color: 'white',
+                    }} 
+                  / >
+                </div>
+
+                {connected && publicKey && (
+                  <p className="text-center text-xs text-gray-500">
+                    Connected: {publicKey.toBase58().slice(0, 8)}…{publicKey.toBase58().slice(-4)}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleLinkWallet}
+                  disabled={!connected || linking}
+                  className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                  }}
+                >
+                  {linking ? 'Linking…' : connected ? 'Link Wallet to Account' : 'Connect wallet first'}
+                </button>
+              </div>
+
+              {/* Skip */}
+              <div className="mt-4 text-center">
+                <button
+                  onClick={handleSkip}
+                  className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
+                >
+                  Skip for now — I'll do this later
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,7 +443,7 @@ export default function AuthModal({
             color: '#4ade80',
           }}
         >
-          🎁 New accounts get <strong>5 free scans</strong> — no wallet needed!
+          🎁 New accounts get <strong>5 free scans</strong> — link your Solana wallet after signup to unlock <strong>50 scans/month</strong> with $100+ in $AGNTCBRO!
         </div>
       </div>
     </div>

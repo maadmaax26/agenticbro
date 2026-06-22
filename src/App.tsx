@@ -3,7 +3,9 @@ import { useLocation } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useTokenGating, isTestWallet } from './hooks/useTokenGating'
+import { useWalletEntitlements } from './hooks/useWalletEntitlements'
 import { useCredits } from './lib/payments'
+import { useAuth } from './lib/AuthContext'
 import MobileMenu from './components/MobileMenu'
 
 import ValueProposition from './components/ValueProposition'
@@ -23,7 +25,6 @@ import LanguageSelector, { type Locale } from './components/LanguageSelector'
 import UserMenu from './components/UserMenu'
 import AuthModal from './components/AuthModal'
 import PaymentModal from './components/PaymentModal'
-import { useAuth } from './lib/AuthContext'
 import { WalletProtectionPage } from './pages/WalletProtectionPage'
 import { ContactUs } from './components/ContactUs'
 import { BrandGuardPage } from './pages/BrandGuardPage'
@@ -161,7 +162,7 @@ class AppErrorBoundary extends Component<{children: React.ReactNode}, {hasError:
 
 function MainApp() {
   const { connected, publicKey } = useWallet()
-  const { user, email, walletAddress } = useAuth()
+  const { user, email, walletAddress, entitlements: authEntitlements } = useAuth()
   const [showValueProp, setShowValueProp] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showTierPage, setShowTierPage] = useState<'holder' | 'whale' | null>(null)
@@ -171,12 +172,26 @@ function MainApp() {
   const [locale, setLocale] = useState<Locale>('en')
 
   const { holderTierUnlocked, whaleTierUnlocked: _whaleTierUnlocked, balance, usdValue, tokenPriceUsd, loading: gatingLoading } = useTokenGating()
-
+  
+  // ── Email-linked wallet entitlements ──────────────────────────────────────
+  const associatedWallet = user?.wallet_address || undefined
+  const { holderTierUnlocked: assocHolderTier, totalRemaining: _assocTotalRemaining, tier: _assocTier, loading: _entitlementsLoading } = useWalletEntitlements(associatedWallet, user?.id)
+  
+  const effectiveHolderTier = holderTierUnlocked || assocHolderTier
+  const _effectiveWhaleTier = _whaleTierUnlocked || false
+  void _effectiveWhaleTier
+  
+  const entitlementsOverride = (authEntitlements && !authEntitlements.loading && !authEntitlements.error)
+    ? { totalRemaining: authEntitlements.totalRemaining, tier: authEntitlements.tier }
+    : null
+  
   const {
     freeScansRemaining: priorityScansRemaining,
     hasScans,
     useCredit: consumeCredit,
-  } = useCredits(user?.id || null, email, publicKey?.toString() || walletAddress)
+    tier: creditTier,
+  } = useCredits(user?.id || null, email, publicKey?.toString() || walletAddress, entitlementsOverride)
+  void creditTier
 
   const [isScanning, setIsScanning]     = useState(false)
   const [scanMessages, setScanMessages] = useState<ChatMessage[]>([])
@@ -370,13 +385,13 @@ function MainApp() {
 
     if (!inputValue) return
     
-    console.log('[runScan] Starting scan. hasScans:', hasScans, 'priorityScansRemaining:', priorityScansRemaining, 'holderTierUnlocked:', holderTierUnlocked);
+    console.log('[runScan] Starting scan. hasScans:', hasScans, 'priorityScansRemaining:', priorityScansRemaining, 'effectiveHolderTier:', effectiveHolderTier);
     
     if (!hasScans) {
-      if (holderTierUnlocked) {
-        alert('Monthly scan limit reached (50 scans). Resets each month.')
+      if (effectiveHolderTier) {
+        alert('Monthly scan limit reached (50 scans). Resets each month. Hold $1,000+ in $AGNTCBRO for unlimited scans.')
       } else {
-        alert('Scan limit reached. Hold $100+ in AGNTCBRO for 50 monthly Priority Scans.')
+        alert('Scan limit reached. Hold $100+ in $AGNTCBRO for 50 monthly Priority Scans, or $1,000+ for unlimited scans.')
       }
       return
     }
@@ -565,7 +580,7 @@ function MainApp() {
       setIsScanning(false)
     }
   }, [scanMode, walletInput, channelInput, tokenInput, hasScans, priorityScansRemaining,
-      holderTierUnlocked, consumeCredit, addMsg])
+      effectiveHolderTier, consumeCredit, addMsg])
 
   return (
     <AppErrorBoundary>
@@ -632,16 +647,16 @@ function MainApp() {
               {/* Scan Credits badge */}
               <div
                 className="flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold"
-                style={holderTierUnlocked
+                style={effectiveHolderTier
                   ? {background: 'rgba(139,92,246,0.3)', borderColor: 'rgba(139,92,246,0.7)', color: '#c4b5fd'}
                   : {background: 'rgba(80,80,80,0.2)', borderColor: 'rgba(120,120,120,0.4)', color: '#9ca3af'}}
-                title={holderTierUnlocked
+                title={effectiveHolderTier
                   ? `Holder Tier · ${balance.toLocaleString()} AGNTCBRO · 50 scans/month`
                   : `Hold $100+ in AGNTCBRO for 50 monthly scans (currently ${priorityScansRemaining} free scans)`}
               >
                 {gatingLoading ? (
                   <span className="animate-pulse">…</span>
-                ) : holderTierUnlocked ? (
+                ) : effectiveHolderTier ? (
                   <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/50</>
                 ) : (
                   <>🔍 {priorityScansRemaining}/5</>
@@ -784,7 +799,7 @@ function MainApp() {
                            border:     priorityScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
                            color:      priorityScansRemaining > 0 ? '#4ade80' : '#fbbf24',
                          }}>
-                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Scans{holderTierUnlocked ? ' (Holder — 50/mo)' : ' (Free)'}</span></>
+                      {priorityScansRemaining > 0 ? <><span>🎁</span><span>{priorityScansRemaining} Scans{effectiveHolderTier ? ' (Holder — 50/mo)' : ' (Free)'}</span></>
                                                   : <><span>💎</span><span>Hold $100 AGNTCBRO for 50/mo</span></>}
                     </div>
                   )}
@@ -902,7 +917,7 @@ function MainApp() {
                 >
                   {isScanning
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full" /> Scanning…</>
-                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${holderTierUnlocked ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold $100 AGNTCBRO' : ''}</>
+                    : <>⚡ Run Priority Scan{!isTest && priorityScansRemaining > 0 ? ` (${priorityScansRemaining} left${effectiveHolderTier ? ' — Holder 50/mo' : ''})` : !isTest ? ' — Hold $100 AGNTCBRO' : ''}</>
                   }
                 </button>
 
