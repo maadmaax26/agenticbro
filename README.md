@@ -1,394 +1,332 @@
-# 🔍 Agentic Bro — AI Scam Detection for Solana
+# 🛡️ AgenticBro — Brand Guard
 
-**$AGNTCBRO** | **Contract:** `52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump` (Solana)
+**AI-powered brand protection for businesses of every size.**
 
-AI-powered scam detection protecting crypto investors across X/Twitter, Instagram, TikTok, Facebook, Telegram, phone numbers, email domains, and websites. Real-time risk scoring, scammer database, brand protection, and community alerts.
+> One Shield. Total Protection. · Detect. Monitor. Protect.
 
-**Website:** [agenticbro.app](https://agenticbro.app) | **X:** [@AgenticBro11](https://x.com/agenticbro11) | **Telegram:** t.me/AGNTCBRO
-
----
-
-## Features
-
-### Multi-Platform Scanning
-
-| Platform | Method | Status |
-|----------|--------|--------|
-| **X / Twitter** | Chrome CDP (port 18801) + Supabase queue worker | ✅ Live |
-| **Instagram** | HTTP API + login-wall detection | ✅ Live |
-| **TikTok** | HTTP API | ✅ Live |
-| **Facebook** | HTTP API | ✅ Live |
-| **Telegram** | Web fetch + channel analysis | ✅ Live |
-| **Phone Numbers** | API-based carrier/VOIP/spam detection | ✅ Live |
-| **Website/URL** | Deep-scan via website API | ✅ Live |
-| **Email/Domain** | SPF/DKIM/DMARC + CertStream lookalike detection | ✅ Live |
-| **Brand Impersonation** | Cross-platform monitor + takedown actions | ✅ Live |
-
-### Scan Example
-
-```
-Risk Score: 7.5/10 — HIGH ⚠️
-
-Red Flags:
-• guaranteed_returns (+25) — Promises unrealistic ROI
-• giveaway_airdrop (+20) — Fake giveaway/airdrop promoted
-• dm_solicitation (+15) — Asks followers to DM for "opportunities"
-• urgency_tactics (+10) — "Act now or miss out" pressure
-
-Behavioral Pattern: Classic giveaway scam — inflates trust with small payouts, then rugs.
-
-Educational purposes only. Not financial advice. Always DYOR. Scan date: 2026-06-02
-```
-
-### Brand Guard
-
-Enterprise-grade brand protection for businesses:
-
-- **Impersonator Detection** — Finds fake accounts mimicking your brand across platforms
-- **Domain Monitoring** — Watches for lookalike domains via Certificate Transparency (crt.sh)
-- **Email Spoof Checks** — SPF/DKIM/DMARC scoring (100-point scale)
-- **Vendor Verification** — Verify if a vendor/contact actually works for the claimed company
-- **Takedown Actions** — Generate and track DMCA/abuse reports for impersonators
-- **Credits System** — Free scans + paid tiers via Stripe integration
+**Live at:** [agenticbro.app/brand-guard](https://agenticbro.app/brand-guard)  
+**Admin CRM:** [agenticbro.app/brand-guard/admin](https://agenticbro.app/brand-guard/admin) *(restricted)*  
+**Built by:** Agentic Insights LLC · Earl B. Finney Jr.
 
 ---
 
-## Architecture
+## What This Is
 
-```
-Jeeevs (OpenClaw Agent — Mac Studio)
-├── Browser X Scanning (Chrome CDP port 18801)
-├── HTTP Social Scanning (Instagram / TikTok / Facebook)
-├── Telegram Channel Scanning (web fetch)
-├── Phone Verification (carrier + VOIP + spam detection)
-├── Email/Domain Security (SPF/DKIM/DMARC + CertStream)
-├── Brand Guard (impersonation + domain monitoring + takedowns)
-├── Risk Scoring (90-pt unified system, 0–10 scale)
-├── Scammer Database (CSV 278+ entries + Supabase)
-├── Community Integration (Telegram group -1003751594817)
-├── launchd Workers (scan-worker + x-scan-worker)
-└── Website API (agenticbro.app/api/*)
-```
+Brand Guard is a production B2B brand protection platform built on the AgenticBro infrastructure. It monitors businesses across domains, social platforms, email channels, phone numbers, and marketplaces — detecting impersonation threats in real time and generating ready-to-submit takedown reports.
 
-### AI Agent — Jeeevs
-
-- **Name:** Jeeevs
-- **Role:** AI-powered scam detection assistant
-- **Platform:** OpenClaw single-agent (Phase 3 production)
-- **Primary Model:** `glm-5:cloud` → fallbacks: `glm-5.1:cloud` → `kimi-k2.6:cloud` → `qwen3-coder-next:cloud`
-- **Telegram Bot:** @Jeeevs222_bot (active)
+The platform emerged from AgenticBro's original Web3/crypto scam detection capability and has been expanded into a full SMB brand protection SaaS, targeting fintech, healthcare, ecommerce, and Web3 companies facing brand impersonation, email spoofing, and domain compromise.
 
 ---
 
-## Risk Scoring System (90-Point Unified)
+## Platform Status
 
-### Social Media Red Flags
-
-| Flag | Points | Indicator |
-|------|--------|-----------|
-| `guaranteed_returns` | 25 | Promises guaranteed ROI |
-| `giveaway_airdrop` | 20 | Fake giveaways or airdrops |
-| `dm_solicitation` | 15 | Asks followers to DM |
-| `free_crypto` | 15 | Offers free crypto |
-| `alpha_dm_scheme` | 15 | "Exclusive alpha" via DM |
-| `unrealistic_claims` | 10 | Unrealistic earnings claims |
-| `download_install` | 10 | Pushes app/download links |
-| `urgency_tactics` | 10 | Pressure to act immediately |
-| `emotional_manipulation` | 10 | Exploits FOMO or fear |
-| `low_credibility` | 10 | New account, no history |
-
-### Phone Number Red Flags
-
-| Flag | Points | Indicator |
-|------|--------|-----------|
-| `invalid_number` | 25 | Number doesn't exist |
-| `premium_rate_number` | 25 | Premium rate scam number |
-| `voip_number` | 20 | VOIP/disposable number |
-| `spoofed_caller_id` | 15 | Caller ID spoofing detected |
-| `disposable_number` | 15 | Temporary/burner number |
-| `spam_dialer_service` | 15 | Known spam dialer |
-| `high_risk_country` | 15 | High-risk country origin |
-| `toll_free_untraceable` | 10 | Toll-free, untraceable |
-| `landline_text` | 10 | Landline pretending to text |
-| `no_carrier_info` | 10 | No carrier data available |
-| `medium_risk_country` | 8 | Medium-risk country |
-| `unknown_carrier` | 5 | Carrier unknown |
-
-### Risk Levels
-
-| Score | Level |
-|-------|-------|
-| 0–3 | LOW |
-| 3–5 | MEDIUM |
-| 5–7 | HIGH |
-| 7+ | CRITICAL |
+| Layer | Status |
+|-------|--------|
+| 6 scan features | ✅ Live |
+| Supabase backend + RLS | ✅ Live |
+| Stripe 7 products/prices | ✅ Live |
+| Webhook endpoint | ✅ Live |
+| 4 payment rails | ✅ Live |
+| Auth + auto-confirm | ✅ Live |
+| Mobile-responsive dashboard | ✅ Live |
+| Admin CRM (Prospect Hunter) | ✅ Live |
+| Billing end-to-end (credit deduction, tier enforcement) | 🔧 In progress |
+| Domain monitoring cron | 🔧 In progress |
+| Takedown Generator | 🔧 In progress |
+| Marketplace Scanner (Shopify/Etsy) | 🔧 Planned |
+| Visual Fingerprinting (pHash) | 🔧 Planned |
+| Alert notifications (email + Telegram) | 🔧 Planned |
 
 ---
 
-## Website
+## Brand Guard Features
 
-**Live at** [agenticbro.app](https://agenticbro.app)
+### 🔍 Impersonator Scan
+Detects fake accounts mimicking a brand across social platforms. Scans X, Instagram, TikTok, Facebook, LinkedIn, and Telegram for copycats, squatting accounts, and impersonation patterns using Chrome CDP + behavioral AI scoring.
 
-### Pages & Features
+### 🌐 Domain Monitor
+Scans Certificate Transparency logs via crt.sh for lookalike domain registrations. Catches TLD swaps (.xyz, .shop, .crypto), phishing suffixes (-login.app, -signin.app), and prefix attacks (login-, secure-, verify-) at registration — before the fake site goes live. Each result gets a HIGH/MEDIUM/LOW risk rating.
 
-| Page | Route | Description |
-|------|-------|-------------|
-| **Home** | `/` | Scanner, token info, roadmap |
-| **Brand Guard** | `/brand-guard` | Business brand protection dashboard |
-| **Brand Guard Admin** | `/brand-guard/admin` | Admin dashboard for brand monitoring |
-| **Wallet Protection** | `/wallet-protection` | Transaction review & approval simulator |
-| **Payment Success** | `/payment/success` | Stripe payment confirmation |
+### 📧 Email Spoof Check
+Full SPF/DKIM/DMARC/MX analysis on a 100-point scale:
+- SPF: 35 pts
+- DMARC: 40 pts
+- DKIM: 15 pts
+- MX: 10 pts
 
-### Key Components
+Ratings: PROTECTED (80+) / LOW (60–79) / MEDIUM (40–59) / HIGH (20–39) / CRITICAL (0–19)
 
-- **SocialScanForm** — Multi-platform social media scanner
-- **PhoneNumberVerifier** — Phone number risk verification
-- **WebsiteSecurityScanner** — URL deep-scan
-- **TokenScanner / TokenImpersonationScanner** — Token scam detection
-- **ProfileVerifierScanner** — Profile authenticity checker
-- **AgntcbroBalanceTracker** — $AGNTCBRO holder tier detection
-- **ScanAnalytics** — Scan metrics dashboard
-- **WalletProtector** — Transaction approval & risk review
-- **Brand Guard** — Impersonation monitor, domain monitor, email spoof, vendor verify
+Uses Google DNS-over-HTTPS + crt.sh. No external API dependency.
 
-### API Endpoints
+### 🌍 Website Scan
+Scans any URL for threats, phishing indicators, and malware signals using the existing AgenticBro Website Deep Scanner infrastructure and Supabase job queue.
 
-| Endpoint | Description |
-|----------|-------------|
-| `/api/social-scan` | Social media profile scan |
-| `/api/phone-verify` | Phone number verification |
-| `/api/phone-scan` | Phone risk scan (async) |
-| `/api/scan` | General scan (async, queued) |
-| `/api/v1/brand-guard/scans` | Durable developer scan queue |
-| `/api/v1/brand-guard/takedowns` | Automated takedown submissions and lifecycle |
-| `/api/v1/brand-guard/usage` | Developer API usage records |
-| `/api/brand-guard/delivery` | Slack/webhook destinations and delivery monitoring |
-| `/api/brand-guard/enterprise` | SLA reports, weekly briefings, and account-manager cases |
-| `/api/scan-report` | Scan report generation |
-| `/api/website-deep-scan` | Website security deep-scan |
-| `/api/brand-guard/email-spoof` | SPF/DKIM/DMARC + lookalike domain check |
-| `/api/brand-guard/impersonator-scan` | Brand impersonation scanner |
-| `/api/brand-guard/domain-monitor` | Domain monitoring |
-| `/api/brand-guard/vendor-verify` | Vendor employment verification |
-| `/api/brand-guard/threat-correlate` | Cross-platform threat correlation |
-| `/api/brand-guard/brands` | Brand CRUD management |
-| `/api/brand-guard/credits` | Stripe credit management |
-| `/api/brand-guard/dashboard` | Dashboard analytics |
-| `/api/brand-guard/admin` | Admin operations |
-| `/api/scam-investigate` | Deep scam investigation |
-| `/api/token-2022-check` | Token-2022 scam detection |
-| `/api/transaction-analyze` | Transaction risk analysis |
+### ⚡ Threat Correlate
+Cross-channel risk correlation. Takes signals from multiple scan types — social impersonation, lookalike domains, email spoof risk, phone fraud — and combines them into a unified risk picture and campaign risk score for a brand.
 
-Developer authentication, scopes, examples, rate limits, scheduling, and takedown provider contracts are documented in [docs/brand-guard-developer-api.md](docs/brand-guard-developer-api.md).
-
-### Tech Stack
-
-- **Frontend:** React 19 + Vite + TypeScript + TailwindCSS
-- **Backend:** Supabase (database + auth + RLS)
-- **AI:** OpenClaw agent (glm-5:cloud)
-- **Payments:** Stripe (credit purchases)
-- **Hosting:** Vercel
-- **Database:** Supabase PostgreSQL with Row-Level Security
+### 📞 Vendor Verify
+Phone number fraud check. Validates whether a number is VOIP, disposable, premium rate, spoofed, or tied to high-risk countries. Uses the same 12-signal, 90-point scoring engine as the AgenticBro Phone Identifier, including FTC complaint database integration and STIR-SHAKEN detection.
 
 ---
 
-## Database (Supabase)
+## Pricing
 
-### Schema
+| Tier | Price | Target |
+|------|-------|--------|
+| **Guardian** | $29/month | SMBs, small ecommerce, freelancers |
+| **Sentinel** | $79/month | Growing brands, fintech, healthcare |
+| **Fortress** | $199/month | Enterprise, agencies, crypto projects |
 
-26 tables with Row-Level Security enabled on all. Key tables:
-
-| Table | Purpose | RLS Policy |
-|-------|---------|------------|
-| `scan_results` | Social scan results | Public read, service_role write |
-| `scammers` | Known scammer database | Public read, service_role write |
-| `scan_jobs` | Async scan queue | Public read, service_role write |
-| `scan_events` | Scan analytics | Public read, service_role write |
-| `brand_monitors` | Brand monitoring config | Owner-scoped (auth.uid) |
-| `brand_impersonators` | Detected impersonators | Owner-scoped |
-| `brand_guard_credits` | User scan credits | Owner-scoped |
-| `takedown_actions` | DMCA/abuse actions | Owner-scoped + service_role |
-| `brand_guard_scan_queue` | Leased, retryable plan-scheduled scan jobs | Owner-scoped + service_role |
-| `brand_guard_api_keys` | Hashed developer credentials and scopes | Owner-scoped + service_role |
-| `brand_guard_api_usage_logs` | Rate, latency, and billing-unit audit trail | Owner-scoped + service_role |
-| `brand_guard_delivery_jobs` | Retryable Slack/webhook delivery queue | Owner-scoped + service_role |
-| `brand_guard_delivery_dead_letters` | Exhausted deliveries requiring operator action | Owner-scoped + service_role |
-| `brand_guard_enterprise_reports` | Weekly, SLA, and custom enterprise reports | Owner-scoped + service_role |
-| `brand_guard_account_cases` | Account-manager case workflow | Owner-scoped + service_role |
-| `threat_profiles` | Threat intelligence | Owner-scoped + service_role |
-| `email_spoof_checks` | SPF/DKIM/DMARC results | Public read, service_role write |
-| `vendor_verifications` | Vendor check results | Public read, service_role write |
-
-### Security
-
-- **All tables have RLS enabled** with appropriate policies
-- **Views referencing `auth.users`** use `WHERE u.id = auth.uid()` filter + `security_barrier`
-- **Anon access** restricted to read-only on public data tables
-- **Owner-scoped tables** restrict access to authenticated user's own data
-- **Service role** has full CRUD for background workers
-
-### Migrations
-
-Located in `supabase/migrations/`:
-
-| File | Description |
-|------|-------------|
-| `001_scan_results_and_scammers.sql` | Core scan tables |
-| `002_scan_events_analytics.sql` | Analytics events |
-| `003_scan_analytics.sql` | Analytics views |
-| `004_rls_security_hardening.sql` | RLS policies hardening |
-| `005_security_fix_auth_users_and_rls.sql` | Auth view exposure + RLS fixes |
-| `20260528000000_brand_guard_full_schema.sql` | Brand Guard tables |
-| `20260529000000_brand_guard_promo_code.sql` | Promo code support |
-| `20260619000002_brand_guard_platform_api.sql` | Durable queue, developer API, and takedown lifecycle |
-| `20260619000003_enterprise_delivery.sql` | Customer delivery, DLQ, SLA reporting, and account management |
-| `20260529000001_email_spoof_checks.sql` | Email spoof checks |
+**Free trial:** 7 days — no credit card required.
 
 ---
 
-## Scan Commands
+## Payment Rails
 
-All scans use bash wrapper scripts (direct `python3` calls are blocked by OpenClaw exec preflight):
-
-```bash
-# Instagram
-bash /workspace/scripts/scan-instagram.sh "<username>"
-
-# TikTok
-bash /workspace/scripts/scan-tiktok-command.sh "<username>"
-
-# Facebook
-bash /workspace/scripts/scan-facebook.sh "<username>"
-
-# Telegram
-bash /workspace/scripts/scan-telegram.sh "<username>"
-
-# Phone Number
-bash /workspace/scripts/scan-phone.sh "+14158586273" US
-
-# Universal (any platform)
-bash /workspace/scripts/scan-source.sh "<platform>" "<username>"
-
-# X/Twitter — Chrome CDP on port 18801
-# X scans are processed via Supabase queue (scan_jobs table)
-```
+Four payment methods accepted:
+- Stripe card (primary)
+- USDC on Solana
+- USDC on Base
+- $AGNTCBRO token
 
 ---
 
-## Cron Jobs & Workers
+## Tech Stack
 
-| Job / Worker | Schedule | Model | Purpose |
-|-----|----------|-------|---------|
-| `nightly_review` | 2:00 AM EST | glm-5:cloud | Review metrics, deliver to DM |
-| `website-deep-scan` | Every 15 min | glm-5:cloud | Scan submitted URLs |
-| `group-morning-vibe` | 9:00 AM EST | glm-5:cloud | Positive morning post to group |
-| `group-evening-vibe` | 7:00 PM EST | glm-5:cloud | Positive evening post to group |
-| `x-engagement-monitor` | 9:00 AM EST | glm-5:cloud | DM only — X outreach targets |
-| `x-scan-worker` | Every 10s (launchd) | — | Processes Supabase scan_jobs for X CDP |
-| `scan-worker` | Continuous (launchd) | — | Token/wallet/profile scans |
+| Component | Technology |
+|-----------|------------|
+| Frontend | React + TypeScript + TailwindCSS (aibro/) |
+| Backend API | Node.js / TypeScript / Express — port 8080 |
+| Database | Supabase (PostgreSQL + RLS) |
+| Auth | Supabase Auth + auto-confirm endpoint |
+| Payments | Stripe (7 products/prices, webhook live) |
+| Email | Zoho Mail (agenticbro@agenticbro.app) |
+| Cold email infra | Gmail alias (agenticbro@agenticbro.app) via send-as |
+| Social scanning | Chrome CDP — port 18800 |
+| Local inference | Ollama (Qwen3 suite, GLM-5:cloud primary) |
+| Agent framework | OpenClaw — workspace at ~/.openclaw/workspace/agentic-bro/ |
+| Execution hardware | Mac Studio M4 Max 36GB ("Jeeevs") |
+| Networking | Tailscale mesh |
+| Alerts | Telegram bot (@Jeeevs222_bot) |
 
 ---
 
-## Project Structure
+## Repository Structure
 
 ```
 agenticbro/
-├── src/                              # React frontend (Vite + TS)
-│   ├── components/                   # 27 UI components
-│   │   ├── dashboard/                # Holder dashboard, whale, signals, etc.
-│   │   ├── WalletProtector/          # Transaction review & approval
-│   │   ├── wallet-simulator/         # Safe transaction simulator
-│   │   ├── PhoneNumberVerifier.tsx   # Phone verification UI
-│   │   ├── SocialScanForm.tsx        # Social scanner UI
-│   │   ├── WebsiteSecurityScanner.tsx # URL deep-scan UI
-│   │   ├── TokenScanner.tsx          # Token scam detection
-│   │   ├── TokenImpersonationScanner.tsx
-│   │   ├── ProfileVerifierScanner.tsx
-│   │   ├── AgntcbroBalanceTracker.tsx # $AGNTCBRO holder tier
-│   │   ├── ScanAnalytics.tsx
-│   │   └── ...                       # Auth, payment, roadmap, etc.
-│   ├── pages/                        # Route pages
-│   │   ├── BrandGuardPage.tsx
-│   │   ├── BrandGuardAdminPage.tsx
-│   │   ├── WalletProtectionPage.tsx
-│   │   └── PaymentSuccess.tsx
-│   ├── hooks/                        # Custom React hooks
-│   └── lib/                          # Utilities, payments, Supabase client
-├── api/                              # Vercel serverless functions (27 endpoints)
-│   ├── social-scan.ts
-│   ├── phone-verify.ts / phone-scan.ts
-│   ├── website-deep-scan.ts
-│   ├── brand-guard/                  # Brand Guard API suite
-│   │   ├── email-spoof.ts
-│   │   ├── impersonator-scan.ts
-│   │   ├── domain-monitor.ts
-│   │   ├── vendor-verify.ts
-│   │   ├── threat-correlate.ts
-│   │   ├── brands.ts / credits.ts / dashboard.ts / admin.ts
-│   │   └── stripe-webhook.ts
-│   ├── scan-report.ts
-│   ├── scam-investigate.ts
-│   ├── token-2022-check.ts
-│   └── transaction-analyze.ts
-├── supabase/migrations/              # Database migrations (8 files)
-├── scam-detection-framework/         # Python scoring engine
-│   └── unified_scoring.py            # 90-point unified risk scorer
-├── scripts/                          # Bash scan wrappers
-│   ├── scan-instagram.sh
-│   ├── scan-tiktok-command.sh
-│   ├── scan-facebook.sh
-│   ├── scan-telegram.sh
-│   ├── scan-phone.sh / phone-scan-api.sh
-│   └── scan-source.sh
-├── scammer-database.csv              # 278+ known scammer entries
-├── scam-detection-framework.md       # Detection methodology docs
-└── scammer-investigation-guide.md    # Investigation procedures
+├── aibro/                        # React frontend (Next.js/Vite)
+│   └── src/
+│       ├── pages/
+│       │   └── brand-guard/      # Brand Guard dashboard + admin
+│       └── components/
+│           └── brand-guard/      # Scan UI components
+├── server/                       # Express API (port 8080)
+│   └── routes/
+│       └── brand-guard/          # Scan endpoints
+├── services/                     # Core scan services
+│   ├── profile-verifier/         # CDP-based social scanner (85 tests passing)
+│   ├── takedown-generator/       # [In progress] Report templates
+│   └── marketplace-scanner/      # [Planned] Shopify/Etsy crawler + pHash
+├── supabase/
+│   └── migrations/               # DB schema (RLS, credits, subscriptions)
+├── .openclaw/                    # OpenClaw agent configuration
+├── src/                          # Shared utilities
+├── scripts/                      # Start/stop scripts (launchd)
+└── memory/                       # Agent memory system
 ```
 
 ---
 
-## Token Info
+## API Endpoints — Brand Guard
 
-| Field | Value |
-|-------|-------|
-| **Name** | Agentic Bro |
-| **Ticker** | $AGNTCBRO |
-| **Supply** | 1,000,000,000 |
-| **Platform** | Solana / pump.fun |
-| **Contract** | `52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump` |
-| **Website** | agenticbro.app |
-| **X** | [@AgenticBro11](https://x.com/agenticbro11) |
-
-### Token Utility
-
-- **Free tier:** First 25 scans free
-- **Holder tier:** Hold $100+ in AGNTCBRO → 50 scans/month
-- **Brand Guard:** Credit-based enterprise brand protection
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/brand-guard/scan/impersonator` | Social platform scan |
+| POST | `/api/brand-guard/scan/domain` | CT log lookalike scan |
+| POST | `/api/brand-guard/scan/email` | SPF/DKIM/DMARC check |
+| POST | `/api/brand-guard/scan/website` | URL threat scan |
+| POST | `/api/brand-guard/scan/correlate` | Cross-channel correlation |
+| POST | `/api/brand-guard/scan/vendor` | Phone fraud check |
+| POST | `/api/brand-guard/takedown/generate` | [In progress] Takedown report |
+| POST | `/api/brand-guard/marketplace/scan` | [Planned] Shopify/Etsy scan |
+| POST | `/api/brand-guard/fingerprint/register` | [Planned] Image hash registration |
 
 ---
 
-## Security & Disclaimers
+## Supabase Schema
 
-- Scans use **public profile data only**
-- Does **not** verify real-world identity
-- May miss sophisticated, well-hidden scams
-- Subject to platform rate limits and login walls
-- **All scan reports include disclaimer:** Educational purposes only. Not financial advice. Not a guarantee of safety. Always DYOR.
-- **Bot token security:** Never hardcode tokens. @Jeeevs222_bot was previously compromised via token leak.
-- **Database security:** All Supabase tables have RLS enabled. Views referencing `auth.users` use `WHERE auth.uid()` filter + `security_barrier`.
+Core tables:
 
----
+| Table | Purpose |
+|-------|---------|
+| `users` | Supabase Auth |
+| `credits` | Scan credit balance per user |
+| `transactions` | Credit deduction log |
+| `subscriptions` | Stripe subscription status + tier |
+| `brand_guard_reports` | Generated takedown reports |
+| `brand_visual_fingerprints` | pHash fingerprints (planned) |
+| `marketplace_scan_results` | Shopify/Etsy scan results (planned) |
 
-## Company
-
-**Agentic Insights LLC** — Earl Finney Jr., Founder
-
----
-
-## License
-
-MIT
+6 DB functions live including credit management and webhook handlers.
 
 ---
 
-**Scan first, trust later! 🔐**
+## Admin CRM — Prospect Hunter
+
+Located at: `agenticbro.app/brand-guard/admin`
+Access restricted to: `agenticbro@agenticbro.app`
+
+The admin panel includes an AI-powered Prospect Hunter that:
+- Searches for real companies with documented brand impersonation incidents
+- Classifies threat type (Cloned Store, Fake Social Accounts, Lookalike Domain, Email Spoofing, Vendor Fraud, Telegram Impersonation)
+- Generates threat intelligence briefs via Claude API
+- Writes personalised cold outreach emails based on verified scan data
+- Tracks outreach status through a full pipeline (pending → contacted → replied → converted)
+- Exports to CSV
+
+---
+
+## GTM Automation System (7-Agent Pipeline)
+
+| Agent | Role | Status |
+|-------|------|--------|
+| Prospect Hunter | Finds companies with documented brand impersonation | ✅ Live in admin |
+| Outreach Automator | Personalised threat brief emails via Gmail + Zoho | ✅ Active |
+| Content Engine | LinkedIn + SEO content | 🔧 Planned |
+| Trial Concierge | 7-day trial activation sequence | 🔧 Planned |
+| Ops Coordinator | Routes data between agents | 🔧 Planned |
+| Product Feedback | Captures friction from churned/converted users | 🔧 Planned |
+| BI Analyst | Weekly automated KPI report | 🔧 Planned |
+
+---
+
+## Email Deliverability Configuration
+
+| Mail Infrastructure | Send Channel |
+|---------------------|-------------|
+| Exchange Online targets | Gmail alias (agenticbro@agenticbro.app) |
+| Proofpoint targets | Gmail alias |
+| Google Workspace targets | Zoho Mail (agenticbro@agenticbro.app) |
+| Self-hosted / other | Zoho Mail |
+
+DKIM verified on agenticbro.app via Zoho (zoho._domainkey selector).  
+DMARC: p=reject  
+SPF: v=spf1 include:zohomail.com -all
+
+---
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+
+- Supabase project (URL + anon key + service role key)
+- Stripe account (webhook endpoint configured)
+- Ollama running locally (or GLM cloud API)
+- Chrome with remote debugging enabled (port 18800) for CDP scans
+
+### Environment Variables
+
+```bash
+cp .env.example .env
+
+# Required
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+ANTHROPIC_API_KEY=
+
+# AI routing
+OLLAMA_API_URL=https://api.ollama.com
+OLLAMA_MODEL=glm-5:cloud
+
+# Optional
+TELEGRAM_BOT_TOKEN=
+HELIUS_API_KEY=
+```
+
+### Run Locally
+
+```bash
+# Install dependencies
+npm install
+
+# Start backend API (port 8080)
+./scripts/start-profile-verifier.sh
+
+# Start frontend
+cd aibro && npm run dev
+```
+
+### Run Tests
+
+```bash
+npm test
+# 85+ passing tests, 100% verifier coverage
+```
+
+---
+
+## Deployment
+
+Production runs on Jeeevs (Mac Studio M4 Max) via launchd services.
+
+```bash
+# Deploy frontend
+cd aibro && npm run build
+
+# Backend is managed via launchd plist
+# See: agenticbro-backend-server.plist
+# See: com.agenticbro.profile-verifier.plist
+```
+
+---
+
+## Roadmap
+
+### Immediate (unblocking billing)
+- [ ] Billing activation: credits deduct on each scan, tiers enforce limits, trial expires at day 7
+- [ ] Trial activation email sequence (Day 0/1/3/5/6/7 via Supabase cron)
+- [ ] `payment_method_collection: 'if_required'` on all Stripe checkout sessions
+
+### Phase 2 (conversion)
+- [ ] Takedown Generator: 5 platform templates (Shopify, Etsy, domain registrar, social abuse, DMCA)
+- [ ] Domain monitoring cron (weekly for Guardian, daily for Sentinel)
+- [ ] Alert notifications: email + Telegram when new threat detected
+
+### Phase 3 (retention + expansion)
+- [ ] Marketplace Scanner: Shopify and Etsy crawler using existing Website Deep Scanner pattern
+- [ ] Visual Fingerprinting: pHash-based image comparison for cloned store detection
+- [ ] Scan-to-PDF export with Brand Guard branding
+- [ ] Cross-platform campaign clustering in Threat Correlate
+
+---
+
+## Target Market
+
+**TAM:** $64B+ combined brand protection market
+
+**Primary verticals:**
+- Ecommerce / Shopify merchants (clone store attacks)
+- Healthcare SMBs (post-breach impersonation)
+- Fintech / Web3 (fake social accounts, email spoofing, DMARC gaps)
+- Professional services (vendor invoice fraud, BEC)
+- SaaS / EdTech (lookalike domains, credential harvesting)
+
+**Pricing competitive set:** ChainPatrol ($500+/mo), BrandShield ($299–$999/mo), ZeroFox ($2,000–$10,000/mo). Brand Guard is the only option built for SMBs under $200/mo.
+
+---
+
+## Contact
+
+**Earl B. Finney Jr.**  
+Founder, Agentic Insights LLC  
+agenticbro@agenticbro.app  
+[linkedin.com/in/earl-finney-60259a4](https://linkedin.com/in/earl-finney-60259a4)
+
+---
+
+*One Shield. Total Protection. · Scan First. Trust Later. Stay Safe.*
