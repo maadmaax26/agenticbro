@@ -11,6 +11,19 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandGuardDraftsReview from '../components/brand-guard/BrandGuardDraftsReview';
 
+// Mobile breakpoint hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+};
+
 const API_BASE = '/api/brand-guard';
 
 interface AdminUser {
@@ -62,10 +75,12 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'outreach'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'outreach'>('outreach');
+  const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [operations, setOperations] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -243,25 +258,37 @@ export function BrandGuardAdminPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f' }}>
       {/* Header */}
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(139,92,246,0.2)', background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate('/brand-guard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px' }}>← Brand Guard</button>
+      <div style={{
+        padding: isMobile ? '12px 16px' : '16px 24px',
+        borderBottom: '1px solid rgba(139,92,246,0.2)',
+        background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(12px)',
+        position: 'sticky', top: 0, zIndex: 50,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: '8px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px' }}>
+          <button onClick={() => navigate('/brand-guard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: isMobile ? '12px' : '14px' }}>← Brand Guard</button>
           <div style={{ width: '1px', height: '20px', background: 'rgba(139,92,246,0.3)' }} />
-          <span style={{ fontSize: '20px' }}>🔐</span>
-          <span style={{ fontWeight: 700, color: '#fff' }}>Brand Guard Admin</span>
+          <span style={{ fontSize: isMobile ? '16px' : '20px' }}>🔐</span>
+          <span style={{ fontWeight: 700, color: '#fff', fontSize: isMobile ? '14px' : '16px' }}>Brand Guard Admin</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: isMobile ? '10px' : '12px', color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.3)' }}>
             ● Admin
           </span>
-          <span style={{ fontSize: '13px', color: '#9ca3af' }}>{userEmail}</span>
+          {!isMobile && <span style={{ fontSize: '13px', color: '#9ca3af' }}>{userEmail}</span>}
         </div>
       </div>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 8px' : '24px' }}>
         {/* Stats Cards */}
         {stats && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: isMobile ? '8px' : '12px',
+            marginBottom: isMobile ? '16px' : '24px',
+          }}>
             {[
               { label: 'Total Users', value: stats.total_users, icon: '👥', color: '#8b5cf6' },
               { label: 'Brands', value: stats.total_brands, icon: '🏢', color: '#3b82f6' },
@@ -272,68 +299,91 @@ export function BrandGuardAdminPage() {
             ].map(card => (
               <div key={card.label} style={{
                 background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)',
-                borderRadius: '12px', padding: '16px', textAlign: 'center',
+                borderRadius: '12px', padding: isMobile ? '10px 8px' : '16px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: '20px', marginBottom: '4px' }}>{card.icon}</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: card.color }}>{card.value}</div>
-                <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+                <div style={{ fontSize: isMobile ? '16px' : '20px', marginBottom: '4px' }}>{card.icon}</div>
+                <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 700, color: card.color }}>{card.value}</div>
+                <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          <button
-            onClick={() => setActiveTab('users')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'users' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'users' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'users' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >👥 Users</button>
-          <button
-            onClick={() => setActiveTab('stats')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'stats' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'stats' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'stats' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >📊 Stats</button>
-          <button
-            onClick={() => setActiveTab('activity')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'activity' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'activity' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'activity' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >🕐 Activity</button>
-          <button
-            onClick={() => setActiveTab('notifications')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'notifications' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'notifications' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'notifications' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-              position: 'relative',
-            }}
-          >🔔 Notifications{unreadCount > 0 && <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>}</button>
-          <button
-            onClick={() => setActiveTab('operations')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'operations' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'operations' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'operations' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >⚙ Operations</button>
-          <button
-            onClick={() => setActiveTab('outreach')}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: activeTab === 'outreach' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
-              background: activeTab === 'outreach' ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: activeTab === 'outreach' ? '#fff' : '#9ca3af', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >🎯 Outreach</button>
-        </div>
+        {/* Tabs — dropdown on mobile, scrollable bar on desktop */}
+        {(() => {
+          const tabs = [
+            { id: 'outreach', label: '🎯 Outreach' },
+            { id: 'users', label: '👥 Users' },
+            { id: 'stats', label: '📊 Stats' },
+            { id: 'activity', label: '🕐 Activity' },
+            { id: 'notifications', label: '🔔 Notifications' },
+            { id: 'operations', label: '⚙ Operations' },
+          ] as const;
+          if (isMobile) {
+            return (
+              <div style={{ marginBottom: '16px' }}>
+                <button
+                  onClick={() => setTabMenuOpen(!tabMenuOpen)}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px',
+                    border: '1px solid rgba(139,92,246,0.4)',
+                    background: 'rgba(139,92,246,0.15)', color: '#fff',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}
+                >
+                  <span>{tabs.find(t => t.id === activeTab)?.label}{activeTab === 'notifications' && unreadCount > 0 ? ` (${unreadCount})` : ''}</span>
+                  <span style={{ fontSize: '12px' }}>{tabMenuOpen ? '▲' : '▼'}</span>
+                </button>
+                {tabMenuOpen && (
+                  <div style={{ marginTop: '4px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(139,92,246,0.3)' }}>
+                    {tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => { setActiveTab(tab.id); setTabMenuOpen(false); }}
+                        style={{
+                          width: '100%', padding: '10px 14px', border: 'none',
+                          background: activeTab === tab.id ? 'rgba(139,92,246,0.25)' : 'rgba(15,15,25,0.8)',
+                          color: activeTab === tab.id ? '#fff' : '#9ca3af',
+                          fontSize: '14px', fontWeight: 600, cursor: 'pointer', textAlign: 'left',
+                          borderBottom: '1px solid rgba(139,92,246,0.1)',
+                        }}
+                      >
+                        {tab.label}
+                        {tab.id === 'notifications' && unreadCount > 0 && (
+                          <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', flexWrap: 'nowrap' }}>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px',
+                    border: activeTab === tab.id ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(139,92,246,0.2)',
+                    background: activeTab === tab.id ? 'rgba(139,92,246,0.2)' : 'transparent',
+                    color: activeTab === tab.id ? '#fff' : '#9ca3af',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    whiteSpace: 'nowrap', position: 'relative',
+                  }}
+                >
+                  {tab.label}
+                  {tab.id === 'notifications' && unreadCount > 0 && (
+                    <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '10px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 700 }}>{unreadCount}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         {error && (
           <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '14px', marginBottom: '16px' }}>
@@ -357,8 +407,49 @@ export function BrandGuardAdminPage() {
               />
             </div>
 
-            {/* Users Table */}
-            <div style={{ overflowX: 'auto' }}>
+            {/* Users — card view on mobile, table on desktop */}
+            {isMobile ? (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {users.map(user => (
+                  <div key={user.user_id} style={{
+                    background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)',
+                    borderRadius: '10px', padding: '12px', fontSize: '13px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px', wordBreak: 'break-all' }}>{user.email}</span>
+                      {user.promo_code && (
+                        <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, background: 'rgba(139,92,246,0.2)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.4)', flexShrink: 0 }}>{user.promo_code}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', color: '#9ca3af', fontSize: '12px' }}>
+                      <div>Free: <span style={{ color: '#22c55e' }}>{user.free_credits_total}</span></div>
+                      <div>Used: <span style={{ color: '#9ca3af' }}>{user.free_credits_used}</span></div>
+                      <div>Paid: <span style={{ color: '#3b82f6' }}>{user.paid_credits}</span></div>
+                      <div>Left: <span style={{ color: user.total_remaining > 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{user.total_remaining ?? 0}</span></div>
+                      <div>Brands: {user.brand_count}</div>
+                      <div>Scans: {user.total_scans}</div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                      <span style={{ color: '#6b7280', fontSize: '11px' }}>{formatDate(user.user_created_at)}</span>
+                      {grantingUserId === user.user_id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input type="number" value={grantAmount} onChange={e => setGrantAmount(parseInt(e.target.value) || 1)}
+                            style={{ width: '40px', padding: '2px 4px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '12px', textAlign: 'center' }} />
+                          <button onClick={() => handleGrantCredits(user.user_id)} style={{ padding: '2px 6px', borderRadius: '4px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✓</button>
+                          <button onClick={() => setGrantingUserId(null)} style={{ padding: '2px 6px', borderRadius: '4px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setGrantingUserId(user.user_id); setGrantAmount(10); }} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '11px', cursor: 'pointer' }}>+ Credits</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {users.length === 0 && (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No users found</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(139,92,246,0.3)' }}>
@@ -428,14 +519,15 @@ export function BrandGuardAdminPage() {
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            )}
           </>
         )}
 
         {activeTab === 'stats' && stats && (
-          <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: '24px' }}>
+          <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '12px', padding: isMobile ? '16px 12px' : '24px' }}>
             <h3 style={{ color: '#fff', marginBottom: '16px' }}>Credit Breakdown</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '8px' : '16px' }}>
               <div style={{ padding: '16px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
                 <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase' }}>Free Credits Granted</div>
                 <div style={{ fontSize: '28px', fontWeight: 700, color: '#22c55e' }}>{stats.credits.free_total}</div>
