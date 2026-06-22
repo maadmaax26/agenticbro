@@ -85,7 +85,10 @@ interface TakedownReport {
 const PLATFORM_FORM_URLS: Record<string, string> = {
   shopify: 'https://www.shopify.com/legal/ip-complaints',
   etsy: 'mailto:etsy-dmca@etsy.com',
-  registrar: 'https://www.icann.org/resources/pages/help/dndr/udrp-en',
+  registrar: 'https://udrp.adr.eu', // Czech Arbitration Court (CAC) — cheapest UDRP provider
+  registrar_wipo: 'https://www.wipo.int/amc/en/domains/',
+  registrar_cac: 'https://udrp.adr.eu',
+  registrar_naf: 'https://www.adrforum.com/domaindispute',
   twitter: 'https://help.twitter.com/forms/impersonation',
   instagram: 'https://help.instagram.com/contact/1361808127148823',
   facebook: 'https://www.facebook.com/help/contact/169486816475808',
@@ -215,13 +218,37 @@ function renderRegistrarTemplate(input: TakedownInput): { body: string; missing:
 
   const disputedDomain = input.violator.url.replace(/https?:\/\//, '').split('/')[0];
 
+  // Determine TLD-specific provider guidance
+  const tld = disputedDomain.split('.').pop()?.toLowerCase() || '';
+  const isEuDomain = tld === 'eu';
+  const isCzDomain = tld === 'cz';
+
+  // CAC handles .eu ADR exclusively and is the cheapest UDRP provider for gTLDs
+  const providerSection = isEuDomain
+    ? `**Provider:** Czech Arbitration Court (CAC) — exclusive .eu ADR provider
+**File at:** https://eu.adr.eu
+**Filing fee:** €320 (standard)
+**Timeframe:** ~6-8 weeks`
+    : isCzDomain
+    ? `**Provider:** Czech Arbitration Court (CAC) — .cz ADR provider
+**File at:** https://domeny.soud.cz
+**Filing fee:** €190 (standard)`
+    : `**Recommended Provider:** Czech Arbitration Court (CAC) — lowest cost UDRP provider
+**File at:** https://udrp.adr.eu
+**Filing fee:** €1,500 (single panelist, 1-5 domains) — vs WIPO €1,500 + higher admin fees
+**Alternative providers:**
+  - WIPO Arbitration Center: https://www.wipo.int/amc/en/domains/ (€1,500+, most established)
+  - National Arbitration Forum (NAF): https://www.adrforum.com/domaindispute ($1,300)\n**Timeframe:** ~6-8 weeks (CAC), 6-12 weeks (WIPO)`;
+
   const body = `# DOMAIN DISPUTE — UDRP COMPLAINT SUMMARY
 Brand Guard Scan ID: ${input.scanId}
 Generated: ${new Date().toISOString()}
 Risk Score: ${input.riskScore}/100 (${input.riskLevel.toUpperCase()})
 
-Submit to: https://www.icann.org/resources/pages/help/dndr/udrp-en
-Recommended Provider: WIPO Arbitration Center (https://www.wipo.int/amc/en/domains/)
+---
+
+## FILING PROVIDER
+${providerSection}
 
 ---
 
@@ -372,6 +399,9 @@ const TEMPLATE_ROUTER: Record<string, (input: TakedownInput) => { body: string; 
   shopify: renderShopifyTemplate,
   etsy: renderEtsyTemplate,
   registrar: renderRegistrarTemplate,
+  registrar_wipo: renderRegistrarTemplate,
+  registrar_cac: renderRegistrarTemplate,
+  registrar_naf: renderRegistrarTemplate,
   twitter: renderSocialTemplate,
   instagram: renderSocialTemplate,
   facebook: renderSocialTemplate,

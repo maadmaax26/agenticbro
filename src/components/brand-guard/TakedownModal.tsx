@@ -35,7 +35,9 @@ interface TakedownModalProps {
 const PLATFORMS = [
   { id: 'shopify', label: 'Shopify', icon: '🛍️' },
   { id: 'etsy', label: 'Etsy', icon: '🎨' },
-  { id: 'registrar', label: 'Domain Registrar', icon: '🌐' },
+  { id: 'registrar', label: 'Domain Dispute (CAC)', icon: '🌐' },
+  { id: 'registrar_wipo', label: 'Domain Dispute (WIPO)', icon: '🏛️' },
+  { id: 'registrar_naf', label: 'Domain Dispute (NAF)', icon: '⚖️' },
   { id: 'twitter', label: 'X (Twitter)', icon: '🐦' },
   { id: 'instagram', label: 'Instagram', icon: '📸' },
   { id: 'facebook', label: 'Facebook', icon: '👤' },
