@@ -43,6 +43,43 @@ interface AdminUser {
   first_brand_at: string | null;
   brand_count: number;
   total_scans: number;
+  subscription_plan: string | null;
+  subscription_status: string | null;
+}
+
+interface AdminBrand {
+  id: string;
+  brand_name: string;
+  brand_handle: string | null;
+  brand_domain: string | null;
+  platforms: string[] | null;
+  scan_frequency: string | null;
+  last_scan_at: string | null;
+  is_active: boolean;
+  scan_count: number;
+}
+
+interface AdminSubscription {
+  id: string;
+  plan_id: string;
+  status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  monthly_credits_included: number;
+  stripe_subscription_id: string | null;
+}
+
+type EditSection = 'brands' | 'subscription' | 'brand-details';
+
+interface EditAccountState {
+  user: AdminUser;
+  brands: AdminBrand[];
+  subscription: AdminSubscription | null;
+  subscriptionDraft: { plan_id: string; status: string; cancel_at_period_end: boolean } | null;
+  loading: boolean;
+  activeSection: EditSection;
+  editingBrand: AdminBrand | null;
 }
 
 interface AdminStats {
@@ -81,6 +118,8 @@ export function BrandGuardAdminPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [operations, setOperations] = useState<any>(null);
   const isMobile = useIsMobile();
+  const [editAccountState, setEditAccountState] = useState<EditAccountState | null>(null);
+  const [editingSaving, setEditingSaving] = useState(false);
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -185,7 +224,7 @@ export function BrandGuardAdminPage() {
         fetchNotifications();
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { supabase?.removeChannel(channel); };
   }, [authToken, isAdmin]);
 
   // Grant credits
@@ -220,6 +259,142 @@ export function BrandGuardAdminPage() {
       });
       fetchNotifications();
     } catch { /* ignore */ }
+  };
+
+  // ── Edit Account modal handlers ────────────────────────────────────────
+
+  const handleOpenEdit = async (user: AdminUser) => {
+    setEditAccountState({ user, brands: [], subscription: null, subscriptionDraft: null, loading: true, activeSection: 'brands', editingBrand: null });
+    try {
+      const res = await fetch(`${API_BASE}/admin/user-details?user_id=${user.user_id}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        const sub: AdminSubscription | null = data.subscription || null;
+        setEditAccountState(s => s ? {
+          ...s,
+          brands: data.brands || [],
+          subscription: sub,
+          subscriptionDraft: sub ? { plan_id: sub.plan_id, status: sub.status, cancel_at_period_end: sub.cancel_at_period_end } : null,
+          loading: false,
+        } : null);
+      } else {
+        setEditAccountState(s => s ? { ...s, loading: false } : null);
+      }
+    } catch {
+      setEditAccountState(s => s ? { ...s, loading: false } : null);
+    }
+  };
+
+  const handleDeleteBrand = async (brandId: string) => {
+    if (!authToken || !window.confirm('Delete this brand? This cannot be undone.')) return;
+    setEditingSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/brand`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ brand_id: brandId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditAccountState(s => s ? {
+          ...s,
+          brands: s.brands.filter(b => b.id !== brandId),
+          editingBrand: s.editingBrand?.id === brandId ? null : s.editingBrand,
+          activeSection: s.editingBrand?.id === brandId ? 'brands' : s.activeSection,
+        } : null);
+        fetchUsers();
+      } else {
+        setError(data.error || 'Failed to delete brand');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    }
+    setEditingSaving(false);
+  };
+
+  const handleSaveBrand = async () => {
+    const brand = editAccountState?.editingBrand;
+    if (!authToken || !brand) return;
+    setEditingSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/brand`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          brand_id: brand.id,
+          brand_name: brand.brand_name,
+          brand_handle: brand.brand_handle,
+          brand_domain: brand.brand_domain,
+          platforms: brand.platforms,
+          scan_frequency: brand.scan_frequency,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditAccountState(s => s ? {
+          ...s,
+          brands: s.brands.map(b => b.id === brand.id ? { ...b, ...brand } : b),
+          activeSection: 'brands',
+          editingBrand: null,
+        } : null);
+      } else {
+        setError(data.error || 'Failed to save brand');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    }
+    setEditingSaving(false);
+  };
+
+  const handleUpdateSubscription = async (subscriptionId: string, draft: { plan_id: string; status: string; cancel_at_period_end: boolean }) => {
+    if (!authToken) return;
+    setEditingSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/subscription`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ subscription_id: subscriptionId, ...draft }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const sub: AdminSubscription = data.subscription;
+        setEditAccountState(s => s ? {
+          ...s,
+          subscription: sub,
+          subscriptionDraft: { plan_id: sub.plan_id, status: sub.status, cancel_at_period_end: sub.cancel_at_period_end },
+        } : null);
+        fetchUsers();
+      } else {
+        setError(data.error || 'Failed to update subscription');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    }
+    setEditingSaving(false);
+  };
+
+  const handleDeleteSubscription = async (subscriptionId: string) => {
+    if (!authToken || !window.confirm("Remove this subscription? The user will revert to the free plan.")) return;
+    setEditingSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/subscription`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ subscription_id: subscriptionId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditAccountState(s => s ? { ...s, subscription: null, subscriptionDraft: null } : null);
+        fetchUsers();
+      } else {
+        setError(data.error || 'Failed to remove subscription');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    }
+    setEditingSaving(false);
   };
 
   if (loading) {
@@ -422,6 +597,9 @@ export function BrandGuardAdminPage() {
                       )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', color: '#9ca3af', fontSize: '12px' }}>
+                      <div style={{ gridColumn: 'span 3' }}>
+                        Plan: <span style={{ color: user.subscription_plan === 'fortress' ? '#f59e0b' : user.subscription_plan === 'sentinel' ? '#8b5cf6' : user.subscription_plan === 'guardian' ? '#3b82f6' : '#9ca3af', fontWeight: 600, textTransform: 'capitalize' }}>{user.subscription_plan || 'free'}</span>
+                      </div>
                       <div>Free: <span style={{ color: '#22c55e' }}>{user.free_credits_total}</span></div>
                       <div>Used: <span style={{ color: '#9ca3af' }}>{user.free_credits_used}</span></div>
                       <div>Paid: <span style={{ color: '#3b82f6' }}>{user.paid_credits}</span></div>
@@ -439,7 +617,10 @@ export function BrandGuardAdminPage() {
                           <button onClick={() => setGrantingUserId(null)} style={{ padding: '2px 6px', borderRadius: '4px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✕</button>
                         </div>
                       ) : (
-                        <button onClick={() => { setGrantingUserId(user.user_id); setGrantAmount(10); }} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '11px', cursor: 'pointer' }}>+ Credits</button>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => { setGrantingUserId(user.user_id); setGrantAmount(10); }} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '11px', cursor: 'pointer' }}>+ Credits</button>
+                          <button onClick={() => handleOpenEdit(user)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '11px', cursor: 'pointer' }}>✏️</button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -456,6 +637,7 @@ export function BrandGuardAdminPage() {
                     <th style={{ padding: '10px 8px', textAlign: 'left', color: '#9ca3af', fontWeight: 600 }}>Email</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Source</th>
                     <th style={{ padding: '10px 8px', textAlign: 'left', color: '#9ca3af', fontWeight: 600 }}>Promo</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Plan</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Free</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Used</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af', fontWeight: 600 }}>Paid</th>
@@ -491,6 +673,22 @@ export function BrandGuardAdminPage() {
                           </span>
                         ) : <span style={{ color: '#6b7280' }}>—</span>}
                       </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                        {(() => {
+                          const plan = user.subscription_plan;
+                          const planMap: Record<string, [string, string]> = {
+                            guardian: ['rgba(59,130,246,0.2)', '#3b82f6'],
+                            sentinel: ['rgba(139,92,246,0.2)', '#8b5cf6'],
+                            fortress: ['rgba(245,158,11,0.2)', '#f59e0b'],
+                          };
+                          const [bg, clr] = plan && planMap[plan] ? planMap[plan] : ['rgba(156,163,175,0.1)', '#9ca3af'];
+                          return (
+                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, background: bg, color: clr, border: `1px solid ${clr}40`, textTransform: 'capitalize' }}>
+                              {plan || 'free'}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', color: '#22c55e' }}>{user.free_credits_total}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af' }}>{user.free_credits_used}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', color: '#3b82f6' }}>{user.paid_credits}</td>
@@ -499,23 +697,26 @@ export function BrandGuardAdminPage() {
                       <td style={{ padding: '10px 8px', textAlign: 'center', color: '#9ca3af' }}>{user.total_scans}</td>
                       <td style={{ padding: '10px 8px', color: '#9ca3af', fontSize: '12px' }}>{formatDate(user.user_created_at)}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                        {grantingUserId === user.user_id ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <input
-                              type="number" value={grantAmount} onChange={e => setGrantAmount(parseInt(e.target.value) || 1)}
-                              style={{ width: '50px', padding: '2px 4px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '12px', textAlign: 'center' }}
-                            />
-                            <button onClick={() => handleGrantCredits(user.user_id)} style={{ padding: '2px 8px', borderRadius: '4px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✓</button>
-                            <button onClick={() => setGrantingUserId(null)} style={{ padding: '2px 8px', borderRadius: '4px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✕</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setGrantingUserId(user.user_id); setGrantAmount(10); }} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '11px', cursor: 'pointer' }}>+ Credits</button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                          {grantingUserId === user.user_id ? (
+                            <>
+                              <input
+                                type="number" value={grantAmount} onChange={e => setGrantAmount(parseInt(e.target.value) || 1)}
+                                style={{ width: '50px', padding: '2px 4px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '12px', textAlign: 'center' }}
+                              />
+                              <button onClick={() => handleGrantCredits(user.user_id)} style={{ padding: '2px 8px', borderRadius: '4px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✓</button>
+                              <button onClick={() => setGrantingUserId(null)} style={{ padding: '2px 8px', borderRadius: '4px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                            </>
+                          ) : (
+                            <button onClick={() => { setGrantingUserId(user.user_id); setGrantAmount(10); }} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', fontSize: '11px', cursor: 'pointer' }}>+ Credits</button>
+                          )}
+                          <button onClick={() => handleOpenEdit(user)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '11px', cursor: 'pointer' }}>✏️ Edit</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {users.length === 0 && (
-                    <tr><td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No users found</td></tr>
+                    <tr><td colSpan={12} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No users found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -719,6 +920,281 @@ export function BrandGuardAdminPage() {
           </div>
         )}
       </div>
+
+      {/* ── Edit Account Drawer ────────────────────────────────────────────── */}
+      {editAccountState && (() => {
+        const eas = editAccountState;
+        const PLATFORMS = ['instagram', 'twitter', 'facebook', 'tiktok', 'youtube', 'linkedin', 'threads', 'reddit', 'pinterest', 'discord'];
+        const PLAN_OPTIONS = ['free', 'guardian', 'sentinel', 'fortress'];
+        const STATUS_OPTIONS = ['active', 'trialing', 'trial_ending', 'canceled', 'paused'];
+        const FREQ_OPTIONS = ['realtime', 'daily', 'weekly', 'monthly'];
+
+        const planColor = (p: string | null): [string, string] => {
+          if (p === 'fortress') return ['rgba(245,158,11,0.2)', '#f59e0b'];
+          if (p === 'sentinel') return ['rgba(139,92,246,0.2)', '#8b5cf6'];
+          if (p === 'guardian') return ['rgba(59,130,246,0.2)', '#3b82f6'];
+          return ['rgba(156,163,175,0.1)', '#9ca3af'];
+        };
+        const statusColor = (s: string | null) => {
+          if (s === 'active') return '#22c55e';
+          if (s === 'trialing') return '#3b82f6';
+          if (s === 'trial_ending') return '#f59e0b';
+          if (s === 'canceled') return '#ef4444';
+          return '#9ca3af';
+        };
+
+        const tabs = [
+          { id: 'brands' as EditSection, label: '🏢 Brands' },
+          { id: 'subscription' as EditSection, label: '💎 Subscription' },
+          ...(eas.editingBrand ? [{ id: 'brand-details' as EditSection, label: '✏️ Edit Brand' }] : []),
+        ];
+
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'flex-end' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setEditAccountState(null); }}
+          >
+            <div style={{ width: isMobile ? '100%' : '520px', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f0f19', borderLeft: '1px solid rgba(139,92,246,0.3)' }}>
+
+              {/* Drawer Header */}
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(139,92,246,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#fff', fontSize: '15px' }}>Edit Account</div>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px', wordBreak: 'break-all' }}>{eas.user.email}</div>
+                </div>
+                <button onClick={() => setEditAccountState(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '22px', lineHeight: 1, padding: '0 4px' }}>✕</button>
+              </div>
+
+              {/* Drawer Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid rgba(139,92,246,0.2)', overflowX: 'auto', flexShrink: 0 }}>
+                {tabs.map(tab => (
+                  <button key={tab.id}
+                    onClick={() => setEditAccountState(s => s ? { ...s, activeSection: tab.id } : null)}
+                    style={{
+                      padding: '10px 16px', border: 'none', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                      borderBottom: eas.activeSection === tab.id ? '2px solid #8b5cf6' : '2px solid transparent',
+                      color: eas.activeSection === tab.id ? '#fff' : '#9ca3af',
+                      fontSize: '13px', fontWeight: 600,
+                    }}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Drawer Content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                {eas.loading ? (
+                  <div style={{ textAlign: 'center', color: '#8b5cf6', padding: '48px 0', fontSize: '14px' }}>Loading account details...</div>
+
+                ) : eas.activeSection === 'brands' ? (
+                  /* ── Brands list ───────────────────────────────────────── */
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {eas.brands.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: '#9ca3af', padding: '32px' }}>
+                        <div style={{ fontSize: '28px', marginBottom: '8px' }}>🏢</div>
+                        <div>No brands registered</div>
+                      </div>
+                    ) : eas.brands.map(brand => (
+                      <div key={brand.id} style={{ padding: '14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#fff', fontSize: '14px' }}>{brand.brand_name}</div>
+                            <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>
+                              {brand.brand_handle && <span>@{brand.brand_handle}</span>}
+                              {brand.brand_domain && <span style={{ marginLeft: brand.brand_handle ? '8px' : 0 }}>🌐 {brand.brand_domain}</span>}
+                            </div>
+                          </div>
+                          <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600, flexShrink: 0, background: brand.is_active ? 'rgba(34,197,94,0.15)' : 'rgba(156,163,175,0.1)', color: brand.is_active ? '#22c55e' : '#9ca3af', border: `1px solid ${brand.is_active ? 'rgba(34,197,94,0.3)' : 'rgba(156,163,175,0.2)'}` }}>
+                            {brand.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        {brand.platforms && brand.platforms.length > 0 && (
+                          <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px' }}>📱 {brand.platforms.join(', ')}</div>
+                        )}
+                        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px' }}>
+                          Freq: {brand.scan_frequency || 'daily'} · Scans: {brand.scan_count}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => setEditAccountState(s => s ? { ...s, editingBrand: { ...brand }, activeSection: 'brand-details' } : null)}
+                            style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '12px', cursor: 'pointer', fontWeight: 500 }}
+                          >
+                            ✏️ Edit Details
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBrand(brand.id)}
+                            disabled={editingSaving}
+                            style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: 500, opacity: editingSaving ? 0.5 : 1 }}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                ) : eas.activeSection === 'subscription' ? (
+                  /* ── Subscription ──────────────────────────────────────── */
+                  eas.subscription && eas.subscriptionDraft ? (() => {
+                    const sub = eas.subscription!;
+                    const draft = eas.subscriptionDraft!;
+                    const [planBg, planClr] = planColor(sub.plan_id);
+                    return (
+                      <div style={{ display: 'grid', gap: '16px' }}>
+                        {/* Current subscription info */}
+                        <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, background: planBg, color: planClr, border: `1px solid ${planClr}40`, textTransform: 'capitalize' }}>{sub.plan_id}</span>
+                            <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: `${statusColor(sub.status)}20`, color: statusColor(sub.status), border: `1px solid ${statusColor(sub.status)}40`, textTransform: 'capitalize' }}>{sub.status.replace(/_/g, ' ')}</span>
+                            {sub.cancel_at_period_end && <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '11px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>Cancels at period end</span>}
+                          </div>
+                          {sub.current_period_end && <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Period ends: {formatDate(sub.current_period_end)}</div>}
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>Credits/mo: {sub.monthly_credits_included}</div>
+                        </div>
+
+                        {/* Edit fields */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan</label>
+                          <select
+                            value={draft.plan_id}
+                            onChange={e => setEditAccountState(s => s ? { ...s, subscriptionDraft: { ...s.subscriptionDraft!, plan_id: e.target.value } } : null)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px' }}
+                          >
+                            {PLAN_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
+                          <select
+                            value={draft.status}
+                            onChange={e => setEditAccountState(s => s ? { ...s, subscriptionDraft: { ...s.subscriptionDraft!, status: e.target.value } } : null)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px' }}
+                          >
+                            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            id="cancel-eop"
+                            checked={draft.cancel_at_period_end}
+                            onChange={e => setEditAccountState(s => s ? { ...s, subscriptionDraft: { ...s.subscriptionDraft!, cancel_at_period_end: e.target.checked } } : null)}
+                            style={{ width: '16px', height: '16px', accentColor: '#8b5cf6', cursor: 'pointer' }}
+                          />
+                          <label htmlFor="cancel-eop" style={{ fontSize: '13px', color: '#d1d5db', cursor: 'pointer' }}>Cancel at period end</label>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateSubscription(sub.id, draft)}
+                          disabled={editingSaving}
+                          style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: editingSaving ? 0.6 : 1 }}
+                        >
+                          {editingSaving ? 'Saving...' : 'Save Changes'}
+                        </button>
+
+                        {/* Danger zone */}
+                        <div style={{ borderTop: '1px solid rgba(239,68,68,0.15)', paddingTop: '16px' }}>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Danger Zone</div>
+                          <button
+                            onClick={() => handleDeleteSubscription(sub.id)}
+                            disabled={editingSaving}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: editingSaving ? 0.6 : 1 }}
+                          >
+                            🗑️ Remove Subscription
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>💎</div>
+                      <div style={{ fontSize: '14px' }}>No active subscription</div>
+                      <div style={{ fontSize: '12px', marginTop: '4px', color: '#6b7280' }}>This user is on the free plan</div>
+                    </div>
+                  )
+
+                ) : eas.activeSection === 'brand-details' && eas.editingBrand ? (() => {
+                  /* ── Brand Details Editor ──────────────────────────────── */
+                  const brand = eas.editingBrand!;
+                  const updateField = (field: string, value: unknown) =>
+                    setEditAccountState(s => s ? { ...s, editingBrand: { ...s.editingBrand!, [field]: value } } : null);
+                  const togglePlatform = (p: string) =>
+                    setEditAccountState(s => {
+                      if (!s || !s.editingBrand) return null;
+                      const curr = s.editingBrand.platforms || [];
+                      return { ...s, editingBrand: { ...s.editingBrand, platforms: curr.includes(p) ? curr.filter(x => x !== p) : [...curr, p] } };
+                    });
+
+                  return (
+                    <div style={{ display: 'grid', gap: '16px' }}>
+                      <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        Editing: <strong style={{ color: '#c4b5fd' }}>{brand.brand_name}</strong>
+                      </div>
+
+                      {[
+                        { field: 'brand_name', label: 'Brand Name', placeholder: 'Acme Corp' },
+                        { field: 'brand_handle', label: 'Brand Handle', placeholder: 'acmecorp' },
+                        { field: 'brand_domain', label: 'Brand Domain', placeholder: 'acme.com' },
+                      ].map(({ field, label, placeholder }) => (
+                        <div key={field}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+                          <input
+                            type="text"
+                            value={(brand as unknown as Record<string, string>)[field] || ''}
+                            onChange={e => updateField(field, e.target.value)}
+                            placeholder={placeholder}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      ))}
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platforms</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {PLATFORMS.map(p => {
+                            const active = brand.platforms?.includes(p);
+                            return (
+                              <button key={p} onClick={() => togglePlatform(p)} style={{ padding: '4px 12px', borderRadius: '20px', border: `1px solid ${active ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.1)'}`, background: active ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.05)', color: active ? '#c4b5fd' : '#9ca3af', fontSize: '12px', cursor: 'pointer', fontWeight: active ? 600 : 400, textTransform: 'capitalize' }}>
+                                {p}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scan Frequency</label>
+                        <select
+                          value={brand.scan_frequency || 'daily'}
+                          onChange={e => updateField('scan_frequency', e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px' }}
+                        >
+                          {FREQ_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={handleSaveBrand}
+                          disabled={editingSaving}
+                          style={{ flex: 1, padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: editingSaving ? 0.6 : 1 }}
+                        >
+                          {editingSaving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          onClick={() => setEditAccountState(s => s ? { ...s, activeSection: 'brands' } : null)}
+                          style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'transparent', color: '#9ca3af', fontSize: '14px', cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })() : null}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

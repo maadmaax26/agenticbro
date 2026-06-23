@@ -89,7 +89,7 @@ const TABLES_NOT_PROVISIONED =
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -130,7 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       query = query.or(`email.ilike.%${search}%,promo_code.ilike.%${search}%`);
     }
 
-    const { data, error, count } = await query;
+    const { data, error } = await query;
 
     if (error) {
       res.status(500).json({ error: 'Failed to fetch users', details: error.message });
@@ -142,9 +142,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .from('brand_guard_admin_all_users')
       .select('*', { count: 'exact', head: true });
 
+    // Batch-fetch active subscriptions for all returned users so the UI can show a plan column
+    const userIds = (data || []).map((u: Record<string, unknown>) => u.user_id as string).filter(Boolean);
+    const subscriptionMap: Record<string, { plan_id: string; status: string }> = {};
+    if (userIds.length > 0) {
+      const { data: subs } = await serviceClient
+        .from('brand_guard_subscriptions')
+        .select('owner_id, plan_id, status')
+        .in('owner_id', userIds)
+        .in('status', ['active', 'trialing', 'trial_ending'])
+        .order('created_at', { ascending: false });
+      for (const sub of (subs || [])) {
+        const s = sub as Record<string, string>;
+        if (s.owner_id && !subscriptionMap[s.owner_id]) {
+          subscriptionMap[s.owner_id] = { plan_id: s.plan_id, status: s.status };
+        }
+      }
+    }
+
+    const usersWithSubs = (data || []).map((u: Record<string, unknown>) => ({
+      ...u,
+      subscription_plan: subscriptionMap[u.user_id as string]?.plan_id || null,
+      subscription_status: subscriptionMap[u.user_id as string]?.status || null,
+    }));
+
     res.status(200).json({
       success: true,
-      users: data || [],
+      users: usersWithSubs,
       total: totalCount || 0,
       limit,
       offset,
@@ -646,6 +670,120 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (!error) await serviceClient.from('brand_guard_delivery_dead_letters').update({ resolved_at: now, resolution_notes: 'Replayed by admin' }).eq('id', letter.id);
     if (error) res.status(500).json({ error: error.message });
     else res.status(202).json({ replayed: letter.original_job_id });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /user-details — Brands + active subscription for a specific user
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/user-details') {
+    const userId = url.searchParams.get('user_id');
+    if (!userId) { res.status(400).json({ error: 'user_id is required' }); return; }
+
+    const [brandsResult, subscriptionResult] = await Promise.all([
+      serviceClient
+        .from('brand_monitors')
+        .select('id, brand_name, brand_handle, brand_domain, platforms, scan_frequency, last_scan_at, is_active, scan_count')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false }),
+      serviceClient
+        .from('brand_guard_subscriptions')
+        .select('id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, monthly_credits_included, stripe_subscription_id')
+        .eq('owner_id', userId)
+        .in('status', ['active', 'trialing', 'trial_ending', 'canceled', 'paused'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      brands: brandsResult.data || [],
+      subscription: subscriptionResult.data || null,
+    });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DELETE /brand — Delete a brand monitor (admin)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'DELETE' && path === '/brand') {
+    const body = await parseBody(req);
+    const brandId = body.brand_id as string;
+    if (!brandId) { res.status(400).json({ error: 'brand_id is required' }); return; }
+
+    const { error } = await serviceClient.from('brand_monitors').delete().eq('id', brandId);
+    if (error) { res.status(500).json({ error: 'Failed to delete brand', details: error.message }); return; }
+
+    res.status(200).json({ success: true });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PATCH /brand — Update brand details (admin)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'PATCH' && path === '/brand') {
+    const body = await parseBody(req);
+    const brandId = body.brand_id as string;
+    if (!brandId) { res.status(400).json({ error: 'brand_id is required' }); return; }
+
+    const updates: Record<string, unknown> = {};
+    for (const field of ['brand_name', 'brand_handle', 'brand_domain', 'platforms', 'scan_frequency']) {
+      if (body[field] !== undefined) updates[field] = body[field];
+    }
+
+    const { data, error } = await serviceClient
+      .from('brand_monitors')
+      .update(updates)
+      .eq('id', brandId)
+      .select('id, brand_name, brand_handle, brand_domain, platforms, scan_frequency, last_scan_at, is_active, scan_count')
+      .maybeSingle();
+    if (error) { res.status(500).json({ error: 'Failed to update brand', details: error.message }); return; }
+
+    res.status(200).json({ success: true, brand: data });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PATCH /subscription — Modify subscription plan or status (admin)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'PATCH' && path === '/subscription') {
+    const body = await parseBody(req);
+    const subscriptionId = body.subscription_id as string;
+    if (!subscriptionId) { res.status(400).json({ error: 'subscription_id is required' }); return; }
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const field of ['plan_id', 'status', 'cancel_at_period_end']) {
+      if (body[field] !== undefined) updates[field] = body[field];
+    }
+
+    const { data, error } = await serviceClient
+      .from('brand_guard_subscriptions')
+      .update(updates)
+      .eq('id', subscriptionId)
+      .select('id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, monthly_credits_included, stripe_subscription_id')
+      .maybeSingle();
+    if (error) { res.status(500).json({ error: 'Failed to update subscription', details: error.message }); return; }
+
+    res.status(200).json({ success: true, subscription: data });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DELETE /subscription — Remove a subscription record (admin)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'DELETE' && path === '/subscription') {
+    const body = await parseBody(req);
+    const subscriptionId = body.subscription_id as string;
+    if (!subscriptionId) { res.status(400).json({ error: 'subscription_id is required' }); return; }
+
+    const { error } = await serviceClient
+      .from('brand_guard_subscriptions')
+      .delete()
+      .eq('id', subscriptionId);
+    if (error) { res.status(500).json({ error: 'Failed to remove subscription', details: error.message }); return; }
+
+    res.status(200).json({ success: true });
     return;
   }
 
