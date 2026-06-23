@@ -20,8 +20,8 @@
  * Required Vercel env vars:
  *   GOOGLE_CLIENT_ID              Google OAuth2 app client ID
  *   GOOGLE_CLIENT_SECRET          Google OAuth2 app client secret
- *   GOOGLE_REFRESH_TOKEN          Offline refresh token for sender Gmail account
- *   GMAIL_SENDER_EMAIL            Sender address (default: ADMIN_EMAIL)
+ *   GOOGLE_REFRESH_TOKEN          Offline refresh token for efinney@brandguardhq.com
+ *   GMAIL_SENDER_EMAIL            Sender address (should match the OAuth account above)
  *   OUTREACH_SUPABASE_URL         Outreach DB URL  (falls back to main Supabase)
  *   OUTREACH_SUPABASE_SECRET_API_KEY  or OUTREACH_SUPABASE_SERVICE_ROLE_KEY
  *   CRON_SECRET                   Vercel cron authentication secret
@@ -52,7 +52,9 @@ const outreachServiceKey =
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN || '';
-const GMAIL_SENDER_EMAIL = process.env.GMAIL_SENDER_EMAIL || ADMIN_EMAIL;
+// GMAIL_SENDER_EMAIL MUST match the account the GOOGLE_REFRESH_TOKEN belongs to.
+// Gmail API rejects From addresses that don't match the authenticated account.
+const GMAIL_SENDER_EMAIL = process.env.GMAIL_SENDER_EMAIL || '';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type VercelRequest = IncomingMessage & {
@@ -95,6 +97,11 @@ async function getGmailAccessToken(): Promise<string> {
       'Missing Google OAuth2 credentials. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN in Vercel env vars.'
     );
   }
+  if (!GMAIL_SENDER_EMAIL) {
+    throw new Error(
+      'GMAIL_SENDER_EMAIL is not set. Set it to the Gmail address the GOOGLE_REFRESH_TOKEN belongs to (e.g. efinney@brandguardhq.com).'
+    );
+  }
 
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
@@ -134,7 +141,7 @@ function buildRawEmail(opts: {
   const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, 'utf8').toString('base64')}?=`;
 
   const raw =
-    `From: AgenticBro Brand Guard <${from}>\r\n` +
+    `From: Brand Guard <${from}>\r\n` +
     `To: ${to}\r\n` +
     `Subject: ${encodedSubject}\r\n` +
     `MIME-Version: 1.0\r\n` +
