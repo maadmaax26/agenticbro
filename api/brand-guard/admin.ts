@@ -10,15 +10,17 @@
  * Admin-only endpoints for managing Brand Guard users, promo codes, and analytics.
  * Access is restricted to agenticbro@agenticbro.app only.
  *
- * GET  /api/brand-guard/admin/users          — List all registered users with promo/credit info
- * GET  /api/brand-guard/admin/stats           — Aggregate stats (total users, scans, credits)
- * POST /api/brand-guard/admin/grant-credits   — Grant credits to a user (admin override)
- * GET  /api/brand-guard/admin/review-queue    — Unreviewed outreach drafts awaiting human approval
- * POST /api/brand-guard/admin/apply-approvals — Record human approve/reject decisions (no send)
+ * GET  /api/brand-guard/admin/users               — List all registered users with promo/credit info
+ * GET  /api/brand-guard/admin/stats               — Aggregate stats (total users, scans, credits)
+ * POST /api/brand-guard/admin/grant-credits        — Grant credits to a user (admin override)
+ * GET  /api/brand-guard/admin/review-queue         — Unreviewed outreach drafts awaiting human approval
+ * POST /api/brand-guard/admin/apply-approvals      — Record human approve/reject decisions (no send)
+ * POST /api/brand-guard/admin/send-approved-drafts — Immediately create Gmail drafts for all approved+unsent email drafts
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
+import cronSendDraftsHandler from './cron-send-drafts';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -784,6 +786,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (error) { res.status(500).json({ error: 'Failed to remove subscription', details: error.message }); return; }
 
     res.status(200).json({ success: true });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /send-approved-drafts — Immediately create Gmail drafts for all
+  // approved, unsent outreach email drafts (channels A and B).
+  // Proxies to cron-send-drafts.ts so the same logic runs on-demand and
+  // on the 15-minute cron schedule.
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/send-approved-drafts') {
+    // Re-auth as CRON_SECRET so the delegate handler accepts it
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      req.headers['authorization'] = `Bearer ${cronSecret}`;
+    }
+    await cronSendDraftsHandler(req as unknown as Parameters<typeof cronSendDraftsHandler>[0], res as unknown as Parameters<typeof cronSendDraftsHandler>[1]);
     return;
   }
 

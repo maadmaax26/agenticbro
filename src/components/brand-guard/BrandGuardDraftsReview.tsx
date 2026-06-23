@@ -6,12 +6,13 @@
  * NOTHING leaves the building until a human approves it here.
  *
  * Data contract (mirrors the Python store, db/store.py):
- *   GET  /api/brand-guard/admin/review-queue     → { available, drafts: Draft[] }
- *   POST /api/brand-guard/admin/apply-approvals   → { log: string[] }
+ *   GET  /api/brand-guard/admin/review-queue          → { available, drafts: Draft[] }
+ *   POST /api/brand-guard/admin/apply-approvals        → { log: string[] }
+ *   POST /api/brand-guard/admin/send-approved-drafts   → { created, skipped, failed, results[] }
  *
- * This component NEVER sends mail. Approving a draft only flips its approval
- * state server-side; an entirely separate (dry-run, suppression-aware) worker
- * is responsible for any actual delivery.
+ * Approving a draft flips its approval state server-side. The "Send to Gmail"
+ * button then calls the send worker, which creates Gmail drafts for all approved,
+ * unsent email-channel (A/B) rows so the admin can review and fire them from Gmail.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -102,6 +103,8 @@ export default function BrandGuardDraftsReview({ authToken }: { authToken: strin
   const [channelOverride, setChannelOverride] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ created: number; skipped: number; failed: number } | null>(null);
   const [toast, setToast] = useState("");
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -186,6 +189,36 @@ export default function BrandGuardDraftsReview({ authToken }: { authToken: strin
     applyDecision("approve", extra);
   };
 
+  const sendApproved = async () => {
+    if (!authToken || sending) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/send-approved-drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      if (data.error) throw new Error(data.error);
+      const created = data.created ?? 0;
+      const skipped = data.skipped ?? 0;
+      const failed = data.failed ?? 0;
+      setSendResult({ created, skipped, failed });
+      showToast(created > 0
+        ? `✉ ${created} Gmail draft${created !== 1 ? "s" : ""} created — check your Drafts folder`
+        : skipped > 0
+        ? `↷ No new drafts — ${skipped} already sent or no email address`
+        : "No approved email drafts found to send"
+      );
+    } catch (e) {
+      showToast(`⚠ ${e instanceof Error ? e.message : "Send failed"}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const reject = (suppress: boolean) => {
     if (!selected) return;
     if (!rejectReason.trim()) { showToast("Enter a reject reason first"); return; }
@@ -260,12 +293,26 @@ export default function BrandGuardDraftsReview({ authToken }: { authToken: strin
         <div style={{ position: "fixed", top: 16, right: 16, zIndex: 99, background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ade80", fontSize: 11, padding: "8px 14px", borderRadius: 6, fontFamily: "'DM Mono',monospace", maxWidth: 360 }}>{toast}</div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 10, flexWrap: "wrap" as const }}>
         <div style={{ fontSize: 12, color: "#6b7280", fontFamily: "'DM Mono',monospace" }}>
           Drafts awaiting approval · <span style={{ color: "#4ade80" }}>{drafts.length}</span>
-          <span style={{ marginLeft: 12, color: "#4b5563" }}>nothing sends from here — this only clears the gate</span>
+          {sendResult && (
+            <span style={{ marginLeft: 12, color: sendResult.created > 0 ? "#4ade80" : "#6b7280" }}>
+              · last send: {sendResult.created} created, {sendResult.skipped} skipped, {sendResult.failed} failed
+            </span>
+          )}
         </div>
-        <button onClick={load} style={S.btn("#60a5fa", true)}>↻ Refresh</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={sendApproved}
+            disabled={sending}
+            title="Create Gmail drafts for all approved email-channel outreach (channels A and B). Check your Gmail Drafts folder after."
+            style={sending ? S.btnDisabled : S.btn("#a78bfa")}
+          >
+            {sending ? "⏳ Sending…" : "✉ Send Approved to Gmail"}
+          </button>
+          <button onClick={load} style={S.btn("#60a5fa", true)}>↻ Refresh</button>
+        </div>
       </div>
 
       {error && <div style={S.banner("#f87171")}>{error}</div>}
