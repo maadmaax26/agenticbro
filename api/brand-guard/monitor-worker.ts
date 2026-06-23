@@ -300,6 +300,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // ── Auth: require CRON_SECRET Bearer token ───────────────────────────────
+  // Vercel cron sends Authorization: Bearer <CRON_SECRET> automatically.
+  // External callers without the token must be rejected to prevent abuse.
+  if (process.env.CRON_SECRET && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
   const body = req.body || {};
   const dryRun = body.dry_run === true;
   const specificBrandId = body.brand_id || null;

@@ -65,7 +65,7 @@
       "maxDuration": 15
     },
     "api/brand-guard/domain-monitor.ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     },
     "api/brand-guard/threat-correlate.ts": {
       "maxDuration": 15
@@ -75,9 +75,6 @@
     },
     "api/brand-guard/admin.ts": {
       "maxDuration": 15
-    },
-    "api/brand-guard/email-spoof.ts": {
-      "maxDuration": 30
     },
     "api/brand-guard/email-spoof.ts": {
       "maxDuration": 30
@@ -134,9 +131,6 @@
       "maxDuration": 15
     },
     "api/contact.ts": {
-      "maxDuration": 15
-    },
-    "api/brand-guard/admin.ts": {
       "maxDuration": 15
     }
   },

@@ -292,7 +292,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     if (!stripeSecretKey) {
-      res.status(503).json({ error: 'Stripe not configured. Use crypto payment instead.' });
+      res.status(503).json({ error: 'Stripe not configured — contact support.' });
       return;
     }
 
