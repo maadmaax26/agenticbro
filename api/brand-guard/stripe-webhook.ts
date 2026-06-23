@@ -123,6 +123,26 @@ async function releaseProcessedEvent(
   }
 }
 
+// ── Raw Body Reader ───────────────────────────────────────────────────────────
+// Stripe signs the exact request bytes. Vercel/Node body parsing changes those
+// bytes, so production verification must run against the raw request body.
+
+async function readRawBody(req: VercelRequest): Promise<string> {
+  if (typeof req.body === 'string') return req.body;
+  if (Buffer.isBuffer(req.body)) return req.body.toString('utf8');
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of req as AsyncIterable<Buffer | string>) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  if (chunks.length > 0) {
+    return Buffer.concat(chunks).toString('utf8');
+  }
+
+  return req.body && typeof req.body === 'object' ? JSON.stringify(req.body) : '';
+}
+
 // ── Stripe Signature Verification ──────────────────────────────────────────────
 // Verifies the webhook signature using the raw body and signing secret.
 // Uses Web Crypto API (Node 18+) — no stripe npm package needed.
@@ -277,6 +297,7 @@ export default async function handler(
   }
 
   let event: any;
+  const rawBody = await readRawBody(req);
 
   if (!isDevelopment) {
     // Production: verify signature using raw body
@@ -284,7 +305,6 @@ export default async function handler(
       console.error('[bg-webhook] No stripe-signature header');
       return res.status(400).json({ error: 'Missing stripe-signature header' });
     }
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     const verification = await verifyStripeSignature(rawBody, sigHeader, webhookSecret);
     if (!verification.verified) {
       console.error('[bg-webhook] Signature verification failed:', verification.error);
@@ -294,7 +314,7 @@ export default async function handler(
   } else {
     // Development: parse body directly
     console.warn('[bg-webhook] ⚠️ Development mode — skipping signature verification');
-    event = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
+    event = rawBody ? JSON.parse(rawBody) : (typeof req.body === 'object' ? req.body : {});
   }
 
   const eventId   = event.id   as string;
@@ -727,5 +747,8 @@ export default async function handler(
 }
 
 export const config = {
+  api: {
+    bodyParser: false,
+  },
   maxDuration: 15,
 };
