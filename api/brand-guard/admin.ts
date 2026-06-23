@@ -20,7 +20,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
-import cronSendDraftsHandler from './cron-send-drafts';
+import { runSendWorker } from '../_lib/outreach-sender.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -796,12 +796,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // on the 15-minute cron schedule.
   // ══════════════════════════════════════════════════════════════════════════
   if (req.method === 'POST' && path === '/send-approved-drafts') {
-    // Re-auth as CRON_SECRET so the delegate handler accepts it
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      req.headers['authorization'] = `Bearer ${cronSecret}`;
+    const { processed, results, error } = await runSendWorker(50);
+    if (error) {
+      res.status(200).json({ success: false, error, processed: 0, results: [] });
+      return;
     }
-    await cronSendDraftsHandler(req as unknown as Parameters<typeof cronSendDraftsHandler>[0], res as unknown as Parameters<typeof cronSendDraftsHandler>[1]);
+    const created = results.filter(r => r.status === 'created').length;
+    const skipped = results.filter(r => r.status === 'skipped').length;
+    const failed  = results.filter(r => r.status === 'error').length;
+    res.status(200).json({ success: true, processed, created, skipped, failed, results });
     return;
   }
 
