@@ -166,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Determine tier
     let tier: 'free' | 'holder' | 'whale' = 'free';
-    let monthlyLimit = 5;
+    let monthlyLimit = 10;
 
     if (livePrice !== null && usdValue >= WHALE_TIER_USD) {
       tier = 'whale';
@@ -178,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Update Supabase if we have a userId
     let monthlyUsed = 0;
-    let freeScansRemaining = 5;
+    let freeScansRemaining = 10;
     let paidCredits = 0;
 
     if (supabase && userId) {
@@ -197,7 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('monthly_scans_used, free_scans_used, scan_credits, monthly_reset_at')
+          .select('monthly_scans_used, free_scans_used, scan_credits, monthly_reset_at, free_scans_reset_at')
           .eq('id', userId)
           .single();
 
@@ -210,7 +210,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } else {
             monthlyUsed = profile.monthly_scans_used || 0;
           }
-          freeScansRemaining = Math.max(0, 5 - (profile.free_scans_used || 0));
+
+          // Check if daily free scan reset is needed
+          const freeResetAt = profile.free_scans_reset_at ? new Date(profile.free_scans_reset_at) : null;
+          const now = new Date();
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (!freeResetAt || freeResetAt < todayStart) {
+            // Reset free scans for the day
+            try {
+              await supabase
+                .from('user_profiles')
+                .update({ free_scans_used: 0, free_scans_reset_at: now.toISOString() })
+                .eq('id', userId);
+              freeScansRemaining = 10;
+            } catch (e) {
+              console.error('[wallet-entitlements] free scan daily reset error:', e);
+              freeScansRemaining = Math.max(0, 10 - (profile.free_scans_used || 0));
+            }
+          } else {
+            freeScansRemaining = Math.max(0, 10 - (profile.free_scans_used || 0));
+          }
           paidCredits = profile.scan_credits || 0;
         }
       } catch (e) {

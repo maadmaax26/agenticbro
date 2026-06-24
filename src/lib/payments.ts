@@ -262,7 +262,7 @@ export function useCredits(
   entitlementsOverride?: { totalRemaining: number; tier: string } | null,
 ) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
   const [loading, setLoading] = useState(true);
   const [remoteAuthToken, setRemoteAuthToken] = useState<string | null>(null);
 
