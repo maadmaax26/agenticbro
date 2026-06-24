@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanCredits, setScanCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
 
   // Wallet entitlements — checks $AGNTCBRO balance for tier/scan allowance
   // Uses connected wallet OR wallet address linked to email account

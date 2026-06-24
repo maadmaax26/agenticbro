@@ -144,9 +144,9 @@ export default function PaymentModal({
           <p className="text-3xl font-bold text-white">
             {user?.scan_credits || 0} <span className="text-purple-400 text-lg">credits</span>
           </p>
-          {(user?.free_scans_used ?? 0) < 5 && (
+          {(user?.free_scans_used ?? 0) < 10 && (
             <p className="text-xs text-green-400 mt-1">
-              + {5 - (user?.free_scans_used ?? 0)} free scans remaining
+              + {10 - (user?.free_scans_used ?? 0)} free scans remaining
             </p>
           )}
         </div>

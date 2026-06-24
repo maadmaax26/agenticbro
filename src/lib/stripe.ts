@@ -173,7 +173,7 @@ export async function loadStripe(): Promise<any | null> {
 
 export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
   const [loading, setLoading] = useState(true);
 
   // Load credits from storage or API
