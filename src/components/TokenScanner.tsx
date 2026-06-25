@@ -390,7 +390,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
                   Purchase credits to continue scanning — <span className="text-emerald-400 font-semibold">$1/scan</span> via Stripe, USDC, or AGNTCBRO
                 </p>
                 <p className="text-xs text-gray-500">
-                  5 free scans included with new accounts
+                  10 free scans per day — resets daily
                 </p>
               </>
             )}

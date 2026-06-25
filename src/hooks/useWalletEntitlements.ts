@@ -167,7 +167,7 @@ export function useWalletEntitlements(
         monthlyUsed: data.monthlyUsed ?? 0,
         freeScansRemaining: data.freeScansRemaining ?? 10,
         paidCredits: data.paidCredits ?? 0,
-        totalRemaining: data.totalRemaining ?? 5,
+        totalRemaining: data.totalRemaining ?? 10,
         holderTierUnlocked: data.holderTierUnlocked ?? false,
         whaleTierUnlocked: data.whaleTierUnlocked ?? false,
         loading: false,
