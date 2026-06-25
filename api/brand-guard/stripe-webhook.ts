@@ -46,7 +46,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const env = (name: string, fallback = '') => (process.env[name] || fallback).trim();
+const env = (name: string, fallback = '') => {
+  const value = (process.env[name] || fallback).trim();
+  return value.replace(/^(['"])(.*)\1$/, '$2');
+};
 const supabaseUrl = env('VITE_SUPABASE_URL', env('SUPABASE_URL'));
 const supabaseServiceKey = env('SUPABASE_SECRET_API_KEY', env('SUPABASE_SERVICE_ROLE_KEY'));
 const webhookSecret = env('STRIPE_WEBHOOK_SECRET');
@@ -278,6 +281,27 @@ function mapSubscriptionStatus(stripeStatus: string, cancelAtPeriodEnd = false):
   }
 }
 
+async function saveSubscriptionForOwner(
+  supabase: ReturnType<typeof createClient>,
+  ownerId: string,
+  values: Record<string, unknown>
+): Promise<{ error: { message: string } | null }> {
+  const { data: updated, error: updateError } = await supabase
+    .from('brand_guard_subscriptions')
+    .update(values)
+    .eq('owner_id', ownerId)
+    .select('id');
+
+  if (updateError) return { error: updateError };
+  if (updated && updated.length > 0) return { error: null };
+
+  const { error: insertError } = await supabase
+    .from('brand_guard_subscriptions')
+    .insert({ owner_id: ownerId, ...values });
+
+  return { error: insertError };
+}
+
 // ── Webhook Handler ───────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -402,28 +426,24 @@ export default async function handler(
           const stripeSubscriptionId = session.subscription as string;
           const monthlyCredits = planConfig.monthly_credits === -1 ? 999999 : planConfig.monthly_credits;
 
-          // Upsert subscription record (handles upgrade/downgrade gracefully)
-          const { error: upsertError } = await supabase
-            .from('brand_guard_subscriptions')
-            .upsert(
-              {
-                owner_id:                 userId,
-                brand_monitor_id:         session.metadata?.brand_monitor_id || null,
-                plan_id:                  planId,
-                status:                   'active',
-                current_period_start:     new Date((session.current_period_start || Date.now() / 1000) * 1000).toISOString(),
-                current_period_end:       new Date((session.current_period_end   || Date.now() / 1000 + 30*24*3600) * 1000).toISOString(),
-                cancel_at_period_end:     false,
-                monthly_credits_included: monthlyCredits,
-                monthly_credits_used:     0,
-                brands_included:          planConfig.brands_included === -1 ? 999 : planConfig.brands_included,
-                stripe_customer_id:       stripeCustomerId,
-                stripe_subscription_id:   stripeSubscriptionId,
-                stripe_price_id:          packageId,
-                updated_at:               new Date().toISOString(),
-              },
-              { onConflict: 'owner_id' }
-            );
+          // Save subscription record (handles upgrade/downgrade gracefully).
+          // owner_id is indexed but not unique in the deployed schema, so
+          // PostgREST upsert(onConflict: 'owner_id') fails.
+          const { error: upsertError } = await saveSubscriptionForOwner(supabase, userId, {
+            brand_monitor_id:         session.metadata?.brand_monitor_id || null,
+            plan_id:                  planId,
+            status:                   'active',
+            current_period_start:     new Date((session.current_period_start || Date.now() / 1000) * 1000).toISOString(),
+            current_period_end:       new Date((session.current_period_end   || Date.now() / 1000 + 30*24*3600) * 1000).toISOString(),
+            cancel_at_period_end:     false,
+            monthly_credits_included: monthlyCredits,
+            monthly_credits_used:     0,
+            brands_included:          planConfig.brands_included === -1 ? 999 : planConfig.brands_included,
+            stripe_customer_id:       stripeCustomerId,
+            stripe_subscription_id:   stripeSubscriptionId,
+            stripe_price_id:          packageId,
+            updated_at:               new Date().toISOString(),
+          });
 
           if (upsertError) {
             console.error(`[bg-webhook] Failed to upsert subscription: ${upsertError.message}`);
@@ -502,27 +522,21 @@ export default async function handler(
           break;
         }
 
-        // Ensure subscription record exists (checkout.session.completed may have already upserted it)
-        const { error: subError } = await supabase
-          .from('brand_guard_subscriptions')
-          .upsert(
-            {
-              owner_id:                 subUserId,
-              brand_monitor_id:         subscription.metadata?.brand_monitor_id || null,
-              plan_id:                  planInfo.plan_id || 'free',
-              status:                   mapSubscriptionStatus(subscription.status),
-              current_period_start:     new Date(subscription.current_period_start * 1000).toISOString(),
-              current_period_end:       new Date(subscription.current_period_end   * 1000).toISOString(),
-              monthly_credits_included: planInfo.credits === -1 ? 999999 : (planInfo.credits || 0),
-              monthly_credits_used:     0,
-              brands_included:          planInfo.plan_id === 'guardian' ? 3 : planInfo.plan_id === 'sentinel' ? 10 : 999,
-              stripe_customer_id:       subscription.customer,
-              stripe_subscription_id:   subscription.id,
-              stripe_price_id:          priceId,
-              updated_at:               new Date().toISOString(),
-            },
-            { onConflict: 'owner_id' }
-          );
+        // Ensure subscription record exists (checkout.session.completed may have already saved it).
+        const { error: subError } = await saveSubscriptionForOwner(supabase, subUserId, {
+          brand_monitor_id:         subscription.metadata?.brand_monitor_id || null,
+          plan_id:                  planInfo.plan_id || 'free',
+          status:                   mapSubscriptionStatus(subscription.status),
+          current_period_start:     new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end:       new Date(subscription.current_period_end   * 1000).toISOString(),
+          monthly_credits_included: planInfo.credits === -1 ? 999999 : (planInfo.credits || 0),
+          monthly_credits_used:     0,
+          brands_included:          planInfo.plan_id === 'guardian' ? 3 : planInfo.plan_id === 'sentinel' ? 10 : 999,
+          stripe_customer_id:       subscription.customer,
+          stripe_subscription_id:   subscription.id,
+          stripe_price_id:          priceId,
+          updated_at:               new Date().toISOString(),
+        });
 
         if (subError) {
           console.error('[bg-webhook] subscription.created upsert error:', subError.message);
