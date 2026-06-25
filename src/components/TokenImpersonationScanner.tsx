@@ -128,7 +128,7 @@ export default function TokenImpersonationScanner() {
     useCredit: consumeCredit
   } = useCredits(null, null, walletAddress);
 
-  // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
+  // Wallet tier gating — Holder ($100+) gets 100/mo, Whale ($1K+) gets unlimited
   const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
   const isTest = isTestWallet(walletAddress ?? '');
 
@@ -216,7 +216,7 @@ export default function TokenImpersonationScanner() {
     : freeScansRemaining === 1 ? '#fbbf24'  // amber — last free scan
     : '#4ade80';                          // green — scans available
 
-  const totalScansRemaining = isTest ? 999999 : whaleTierUnlocked ? 999999 : holderTierUnlocked ? 50 : freeScansRemaining + credits;
+  const totalScansRemaining = isTest ? 999999 : whaleTierUnlocked ? 999999 : holderTierUnlocked ? 100 : freeScansRemaining + credits;
 
   return (
     <div className="space-y-6">
@@ -251,7 +251,7 @@ export default function TokenImpersonationScanner() {
               Scans
             </span>
             <span className="text-xl font-black" style={{ color: counterColour }}>
-              {isTest ? '∞' : whaleTierUnlocked ? '∞' : holderTierUnlocked ? '50' : totalScansRemaining}
+              {isTest ? '∞' : whaleTierUnlocked ? '∞' : holderTierUnlocked ? '100' : totalScansRemaining}
             </span>
             {isTest ? (
               <span className="text-xs text-purple-400">
@@ -263,7 +263,7 @@ export default function TokenImpersonationScanner() {
               </span>
             ) : holderTierUnlocked ? (
               <span className="text-xs text-purple-400">
-                💎 Holder — 50/mo
+                💎 Holder — 100/mo
               </span>
             ) : (
               <>
@@ -284,7 +284,7 @@ export default function TokenImpersonationScanner() {
 
         {/* Tier scan counts */}
         <div className="text-xs text-gray-500 mb-4">
-          <span>Free: 5 | Holder: 50/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
+          <span>Free: 5 | Holder: 100/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
         </div>
 
         {/* ── No scans remaining ── */}

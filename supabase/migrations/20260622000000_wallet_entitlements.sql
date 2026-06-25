@@ -158,7 +158,7 @@ BEGIN
     v_new_limit := -1;  -- unlimited
   ELSIF p_usd_value >= 100 THEN
     v_new_tier := 'holder';
-    v_new_limit := 50;
+    v_new_limit := 100;
   ELSE
     v_new_tier := 'free';
     v_new_limit := 5;

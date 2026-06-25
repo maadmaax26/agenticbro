@@ -173,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       monthlyLimit = -1; // unlimited
     } else if (livePrice !== null && usdValue >= HOLDER_TIER_USD) {
       tier = 'holder';
-      monthlyLimit = 50;
+      monthlyLimit = 100;
     }
 
     // Update Supabase if we have a userId
