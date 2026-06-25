@@ -10,6 +10,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandGuardDraftsReview from '../components/brand-guard/BrandGuardDraftsReview';
+import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
+import BrandGuardProspectsList from '../components/brand-guard/BrandGuardProspectsList';
 
 // Mobile breakpoint hook
 const useIsMobile = () => {
@@ -113,6 +115,7 @@ export function BrandGuardAdminPage() {
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
   const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'outreach'>('outreach');
+  const [outreachTab, setOutreachTab] = useState<'review' | 'hunt' | 'prospects'>('review');
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -916,7 +919,38 @@ export function BrandGuardAdminPage() {
         )}
         {activeTab === 'outreach' && (
           <div>
-            <BrandGuardDraftsReview authToken={authToken} />
+            {/* Outreach sub-tab nav */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+              {([
+                { id: 'review',    label: '📋 Review Queue',    desc: 'Approve / reject drafts' },
+                { id: 'hunt',      label: '🔍 Find Prospects',  desc: 'AI-powered prospect discovery' },
+                { id: 'prospects', label: '👥 All Prospects',   desc: 'Browse + edit prospect records' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setOutreachTab(tab.id)}
+                  title={tab.desc}
+                  style={{
+                    fontSize: 11,
+                    padding: '8px 16px',
+                    background: outreachTab === tab.id ? 'rgba(74,222,128,0.1)' : 'transparent',
+                    border: `1px solid ${outreachTab === tab.id ? 'rgba(74,222,128,0.45)' : 'rgba(74,222,128,0.15)'}`,
+                    borderRadius: 6,
+                    color: outreachTab === tab.id ? '#4ade80' : '#6b7280',
+                    cursor: 'pointer',
+                    fontFamily: "'DM Mono',monospace",
+                    fontWeight: outreachTab === tab.id ? 'bold' : 'normal',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sub-tab content */}
+            {outreachTab === 'review' && <BrandGuardDraftsReview authToken={authToken} />}
+            {outreachTab === 'hunt' && <BrandGuardProspectHunter authToken={authToken || ''} />}
+            {outreachTab === 'prospects' && <BrandGuardProspectsList authToken={authToken} />}
           </div>
         )}
       </div>

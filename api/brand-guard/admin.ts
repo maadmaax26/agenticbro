@@ -884,6 +884,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // GET /prospects — Browse all prospects with search + filter
+  // Params: search (company/domain/email), channel, approval, suppressed,
+  //         compliance_ok, sort (victim_score|created_at), order (desc|asc),
+  //         limit (max 200), offset
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/prospects') {
+    const search = url.searchParams.get('search') || '';
+    const channelFilter = url.searchParams.get('channel') || '';
+    const approvalFilter = url.searchParams.get('approval') || '';
+    const suppressedFilter = url.searchParams.get('suppressed') || '';
+    const complianceFilter = url.searchParams.get('compliance_ok') || '';
+    const sort = url.searchParams.get('sort') || 'victim_score';
+    const order = url.searchParams.get('order') === 'asc';
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200);
+    const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+    const allowedSort = ['victim_score', 'created_at', 'company_name', 'primary_domain', 'updated_at'];
+    const sortCol = allowedSort.includes(sort) ? sort : 'victim_score';
+
+    let query = outreachClient
+      .from('prospects')
+      .select('id, company_name, primary_domain, vertical, contact_email, contact_name, contact_title, linkedin_url, victim_score, compliance_ok, compliance_region, suppressed, channel, approval, sent_at, created_at, updated_at', { count: 'exact' })
+      .order(sortCol, { ascending: order })
+      .range(offset, offset + limit - 1);
+
+    if (search) {
+      query = query.or(
+        `company_name.ilike.%${search}%,primary_domain.ilike.%${search}%,contact_email.ilike.%${search}%,contact_name.ilike.%${search}%`
+      );
+    }
+    if (channelFilter) query = query.eq('channel', channelFilter);
+    if (approvalFilter) query = query.eq('approval', approvalFilter);
+    if (suppressedFilter === 'true') query = query.eq('suppressed', true);
+    else if (suppressedFilter === 'false') query = query.eq('suppressed', false);
+    if (complianceFilter === 'true') query = query.eq('compliance_ok', true);
+    else if (complianceFilter === 'false') query = query.eq('compliance_ok', false);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      if (isMissingTable(error)) {
+        res.status(200).json({ success: true, available: false, total: 0, prospects: [], message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to fetch prospects', details: error.message });
+      return;
+    }
+
+    res.status(200).json({ success: true, available: true, total: count ?? 0, offset, limit, prospects: data || [] });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // POST /send-approved-drafts — Immediately create Gmail drafts for all
   // approved, unsent outreach email drafts (channels A and B).
   // Proxies to cron-send-drafts.ts so the same logic runs on-demand and

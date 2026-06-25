@@ -660,7 +660,7 @@ export default function BrandGuardDraftsReview({ authToken }: { authToken: strin
                       </div>
                       <div style={{ fontSize: 9, color: "#4b5563", display: "flex", justifyContent: "space-between" }}>
                         <span>{d.primary_domain || "—"}</span>
-                        <span>approved {relTime(d.approved_at)}</span>
+                        <span>approved {relTime(d.approved_at ?? null)}</span>
                       </div>
                     </div>
                   );
@@ -681,7 +681,7 @@ export default function BrandGuardDraftsReview({ authToken }: { authToken: strin
                   </div>
                   <div style={{ textAlign: "right", fontSize: 10, color: "#6b7280" }}>
                     <div style={{ color: "#a78bfa", marginBottom: 2 }}>✓ Approved</div>
-                    <div>{relTime(approvedSelected.approved_at)}</div>
+                    <div>{relTime(approvedSelected.approved_at ?? null)}</div>
                   </div>
                 </div>
 
