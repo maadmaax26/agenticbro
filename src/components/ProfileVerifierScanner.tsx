@@ -489,26 +489,33 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
                 });
                 botDetection = calculateBotScore(botInput, platform, workerEngagement);
                 engagementAnalysis = botDetection.engagementAnalysis;
-              } catch (_) { /* skip if insufficient data */ }
+              } catch { /* skip if insufficient data */ }
 
               const apiResult: ProfileScanResult = {
                 success: true,
                 platform: platform as any,
                 username: cleanUsername,
-                verified: false,
-                riskScore: Math.round(d.riskScore * 10),
+                displayName: d.displayName || d.profileData?.displayName,
+                verified: d.verified ?? d.profileData?.verified ?? false,
+                riskScore: normalizeRiskScore(d.riskScore),
                 riskLevel: d.riskLevel || 'LOW',
                 scamType: undefined,
-                redFlags: d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) - ${f.description}`) || [],
-                evidence: [],
-                recommendation: `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected.`,
+                redFlags: d.redFlags || d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) - ${f.description}`) || [],
+                evidence: d.evidence || [],
+                recommendation: d.recommendation || `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected.`,
                 profileData: {
-                  followers: d.followers ?? undefined,
+                  followers: d.profileData?.followers ?? d.followers ?? undefined,
+                  following: d.profileData?.following ?? d.following ?? undefined,
+                  posts: d.profileData?.posts ?? d.posts ?? undefined,
+                  bio: d.profileData?.bio ?? d.bio ?? undefined,
+                  location: d.profileData?.location ?? d.location ?? undefined,
+                  website: d.profileData?.website ?? d.website ?? undefined,
+                  profileImage: d.profileData?.profileImage ?? d.profileImage ?? undefined,
                 },
-                confidence: d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM',
-                scanDate: d.scanTimestamp || new Date().toISOString(),
-                botDetection,
-                engagementAnalysis,
+                confidence: d.confidence || (d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM'),
+                scanDate: d.scanDate || d.scanTimestamp || new Date().toISOString(),
+                botDetection: d.botDetection || botDetection,
+                engagementAnalysis: d.engagementAnalysis || engagementAnalysis,
               };
               setResult(apiResult);
               uploadScanToSupabase(apiResult).catch(() => {});
@@ -689,6 +696,13 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
   };
 
+  const normalizeRiskScore = (score: unknown): number => {
+    const numeric = Number(score ?? 0);
+    if (!Number.isFinite(numeric)) return 0;
+    const normalized = numeric <= 10 ? numeric * 10 : numeric;
+    return Math.max(0, Math.min(100, Math.round(normalized)));
+  };
+
   // Normalize backend response to frontend format
   const normalizeResult = (data: any, platform: string, username: string): ProfileScanResult => {
     // Compute bot detection from available data
@@ -702,17 +716,19 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       console.warn('[BotDetection] Failed to compute bot score:', e);
     }
 
+    const riskScore = normalizeRiskScore(data.riskScore ?? data.risk_score);
+
     return {
       success: data.success ?? true,
       platform: data.platform || platform,
       username: data.username || username,
       displayName: data.displayName || data.profileData?.displayName,
       verified: data.verified ?? data.profileData?.verified ?? false,
-      riskScore: data.riskScore ?? 0,
-      riskLevel: data.riskLevel || calculateRiskLevel(data.riskScore ?? 0),
+      riskScore,
+      riskLevel: data.riskLevel || calculateRiskLevel(riskScore),
       scamType: data.scamType,
-      redFlags: data.redFlags || data.flags || [],
-      evidence: data.evidence || [],
+      redFlags: data.redFlags || data.flags || data.flagDetails?.map((f: any) => `${f.flag || f.id} (${f.weight || f.points || 0}pts) - ${f.description || f.name || 'Flag detected'}`) || [],
+      evidence: data.evidence || data.flagDetails?.map((f: any) => `Matched ${f.flag || f.id}: ${f.patternMatched || f.description || f.name}`) || [],
       recommendation: data.recommendation || data.recommendation || 'Profile analyzed successfully',
       profileData: {
         followers: data.profileData?.followers,
@@ -774,9 +790,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             results.push({
               platform: platformLabel,
               success: data.success ?? false,
-              riskScore: Math.round((data.riskScore ?? 0) * 10),
+              riskScore: normalizeRiskScore(data.riskScore),
               riskLevel: data.riskLevel ?? 'UNKNOWN',
-              redFlags: data.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts)`) || [],
+              redFlags: data.redFlags || data.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts)`) || [],
               scannedAt: new Date().toISOString(),
             });
           } else {
