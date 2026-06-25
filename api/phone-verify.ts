@@ -100,6 +100,7 @@ interface PhoneRiskResult {
   countryCode: string;
   carrier: string;
   lineType: string;
+  rawLineType?: string;
   callerName: string | null;        // CNAM from Twilio / IPQS
   city: string | null;              // from IPQS
   region: string | null;            // state/province from IPQS
@@ -138,6 +139,8 @@ const FLAG_VALUES: Record<string, number> = {
   community_reports_high:     15,
   toll_free_untraceable:      10,
   landline_text:              10,
+  sms_line_type_conflict:      25,
+  reported_malicious_sms:     30,
   no_carrier_info:            10,
   ipqs_leaked:                10,
   medium_risk_country:         8,
@@ -439,6 +442,7 @@ function analyzePhoneHeuristics(
   const carrierLower    = (carrier || '').toLowerCase();
   const carrierIsEmpty  = !carrier || carrier.trim() === '';
   const isVoip          = lineType.includes('voip');
+  const smsLineTypeConflict = textScam && lineType === 'landline' && !isVoip;
 
   // CNAM: prefer Twilio caller_name, then IPQS name
   const callerName: string | null =
@@ -517,7 +521,7 @@ function analyzePhoneHeuristics(
   }
 
   // ── Flag 10: Landline (10pts) ─────────────────────────────────────────────
-  if (lineType === 'landline' && !isVoip) {
+  if (lineType === 'landline' && !isVoip && !textScam) {
     redFlags.push(`landline_text (10pts) — Landline number — unusual for SMS/text-based scams`);
     totalPoints += FLAG_VALUES.landline_text;
   }
@@ -560,9 +564,12 @@ function analyzePhoneHeuristics(
 
   // ── SMS scam flags ────────────────────────────────────────────────────────
   if (textScam) {
-    if (lineType === 'landline') {
-      redFlags.push(`spoofed_landline_sms (20pts) — Landline number reportedly sent text messages — landlines cannot SMS, number is almost certainly spoofed`);
-      totalPoints += FLAG_VALUES.spoofed_landline_sms;
+    redFlags.push(`reported_malicious_sms (30pts) — User reported this number sent a suspicious or malicious SMS/text message`);
+    totalPoints += FLAG_VALUES.reported_malicious_sms;
+
+    if (smsLineTypeConflict) {
+      redFlags.push(`sms_line_type_conflict (25pts) — SMS was reported from a number carrier databases classify as landline — likely mobile/text-enabled, hosted messaging, stale carrier data, or spoofed caller ID`);
+      totalPoints += FLAG_VALUES.sms_line_type_conflict;
     } else if (isVoip || isVirtualCarrier || twilioData?.line_type_intelligence?.type === 'nonFixedVoip') {
       redFlags.push(`voip_sms_confirmed (10pts) — VoIP/virtual number actively sending text messages, consistent with SMS spam or smishing operations`);
       totalPoints += FLAG_VALUES.voip_sms_confirmed;
@@ -594,13 +601,18 @@ function analyzePhoneHeuristics(
   let ownerType = 'unknown';
   if (isTollFree)                     ownerType = 'business';
   else if (isVoip || isVirtualCarrier) ownerType = 'voip_service';
+  else if (smsLineTypeConflict)       ownerType = 'unknown';
   else if (lineType === 'landline')   ownerType = 'business';
   else if (lineType === 'mobile' || lineType === 'wireless') ownerType = 'individual';
 
   // ── Threat matches ────────────────────────────────────────────────────────
   const scamOperationMatch = totalPoints >= 20 ? `High-risk indicators detected (score ${riskScore}/10)` : null;
   const virtualCenterMatch = (isVoip || isVirtualCarrier) ? carrier || 'Virtual/VoIP Service' : null;
-  const spamDialerMatch    = isTollFree ? 'Toll-free numbers are frequently used for mass calling operations' : null;
+  const spamDialerMatch    = isTollFree
+    ? 'Toll-free numbers are frequently used for mass calling operations'
+    : smsLineTypeConflict
+      ? 'Reported SMS conflicts with carrier landline classification; treat as text-enabled service or spoofing until proven otherwise'
+      : null;
 
   // ── Recommendation ────────────────────────────────────────────────────────
   let recommendation: string;
@@ -635,7 +647,8 @@ function analyzePhoneHeuristics(
     country:   country || 'Unknown',
     countryCode: countryCode || '',
     carrier:   carrier || 'Unknown',
-    lineType:  lineType || 'unknown',
+    lineType:  smsLineTypeConflict ? 'reported_sms_text_enabled_or_spoofed (carrier lookup: landline)' : lineType || 'unknown',
+    rawLineType: lineType || 'unknown',
     callerName,
     city,
     region,
