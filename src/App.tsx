@@ -611,7 +611,7 @@ function MainApp() {
             style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
             <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
             <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 5 scans. Hold tokens to unlock more.</span>
+            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">50 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 10 scans/day. Hold tokens to unlock more.</span>
           </div>
 
           <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
@@ -659,7 +659,7 @@ function MainApp() {
                 ) : effectiveHolderTier ? (
                   <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/50</>
                 ) : (
-                  <>🔍 {priorityScansRemaining}/5</>
+                  <>🔍 {priorityScansRemaining}/10</>
                 )}
               </div>
 
@@ -751,7 +751,7 @@ function MainApp() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
-                        { icon: '🔍', title: 'Priority Scans', desc: '5 free wallet/channel/token scans' },
+                        { icon: '🔍', title: 'Priority Scans', desc: '10 free scans per day' },
                         { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
@@ -1000,7 +1000,7 @@ function MainApp() {
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-              <p className="text-gray-400">First 5 scans free for each tool — {connected ? 'logged in' : 'no wallet needed'}</p>
+              <p className="text-gray-400">First 10 scans free per day — {connected ? 'logged in' : 'no wallet needed'}</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
@@ -1092,7 +1092,7 @@ function MainApp() {
               {[
                 { value: '260+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '5 Free', label: 'Priority Scans',       color: '#a78bfa' },
+                { value: '10/day', label: 'Free Scans',            color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
@@ -1160,7 +1160,7 @@ function MainApp() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
                   <span>🎁</span>
-                  <span>First 5 scans free when you connect your wallet — no token required</span>
+                  <span>First 10 scans free daily — resets every 24 hours, no token required</span>
                 </div>
               </div>
             </div>
