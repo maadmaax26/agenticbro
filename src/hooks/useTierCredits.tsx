@@ -4,7 +4,7 @@
  * Manages monthly scan credits for Holder and Whale tier users.
  * 
  * Free Tier: 5 free scans
- * Holder Tier ($100+ AGNTCBRO): 50 ALL scans/month (Profile, Phone, Token, Channel, Priority)
+ * Holder Tier ($100+ AGNTCBRO): 100 ALL scans/month (Profile, Phone, Token, Channel, Priority)
  * Whale Tier ($1,000+ AGNTCBRO): Unlimited scans
  * 
  * After monthly allowance is used, users can purchase credits at $1/scan.
@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const FREE_TIER_SCANS = 25; // Free scans for everyone
-export const HOLDER_TIER_SCANS = 50; // 50 ALL scans/month for Holder Tier
+export const HOLDER_TIER_SCANS = 100; // 100 ALL scans/month for Holder Tier
 export const SCAN_PRICE_USD = 1; // $1 per scan after allowance
 
 // Test wallets get unlimited scans
@@ -26,7 +26,7 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TierCreditsState {
-  tierMonthlyScans: number;       // Total monthly allowance (50 for Holder)
+  tierMonthlyScans: number;       // Total monthly allowance (100 for Holder)
   tierScansUsed: number;          // Scans used this month
   tierScansRemaining: number;    // Scans remaining this month
   paidCredits: number;           // Purchased credits (don't expire)

@@ -201,7 +201,7 @@ export default function AgntcbroBalanceTracker() {
                 >
                 <span className="text-xs text-gray-400">Holder Tier Progress</span>
                 <span className="text-xs font-semibold" style={{ color: holderTierUnlocked ? '#4ade80' : '#fbbf24' }}>
-                  {holderTierUnlocked ? '✅ 50 scans/month' : `$${(100 - usdValue).toFixed(0)} away`}
+                  {holderTierUnlocked ? '✅ 100 scans/month' : `$${(100 - usdValue).toFixed(0)} away`}
                 </span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
@@ -216,7 +216,7 @@ export default function AgntcbroBalanceTracker() {
                 />
               </div>
               <p className="text-[10px] text-gray-600 mt-1">
-                Hold $100+ USD of $AGNTCBRO to unlock 50 ALL scans/month (Profile, Phone, Token, Channel)
+                Hold $100+ USD of $AGNTCBRO to unlock 100 ALL scans/month (Profile, Phone, Token, Channel)
               </p>
               {whaleTierUnlocked && (
                 <p className="text-[10px] text-emerald-400 mt-1">

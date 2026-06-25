@@ -77,7 +77,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
   const { credits, freeScansRemaining, hasScans, useCredit: consumeCredit, isTestWallet } = useCredits(null, null, walletAddress);
   const isAuthenticated = !!walletAddress;
 
-  // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
+  // Wallet tier gating — Holder ($100+) gets 100/mo, Whale ($1K+) gets unlimited
   const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
   const isTierTest = isTestWalletGating(walletAddress ?? '');
   
@@ -432,7 +432,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
                 : whaleTierUnlocked
                   ? '🐋 Whale — Unlimited'
                   : holderTierUnlocked
-                    ? '💎 Holder — 50/mo'
+                    ? '💎 Holder — 100/mo'
                     : freeScansRemaining > 0
                       ? `${freeScansRemaining} Free`
                       : 'No Free Scans'}
@@ -442,7 +442,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
             )}
           </div>
           <div className="flex items-center gap-3 text-gray-400">
-            <span>Free: 5 | Holder: 50/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
+            <span>Free: 5 | Holder: 100/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
           </div>
         </div>
 

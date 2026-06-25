@@ -136,7 +136,7 @@ export default function AuthModal({
             >
               <span className="text-xl">💎</span>
               <div>
-                <p className="text-white text-sm font-semibold">Holder Tier — 50 scans/month</p>
+                <p className="text-white text-sm font-semibold">Holder Tier — 100 scans/month</p>
                 <p className="text-gray-500 text-xs">Hold $100+ in $AGNTCBRO</p>
               </div>
             </div>
@@ -443,7 +443,7 @@ export default function AuthModal({
             color: '#4ade80',
           }}
         >
-          🎁 New accounts get <strong>5 free scans</strong> — link your Solana wallet after signup to unlock <strong>50 scans/month</strong> with $100+ in $AGNTCBRO!
+          🎁 New accounts get <strong>5 free scans</strong> — link your Solana wallet after signup to unlock <strong>100 scans/month</strong> with $100+ in $AGNTCBRO!
         </div>
       </div>
     </div>

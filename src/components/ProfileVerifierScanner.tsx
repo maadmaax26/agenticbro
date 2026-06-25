@@ -242,7 +242,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
   const effectiveEmail = email || null;
 
-  // Get tier status from useTokenGating (Holder: $100+ = 50 scans/month, Whale: $1000+ = unlimited)
+  // Get tier status from useTokenGating (Holder: $100+ = 100 scans/month, Whale: $1000+ = unlimited)
   const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
 
   // Use the credits system ($1/scan, tracked by wallet/email)
@@ -260,9 +260,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
   // Calculate display text based on tier
   // Free: 5 scans
-  // Holder ($100+): 50 ALL scans/month
+  // Holder ($100+): 100 ALL scans/month
   // Whale ($1000+): Unlimited
-  const displayScans = isTestWallet ? '∞ Unlimited' : whaleTierUnlocked ? '∞ Unlimited' : holderTierUnlocked ? '50 ALL' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`;
+  const displayScans = isTestWallet ? '∞ Unlimited' : whaleTierUnlocked ? '∞ Unlimited' : holderTierUnlocked ? '100 ALL' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`;
 
   // ── Watch Realtime job updates ─────────────────────────────────────────────
   useEffect(() => {
@@ -389,7 +389,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
 
     // Only use a credit if not in a holder/whale tier
-    // Holder tier: 50 free scans/month (no credit deduction)
+    // Holder tier: 100 free scans/month (no credit deduction)
     // Whale tier: Unlimited free scans (no credit deduction)
     if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
       const creditResult = await consumeCredit();
@@ -992,7 +992,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 : whaleTierUnlocked
                   ? '∞ Unlimited (Whale)'
                   : holderTierUnlocked
-                    ? '50 ALL Scans (Holder)'
+                    ? '100 ALL Scans (Holder)'
                     : freeScansRemaining > 0
                       ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}`
                       : 'No Free Scans'}

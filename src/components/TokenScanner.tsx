@@ -60,7 +60,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     useCredit: consumeCredit
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
-  // Wallet tier gating — Holder ($100+) gets 50/mo, Whale ($1K+) gets unlimited
+  // Wallet tier gating — Holder ($100+) gets 100/mo, Whale ($1K+) gets unlimited
   const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
   const isTest = isTestWallet(effectiveWalletAddress ?? '');
 
@@ -284,7 +284,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
     : freeScansRemaining === 1 ? '#fbbf24'
     : '#4ade80';
 
-  const totalScansRemaining = isTest ? 999999 : whaleTierUnlocked ? 999999 : holderTierUnlocked ? 50 : freeScansRemaining + credits;
+  const totalScansRemaining = isTest ? 999999 : whaleTierUnlocked ? 999999 : holderTierUnlocked ? 100 : freeScansRemaining + credits;
 
   return (
     <div className="space-y-6">
@@ -331,7 +331,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
               </span>
             ) : holderTierUnlocked ? (
               <span className="text-xs text-purple-400">
-                💎 Holder — 50/mo
+                💎 Holder — 100/mo
               </span>
             ) : (
               <>
@@ -352,7 +352,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
 
         {/* Tier scan counts */}
         <div className="text-xs text-gray-500 mb-4">
-          <span>Free: 5 | Holder: 50/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
+          <span>Free: 5 | Holder: 100/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
         </div>
 
         {/* No scans remaining */}
@@ -428,7 +428,7 @@ export default function TokenScanner({ onLoginRequired }: TokenScannerProps) {
               }}
             >
               {scanning ? '🔄 Scanning...' : hasScans 
-                ? `🔍 Scan Token (${isTest ? '∞' : whaleTierUnlocked ? '∞ Whale' : holderTierUnlocked ? '50 (Holder)' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
+                ? `🔍 Scan Token (${isTest ? '∞' : whaleTierUnlocked ? '∞ Whale' : holderTierUnlocked ? '100 (Holder)' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`})`
                 : '❌ No Scans - Buy Credits'}
             </button>
           </div>
