@@ -21,6 +21,7 @@ interface PhoneScanResult {
   countryCode:    string;
   carrier:        string;
   lineType:       string;
+  rawLineType?:    string;
   callerName:     string | null;
   city:           string | null;
   region:         string | null;
@@ -60,12 +61,21 @@ function getRiskColors(level: string) {
 
 function getLineTypeIcon(lineType: string): string {
   const lt = (lineType || '').toLowerCase();
+  if (lt.includes('reported_sms') || lt.includes('text_enabled')) return '📱';
   if (lt.includes('voip') || lt.includes('virtual')) return '☁️';
   if (lt.includes('mobile') || lt.includes('cell') || lt.includes('wireless')) return '📱';
   if (lt.includes('landline') || lt.includes('fixed')) return '☎️';
   if (lt.includes('toll_free') || lt.includes('toll free')) return '📞';
   if (lt.includes('premium')) return '💰';
   return '📞';
+}
+
+function formatLineType(lineType: string, rawLineType?: string): string {
+  const lt = (lineType || '').toLowerCase();
+  if (lt.includes('reported_sms_text_enabled_or_spoofed')) {
+    return `Reported SMS-capable / possible spoofing${rawLineType ? ` (carrier lookup: ${rawLineType})` : ''}`;
+  }
+  return lineType || 'unknown';
 }
 
 function getOwnerTypeLabel(ownerType: string): { label: string; color: string } {
@@ -246,8 +256,8 @@ export default function PhoneNumberVerifier() {
                   className="w-4 h-4 rounded accent-purple-500"
                 />
                 <span className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
-                  📱 This number sent me a text / SMS message
-                  <span className="ml-1 text-purple-500 font-semibold">(boosts scoring for landline spoofing)</span>
+                  📱 This number sent me a suspicious / malicious text message
+                  <span className="ml-1 text-purple-500 font-semibold">(treats SMS evidence as a risk signal)</span>
                 </span>
               </label>
 
@@ -349,7 +359,7 @@ export default function PhoneNumberVerifier() {
                 </p>
                 <p className="text-gray-300">
                   <span className="text-gray-500">Line type:</span>{' '}
-                  {getLineTypeIcon(result.lineType)} {result.lineType}
+                  {getLineTypeIcon(result.lineType)} {formatLineType(result.lineType, result.rawLineType)}
                 </p>
                 <p className="text-gray-300">
                   <span className="text-gray-500">Owner type:</span>{' '}
