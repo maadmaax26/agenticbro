@@ -17,6 +17,7 @@
  * POST /api/brand-guard/admin/apply-approvals      — Record human approve/reject decisions (no send)
  * GET  /api/brand-guard/admin/approved-drafts      — Approved + unsent drafts awaiting Gmail send
  * PATCH /api/brand-guard/admin/prospect            — Update contact_email / contact_name / linkedin_url on a prospect
+ * POST /api/brand-guard/admin/save-draft           — Save a ProspectHunter-generated email as an unreviewed outreach draft
  * POST /api/brand-guard/admin/send-approved-drafts — Immediately create Gmail drafts for all approved+unsent email drafts
  */
 
@@ -933,6 +934,129 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     res.status(200).json({ success: true, available: true, total: count ?? 0, offset, limit, prospects: data || [] });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // POST /save-draft — Save a manually-written or AI-generated email as an
+  // unreviewed outreach draft in the pipeline. Creates the prospect row if
+  // one doesn't already exist for the domain. Called from ProspectHunter's
+  // "Save to Queue" button.
+  //
+  // Body: { company_name, primary_domain, contact_email?, contact_name?,
+  //         contact_title?, linkedin_url?, vertical?, threat_type?,
+  //         victim_score?, subject?, body, channel? }
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'POST' && path === '/save-draft') {
+    const body = await parseBody(req);
+    const companyName   = String(body.company_name   || '').trim();
+    const primaryDomain = String(body.primary_domain || '').trim().toLowerCase();
+    const contactEmail  = String(body.contact_email  || '').trim().toLowerCase();
+    const contactName   = String(body.contact_name   || '').trim();
+    const contactTitle  = String(body.contact_title  || '').trim();
+    const linkedinUrl   = String(body.linkedin_url   || '').trim();
+    const vertical      = String(body.vertical       || '').trim();
+    const threatType    = String(body.threat_type    || '').trim();
+    const victimScore   = Math.min(100, Math.max(0, Number(body.victim_score) || 50));
+    const subject       = String(body.subject        || '').trim() || null;
+    const emailBody     = String(body.body           || '').trim();
+    const channel       = String(body.channel        || (contactEmail ? 'A' : 'C')).toUpperCase();
+
+    if (!companyName && !primaryDomain) {
+      res.status(400).json({ error: 'company_name or primary_domain is required' });
+      return;
+    }
+    if (!emailBody) {
+      res.status(400).json({ error: 'body (email text) is required' });
+      return;
+    }
+
+    // ── 1. Upsert prospect ────────────────────────────────────────────────
+    let prospectId: string | null = null;
+
+    // Try to find an existing prospect by domain first
+    if (primaryDomain) {
+      const { data: existing } = await outreachClient
+        .from('prospects')
+        .select('id')
+        .eq('primary_domain', primaryDomain)
+        .maybeSingle();
+      if (existing) prospectId = (existing as Record<string, unknown>).id as string;
+    }
+
+    if (!prospectId) {
+      // Insert new prospect
+      const prospectRow: Record<string, unknown> = {
+        company_name:    companyName  || null,
+        primary_domain:  primaryDomain || null,
+        contact_email:   contactEmail  || null,
+        contact_name:    contactName   || null,
+        contact_title:   contactTitle  || null,
+        linkedin_url:    linkedinUrl   || null,
+        vertical:        vertical      || null,
+        victim_score:    victimScore,
+        compliance_ok:   true,   // assume OK for manually discovered prospects
+        suppressed:      false,
+        approval:        'unreviewed',
+        channel,
+        created_at:      new Date().toISOString(),
+        updated_at:      new Date().toISOString(),
+      };
+      if (threatType) prospectRow.threat_type = threatType;
+
+      const { data: newProspect, error: prospectErr } = await outreachClient
+        .from('prospects')
+        .insert(prospectRow)
+        .select('id')
+        .maybeSingle();
+
+      if (prospectErr) {
+        if (isMissingTable(prospectErr)) {
+          res.status(200).json({ success: false, available: false, message: TABLES_NOT_PROVISIONED });
+          return;
+        }
+        res.status(500).json({ error: 'Failed to create prospect', details: prospectErr.message });
+        return;
+      }
+      prospectId = newProspect ? (newProspect as Record<string, unknown>).id as string : null;
+    } else if (contactEmail || contactName || contactTitle || linkedinUrl) {
+      // Update contact details on existing prospect if we have new info
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (contactEmail) updates.contact_email = contactEmail;
+      if (contactName)  updates.contact_name  = contactName;
+      if (contactTitle) updates.contact_title = contactTitle;
+      if (linkedinUrl)  updates.linkedin_url  = linkedinUrl;
+      await outreachClient.from('prospects').update(updates).eq('id', prospectId);
+    }
+
+    // ── 2. Insert outreach_draft ──────────────────────────────────────────
+    const draftRow: Record<string, unknown> = {
+      prospect_id:  prospectId,
+      channel,
+      subject,
+      body:         emailBody,
+      approval:     'unreviewed',
+      created_at:   new Date().toISOString(),
+      routing_reason: 'manual:prospect-hunter',
+    };
+
+    const { data: newDraft, error: draftErr } = await outreachClient
+      .from('outreach_drafts')
+      .insert(draftRow)
+      .select('id')
+      .maybeSingle();
+
+    if (draftErr) {
+      if (isMissingTable(draftErr)) {
+        res.status(200).json({ success: false, available: false, message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to save draft', details: draftErr.message });
+      return;
+    }
+
+    const draftId = newDraft ? (newDraft as Record<string, unknown>).id as string : null;
+    res.status(201).json({ success: true, draft_id: draftId, prospect_id: prospectId });
     return;
   }
 

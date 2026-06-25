@@ -106,6 +106,8 @@ export default function BrandGuardProspectHunter({ authToken }: { authToken: str
   const [generatingEmail, setGeneratingEmail] = useState(false);
   const [generatingResearch, setGeneratingResearch] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [savingToQueue, setSavingToQueue] = useState(false);
+  const [savedToQueue, setSavedToQueue] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
@@ -243,6 +245,40 @@ export default function BrandGuardProspectHunter({ authToken }: { authToken: str
     setCopiedId(p.id);
     setTimeout(() => setCopiedId(null), 2000);
   }
+
+  // ── Save generated email to outreach Review Queue ───────────────────────
+  const saveToQueue = useCallback(async () => {
+    if (!selected || !selected.generatedEmail || savingToQueue) return;
+    setSavingToQueue(true);
+    try {
+      const res = await fetch("/api/brand-guard/admin/save-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          company_name:   selected.company,
+          primary_domain: selected.website,
+          contact_email:  selected.email,
+          contact_name:   selected.contactRole ? undefined : undefined,
+          vertical:       selected.vertical,
+          threat_type:    selected.threatType,
+          victim_score:   selected.riskLevel === "critical" ? 85 : selected.riskLevel === "high" ? 70 : 55,
+          subject:        `Brand protection for ${selected.company}`,
+          body:           selected.generatedEmail,
+          channel:        selected.email ? "A" : "C",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      if (data.available === false) throw new Error("Outreach tables not provisioned — apply db/schema.sql first");
+      setSavedToQueue(prev => new Set([...prev, selected.id]));
+      updateProspect(selected.id, { outreachStatus: "contacted" });
+      showToast(`✓ Saved to Review Queue — approve it in the 📋 Review Queue tab`);
+    } catch (e) {
+      showToast(`⚠ ${e instanceof Error ? e.message : "Save failed"}`);
+    } finally {
+      setSavingToQueue(false);
+    }
+  }, [authToken, selected, savingToQueue]);
 
   function exportCSV() {
     const h = ["Company","Website","Email","LinkedIn","Instagram","Vertical","Threat Type","Risk","Status","Incident Summary","Source","Notes"];
@@ -697,6 +733,12 @@ export default function BrandGuardProspectHunter({ authToken }: { authToken: str
                           <textarea value={selected.generatedEmail}
                             onChange={e=>updateProspect(selected.id,{generatedEmail:e.target.value})} rows={16}
                             style={{...S.input,resize:"none",lineHeight:1.8,padding:"14px 16px",marginBottom:10}}/>
+
+                          {/* Save-to-queue banner */}
+                          <div style={{background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:10,color:"#a78bfa",lineHeight:1.6}}>
+                            📋 <strong>Save to Queue</strong> to send this through the approve → Gmail pipeline instead of sending manually.
+                          </div>
+
                           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                             <button onClick={()=>copyEmail(selected)} style={S.btn("#4ade80")}>
                               {copiedId===selected.id?"✓ Copied":"Copy Email"}
@@ -704,6 +746,19 @@ export default function BrandGuardProspectHunter({ authToken }: { authToken: str
                             <a href={`mailto:${selected.email}`} style={{...S.btn("#60a5fa"),textDecoration:"none"}}>
                               Open in Mail
                             </a>
+                            {savedToQueue.has(selected.id) ? (
+                              <span style={{...S.btn("#4ade80"),opacity:0.6,cursor:"default"}}>
+                                ✓ In Review Queue
+                              </span>
+                            ) : (
+                              <button
+                                onClick={saveToQueue}
+                                disabled={savingToQueue}
+                                style={{...S.btn("#a78bfa"), opacity: savingToQueue ? 0.5 : 1, cursor: savingToQueue ? "not-allowed" : "pointer"}}
+                              >
+                                {savingToQueue ? "Saving…" : "→ Save to Queue"}
+                              </button>
+                            )}
                             <button onClick={()=>updateProspect(selected.id,{outreachStatus:"contacted"})}
                               style={S.btn("#fb923c")}>
                               Mark Contacted
