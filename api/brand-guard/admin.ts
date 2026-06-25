@@ -15,6 +15,8 @@
  * POST /api/brand-guard/admin/grant-credits        — Grant credits to a user (admin override)
  * GET  /api/brand-guard/admin/review-queue         — Unreviewed outreach drafts awaiting human approval
  * POST /api/brand-guard/admin/apply-approvals      — Record human approve/reject decisions (no send)
+ * GET  /api/brand-guard/admin/approved-drafts      — Approved + unsent drafts awaiting Gmail send
+ * PATCH /api/brand-guard/admin/prospect            — Update contact_email / contact_name / linkedin_url on a prospect
  * POST /api/brand-guard/admin/send-approved-drafts — Immediately create Gmail drafts for all approved+unsent email drafts
  */
 
@@ -478,6 +480,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const channel = (r.channel as string) || '';
       return {
         draft_id: r.id,
+        prospect_id: (pr.id as string | null) ?? (r.prospect_id as string | null) ?? null,
         company_name: pr.company_name ?? null,
         primary_domain: pr.primary_domain ?? null,
         vertical: pr.vertical ?? null,
@@ -496,6 +499,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         findings_used: r.findings_used ?? {},
         contact_channel: pr.contact_channel ?? null,
         contact_email: pr.contact_email ?? null,
+        contact_name: (pr.contact_name as string | null) ?? null,
         linkedin_url: pr.linkedin_url ?? null,
         approval: r.approval ?? 'unreviewed',
         suppressed:
@@ -786,6 +790,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (error) { res.status(500).json({ error: 'Failed to remove subscription', details: error.message }); return; }
 
     res.status(200).json({ success: true });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /approved-drafts — Approved outreach drafts waiting to be sent
+  // Returns the same shape as /review-queue but filtered to approval='approved'
+  // and sent_at IS NULL. Used by the admin Approved Queue view and by the
+  // Cowork Gmail scheduled task.
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/approved-drafts') {
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200);
+    const { data: rows, error } = await outreachClient
+      .from('outreach_drafts')
+      .select('*, prospects(id, company_name, primary_domain, vertical, contact_email, contact_name, contact_title, linkedin_url, victim_score, compliance_region, compliance_ok, signals(*))')
+      .eq('approval', 'approved')
+      .is('sent_at', null)
+      .order('approved_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (isMissingTable(error)) {
+        res.status(200).json({ success: true, available: false, count: 0, drafts: [], message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to fetch approved drafts', details: error.message });
+      return;
+    }
+
+    const approvedDrafts = (rows || []).map((r: Record<string, unknown>) => {
+      const pr = (r.prospects as Record<string, unknown>) || {};
+      const channel = (r.channel as string) || '';
+      return {
+        draft_id: r.id,
+        prospect_id: (pr.id as string | null) ?? (r.prospect_id as string | null) ?? null,
+        company_name: pr.company_name ?? null,
+        primary_domain: pr.primary_domain ?? null,
+        vertical: pr.vertical ?? null,
+        contact_email: pr.contact_email ?? null,
+        contact_name: (pr.contact_name as string | null) ?? null,
+        linkedin_url: (pr.linkedin_url as string | null) ?? null,
+        compliance_region: pr.compliance_region ?? null,
+        compliance_ok: Boolean(pr.compliance_ok),
+        victim_score: (pr.victim_score as number) ?? 0,
+        channel,
+        subject: r.subject ?? null,
+        body: (r.body as string) ?? '',
+        edited_body: r.edited_body ?? null,
+        opt_out_line: r.opt_out_line ?? null,
+        approved_at: r.approved_at ?? null,
+        created_at: r.created_at ?? null,
+        signals: (pr.signals as unknown[]) ?? [],
+      };
+    });
+
+    res.status(200).json({ success: true, available: true, count: approvedDrafts.length, drafts: approvedDrafts });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PATCH /prospect — Update contact details on a prospect record
+  // Editable fields: contact_email, contact_name, contact_title, linkedin_url
+  // Used to fix registrar/abuse contact emails before approving a draft.
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'PATCH' && path === '/prospect') {
+    const body = await parseBody(req);
+    const prospectId = body.prospect_id as string;
+    if (!prospectId) { res.status(400).json({ error: 'prospect_id is required' }); return; }
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const field of ['contact_email', 'contact_name', 'contact_title', 'linkedin_url']) {
+      if (body[field] !== undefined) updates[field] = body[field];
+    }
+
+    const { data, error } = await outreachClient
+      .from('prospects')
+      .update(updates)
+      .eq('id', prospectId)
+      .select('id, contact_email, contact_name, contact_title, linkedin_url, updated_at')
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingTable(error)) {
+        res.status(200).json({ success: false, available: false, message: TABLES_NOT_PROVISIONED });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to update prospect', details: error.message });
+      return;
+    }
+
+    res.status(200).json({ success: true, prospect: data });
     return;
   }
 
