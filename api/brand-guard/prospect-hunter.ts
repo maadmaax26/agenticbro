@@ -2,7 +2,7 @@
  * api/brand-guard/prospect-hunter.ts — Brand Guard Prospect Hunter AI
  * ========================================================================
  * Server-side AI endpoints for the Brand Guard Prospect Hunter CRM.
- * Uses local Ollama models (glm-5, qwen3-coder) — no external API keys.
+ * Uses local Ollama model (qwen3.5:9b) — no external API keys.
  *
  * POST /api/brand-guard/prospect-hunter
  *   Body: { action: "hunt" | "email" | "research", ...params }
@@ -19,7 +19,7 @@ import { createClient } from '@supabase/supabase-js';
 // ── Config ────────────────────────────────────────────────────────────────────
 // Local Ollama — no API keys needed, runs on the same machine
 const OLLAMA_BASE = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_PROSPECT_MODEL || 'glm5:cloud';
+const OLLAMA_MODEL = process.env.OLLAMA_PROSPECT_MODEL || 'qwen3.5:9b';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
@@ -57,8 +57,7 @@ interface ResearchRequest {
 type ProspectRequest = HuntRequest | EmailRequest | ResearchRequest;
 
 // ── Ollama API Call ────────────────────────────────────────────────────────────
-// Uses local Ollama models. Handles both thinking-enabled models (glm-5, kimi)
-// and standard models (qwen3-coder-next). Thinking content is stripped from output.
+// Uses local Ollama model (qwen3.5:9b). Thinking content is stripped from output if present.
 async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
   // Force JSON output by appending explicit instruction for non-thinking models
   const enhancedPrompt = `${prompt}\n\nIMPORTANT: Output ONLY the raw JSON. Start with [ and end with ]. No thinking tags, no markdown fences, no explanation.`;
@@ -89,14 +88,14 @@ async function callAI(prompt: string, maxTokens = 1500): Promise<string> {
   let text = data?.message?.content || data?.response || '';
 
   // If content is empty but thinking exists, the model used all tokens for thinking.
-  // This can happen with glm-5:cloud — fall back to trying qwen3-coder-next.
+  // Fall back to qwen3.5:9b without /think suffix as a safety net.
   if (!text && data?.message?.thinking) {
-    console.warn(`[prospect-hunter] ${OLLAMA_MODEL} returned empty content (thinking consumed tokens). Falling back to qwen3-coder-next:cloud.`);
+    console.warn(`[prospect-hunter] ${OLLAMA_MODEL} returned empty content (thinking consumed tokens). Falling back to qwen3.5:9b.`);
     const fallbackResponse = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen3-coder-next:cloud',
+        model: 'qwen3.5:9b',
         messages: [{ role: 'user', content: prompt }],
         stream: false,
         options: { num_predict: maxTokens, temperature: 0.7 },
