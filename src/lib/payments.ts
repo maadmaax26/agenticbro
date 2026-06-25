@@ -9,7 +9,7 @@
  * 
  * Track credits by wallet address or email
  * 
- * Free tier: 5 free scans per user (tracked in localStorage)
+ * Free tier: 10 free scans per day (date-stamped in localStorage, auto-resets daily)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -255,6 +255,39 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
   'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
 ]);
 
+const FREE_SCANS_PER_DAY = 10;
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+/** Read free-scan count from localStorage, resetting if the date has changed. */
+function loadFreeScans(storageKey: string): number {
+  try {
+    const raw = localStorage.getItem(`agenticbro_free_${storageKey}`);
+    if (!raw) return FREE_SCANS_PER_DAY;
+    // New format: { date, count }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.date === getTodayStr()) {
+      return Math.max(0, parsed.count ?? FREE_SCANS_PER_DAY);
+    }
+    // Old format (plain number) or stale date — treat as new day
+    return FREE_SCANS_PER_DAY;
+  } catch {
+    return FREE_SCANS_PER_DAY;
+  }
+}
+
+/** Persist free-scan count (date-stamped for daily reset). */
+function storeFreeScans(storageKey: string, count: number): void {
+  try {
+    localStorage.setItem(
+      `agenticbro_free_${storageKey}`,
+      JSON.stringify({ date: getTodayStr(), count }),
+    );
+  } catch { /* quota — ignore */ }
+}
+
 export function useCredits(
   userId: string | null,
   email: string | null,
@@ -262,7 +295,7 @@ export function useCredits(
   entitlementsOverride?: { totalRemaining: number; tier: string } | null,
 ) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(FREE_SCANS_PER_DAY);
   const [loading, setLoading] = useState(true);
   const [remoteAuthToken, setRemoteAuthToken] = useState<string | null>(null);
 
@@ -283,7 +316,7 @@ export function useCredits(
   useEffect(() => {
     const loadCredits = async () => {
       setLoading(true);
-      
+
       // Test wallet gets unlimited scans
       if (isTestWallet) {
         setCredits(999999);
@@ -305,22 +338,19 @@ export function useCredits(
       } else {
         setRemoteAuthToken(null);
       }
-      
+
       const storageKey = getStorageKey();
       const stored = localStorage.getItem(`agenticbro_credits_${storageKey}`);
-      const storedFree = localStorage.getItem(`agenticbro_free_${storageKey}`);
-      
+
       if (!usingRemote && stored) {
         setCredits(parseInt(stored, 10) || 0);
       }
-      if (storedFree) {
-        setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
-      } else {
-        // New user gets 5 free scans
-        setFreeScansRemaining(5);
-        localStorage.setItem(`agenticbro_free_${storageKey}`, '5');
-      }
-      
+
+      // Daily-resetting free scan counter
+      const freeRemaining = loadFreeScans(storageKey);
+      storeFreeScans(storageKey, freeRemaining); // write back (normalises old format / stamps today)
+      setFreeScansRemaining(freeRemaining);
+
       setLoading(false);
     };
 
@@ -337,7 +367,7 @@ export function useCredits(
   const saveFreeScans = (newFree: number) => {
     if (isTestWallet) return; // Don't save for test wallets
     const storageKey = getStorageKey();
-    localStorage.setItem(`agenticbro_free_${storageKey}`, String(newFree));
+    storeFreeScans(storageKey, newFree);
     setFreeScansRemaining(newFree);
   };
 
