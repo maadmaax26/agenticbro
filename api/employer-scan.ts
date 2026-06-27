@@ -257,10 +257,23 @@ function calculateEmployerTrustScore(
   let recommendation: string;
   if (trustScore < EMPLOYER_TRUST_THRESHOLDS.HIGHLY_TRUSTED) {
     trustLevel = 'HIGHLY TRUSTED';
-    recommendation = '✅ This employer shows strong trust signals. Verified payment history, established domain, and public founders.';
+    if (detectedTrustSignals.length > 0) {
+      const signalNames: string[] = [];
+      if (detectedTrustSignals.includes('positive_payment_history')) signalNames.push('verified payment history');
+      if (detectedTrustSignals.includes('established_domain')) signalNames.push('established domain');
+      if (detectedTrustSignals.includes('public_founders')) signalNames.push('public founders');
+      if (detectedTrustSignals.includes('positive_contractor_reviews')) signalNames.push('positive contractor reviews');
+      recommendation = `✅ This employer shows strong trust signals. ${signalNames.slice(0, 3).join(', ')}.`;
+    } else {
+      recommendation = '✅ No risk signals detected. No community reports on file. Standard due diligence recommended before accepting work.';
+    }
   } else if (trustScore < EMPLOYER_TRUST_THRESHOLDS.TRUSTED) {
     trustLevel = 'TRUSTED';
-    recommendation = '🟢 This employer appears reliable. Verify details before accepting work.';
+    if (detectedTrustSignals.length > 0) {
+      recommendation = '🟢 This employer appears reliable with some trust signals. Verify details before accepting work.';
+    } else {
+      recommendation = '🟢 Low risk profile. No red flags detected. Verify details before accepting work.';
+    }
   } else if (trustScore < EMPLOYER_TRUST_THRESHOLDS.MODERATE) {
     trustLevel = 'MODERATE';
     recommendation = '🟡 Exercise caution. Request payment terms in writing and verify references.';
