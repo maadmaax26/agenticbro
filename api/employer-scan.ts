@@ -307,6 +307,66 @@ function calculateEmployerTrustScore(
   };
 }
 
+// ── Fetch X profile data via oEmbed + public page ─────────────────────────
+async function fetchXProfileData(handle: string): Promise<{ display_name: string; bio: string; followers: string; following: string; joined_date: string; post_count: string; verified: boolean; website: string } | null> {
+  try {
+    // Use X oEmbed API for basic info (no auth required, limited data)
+    const oembedUrl = `https://publish.twitter.com/oembed?url=https://x.com/${handle}&omit_script=true`;
+    const oembedResp = await fetch(oembedUrl, { headers: { 'User-Agent': 'AgenticBro/1.0' } });
+    if (!oembedResp.ok) return null;
+    const oembed = await oembedResp.json();
+    const html = oembed.html || '';
+    
+    // Extract display name from oEmbed HTML
+    const nameMatch = html.match(/data-name="([^"]+)"/);
+    const displayName = nameMatch ? nameMatch[1] : handle;
+    
+    // For more data, try fetching the public profile page (works server-side, limited data)
+    const profileUrl = `https://x.com/${handle}`;
+    const profileResp = await fetch(profileUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro/1.0)',
+        'Accept': 'text/html',
+      },
+      redirect: 'follow',
+    });
+    
+    let bio = '';
+    let followers = '';
+    let following = '';
+    let joinedDate = '';
+    let postCount = '';
+    let verified = false;
+    let website = '';
+    
+    if (profileResp.ok) {
+      const html = await profileResp.text();
+      // Try to extract OpenGraph meta tags
+      const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/);
+      const ogDesc = html.match(/<meta property="og:description" content="([^"]+)"/);
+      if (ogTitle) {
+        // Format: "Display Name (@handle) / X"
+        const parts = ogTitle[1].split(' (');
+        if (parts.length > 0) displayName = parts[0].trim();
+      }
+      if (ogDesc) {
+        // Format: "The latest posts from... Followers: 13K, Following: 6K"
+        bio = ogDesc[1];
+        const followersMatch = ogDesc[1].match(/Followers: ([\d.,KMB]+)/i);
+        const followingMatch = ogDesc[1].match(/Following: ([\d.,KMB]+)/i);
+        if (followersMatch) followers = followersMatch[1];
+        if (followingMatch) following = followingMatch[1];
+      }
+      // Check for verified badge in HTML
+      if (html.includes('verified') || html.includes('Verified account')) verified = true;
+    }
+    
+    return { display_name: displayName, bio, followers, following, joined_date: joinedDate, post_count: postCount, verified, website };
+  } catch {
+    return null;
+  }
+}
+
 // ── Main handler ────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -376,6 +436,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Calculate score
     const result = calculateEmployerTrustScore(text, platform, metadata);
 
+    // Fetch X profile data for display (parallel with score calculation)
+    let profileData: { display_name: string; bio: string; followers: string; following: string; joined_date: string; post_count: string; verified: boolean; website: string } | null = null;
+    if (platform === 'x') {
+      profileData = await fetchXProfileData(handle);
+    }
+
+    // Build response with all data for UI
+    const response = {
+      ...result,
+      profile_data: profileData,
+      community_data: reports ? {
+        community_reports: reports.community_reports || 0,
+        prior_rug_flags: reports.prior_rug_flags || 0,
+        positive_reviews: reports.positive_reviews || 0,
+        verified_payments: reports.verified_payments || 0,
+        total_reports: reports.hiring_post_count || 0,
+      } : { community_reports: 0, prior_rug_flags: 0, positive_reviews: 0, verified_payments: 0, total_reports: 0 },
+      domain_data: metadata.website_domain ? {
+        domain: metadata.website_domain,
+        age_days: metadata.website_age_days ?? null,
+      } : undefined,
+      wallet_data: metadata.wallet_address ? {
+        address: metadata.wallet_address,
+        has_payment_history: metadata.has_payment_history ?? null,
+        tx_count: null,
+      } : undefined,
+    };
+
     // Record scan to Supabase
     if (supabase) {
       try {
@@ -393,7 +481,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch { /* analytics only */ }
     }
 
-    res.status(200).json(result);
+    res.status(200).json(response);
     return;
   }
 

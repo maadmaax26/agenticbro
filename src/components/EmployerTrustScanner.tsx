@@ -24,6 +24,32 @@ interface EmployerScanResult {
   scan_type: string;
   handle: string;
   platform: string;
+  profile_data?: {
+    display_name: string;
+    bio: string;
+    followers: string;
+    following: string;
+    joined_date: string;
+    post_count: string;
+    verified: boolean;
+    website: string;
+  };
+  community_data?: {
+    community_reports: number;
+    prior_rug_flags: number;
+    positive_reviews: number;
+    verified_payments: number;
+    total_reports: number;
+  };
+  domain_data?: {
+    domain: string;
+    age_days: number | null;
+  };
+  wallet_data?: {
+    address: string;
+    has_payment_history: boolean | null;
+    tx_count: number | null;
+  };
 }
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -63,6 +89,8 @@ export function EmployerTrustScanner() {
   const [handle, setHandle] = useState('');
   const [platform, setPlatform] = useState('x');
   const [bioText, setBioText] = useState('');
+  const [websiteDomain, setWebsiteDomain] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<EmployerScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +123,8 @@ export function EmployerTrustScanner() {
           handle: handle.replace(/^@/, ''),
           platform,
           text: bioText,
+          website_domain: websiteDomain || undefined,
+          wallet_address: walletAddress || undefined,
         }),
       });
 
@@ -110,7 +140,7 @@ export function EmployerTrustScanner() {
     } finally {
       setScanning(false);
     }
-  }, [handle, platform, bioText]);
+  }, [handle, platform, bioText, websiteDomain, walletAddress]);
 
   const submitReport = useCallback(async () => {
     if (!handle.trim() || !reportDescription.trim()) {
@@ -206,6 +236,23 @@ export function EmployerTrustScanner() {
           onChange={(e) => setBioText(e.target.value)}
           className="w-full rounded-lg bg-black/50 border border-purple-500/20 text-white px-4 py-2 text-sm placeholder-gray-500"
         />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="text"
+            placeholder="Website domain (e.g. alphadao.xyz)"
+            value={websiteDomain}
+            onChange={(e) => setWebsiteDomain(e.target.value)}
+            className="rounded-lg bg-black/50 border border-purple-500/20 text-white px-4 py-2 text-sm placeholder-gray-500"
+          />
+          <input
+            type="text"
+            placeholder="Solana wallet address (optional)"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            className="rounded-lg bg-black/50 border border-purple-500/20 text-white px-4 py-2 text-sm placeholder-gray-500"
+          />
+        </div>
       </div>
 
       {/* Error */}
@@ -241,6 +288,90 @@ export function EmployerTrustScanner() {
             </div>
             <p className="mt-2 text-sm text-gray-400">{result.trust_recommendation}</p>
           </div>
+
+          {/* Profile Details */}
+          {result.profile_data && (
+            <div className="rounded-lg bg-blue-500/5 border border-blue-500/10 p-3">
+              <div className="text-sm font-medium text-blue-400 mb-2">👤 Profile Details</div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                {result.profile_data.display_name && (
+                  <div><span className="text-gray-500">Name:</span> {result.profile_data.display_name}</div>
+                )}
+                {result.profile_data.bio && (
+                  <div className="col-span-2"><span className="text-gray-500">Bio:</span> {result.profile_data.bio}</div>
+                )}
+                {result.profile_data.followers && (
+                  <div><span className="text-gray-500">Followers:</span> {result.profile_data.followers}</div>
+                )}
+                {result.profile_data.following && (
+                  <div><span className="text-gray-500">Following:</span> {result.profile_data.following}</div>
+                )}
+                {result.profile_data.joined_date && (
+                  <div><span className="text-gray-500">Joined:</span> {result.profile_data.joined_date}</div>
+                )}
+                {result.profile_data.post_count && (
+                  <div><span className="text-gray-500">Posts:</span> {result.profile_data.post_count}</div>
+                )}
+                {result.profile_data.verified && (
+                  <div><span className="text-gray-500">Verified:</span> ✅ Yes</div>
+                )}
+                {result.profile_data.website && (
+                  <div className="col-span-2"><span className="text-gray-500">Website:</span> {result.profile_data.website}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Community Reports */}
+          {result.community_data && result.community_data.total_reports > 0 && (
+            <div className="rounded-lg bg-orange-500/5 border border-orange-500/10 p-3">
+              <div className="text-sm font-medium text-orange-400 mb-2">📢 Community Reports</div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                {result.community_data.community_reports > 0 && (
+                  <div className="text-red-400">💸 Non-payment: {result.community_data.community_reports}</div>
+                )}
+                {result.community_data.prior_rug_flags > 0 && (
+                  <div className="text-red-400">🚨 Rug pulls: {result.community_data.prior_rug_flags}</div>
+                )}
+                {result.community_data.positive_reviews > 0 && (
+                  <div className="text-green-400">👍 Positive: {result.community_data.positive_reviews}</div>
+                )}
+                {result.community_data.verified_payments > 0 && (
+                  <div className="text-green-400">✅ Verified payments: {result.community_data.verified_payments}</div>
+                )}
+                <div className="col-span-2 text-gray-500">Total reports: {result.community_data.total_reports}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Domain Data */}
+          {result.domain_data && result.domain_data.domain && (
+            <div className="rounded-lg bg-cyan-500/5 border border-cyan-500/10 p-3">
+              <div className="text-sm font-medium text-cyan-400 mb-2">🌐 Domain Info</div>
+              <div className="text-xs text-gray-400 space-y-1">
+                <div><span className="text-gray-500">Domain:</span> {result.domain_data.domain}</div>
+                {result.domain_data.age_days !== null && result.domain_data.age_days !== undefined && (
+                  <div><span className="text-gray-500">Age:</span> {result.domain_data.age_days < 90 ? <span className="text-red-400">{result.domain_data.age_days} days ⚠️</span> : result.domain_data.age_days > 730 ? <span className="text-green-400">{Math.floor(result.domain_data.age_days / 365)} years ✅</span> : <span>{result.domain_data.age_days} days</span>}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Data */}
+          {result.wallet_data && result.wallet_data.address && (
+            <div className="rounded-lg bg-purple-500/5 border border-purple-500/10 p-3">
+              <div className="text-sm font-medium text-purple-400 mb-2">🪙 Wallet Activity</div>
+              <div className="text-xs text-gray-400 space-y-1">
+                <div><span className="text-gray-500">Address:</span> {result.wallet_data.address.slice(0, 8)}...{result.wallet_data.address.slice(-4)}</div>
+                {result.wallet_data.has_payment_history !== null && result.wallet_data.has_payment_history !== undefined && (
+                  <div><span className="text-gray-500">Payment history:</span> {result.wallet_data.has_payment_history ? <span className="text-green-400">Yes ✅</span> : <span className="text-red-400">No ❌</span>}</div>
+                )}
+                {result.wallet_data.tx_count !== null && result.wallet_data.tx_count !== undefined && (
+                  <div><span className="text-gray-500">Transactions:</span> {result.wallet_data.tx_count}</div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Risk Signals */}
           {result.signal_details.filter((s) => s.type === 'risk').length > 0 && (
