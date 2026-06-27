@@ -725,6 +725,12 @@ function MainApp() {
                 if (section === 'wallet-protection') setShowWalletProtection(true)
                 if (section === 'holder') setShowTierPage('holder')
                 if (section === 'whale') setShowTierPage('whale')
+                // Scroll to scan sections
+                if (section === 'profile-verifier') document.getElementById('profile-verifier')?.scrollIntoView({ behavior: 'smooth' })
+                if (section === 'employer-scanner') document.getElementById('employer-scanner')?.scrollIntoView({ behavior: 'smooth' })
+                if (section === 'priority-scan') document.getElementById('priority-scan-section')?.scrollIntoView({ behavior: 'smooth' })
+                if (section === 'token-scanner') document.getElementById('token-scanner')?.scrollIntoView({ behavior: 'smooth' })
+                if (section === 'wallet-protection-scroll') document.getElementById('wallet-protection')?.scrollIntoView({ behavior: 'smooth' })
               }}
               onLoginClick={() => {
                 setAuthMode('login')
@@ -778,7 +784,14 @@ function MainApp() {
         <AgntcbroBalanceTracker />
 
         {/* ── Profile Verifier Scanner - TOP OF PAGE (5 FREE SCANS) ── */}
-        <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
+        <div id="profile-verifier">
+          <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
+        </div>
+
+        {/* ── Employer Trust Scanner ── */}
+        <div id="employer-scanner" className="max-w-3xl mx-auto mb-10">
+          <EmployerTrustScanner />
+        </div>
 
             {/* ── Priority Scan Section ── */}
             <div id="priority-scan-section" className="max-w-6xl mx-auto mb-6">
@@ -926,17 +939,14 @@ function MainApp() {
             </div>
 
         {/* ── Token Scanner (consolidated: priority + contract + impersonation) ── */}
-        <PriorityTokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-        <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
-        <TokenImpersonationScanner />
-
-        {/* ── Employer Trust Scanner ── */}
-        <div className="max-w-3xl mx-auto mb-10">
-          <EmployerTrustScanner />
+        <div id="token-scanner">
+          <PriorityTokenScanner onLoginRequired={() => setShowAuthModal(true)} />
+          <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
+          <TokenImpersonationScanner />
         </div>
 
         {/* ── Wallet Protection — Safe dApp Interaction ── */}
-        <div className="max-w-6xl mx-auto mb-10">
+        <div id="wallet-protection" className="max-w-6xl mx-auto mb-10">
           <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 backdrop-blur-md rounded-2xl border border-green-500/20 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
