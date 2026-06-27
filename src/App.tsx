@@ -17,6 +17,7 @@ import WebsiteSecurityScanner from './components/WebsiteSecurityScanner'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
 import TokenScanner from './components/TokenScanner'
 import TokenImpersonationScanner from './components/TokenImpersonationScanner'
+import EmployerTrustScanner from './components/EmployerTrustScanner'
 import AgntcbroBalanceTracker from './components/AgntcbroBalanceTracker'
 import Roadmap from './components/Roadmap'
 import ScanAnalytics from './components/ScanAnalytics'
@@ -929,6 +930,11 @@ function MainApp() {
         <TokenScanner onLoginRequired={() => setShowAuthModal(true)} />
         <TokenImpersonationScanner />
 
+        {/* ── Employer Trust Scanner ── */}
+        <div className="max-w-3xl mx-auto mb-10">
+          <EmployerTrustScanner />
+        </div>
+
         {/* ── Wallet Protection — Safe dApp Interaction ── */}
         <div className="max-w-6xl mx-auto mb-10">
           <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 backdrop-blur-md rounded-2xl border border-green-500/20 p-6">
@@ -1245,6 +1251,10 @@ function App() {
 
   if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
     return <BrandGuardAdminPage />
+  }
+
+  if (location.pathname === '/employer' || location.pathname === '/employer/') {
+    return <MainApp />  // Employer scanner is in the main page
   }
 
   return <MainApp />
