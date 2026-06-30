@@ -309,6 +309,10 @@ const PLATFORM_SPECIFIC: Record<string, Record<string, { weight: number; pattern
     limited_content: { weight: 10, patterns: ['limited content','few videos','low video count'], description: 'Limited content on profile' },
     private_profile: { weight: 10, patterns: ['private','private account','hidden'], description: 'Private profile hiding information' },
   },
+  telegram: {
+    tiktok_funnel: { weight: 10, patterns: ['from tiktok','open in browser','use 3 dots','tiktok to telegram'], description: 'TikTok-to-Telegram funnel pattern' },
+    signal_selling: { weight: 10, patterns: ['callouts','signals','vip group','premium group','private group','exclusive signals'], description: 'Signal-selling or callout channel' },
+  },
 };
 
 function calculateRiskScore(text: string, platform?: string, metadata?: { followers?: number }) {
@@ -449,28 +453,36 @@ function confidenceFromProfile(profile: ProfileMetadata, flagCount: number): 'HI
 
 // ── Platform config ─────────────────────────────────────────────────────────
 
-const VALID_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+const VALID_PLATFORMS = ['instagram', 'tiktok', 'facebook', 'telegram'];
 const PROFILE_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://www.instagram.com/${u}/`,
   tiktok:    (u) => `https://www.tiktok.com/@${u}`,
   facebook:  (u) => `https://www.facebook.com/${u}`,
+  telegram:  (u) => `https://t.me/${u}`,
 };
 
 const LOGIN_WALL_PATTERNS: Record<string, string[]> = {
   instagram: ['PolarisErrorRoot', 'show_lox_redesigned_404_page', 'httpErrorPage', 'loginWall'],
   tiktok:    ["Couldn't find this account", 'Page not found', 'tiktok-login'],
   facebook:  ["This page isn't available", 'Page Not Found', 'login_page'],
+  telegram:  ['Telegram Messenger'], // Generic homepage = not a valid channel
 };
 
 const NOT_FOUND_PATTERNS: Record<string, string[]> = {
   instagram: ["Sorry, this page isn't available", 'Unable to load this page'],
   tiktok:    ["Couldn't find this account", 'Page not found'],
   facebook:  ["This page isn't available", 'Page Not Found'],
+  telegram:  ['Page not found', 'If you have Telegram, you can view and join'], // t.me generic fallback
 };
 
 // ── Core scan function ──────────────────────────────────────────────────────
 
 async function performScan(platform: string, username: string): Promise<Record<string, unknown>> {
+  // Telegram has a different page structure — use dedicated handler
+  if (platform === 'telegram') {
+    return performTelegramScan(username);
+  }
+
   const url = PROFILE_URLS[platform](username);
 
   const fetchRes = await fetch(url, {
@@ -577,6 +589,83 @@ async function performScan(platform: string, username: string): Promise<Record<s
     scanTimestamp: result.scanTimestamp,
     scanDate: result.scanTimestamp,
     dataQuality: profileMeta.sourceFields.length >= 3 ? 'rich_public_profile' : profileMeta.sourceFields.length > 0 ? 'limited_public_profile' : 'sparse_public_profile',
+    botDetection,
+    disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
+  };
+}
+
+// ── Telegram-specific scan ──────────────────────────────────────────────────
+// t.me pages have a unique structure: og:title for channel name, og:description
+// for channel description, and subscriber count in the visible text.
+
+async function performTelegramScan(username: string): Promise<Record<string, unknown>> {
+  const url = `https://t.me/${username}`;
+
+  const fetchRes = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    },
+    signal: AbortSignal.timeout(10000),
+    redirect: 'follow',
+  });
+
+  const rawHtml = await fetchRes.text();
+
+  // t.me returns the generic Telegram homepage when the channel doesn't exist
+  // Check for actual channel content via og:title
+  const ogTitleMatch = rawHtml.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+  const ogDescMatch = rawHtml.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
+  const ogTitle = ogTitleMatch?.[1] || '';
+  const ogDesc = ogDescMatch?.[1] || '';
+
+  // If og:title is just "Telegram Messenger" or empty, it's not a real channel
+  if (!ogTitle || ogTitle === 'Telegram Messenger' || ogTitle === 'Telegram') {
+    return {
+      success: false, error: 'TELEGRAM_CHANNEL_NOT_FOUND',
+      message: `No public Telegram channel found for @${username}. This may be a private user account (not a public channel/group). Private accounts cannot be scanned without Bot API access.`,
+      platform: 'telegram', username, riskScore: 0, riskLevel: 'UNAVAILABLE',
+      verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
+    };
+  }
+
+  // Extract visible text
+  const visibleText = extractVisibleText(rawHtml);
+
+  // Extract subscriber count — t.me shows "N subscribers" or "N member"
+  const subscriberMatch = rawHtml.match(/(\d[\d\s.,]*)\s*(?:subscribers|members|subscriber)/i);
+  let subscribers: number | undefined;
+  if (subscriberMatch) {
+    const raw = subscriberMatch[1].replace(/[\s,]/g, '');
+    subscribers = parseInt(raw, 10);
+    if (isNaN(subscribers)) subscribers = undefined;
+  }
+
+  // Build scoring text from channel name + description + visible content
+  let scoringText = ogTitle;
+  if (ogDesc) scoringText += '\n' + ogDesc;
+  scoringText += '\n' + visibleText;
+
+  // Run the same 90-point unified scoring as the local CLI scanner
+  const result = calculateRiskScore(scoringText, 'telegram', { followers: subscribers });
+
+  // Bot detection (lightweight)
+  const botDetection = calculateBotScoreLite({
+    followers: subscribers,
+    username,
+    bio: ogDesc,
+  }, 'telegram');
+
+  return {
+    success: true, platform: 'telegram', username, url,
+    displayName: ogTitle,
+    bio: ogDesc,
+    followers: subscribers,
+    riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
+    redFlagsDetected: result.redFlagsDetected, flagDetails: result.flagDetails,
+    weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
+    scanTimestamp: result.scanTimestamp,
     botDetection,
     disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
   };
