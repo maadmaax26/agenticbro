@@ -462,7 +462,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       // ── STEP 2: Direct serverless scan for IG/TikTok/FB (works via web fetch) ──
       const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
 
-      if (['instagram', 'tiktok', 'facebook'].includes(platform)) {
+      if (['instagram', 'tiktok', 'facebook', 'telegram'].includes(platform)) {
         try {
           setScanStatus(`Scanning ${platform} profile...`);
           const scanRes = await fetch(`${apiBase}/api/social-scan`, {
