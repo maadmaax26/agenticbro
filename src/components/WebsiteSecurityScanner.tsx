@@ -70,6 +70,7 @@ interface WebsiteScanResult {
   urlScanInfo?:      UrlScanIoResult | null;
   ipInfo?:           IPHostingInfo | null;
   ownCommunityReports?: number;
+  findings?:         { title: string; detail: string; icon?: string }[];
 }
 
 type ScanStep    = 'idle' | 'checking' | 'fetching' | 'scoring' | 'done' | 'error';
@@ -318,6 +319,26 @@ export default function WebsiteSecurityScanner() {
               <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${result.riskScore * 10}%`, background: 'linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)' }} />
             </div>
           </div>
+
+          {/* ── Findings / Detailed Analysis ──────────────────────────────── */}
+          {result.findings && result.findings.length > 0 && (
+            <div className="rounded-xl p-5" style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)' }}>
+              <h4 className="text-base font-bold text-purple-300 mb-3">🔍 Detailed Findings</h4>
+              <div className="space-y-3">
+                {result.findings.map((finding, idx) => (
+                  <div key={idx} className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-base flex-shrink-0">{finding.icon || 'ℹ️'}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-white">{finding.title}</p>
+                        <p className="text-xs text-gray-400 mt-1" style={{ wordBreak: 'break-word' }}>{finding.detail}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Google Safe Browsing verdict (prominent if flagged) ────────── */}
           {result.safeBrowsing?.flagged && (
