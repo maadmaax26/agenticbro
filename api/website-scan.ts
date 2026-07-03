@@ -256,6 +256,12 @@ const LEGITIMATE_DOMAINS = [
   'fifa.com', 'fifaworldcup.com', 'fifa.org',
   'stubhub.com', 'ticketmaster.com', 'viagogo.com', 'seatgeek.com',
   'vivaticket.com', 'match-hospitality.com',
+  // DeFi / trading platforms (wallet connection is expected behavior)
+  'bullpen.fi', 'hyperliquid.xyz', 'polymarket.com',
+  'driftprotocol.com', 'zeta.markets', 'photon.xyz',
+  'axiom.trade', 'bloomtrade.com', 'trojanonbase.com',
+  'pumpportal.com', 'birdeye.so', 'rugcheck.xyz',
+  'solscan.io', 'solana.fm', 'explorer.solana.com',
 ];
 
 // ─── Helper: Extract Domain ──────────────────────────────────────────────────
@@ -472,7 +478,7 @@ function checkKnownScamDomain(domain: string): ThreatDetection | null {
 
 // ─── Content Analysis ─────────────────────────────────────────────────────────
 
-function analyzeContent(html: string, _domain: string): ThreatDetection[] {
+function analyzeContent(html: string, _domain: string, isLegit: boolean = false): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
   const lower   = html.toLowerCase();
   const domain  = _domain.toLowerCase();
@@ -497,7 +503,7 @@ function analyzeContent(html: string, _domain: string): ThreatDetection[] {
   }
 
   if (lower.includes('eval(') || lower.includes('atob(')) threats.push({ type: 'obfuscated_code', severity: 'HIGH', description: 'Obfuscated JavaScript — often hides malicious code', weight: 15 });
-  if (lower.includes('connect wallet') || lower.includes('walletconnect')) threats.push({ type: 'wallet_connect', severity: 'MEDIUM', description: 'Wallet connection requested', weight: 10 });
+  if (!isLegit && (lower.includes('connect wallet') || lower.includes('walletconnect'))) threats.push({ type: 'wallet_connect', severity: 'MEDIUM', description: 'Wallet connection requested', weight: 10 });
   if (lower.includes('cloudflare') && lower.includes('blocked')) threats.push({ type: 'cloudflare_block', severity: 'MEDIUM', description: 'Site blocking automated access — could hide malicious content', evidence: 'Cloudflare challenge detected', weight: 10 });
 
   if (!isLikelyCasino) {
@@ -941,7 +947,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const pageRes = await fetch(finalUrl, { method: 'GET', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' }, signal: AbortSignal.timeout(8000) });
     const html    = await pageRes.text();
-    threats.push(...analyzeContent(html, finalDomain));
+    threats.push(...analyzeContent(html, finalDomain, isLegit));
     paymentAnalysis = analyzePaymentMethods(html, finalDomain);
   } catch {
     if (threats.length === 0) threats.push({ type: 'fetch_error', severity: 'LOW', description: 'Could not fetch page — site may be down or blocking scanners', weight: 0 });
