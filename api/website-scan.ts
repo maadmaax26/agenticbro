@@ -104,6 +104,7 @@ interface WebsiteScanResult {
   urlScanInfo?:         UrlScanIoResult | null;
   ipInfo?:              IPHostingInfo | null;
   ownCommunityReports?: number;
+  findings?:            { title: string; detail: string; icon?: string }[];
 }
 
 // ─── High-Risk TLDs ───────────────────────────────────────────────────────────
@@ -264,7 +265,141 @@ const LEGITIMATE_DOMAINS = [
   'solscan.io', 'solana.fm', 'explorer.solana.com',
 ];
 
-// ─── Helper: Extract Domain ──────────────────────────────────────────────────
+// ─── Known Legitimate Domain Details ────────────────────────────────────────
+
+const LEGITIMATE_DOMAIN_INFO: Record<string, { platform: string; description: string; walletConnect: boolean; notes: string }> = {
+  'bullpen.fi': {
+    platform: 'Bullpen',
+    description: 'Non-custodial Solana trading terminal — combines Polymarket, Hyperliquid, and Jupiter Ultra',
+    walletConnect: true,
+    notes: 'Wallet connection is expected behavior for this DeFi trading platform. Referral links (?ref=) are standard for Bullpen\'s airdrop and growth campaigns.',
+  },
+  'hyperliquid.xyz': {
+    platform: 'Hyperliquid',
+    description: 'Decentralized perpetual exchange on its own L1 blockchain',
+    walletConnect: true,
+    notes: 'Wallet connection is expected for trading. Non-custodial — users control their own funds.',
+  },
+  'polymarket.com': {
+    platform: 'Polymarket',
+    description: 'Decentralized prediction market platform',
+    walletConnect: true,
+    notes: 'Wallet connection required for trading. Well-known platform in the crypto space.',
+  },
+  'driftprotocol.com': {
+    platform: 'Drift Protocol',
+    description: 'Decentralized perpetual futures exchange on Solana',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi trading protocol. Wallet connection is standard.',
+  },
+  'zeta.markets': {
+    platform: 'Zeta Markets',
+    description: 'Decentralized options and perpetuals exchange on Solana',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi protocol. Wallet connection is expected.',
+  },
+  'photon.xyz': {
+    platform: 'Photon',
+    description: 'Solana memecoin trading terminal with real-time data',
+    walletConnect: true,
+    notes: 'Trading platform for Solana tokens. Wallet connection is required for trading.',
+  },
+  'axiom.trade': {
+    platform: 'Axiom',
+    description: 'Solana trading terminal for meme coins',
+    walletConnect: true,
+    notes: 'Non-custodial trading platform. Wallet connection is standard behavior.',
+  },
+  'pumpportal.com': {
+    platform: 'PumpPortal',
+    description: 'Pump.fun token launch and trading platform',
+    walletConnect: true,
+    notes: 'Official platform for pump.fun token creation and trading.',
+  },
+  'birdeye.so': {
+    platform: 'Birdeye',
+    description: 'Solana token analytics and charting platform',
+    walletConnect: false,
+    notes: 'Analytics platform. Read-only data, wallet connection optional for portfolio tracking.',
+  },
+  'rugcheck.xyz': {
+    platform: 'RugCheck',
+    description: 'Solana token safety checker and rug pull detector',
+    walletConnect: false,
+    notes: 'Security analysis tool. No wallet connection required for basic checks.',
+  },
+  'solscan.io': {
+    platform: 'Solscan',
+    description: 'Solana blockchain explorer and analytics',
+    walletConnect: false,
+    notes: 'Official Solana blockchain explorer. Read-only data.',
+  },
+  'solana.fm': {
+    platform: 'SolanaFM',
+    description: 'Solana blockchain explorer',
+    walletConnect: false,
+    notes: 'Blockchain explorer. Read-only data, no wallet connection needed.',
+  },
+  'explorer.solana.com': {
+    platform: 'Solana Explorer',
+    description: 'Official Solana blockchain explorer',
+    walletConnect: false,
+    notes: 'Official Solana Foundation explorer. Read-only.',
+  },
+  'phantom.app': {
+    platform: 'Phantom',
+    description: 'Leading Solana wallet',
+    walletConnect: false,
+    notes: 'Official Phantom wallet app. Never download wallets from unofficial sources.',
+  },
+  'jupiter.ag': {
+    platform: 'Jupiter',
+    description: 'Solana\'s largest DEX aggregator',
+    walletConnect: true,
+    notes: 'Non-custodial swap aggregator. Wallet connection is required for trading.',
+  },
+  'raydium.io': {
+    platform: 'Raydium',
+    description: 'Solana AMM and liquidity provider',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi protocol. Wallet connection is standard for liquidity provision and swapping.',
+  },
+  'dexscreener.com': {
+    platform: 'DexScreener',
+    description: 'DEX token price tracker and charting',
+    walletConnect: false,
+    notes: 'Analytics platform. Read-only data, no wallet connection required.',
+  },
+  'coingecko.com': {
+    platform: 'CoinGecko',
+    description: 'Cryptocurrency price tracking and analytics',
+    walletConnect: false,
+    notes: 'Well-known crypto data aggregator. Read-only.',
+  },
+  'coinmarketcap.com': {
+    platform: 'CoinMarketCap',
+    description: 'Cryptocurrency market capitalization tracker',
+    walletConnect: false,
+    notes: 'Industry standard crypto data platform. Read-only.',
+  },
+  'pump.fun': {
+    platform: 'Pump.fun',
+    description: 'Solana memecoin launch platform',
+    walletConnect: true,
+    notes: 'Token launch platform. Wallet connection is required for creating or trading tokens.',
+  },
+};
+
+function getLegitimateDomainInfo(domain: string): { platform: string; description: string; walletConnect: boolean; notes: string } | null {
+  // Try exact match first, then parent domain
+  const lower = domain.toLowerCase();
+  if (LEGITIMATE_DOMAIN_INFO[lower]) return LEGITIMATE_DOMAIN_INFO[lower];
+  // Try matching parent domain (e.g. app.bullpen.fi → bullpen.fi)
+  for (const [key, info] of Object.entries(LEGITIMATE_DOMAIN_INFO)) {
+    if (lower === key || lower.endsWith('.' + key)) return info;
+  }
+  return null;
+}
 
 function extractDomain(url: string): string {
   try { return new URL(url).hostname.replace('www.', ''); }
@@ -831,14 +966,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── Early return for known legit domains ──────────────────────────────────
   if (isLegit) {
+    const domainInfoData = getLegitimateDomainInfo(domain);
+    const findings: { title: string; detail: string; icon?: string }[] = [];
+    
+    if (domainInfoData) {
+      findings.push({
+        title: 'Verified Platform',
+        detail: `${domainInfoData.platform} — ${domainInfoData.description}`,
+        icon: '✅',
+      });
+      findings.push({
+        title: 'Wallet Connection',
+        detail: domainInfoData.walletConnect
+          ? 'Wallet connection is expected behavior for this platform. Always verify you are on the correct domain before connecting.'
+          : 'No wallet connection required for this platform.',
+        icon: domainInfoData.walletConnect ? '🔐' : 'ℹ️',
+      });
+      findings.push({
+        title: 'Safety Notes',
+        detail: domainInfoData.notes,
+        icon: '📋',
+      });
+    } else {
+      findings.push({
+        title: 'Known Legitimate Domain',
+        detail: 'This domain is in the Agentic Bro trusted domains database.',
+        icon: '✅',
+      });
+    }
+
+    // Parse URL path/ref for additional context
+    try {
+      const urlObj = new URL(validUrl);
+      const refParam = urlObj.searchParams.get('ref');
+      if (refParam) {
+        findings.push({
+          title: 'Referral Parameter Detected',
+          detail: `URL contains ?ref=${refParam}. This is a referral link. Referral links are standard for crypto platforms but always verify the referrer is who they claim to be.`,
+          icon: '🔗',
+        });
+      }
+      const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+      if (pathSegments.length >= 2) {
+        findings.push({
+          title: 'URL Path Analysis',
+          detail: `Path: /${pathSegments.join('/')} — Always verify the full URL matches the official platform. Phishing sites use lookalike domains with similar paths.`,
+          icon: '🔍',
+        });
+      }
+    } catch {}
+
     return res.status(200).json({
       success: true, url: validUrl, domain,
       riskScore: 0, riskLevel: 'LOW', threats: [], scamIndicators: [],
       recommendations: brandDomain && domain === brandDomain
         ? ['✅ This is your verified brand domain', '🔐 Monitor for lookalike domains that impersonate your brand']
-        : ['✅ Known legitimate domain', '🔐 Still verify the URL is correct'],
+        : ['✅ Known legitimate domain', '🔐 Still verify the URL is correct', '🔗 Verify any referral parameters before connecting wallet'],
       legitimate: true, scanDate: new Date().toISOString(),
       scanCategory: 'general',
+      findings,
     });
   }
 
@@ -995,6 +1181,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (e) { console.error('[website-scan] analytics:', e); }
 
+  // ── Build findings for non-legitimate domains ─────────────────────────────
+  const findings: { title: string; detail: string; icon?: string }[] = [];
+  
+  if (threats.filter(t => t.type !== 'fetch_error').length > 0) {
+    findings.push({
+      title: 'Threat Analysis',
+      detail: `${threats.filter(t => t.type !== 'fetch_error').length} threat(s) detected. See Detected Threats section for details.`,
+      icon: '🚨',
+    });
+  }
+  
+  if (safeBrowsing?.flagged) {
+    findings.push({
+      title: 'Google Safe Browsing',
+      detail: `Flagged as: ${safeBrowsing.threats.map(t => t.type.replace(/_/g, ' ')).join(', ')}. This site is in Google\'s phishing/malware database.`,
+      icon: '🔴',
+    });
+  } else if (safeBrowsing && !safeBrowsing.flagged) {
+    findings.push({
+      title: 'Google Safe Browsing',
+      detail: 'Not in phishing/malware database — no automated flags from Google.',
+      icon: '✅',
+    });
+  }
+  
+  if (urlScanInfo?.found) {
+    findings.push({
+      title: 'urlscan.io',
+      detail: `Verdict: ${urlScanInfo.verdict}. ${urlScanInfo.country ? `Hosted in ${urlScanInfo.country}.` : ''} ${urlScanInfo.asnName ? `Provider: ${urlScanInfo.asnName}.` : ''}`,
+      icon: urlScanInfo.verdict === 'malicious' ? '🔴' : urlScanInfo.verdict === 'suspicious' ? '🟠' : '🟢',
+    });
+  }
+  
+  if (domainInfo.isNewDomain) {
+    findings.push({
+      title: 'Domain Age Warning',
+      detail: `Domain is ${domainInfo.domainAgeDays} days old (less than 6 months). Newly registered domains are high-risk for scams.`,
+      icon: '🆕',
+    });
+  }
+  
+  if (ipInfo?.isBulletproof) {
+    findings.push({
+      title: 'Bulletproof Hosting',
+      detail: `This site is hosted on a bulletproof provider known for hosting scam infrastructure. IP: ${ipInfo.ip}`,
+      icon: '⚠️',
+    });
+  }
+  
+  if (redirectChain.length > 1) {
+    findings.push({
+      title: 'Redirect Chain',
+      detail: `URL redirects through ${redirectChain.length - 1} hop(s) to a different domain. Final destination: ${redirectChain[redirectChain.length - 1]}`,
+      icon: '🔀',
+    });
+  }
+  
+  if (brandImpersonationInfo?.is_lookalike) {
+    findings.push({
+      title: 'Brand Impersonation',
+      detail: `This domain appears to impersonate ${brandImpersonationInfo.brand_domain} (similarity: ${Math.round(brandImpersonationInfo.similarity * 100)}%, type: ${brandImpersonationInfo.variant_type}).`,
+      icon: '🎭',
+    });
+  }
+  
+  if (scamIndicators.length > 0) {
+    findings.push({
+      title: 'Web Search Analysis',
+      detail: `${scamIndicators.length} potential scam indicator(s) found in web search results.`,
+      icon: '🔍',
+    });
+  }
+  
+  if (findings.length === 0) {
+    findings.push({
+      title: 'No Major Threats Found',
+      detail: 'Automated scan did not detect obvious threats. Still verify the URL matches the official site before entering credentials or connecting a wallet.',
+      icon: 'ℹ️',
+    });
+  }
+
   const result: WebsiteScanResult = {
     success: true,
     url: validUrl,
@@ -1019,6 +1286,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     urlScanInfo: urlScanInfo?.found ? urlScanInfo : undefined,
     ipInfo: ipInfo?.ip ? ipInfo : undefined,
     ownCommunityReports,
+    findings,
   };
 
   return res.status(200).json(result);
