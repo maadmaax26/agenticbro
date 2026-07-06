@@ -668,19 +668,68 @@ function analyzeContent(html: string, _domain: string, isLegit: boolean = false)
     }
   }
 
+  // ── Payment method analysis — only for commerce/checkout contexts ──
+  // Sites that merely mention crypto terms (e.g. token analytics dashboards,
+  // blockchain explorers, DeFi info sites) should NOT trigger payment-method
+  // threats unless they actually ask the user to PAY for something.
   const paymentAnalysis = analyzePaymentMethods(html, _domain);
-  const cryptoMethods   = ['bitcoin', 'ethereum', 'cryptocurrency', 'crypto', 'usdt', 'usdc', 'tether'];
-  for (const method of paymentAnalysis.riskyMethods) {
-    if (isLegitimateDomain(_domain) && cryptoMethods.includes(method)) continue;
-    const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const : 'MEDIUM' as const;
-    const weight   = severity === 'CRITICAL' ? 25 : severity === 'HIGH' ? 20 : 10;
-    threats.push({ type: 'risky_payment_method', severity, description: `Non-standard payment method: ${method} — no buyer protection`, evidence: `Payment method "${method}" found on site`, weight });
-  }
-  if (paymentAnalysis.detectedMethods.length > 0 && paymentAnalysis.safeMethods.length === 0 && paymentAnalysis.riskyMethods.length > 0) {
-    threats.push({ type: 'no_safe_payment', severity: 'CRITICAL', description: 'Site only accepts non-standard payment methods — no buyer protection', evidence: `Only accepts: ${paymentAnalysis.riskyMethods.join(', ')}`, weight: 25 });
+  const isCommerceSite = detectCommerceContext(lower);
+
+  if (isCommerceSite) {
+    for (const method of paymentAnalysis.riskyMethods) {
+      const cryptoMethods = ['bitcoin', 'ethereum', 'cryptocurrency', 'crypto', 'usdt', 'usdc', 'tether'];
+      if (isLegitimateDomain(_domain) && cryptoMethods.includes(method)) continue;
+      const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const : 'MEDIUM' as const;
+      const weight   = severity === 'CRITICAL' ? 25 : severity === 'HIGH' ? 20 : 10;
+      threats.push({ type: 'risky_payment_method', severity, description: `Non-standard payment method: ${method} — no buyer protection`, evidence: `Payment method "${method}" found on site`, weight });
+    }
+    if (paymentAnalysis.detectedMethods.length > 0 && paymentAnalysis.safeMethods.length === 0 && paymentAnalysis.riskyMethods.length > 0) {
+      threats.push({ type: 'no_safe_payment', severity: 'CRITICAL', description: 'Site only accepts non-standard payment methods — no buyer protection', evidence: `Only accepts: ${paymentAnalysis.riskyMethods.join(', ')}`, weight: 25 });
+    }
   }
 
   return threats;
+}
+
+// ── Commerce context detection ──────────────────────────────────────────────
+// Only flag payment methods when the site is actually selling something.
+// This prevents false positives on crypto analytics sites, blockchain explorers,
+// token dashboards, and informational pages that merely mention crypto terms.
+function detectCommerceContext(lowerHtml: string): boolean {
+  // Strong commerce signals — site has a checkout / payment / cart / buy flow
+  const COMMERCE_STRONG = [
+    'checkout', 'add to cart', 'shopping cart', 'buy now', 'purchase',
+    'add to basket', 'proceed to payment', 'order summary', 'payment method',
+    'select payment', 'choose payment', 'pay with', 'subtotal',
+    'shipping address', 'billing address', 'credit card number',
+    'card number', 'cvv', 'expiry date', 'order total',
+    'complete your purchase', 'secure checkout', 'pay $', 'pay usd',
+  ];
+  for (const s of COMMERCE_STRONG) {
+    if (lowerHtml.includes(s)) return true;
+  }
+
+  // Form-based payment signals — actual payment forms on the page
+  const hasPaymentForm = lowerHtml.includes('<form') && (
+    lowerHtml.includes('card-number') ||
+    lowerHtml.includes('cc-number') ||
+    lowerHtml.includes('payment-form') ||
+    lowerHtml.includes('checkout-form') ||
+    lowerHtml.includes('data-stripe') ||
+    lowerHtml.includes('data-razorpay')
+  );
+  if (hasPaymentForm) return true;
+
+  // E-commerce platform signals
+  const ECOMMERCE_PLATFORMS = ['shopify', 'woocommerce', 'magento', 'bigcommerce', 'opencart', 'prestashop'];
+  for (const p of ECOMMERCE_PLATFORMS) {
+    if (lowerHtml.includes(p)) return true;
+  }
+
+  // Ticket/casino deposit signals — these are inherently commerce
+  if (lowerHtml.includes('buy tickets') || lowerHtml.includes('book tickets') || lowerHtml.includes('deposit now') || lowerHtml.includes('make a deposit')) return true;
+
+  return false;
 }
 
 // ─── Payment Method Analysis (unchanged) ─────────────────────────────────────
@@ -1134,7 +1183,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pageRes = await fetch(finalUrl, { method: 'GET', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' }, signal: AbortSignal.timeout(8000) });
     const html    = await pageRes.text();
     threats.push(...analyzeContent(html, finalDomain, isLegit));
-    paymentAnalysis = analyzePaymentMethods(html, finalDomain);
+    // Only include payment analysis in results if the site is actually commerce-oriented
+    const lowerHtml = html.toLowerCase();
+    if (detectCommerceContext(lowerHtml)) {
+      paymentAnalysis = analyzePaymentMethods(html, finalDomain);
+    }
   } catch {
     if (threats.length === 0) threats.push({ type: 'fetch_error', severity: 'LOW', description: 'Could not fetch page — site may be down or blocking scanners', weight: 0 });
   }
