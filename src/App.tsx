@@ -12,6 +12,7 @@ import ValueProposition from './components/ValueProposition'
 import ScamDetectionSection from './components/ScamDetectionSection'
 import ScamDatabaseModal from './components/ScamDatabaseModal'
 import ProfileVerifierScanner from './components/ProfileVerifierScanner'
+import { CredibilityAnalyzer } from './components/CredibilityAnalyzer'
 import PhoneNumberVerifier from './components/PhoneNumberVerifier'
 import WebsiteSecurityScanner from './components/WebsiteSecurityScanner'
 import PriorityTokenScanner from './components/PriorityTokenScanner'
@@ -788,9 +789,33 @@ function MainApp() {
           <ProfileVerifierScanner onLoginRequired={() => setShowAuthModal(true)} />
         </div>
 
+        {/* ── Credibility History Analyzer (under Profile Verifier) ── */}
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-4 mb-6">
+          <details className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white transition-colors">
+              🔍 Credibility History Analyzer — Detect lying & paid promotion fraud
+            </summary>
+            <div className="px-2 pb-2">
+              <CredibilityAnalyzer />
+            </div>
+          </details>
+        </div>
+
         {/* ── Employer Trust Scanner ── */}
         <div id="employer-scanner" className="max-w-3xl mx-auto mb-10">
           <EmployerTrustScanner />
+        </div>
+
+        {/* ── Credibility History Analyzer (under Profile Verifier) ── */}
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-4 mb-6">
+          <details className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white transition-colors">
+              🔍 Credibility History Analyzer — Detect lying & paid promotion fraud
+            </summary>
+            <div className="px-2 pb-2">
+              <CredibilityAnalyzer />
+            </div>
+          </details>
         </div>
 
             {/* ── Priority Scan Section ── */}
