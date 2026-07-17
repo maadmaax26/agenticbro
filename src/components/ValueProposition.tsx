@@ -17,7 +17,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
       name: 'profile-verifier',
       icon: '🔍',
       title: 'Profile Verifier Scanner',
-      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. First 5 scans free, then $1/scan.',
+      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. First 10 scans free, then $1/scan.',
     },
     {
       name: 'token-impersonation',
@@ -62,7 +62,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
     { value: '6', label: 'Platforms Supported' },
     { value: '5,000+', label: 'Known Scammers in Database' },
     { value: '< 30s', label: 'Average Scan Time' },
-    { value: '5 Free', label: 'Scans for Every User' },
+    { value: '10 Free', label: 'Scans for Every User' },
   ];
 
   return (
@@ -228,7 +228,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 </ul>
                 <div className="mt-6 flex items-center gap-4">
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-4 py-2">
-                    <span className="text-cyan-400 font-bold">5 Free Scans</span>
+                    <span className="text-cyan-400 font-bold">10 Free Scans</span>
                   </div>
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2">
                     <span className="text-purple-400 font-bold">$1/scan after</span>
