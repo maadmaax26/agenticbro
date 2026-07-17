@@ -15,10 +15,31 @@ import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase Client for scan tracking ───────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY;
 const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
+
+// ── Inline scan event tracking for analytics ──────────────────────────────
+async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {
+  if (!supabase) return;
+  try {
+    await supabase.from('scan_events').insert({
+      scan_type: params.scan_type,
+      platform: params.platform ?? null,
+      target: params.target,
+      username: params.target,
+      risk_score: params.risk_score ?? null,
+      risk_level: params.risk_level ?? null,
+      source: params.source ?? 'website',
+      source_table: 'direct_insert',
+      event_date: new Date().toISOString().split('T')[0],
+      country_code: params.country_code ?? null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] Error:', e);
+  }
+}
 
 // ── Record scan to Supabase ────────────────────────────────────────────────
 async function recordScan(data: {
@@ -89,8 +110,172 @@ function extractVisibleText(html: string): string {
   text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
   text = text.replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
   text = text.replace(/<[^>]+>/g, ' ');
-  text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+  text = decodeHtml(text);
   return text.replace(/\s+/g, ' ').trim();
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripTags(value: string): string {
+  return decodeHtml(value.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+function extractMetaContent(html: string, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const keyEscaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patterns = [
+      new RegExp(`<meta\\b(?=[^>]*(?:property|name|itemprop)=["']${keyEscaped}["'])(?=[^>]*content=["']([^"']*)["'])[^>]*>`, 'i'),
+      new RegExp(`<meta\\b(?=[^>]*content=["']([^"']*)["'])(?=[^>]*(?:property|name|itemprop)=["']${keyEscaped}["'])[^>]*>`, 'i'),
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return stripTags(match[1]);
+    }
+  }
+  return undefined;
+}
+
+function extractTitle(html: string): string | undefined {
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  return title ? stripTags(title) : undefined;
+}
+
+function parseCount(raw?: string | number | null): number | undefined {
+  if (raw == null) return undefined;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const match = String(raw).trim().match(/([\d,.]+)\s*([KkMmBb])?/);
+  if (!match) return undefined;
+  const base = Number(match[1].replace(/,/g, ''));
+  if (!Number.isFinite(base)) return undefined;
+  const suffix = (match[2] || '').toLowerCase();
+  if (suffix === 'k') return Math.round(base * 1_000);
+  if (suffix === 'm') return Math.round(base * 1_000_000);
+  if (suffix === 'b') return Math.round(base * 1_000_000_000);
+  return Math.round(base);
+}
+
+function firstCount(text: string, labelPatterns: RegExp[], jsonKeys: string[]): number | undefined {
+  for (const key of jsonKeys) {
+    const keyEscaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patterns = [
+      new RegExp(`"${keyEscaped}"\\s*:\\s*"?([\\d,.]+)"?`, 'i'),
+      new RegExp(`'${keyEscaped}'\\s*:\\s*'?([\\d,.]+)'?`, 'i'),
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      const parsed = parseCount(match?.[1]);
+      if (parsed !== undefined) return parsed;
+    }
+  }
+
+  for (const pattern of labelPatterns) {
+    const match = text.match(pattern);
+    const parsed = parseCount(match?.[1]);
+    if (parsed !== undefined) return parsed;
+  }
+  return undefined;
+}
+
+function cleanDisplayName(raw?: string, username?: string, platform?: string): string | undefined {
+  if (!raw) return undefined;
+  let value = raw
+    .replace(/\s*\(@[^)]+\)\s*.*$/i, '')
+    .replace(/\s*\|\s*(Instagram|TikTok|Facebook).*$/i, '')
+    .replace(/\s*on\s*(Instagram|TikTok|Facebook).*$/i, '')
+    .replace(/\s*-\s*(Instagram|TikTok|Facebook).*$/i, '')
+    .replace(/\s*\(@.*$/, '')
+    .trim();
+  if (platform === 'tiktok') value = value.replace(/\s*\| TikTok Search.*$/i, '').trim();
+  if (!value || value.toLowerCase() === username?.toLowerCase()) return undefined;
+  return value.slice(0, 120);
+}
+
+function cleanBio(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const value = raw
+    .replace(/\s+/g, ' ')
+    .replace(/^.*?on Instagram:\s*/i, '')
+    .replace(/^.*?on TikTok:\s*/i, '')
+    .replace(/^.*?on Facebook:\s*/i, '')
+    .replace(/\s*See Instagram photos and videos from.*$/i, '')
+    .trim();
+  return value ? value.slice(0, 500) : undefined;
+}
+
+function extractWebsite(text: string): string | undefined {
+  const urls = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+  return urls.find((url) => !/(instagram\.com|tiktok\.com|facebook\.com|fb\.com|schema\.org)/i.test(url));
+}
+
+interface ProfileMetadata {
+  displayName?: string;
+  verified?: boolean;
+  followers?: number;
+  following?: number;
+  posts?: number;
+  bio?: string;
+  location?: string;
+  website?: string;
+  profileImage?: string;
+  sourceFields: string[];
+  evidence: string[];
+}
+
+function extractProfileMetadata(platform: string, username: string, rawHtml: string, visibleText: string): ProfileMetadata {
+  const title = extractMetaContent(rawHtml, ['og:title', 'twitter:title']) || extractTitle(rawHtml);
+  const description = extractMetaContent(rawHtml, ['og:description', 'description', 'twitter:description']);
+  const combined = `${rawHtml}\n${visibleText}\n${title || ''}\n${description || ''}`;
+  const sourceFields: string[] = [];
+  const evidence: string[] = [];
+
+  const followers = firstCount(combined, [
+    /([\d,.]+\s*[KkMmBb]?)\s+(?:followers|Follower)/i,
+    /(?:followers|Follower)[^\d]{0,20}([\d,.]+\s*[KkMmBb]?)/i,
+  ], ['followerCount', 'followers', 'follower_count', 'fans', 'fansCount']);
+  const following = firstCount(combined, [
+    /([\d,.]+\s*[KkMmBb]?)\s+(?:following|Following)/i,
+    /(?:following|Following)[^\d]{0,20}([\d,.]+\s*[KkMmBb]?)/i,
+  ], ['followingCount', 'following', 'following_count']);
+  const posts = firstCount(combined, [
+    /([\d,.]+\s*[KkMmBb]?)\s+(?:posts|videos|photos|likes)/i,
+    /(?:posts|videos|photos|likes)[^\d]{0,20}([\d,.]+\s*[KkMmBb]?)/i,
+  ], ['media_count', 'videoCount', 'awemeCount', 'postCount', 'statuses_count']);
+
+  if (followers !== undefined) { sourceFields.push('followers'); evidence.push(`Public metadata shows ${followers.toLocaleString()} followers.`); }
+  if (following !== undefined) { sourceFields.push('following'); evidence.push(`Public metadata shows ${following.toLocaleString()} following.`); }
+  if (posts !== undefined) { sourceFields.push('posts'); evidence.push(`Public metadata shows ${posts.toLocaleString()} posts/videos.`); }
+
+  const displayName = cleanDisplayName(title, username, platform);
+  if (displayName) sourceFields.push('displayName');
+
+  const bio = cleanBio(description);
+  if (bio) { sourceFields.push('bio'); evidence.push(`Bio/description extracted: "${bio.slice(0, 160)}${bio.length > 160 ? '...' : ''}"`); }
+
+  const profileImage = extractMetaContent(rawHtml, ['og:image', 'twitter:image', 'image']);
+  if (profileImage) sourceFields.push('profileImage');
+
+  const website = extractWebsite(`${description || ''}\n${visibleText}`);
+  if (website) sourceFields.push('website');
+
+  const verified = /"isVerified"\s*:\s*true|"verified"\s*:\s*true|"blue_verified"\s*:\s*true|Verified account|verified badge/i.test(combined)
+    ? true
+    : /"isVerified"\s*:\s*false|"verified"\s*:\s*false/i.test(combined)
+      ? false
+      : undefined;
+  if (verified !== undefined) sourceFields.push('verified');
+
+  return { displayName, verified, followers, following, posts, bio, website, profileImage, sourceFields, evidence };
 }
 
 // ── Inline: calculateRiskScore (identical to Python unified_scoring.py) ──────
@@ -123,6 +308,10 @@ const PLATFORM_SPECIFIC: Record<string, Record<string, { weight: number; pattern
   tiktok: {
     limited_content: { weight: 10, patterns: ['limited content','few videos','low video count'], description: 'Limited content on profile' },
     private_profile: { weight: 10, patterns: ['private','private account','hidden'], description: 'Private profile hiding information' },
+  },
+  telegram: {
+    tiktok_funnel: { weight: 10, patterns: ['from tiktok','open in browser','use 3 dots','tiktok to telegram'], description: 'TikTok-to-Telegram funnel pattern' },
+    signal_selling: { weight: 10, patterns: ['callouts','signals','vip group','premium group','private group','exclusive signals'], description: 'Signal-selling or callout channel' },
   },
 };
 
@@ -170,30 +359,130 @@ function calculateRiskScore(text: string, platform?: string, metadata?: { follow
   return { riskScore: Math.round(riskScore * 10) / 10, riskLevel, verificationLevel, redFlagsDetected: detectedFlags.length, flagDetails, weightsSum: totalWeight, maxPossibleWeight: 90, scanTimestamp: new Date().toISOString() };
 }
 
+function levelFromWeight(totalWeight: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  const score = Math.min((totalWeight / 90) * 10, 10);
+  return score >= 7 ? 'CRITICAL' : score >= 5 ? 'HIGH' : score >= 3 ? 'MEDIUM' : 'LOW';
+}
+
+function verificationFromSignals(totalWeight: number, flags: FlagDetail[], verified?: boolean): string {
+  if (flags.some((flag) => flag.flag === 'paid_promoter_kol')) return 'PAID PROMOTER';
+  if (totalWeight >= 50) return 'HIGH RISK';
+  if (totalWeight >= 30) return 'UNVERIFIED';
+  if (totalWeight >= 15) return 'PARTIALLY VERIFIED';
+  if (verified) return 'VERIFIED';
+  return flags.length === 0 ? 'LIKELY SAFE' : 'UNVERIFIED';
+}
+
+function addLocalProfileSignals(
+  result: ReturnType<typeof calculateRiskScore>,
+  profile: ProfileMetadata,
+  scoringText: string,
+) {
+  let totalWeight = result.weightsSum;
+  const flagDetails = [...result.flagDetails];
+
+  const addFlag = (detail: FlagDetail) => {
+    if (flagDetails.some((flag) => flag.flag === detail.flag)) return;
+    flagDetails.push(detail);
+    totalWeight += detail.weight;
+  };
+
+  if (profile.verified === false) {
+    addFlag({
+      flag: 'no_verification',
+      weight: 5,
+      description: 'Profile is not verified by the platform',
+      patternMatched: 'verified=false',
+      platformSpecific: true,
+    });
+  }
+
+  if (profile.followers != null && profile.following != null && profile.followers > 0 && profile.following > 0) {
+    const ratio = profile.followers / profile.following;
+    if (ratio < 1) {
+      addFlag({
+        flag: 'low_follower_ratio',
+        weight: 5,
+        description: `Low follower ratio (${ratio.toFixed(1)}:1)`,
+        patternMatched: 'followers/following',
+        platformSpecific: true,
+      });
+    }
+  }
+
+  const profileText = `${profile.bio || ''}\n${profile.displayName || ''}\n${scoringText}`.toLowerCase();
+  if (/\b(kol|influencer|partnered|promoter|shill)\b/i.test(profileText)) {
+    addFlag({
+      flag: 'paid_promoter_kol',
+      weight: 15,
+      description: 'Paid promoter/KOL language detected',
+      patternMatched: 'kol|influencer|partnered|promoter|shill',
+      platformSpecific: true,
+    });
+  }
+
+  const riskScore = Math.min((totalWeight / 90) * 10, 10);
+  return {
+    ...result,
+    riskScore: Math.round(riskScore * 10) / 10,
+    riskLevel: levelFromWeight(totalWeight),
+    verificationLevel: verificationFromSignals(totalWeight, flagDetails, profile.verified),
+    redFlagsDetected: flagDetails.length,
+    flagDetails,
+    weightsSum: totalWeight,
+  };
+}
+
+function buildRecommendation(riskLevel: string, redFlagsDetected: number): string {
+  if (riskLevel === 'CRITICAL' || riskLevel === 'HIGH') {
+    return 'High-risk scam indicators detected. Do not send funds, connect wallets, download files, or move to DMs without independent verification.';
+  }
+  if (riskLevel === 'MEDIUM') {
+    return 'Some concerning profile patterns were detected. Verify identity, links, and claims through independent sources before engaging.';
+  }
+  return redFlagsDetected > 0
+    ? 'Minor warning signs detected. Treat the profile as unverified and verify links or claims independently.'
+    : 'No major scam patterns were detected from publicly available profile data.';
+}
+
+function confidenceFromProfile(profile: ProfileMetadata, flagCount: number): 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (profile.sourceFields.includes('bio') && profile.sourceFields.some((field) => ['followers', 'following', 'posts'].includes(field))) return 'HIGH';
+  if (profile.sourceFields.length >= 2 || flagCount > 0) return 'MEDIUM';
+  return 'LOW';
+}
+
 // ── Platform config ─────────────────────────────────────────────────────────
 
-const VALID_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+const VALID_PLATFORMS = ['instagram', 'tiktok', 'facebook', 'telegram'];
 const PROFILE_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://www.instagram.com/${u}/`,
   tiktok:    (u) => `https://www.tiktok.com/@${u}`,
   facebook:  (u) => `https://www.facebook.com/${u}`,
+  telegram:  (u) => `https://t.me/${u}`,
 };
 
 const LOGIN_WALL_PATTERNS: Record<string, string[]> = {
   instagram: ['PolarisErrorRoot', 'show_lox_redesigned_404_page', 'httpErrorPage', 'loginWall'],
   tiktok:    ["Couldn't find this account", 'Page not found', 'tiktok-login'],
   facebook:  ["This page isn't available", 'Page Not Found', 'login_page'],
+  telegram:  ['Telegram Messenger'], // Generic homepage = not a valid channel
 };
 
 const NOT_FOUND_PATTERNS: Record<string, string[]> = {
   instagram: ["Sorry, this page isn't available", 'Unable to load this page'],
   tiktok:    ["Couldn't find this account", 'Page not found'],
   facebook:  ["This page isn't available", 'Page Not Found'],
+  telegram:  ['Page not found', 'If you have Telegram, you can view and join'], // t.me generic fallback
 };
 
 // ── Core scan function ──────────────────────────────────────────────────────
 
 async function performScan(platform: string, username: string): Promise<Record<string, unknown>> {
+  // Telegram has a different page structure — use dedicated handler
+  if (platform === 'telegram') {
+    return performTelegramScan(username);
+  }
+
   const url = PROFILE_URLS[platform](username);
 
   const fetchRes = await fetch(url, {
@@ -214,7 +503,13 @@ async function performScan(platform: string, username: string): Promise<Record<s
     return {
       success: false, error: 'PROFILE_LOGIN_REQUIRED',
       message: `${platform.charAt(0).toUpperCase() + platform.slice(1)} requires login to view this profile. For accurate scanning, use the Jeeevs Telegram bot or Chrome CDP scan.`,
-      platform, username, riskScore: 0, riskLevel: 'UNAVAILABLE', verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
+      platform, username, url, riskScore: 0, riskLevel: 'UNAVAILABLE', verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
+      redFlags: [],
+      evidence: ['Direct public HTML scan was blocked by a platform login wall.'],
+      recommendation: 'Run the local OpenClaw/Chrome scan or Telegram bot path for full authenticated profile evidence.',
+      confidence: 'LOW',
+      scanDate: new Date().toISOString(),
+      profileData: {},
     };
   }
 
@@ -226,40 +521,147 @@ async function performScan(platform: string, username: string): Promise<Record<s
   if (notFoundPatterns.some((p) => visibleText.includes(p))) {
     return {
       success: false, error: 'Profile not found or unreachable',
-      platform, username, riskScore: 0, riskLevel: 'ERROR', verificationLevel: 'ERROR', redFlagsDetected: 0, flagDetails: [],
+      platform, username, url, riskScore: 0, riskLevel: 'ERROR', verificationLevel: 'ERROR', redFlagsDetected: 0, flagDetails: [],
+      redFlags: [],
+      evidence: ['Platform returned a not-found or unreachable profile page.'],
+      recommendation: 'Confirm the handle and platform, then retry. If the profile is private or region-blocked, use the local OpenClaw scan path.',
+      confidence: 'LOW',
+      scanDate: new Date().toISOString(),
+      profileData: {},
     };
   }
 
-  // Include OG/meta description
-  const ogDesc = rawHtml.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i);
-  const metaDesc = rawHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-  let scoringText = visibleText;
-  if (ogDesc?.[1]) scoringText += '\n' + ogDesc[1];
-  if (metaDesc?.[1] && metaDesc[1] !== ogDesc?.[1]) scoringText += '\n' + metaDesc[1];
+  const profileMeta = extractProfileMetadata(platform, username, rawHtml, visibleText);
+  const scoringText = [
+    visibleText,
+    profileMeta.displayName,
+    profileMeta.bio,
+    profileMeta.website,
+  ].filter(Boolean).join('\n');
 
-  // Extract follower count
-  const metadata: { followers?: number } = {};
-  const followerMatch = rawHtml.toLowerCase().match(/(\d+[,.]?\d*[KkMm]?)\s*followers/);
-  if (followerMatch) {
-    const raw = followerMatch[1].toLowerCase();
-    metadata.followers = raw.includes('k') ? parseFloat(raw.replace('k','').replace(',','')) * 1000
-      : raw.includes('m') ? parseFloat(raw.replace('m','').replace(',','')) * 1000000
-      : parseFloat(raw.replace(',',''));
-  }
-
-  // Score VISIBLE TEXT only
-  const result = calculateRiskScore(scoringText, platform, metadata);
+  // Score public page content plus extracted profile metadata.
+  const result = addLocalProfileSignals(
+    calculateRiskScore(scoringText, platform, { followers: profileMeta.followers }),
+    profileMeta,
+    scoringText,
+  );
 
   // Bot detection (lightweight, profile-level only)
-  const bio = ogDesc?.[1] || metaDesc?.[1] || '';
   const botDetection = calculateBotScoreLite({
-    followers: metadata.followers,
+    followers: profileMeta.followers,
+    following: profileMeta.following,
+    posts: profileMeta.posts,
     username,
-    bio,
+    bio: profileMeta.bio,
+    website: profileMeta.website,
+    verified: profileMeta.verified,
   }, platform);
+
+  const redFlags = result.flagDetails.map((flag) => `${flag.description} (+${flag.weight})`);
+  const evidence = [
+    ...profileMeta.evidence,
+    ...result.flagDetails.map((flag) => `Matched ${flag.flag}: ${flag.patternMatched}`),
+  ];
+  const confidence = confidenceFromProfile(profileMeta, result.flagDetails.length);
 
   return {
     success: true, platform, username, url,
+    displayName: profileMeta.displayName,
+    verified: profileMeta.verified ?? false,
+    riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
+    redFlagsDetected: result.redFlagsDetected, redFlags, flagDetails: result.flagDetails,
+    evidence,
+    recommendation: buildRecommendation(result.riskLevel, result.redFlagsDetected),
+    profileData: {
+      displayName: profileMeta.displayName,
+      verified: profileMeta.verified ?? false,
+      followers: profileMeta.followers,
+      following: profileMeta.following,
+      posts: profileMeta.posts,
+      bio: profileMeta.bio,
+      location: profileMeta.location,
+      website: profileMeta.website,
+      profileImage: profileMeta.profileImage,
+      sourceFields: profileMeta.sourceFields,
+    },
+    confidence,
+    weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
+    scanTimestamp: result.scanTimestamp,
+    scanDate: result.scanTimestamp,
+    dataQuality: profileMeta.sourceFields.length >= 3 ? 'rich_public_profile' : profileMeta.sourceFields.length > 0 ? 'limited_public_profile' : 'sparse_public_profile',
+    botDetection,
+    disclaimer: 'This scan is an AI-powered threat assessment. For complete accuracy, verify information through multiple sources. Independent verification always recommended.',
+  };
+}
+
+// ── Telegram-specific scan ──────────────────────────────────────────────────
+// t.me pages have a unique structure: og:title for channel name, og:description
+// for channel description, and subscriber count in the visible text.
+
+async function performTelegramScan(username: string): Promise<Record<string, unknown>> {
+  const url = `https://t.me/${username}`;
+
+  const fetchRes = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    },
+    signal: AbortSignal.timeout(10000),
+    redirect: 'follow',
+  });
+
+  const rawHtml = await fetchRes.text();
+
+  // t.me returns the generic Telegram homepage when the channel doesn't exist
+  // Check for actual channel content via og:title
+  const ogTitleMatch = rawHtml.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+  const ogDescMatch = rawHtml.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
+  const ogTitle = ogTitleMatch?.[1] || '';
+  const ogDesc = ogDescMatch?.[1] || '';
+
+  // If og:title is just "Telegram Messenger" or empty, it's not a real channel
+  if (!ogTitle || ogTitle === 'Telegram Messenger' || ogTitle === 'Telegram') {
+    return {
+      success: false, error: 'TELEGRAM_CHANNEL_NOT_FOUND',
+      message: `No public Telegram channel found for @${username}. This may be a private user account (not a public channel/group). Private accounts cannot be scanned without Bot API access.`,
+      platform: 'telegram', username, riskScore: 0, riskLevel: 'UNAVAILABLE',
+      verificationLevel: 'UNAVAILABLE', redFlagsDetected: 0, flagDetails: [],
+    };
+  }
+
+  // Extract visible text
+  const visibleText = extractVisibleText(rawHtml);
+
+  // Extract subscriber count — t.me shows "N subscribers" or "N member"
+  const subscriberMatch = rawHtml.match(/(\d[\d\s.,]*)\s*(?:subscribers|members|subscriber)/i);
+  let subscribers: number | undefined;
+  if (subscriberMatch) {
+    const raw = subscriberMatch[1].replace(/[\s,]/g, '');
+    subscribers = parseInt(raw, 10);
+    if (isNaN(subscribers)) subscribers = undefined;
+  }
+
+  // Build scoring text from channel name + description + visible content
+  let scoringText = ogTitle;
+  if (ogDesc) scoringText += '\n' + ogDesc;
+  scoringText += '\n' + visibleText;
+
+  // Run the same 90-point unified scoring as the local CLI scanner
+  const result = calculateRiskScore(scoringText, 'telegram', { followers: subscribers });
+
+  // Bot detection (lightweight)
+  const botDetection = calculateBotScoreLite({
+    followers: subscribers,
+    username,
+    bio: ogDesc,
+  }, 'telegram');
+
+  return {
+    success: true, platform: 'telegram', username, url,
+    displayName: ogTitle,
+    bio: ogDesc,
+    followers: subscribers,
     riskScore: result.riskScore, riskLevel: result.riskLevel, verificationLevel: result.verificationLevel,
     redFlagsDetected: result.redFlagsDetected, flagDetails: result.flagDetails,
     weightsSum: result.weightsSum, maxPossibleWeight: result.maxPossibleWeight,
@@ -294,7 +696,7 @@ function calculateBotScoreLite(
     website?: string;
     verified?: boolean;
   },
-  platform: string,
+  _platform: string,
 ): { botScore: number; classification: string; flags: BotFlagLite[] } {
   const flags: BotFlagLite[] = [];
 
@@ -418,7 +820,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const result = await performScan(platform, username);
     
-    // Record scan to Supabase for tracking
+    // Record scan to Supabase for tracking (legacy scan_results table)
     if (result.success) {
       await recordScan({
         platform: result.platform,
@@ -428,6 +830,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         red_flags: result.flagDetails?.map((f: any) => f.name || f.id) || [],
         source: 'website',
       });
+
+      // Also record to analytics with scan_type
+      try {
+        await fetch('https://agenticbro.app/api/scan-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'social',
+            platform: result.platform,
+            username: result.username,
+            risk_score: result.riskScore,
+            risk_level: result.riskLevel,
+            source: 'website',
+          }),
+        });
+      } catch (e) {
+        console.error('[social-scan] analytics tracking error:', e);
+      }
+    }
+    
+    // Record to unified scan_events table for analytics
+    try {
+      await trackScanEvent({
+        scan_type: 'social',
+        platform: result.platform as any,
+        target: result.username,
+        risk_score: result.riskScore,
+        risk_level: result.riskLevel as any,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] social-scan event error:', e);
     }
     
     res.status(200).json(result);

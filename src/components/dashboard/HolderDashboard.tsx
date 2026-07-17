@@ -51,7 +51,7 @@ export default function HolderDashboard({ onBack }: { onBack?: () => void }) {
           <div className="text-sm text-gray-500">
             <p className="mb-2">Holder Tier includes:</p>
             <ul className="text-left max-w-sm mx-auto space-y-1">
-              <li>• <span className="text-green-400 font-bold">50 ALL scans/month</span> (Profile, Phone, Token, Channel, Priority)</li>
+              <li>• <span className="text-green-400 font-bold">100 ALL scans/month</span> (Profile, Phone, Token, Channel, Priority)</li>
               <li>• Profile Verifier — X, IG, TikTok, FB, Telegram</li>
               <li>• Phone Identifier — FTC data + community reports</li>
               <li>• Token Scanner — Honeypot + contract analysis</li>

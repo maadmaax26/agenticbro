@@ -14,8 +14,28 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SECRET_API_KEY!
 );
+
+// ── Inline scan event tracking for analytics ──────────────────────────────
+async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {
+  try {
+    await supabase.from('scan_events').insert({
+      scan_type: params.scan_type,
+      platform: params.platform ?? null,
+      target: params.target,
+      username: params.target,
+      risk_score: params.risk_score ?? null,
+      risk_level: params.risk_level ?? null,
+      source: params.source ?? 'website',
+      source_table: 'direct_insert',
+      event_date: new Date().toISOString().split('T')[0],
+      country_code: params.country_code ?? null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] Error:', e);
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── CORS ──────────────────────────────────────────────────────────────────
@@ -51,6 +71,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Create scan job
     const jobId = crypto.randomUUID();
     
+    // Record to unified scan_events table for analytics (before job insert so we track even if queue fails)
+    try {
+      await trackScanEvent({
+        scan_type: 'x_cdp',
+        platform: 'twitter',
+        target: cleanUsername,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] x-scan event error:', e);
+    }
+
     const { error: insertError } = await supabase
       .from('scan_jobs')
       .insert({

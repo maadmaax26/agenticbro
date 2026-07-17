@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 const SCAN_STORAGE_KEY = 'preconnect_scan_count'
-const FREE_SCANS = 5
+const FREE_SCANS = 25
 
 interface ScanResult {
   risk_score: number
@@ -260,7 +260,7 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
   return (
     <div className="w-full max-w-2xl mx-auto my-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-6 shadow-2xl">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-purple-500/20">
           <Shield className="w-5 h-5 text-purple-400" />
         </div>
@@ -268,7 +268,7 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
           <h3 className="text-base font-bold text-white">{t.title as string}</h3>
           <p className="text-xs text-gray-400">{t.subtitle as string}</p>
         </div>
-        <div className="ml-auto text-right">
+        <div className="sm:ml-auto sm:text-right">
           {scansLeft > 0 ? (
             <span className="text-xs text-purple-300 font-semibold">
               {(t.scans_left as (n: number) => string)(scansLeft)}
@@ -280,12 +280,12 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
       </div>
 
       {/* Input Row */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <select
           value={platform}
           onChange={e => setPlatform(e.target.value as 'telegram' | 'twitter')}
           disabled={!canScan}
-          className="rounded-lg border border-white/10 bg-gray-900 text-gray-200 text-xs px-2 py-2 outline-none focus:ring-1 focus:ring-purple-500"
+          className="w-full sm:w-auto rounded-lg border border-white/10 bg-gray-900 text-gray-200 text-xs px-2 py-2 outline-none focus:ring-1 focus:ring-purple-500"
         >
           <option value="telegram">Telegram</option>
           <option value="twitter">Twitter/X</option>
@@ -298,13 +298,13 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
           onKeyDown={e => { if (e.key === 'Enter') handleScan() }}
           placeholder={t.placeholder as string}
           disabled={!canScan}
-          className="flex-1 rounded-lg border border-white/10 bg-gray-900 text-gray-200 text-xs px-3 py-2 outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
+          className="w-full flex-1 rounded-lg border border-white/10 bg-gray-900 text-gray-200 text-xs px-3 py-2 outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
         />
 
         <button
           onClick={handleScan}
           disabled={!canScan || !username.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+          className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
           style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff' }}
         >
           {scanning ? (

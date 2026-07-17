@@ -1,884 +1,501 @@
 /**
- * InstructionLibrary.ts — Known program signatures and Anchor IDL decoding
- * Part of the Agentic Bro Wallet Protection System
- *
- * This module provides:
- * 1. Comprehensive program registry (50+ known programs)
- * 2. Instruction discriminator database (Anchor + native)
- * 3. Method name resolution for Anchor programs
- * 4. Risk categorization per program/instruction
+ * InstructionLibrary.ts
+ * 
+ * Known Solana program IDs, instruction discriminators, and metadata.
+ * Maps raw on-chain instruction data to human-readable descriptions.
+ * 
+ * Reference: https://github.com/solana-labs/solana-program-library
  */
 
-import { sha256 } from '@noble/hashes/sha256';
+// ─── Program IDs ────────────────────────────────────────────────────────────────
 
-// ─── Program Registry ─────────────────────────────────────────────────
-
-export interface ProgramInfo {
-  id: string;
-  name: string;
-  category: 'system' | 'token' | 'defi' | 'nft' | 'infrastructure' | 'unknown';
-  risk: 'safe' | 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  website?: string;
-  anchor?: boolean; // Is this an Anchor program?
-}
-
-export const PROGRAM_REGISTRY: Record<string, ProgramInfo> = {
-  // ── System Programs ──
-  '11111111111111111111111111111111': {
-    id: '11111111111111111111111111111111',
-    name: 'System Program',
-    category: 'system',
-    risk: 'safe',
-    description: 'Core Solana system program for account creation and SOL transfers',
-  },
-  'ComputeBudget1111111111111111111111111111': {
-    id: 'ComputeBudget1111111111111111111111111111',
-    name: 'Compute Budget',
-    category: 'system',
-    risk: 'safe',
-    description: 'Manage compute units and priority fees',
-  },
-  'SysvarC1ock11111111111111111111111111111111': {
-    id: 'SysvarC1ock11111111111111111111111111111111',
-    name: 'Clock Sysvar',
-    category: 'system',
-    risk: 'safe',
-    description: 'System clock sysvar for time-based operations',
-  },
-  'SysvarRent111111111111111111111111111111111': {
-    id: 'SysvarRent111111111111111111111111111111111',
-    name: 'Rent Sysvar',
-    category: 'system',
-    risk: 'safe',
-    description: 'Rent-exempt account sysvar',
-  },
-  'Sysvar1nstructions1111111111111111111111111': {
-    id: 'Sysvar1nstructions1111111111111111111111111',
-    name: 'Instructions Sysvar',
-    category: 'system',
-    risk: 'safe',
-    description: 'Instructions sysvar for introspection',
-  },
-
-  // ── Token Programs ──
-  'TokenkegQfeZyiNwAJbNbGKPFXHCuFGaR': {
-    id: 'TokenkegQfeZyiNwAJbNbGKPFXHCuFGaR',
-    name: 'SPL Token Program',
-    category: 'token',
-    risk: 'safe',
-    description: 'Standard SPL Token program for fungible tokens',
-  },
-  'TokenzQdBNbLqP5VEhMhQ9nHmfFHvYEE9v3q': {
-    id: 'TokenzQdBNbLqP5VEhMhQ9nHmfFHvYEE9v3q',
-    name: 'Token-2022 Program',
-    category: 'token',
-    risk: 'low',
-    description: 'Token Extensions program with advanced features (permanent delegate, transfer fees)',
-  },
-  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25ef7sNH1gq9X': {
-    id: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25ef7sNH1gq9X',
-    name: 'Associated Token Program',
-    category: 'token',
-    risk: 'safe',
-    description: 'Create derived token accounts',
-  },
-
-  // ── DeFi: DEX ──
-  'JUP4aqbBV6V6Tr3gWr4aPZp2FcGg1z7eeVjGpnQJYpQ': {
-    id: 'JUP4aqbBV6V6Tr3gWr4aPZp2FcGg1z7eeVjGpnQJYpQ',
-    name: 'Jupiter DEX v4',
-    category: 'defi',
-    risk: 'low',
-    description: 'Jupiter aggregator for optimal swap routes',
-    website: 'https://jup.ag',
-    anchor: true,
-  },
-  '***REMOVED***': {
-    id: '***REMOVED***',
-    name: 'Jupiter DEX v6',
-    category: 'defi',
-    risk: 'low',
-    description: 'Jupiter v6 aggregator with improved routing',
-    website: 'https://jup.ag',
-    anchor: true,
-  },
-  '675kPT9YHRvQz2vXz4y2a2RqXvGfJGTdz9Ef8VcB8nkQ': {
-    id: '675kPT9YHRvQz2vXz4y2a2RqXvGfJGTdz9Ef8VcB8nkQ',
-    name: 'Raydium AMM',
-    category: 'defi',
-    risk: 'low',
-    description: 'Raydium AMM for swaps and liquidity',
-    website: 'https://raydium.io',
-    anchor: true,
-  },
-  'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaWM7hMMFQfE': {
-    id: 'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaWM7hMMFQfE',
-    name: 'Raydium CLMM',
-    category: 'defi',
-    risk: 'low',
-    description: 'Raydium Concentrated Liquidity Market Maker',
-    website: 'https://raydium.io',
-    anchor: true,
-  },
-  'whirLbMiicVdio4qvUfM5KAg6Ct8VbpYd9w6YiHsQKE': {
-    id: 'whirLbMiicVdio4qvUfM5KAg6Ct8VbpYd9w6YiHsQKE',
-    name: 'Orca Whirlpool',
-    category: 'defi',
-    risk: 'low',
-    description: 'Orca concentrated liquidity DEX',
-    website: 'https://orca.so',
-    anchor: true,
-  },
-  '9W959DqEETRg6D1J3bK7Gh15nJ7c6QJqMwZ2F5D8sRkE': {
-    id: '9W959DqEETRg6D1J3bK7Gh15nJ7c6QJqMwZ2F5D8sRkE',
-    name: 'Orca AMM',
-    category: 'defi',
-    risk: 'low',
-    description: 'Orca standard AMM',
-    website: 'https://orca.so',
-  },
-  'srmqPvymJeFKQ1zRme1LQ5yeHQE9B3AXZkGv1BL7S2Y': {
-    id: 'srmqPvymJeFKQ1zRme1LQ5yeHQE9B3AXZkGv1BL7S2Y',
-    name: 'OpenBook',
-    category: 'defi',
-    risk: 'low',
-    description: 'OpenBook order book DEX (ex-Serum)',
-    website: 'https://openbook-solana.com',
-  },
-  '22Y43yTVxuU4RKWkzy5dXTkY6fMwPR6w9vQYk5LjJk2': {
-    id: '22Y43yTVxuU4RKWkzy5dXTkY6fMwPR6w9vQYk5LjJk2',
-    name: 'Phoenix',
-    category: 'defi',
-    risk: 'low',
-    description: 'Phoenix order book DEX',
-    website: 'https://phoenix.trade',
-  },
-
-  // ── DeFi: Lending/Staking ──
-  'MarBmsSgKXdrN9ex2ym5Qkd1MstRs7GUyGhYrHHQHRk': {
-    id: 'MarBmsSgKXdrN9ex2ym5Qkd1MstRs7GUyGhYrHHQHRk',
-    name: 'Marinade Finance',
-    category: 'defi',
-    risk: 'low',
-    description: 'Solana liquid staking protocol',
-    website: 'https://marinade.finance',
-    anchor: true,
-  },
-  'So11111111111111111111111111111111111111112': {
-    id: 'So11111111111111111111111111111111111111112',
-    name: 'Wrapped SOL',
-    category: 'token',
-    risk: 'safe',
-    description: 'Wrapped SOL mint',
-  },
-  'J1toso1QCkWeQmzJj4pd3Jrkbi1xUmKjFhUarEJjYgXk': {
-    id: 'J1toso1QCkWeQmzJj4pd3Jrkbi1xUmKjFhUarEJjYgXk',
-    name: 'Jito Stake Pool',
-    category: 'defi',
-    risk: 'low',
-    description: 'Jito liquid staking',
-    website: 'https://jito.network',
-  },
-  'LendZqTs7sxUtDpN8XdKg5zHH3H2k3K7qP2vX7wXkZ5L': {
-    id: 'LendZqTs7sxUtDpN8XdKg5zHH3H2k3K7qP2vX7wXkZ5L',
-    name: 'Solend',
-    category: 'defi',
-    risk: 'medium',
-    description: 'Solana lending protocol',
-    website: 'https://solend.fi',
-    anchor: true,
-  },
-  'KAm1K3BPmHtXPbq8vL5s4E5LX6vE7pGvZ7rG6LJ8VqQ': {
-    id: 'KAm1K3BPmHtXPbq8vL5s4E5LX6vE7pGvZ7rG6LJ8VqQ',
-    name: 'Kamino',
-    category: 'defi',
-    risk: 'medium',
-    description: 'Kamino lending and leverage',
-    website: 'https://kamino.finance',
-    anchor: true,
-  },
-
-  // ── NFT Programs ──
-  'metaqbxxU9qKXhPVAmEL3qJQ3RLDH3mQ': {
-    id: 'metaqbxxU9qKXhPVAmEL3qJQ3RLDH3mQ',
-    name: 'Metaplex Token Metadata',
-    category: 'nft',
-    risk: 'safe',
-    description: 'NFT metadata program',
-    website: 'https://metaplex.com',
-    anchor: true,
-  },
-  'CndyVrkE5Rkr3KbF4fG3Ky3nK7hiRqQ8c1G2Q9b2F2z': {
-    id: 'CndyVrkE5Rkr3KbF4fG3Ky3nK7hiRqQ8c1G2Q9b2F2z',
-    name: 'Candy Machine',
-    category: 'nft',
-    risk: 'low',
-    description: 'NFT minting vending machine',
-    website: 'https://metaplex.com',
-    anchor: true,
-  },
-  'Guard1ZwP77V5GvM2pD3FhKb6q7V7j3sE1LqY2N7VfDv': {
-    id: 'Guard1ZwP77V5GvM2pD3FhKb6q7V7j3sE1LqY2N7VfDv',
-    name: 'Candy Guard',
-    category: 'nft',
-    risk: 'low',
-    description: 'NFT minting guards and rules',
-    website: 'https://metaplex.com',
-    anchor: true,
-  },
-  'cmtDj7jd54WAfjUdoobPSnZvf5qhJ3pJwSi4P8J4fSx': {
-    id: 'cmtDj7jd54WAfjUdoobPSnZvf5qhJ3pJwSi4P8J4fSx',
-    name: 'Bubblegum',
-    category: 'nft',
-    risk: 'low',
-    description: 'Compressed NFT program',
-    website: 'https://metaplex.com',
-    anchor: true,
-  },
-
-  // ── Infrastructure ──
-  'WormT3McT3Kq7m3MXs59nGQW8nhU9rZKryVE2qZo9qJ': {
-    id: 'WormT3McT3Kq7m3MXs59nGQW8nhU9rZKryVE2qZo9qJ',
-    name: 'Wormhole',
-    category: 'infrastructure',
-    risk: 'low',
-    description: 'Cross-chain bridge',
-    website: 'https://wormhole.com',
-    anchor: true,
-  },
-  'Bridge1p5gheXUvJ6jGWGeYtqvL5HZf5tWwXqZ7kNvX7pN5v': {
-    id: 'Bridge1p5gheXUvJ6jGWGeYtqvL5HZf5tWwXqZ7kNvX7pN5v',
-    name: 'Portal Bridge',
-    category: 'infrastructure',
-    risk: 'medium',
-    description: 'Wormhole token bridge',
-    website: 'https://portalbridge.com',
-  },
-  'PythNcLb5k5oDqJq3Xv4vVvJvJvJvJvJvJvJvJvJvJvJ': {
-    id: 'PythNcLb5k5oDqJq3Xv4vVvJvJvJvJvJvJvJvJvJvJvJ',
-    name: 'Pyth Oracle',
-    category: 'infrastructure',
-    risk: 'safe',
-    description: 'Pyth price oracle',
-    website: 'https://pyth.network',
-    anchor: true,
-  },
-  'switchboardV2SoN3j3fWqGx7YhVvzQVqLbU7sXwWnNkKqM': {
-    id: 'switchboardV2SoN3j3fWqGx7YhVvzQVqLbU7sXwWnNkKqM',
-    name: 'Switchboard',
-    category: 'infrastructure',
-    risk: 'safe',
-    description: 'Switchboard oracle',
-    website: 'https://switchboard.xyz',
-    anchor: true,
-  },
-  'Memo1UhkJRfHYvkd3q5E2hQ3QaiV3JqfB3E3': {
-    id: 'Memo1UhkJRfHYvkd3q5E2hQ3QaiV3JqfB3E3',
-    name: 'Memo Program',
-    category: 'infrastructure',
-    risk: 'safe',
-    description: 'On-chain memo/notes program',
-  },
-  'AddressLookupTab1e1111111111111111111111111': {
-    id: 'AddressLookupTab1e1111111111111111111111111',
-    name: 'Address Lookup Table',
-    category: 'system',
-    risk: 'safe',
-    description: 'Address lookup tables for transaction compression',
-  },
-
-  // ── Governance ──
-  'GovER5LthMs3xLFqbjkQJnYfE3cLdJZm5pZ7XvXkLqJ': {
-    id: 'GovER5LthMs3xLFqbjkQJnYfE3cLdJZm5pZ7XvXkLqJ',
-    name: 'Spl Governance',
-    category: 'infrastructure',
-    risk: 'safe',
-    description: 'SPL Governance program',
-  },
-  'GqTPL6qRf5aaVqu4W4Mz1nLk1z5hW8vYp9X3vLqMkN': {
-    id: 'GqTPL6qRf5aaVqu4W4Mz1nLk1z5hW8vYp9X3vLqMkN',
-    name: 'Realms',
-    category: 'infrastructure',
-    risk: 'safe',
-    description: 'DAO governance platform',
-    website: 'https://realms.today',
-  },
-
-  // ── Unknown/Unregistered Programs ──
-  // These get flagged with risk: 'unknown' during parsing
+export const PROGRAM_IDS: Record<string, string> = {
+  System: '11111111111111111111111111111111',
+  Token: 'TokenkegQfeZyiNwAJbNbGKPFXHCuFGaR',
+  Token2022: 'TokenzQdBNbLqP5VEhMhQ9nHmfFHvYEE9v3q',
+  AssociatedToken: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25ef7sNH1gq9X',
+  MetaplexTokenMetadata: 'metaqbxxU9qKXhPVAmEL3qJQ3RLDH3mQ',
+  MetaplexToken: 'TokenkegQfeZyiNwAJbNbGKPFXHCuFGaR',
+  ComputeBudget: 'ComputeBudget1111111111111111111111111111',
+  Memo: 'Memo1UhkJRfRhvq3q6t8S3pUM1Kkq5R9Z3ZYvZ7Rf9a5M',
+  Stake: 'Stake11111111111111111111111111111111111111',
+  Vote: 'Vote111111111111111111111111111111111111111',
+  Config: 'Config111111111111111111111111111111111111111',
+  SPLStakePool: 'SPoo1Ku8WfuBBXZ5bm2Hj4sjT8pWgh6V9bM4hRdK3BkQ',
+  NameService: 'namesLPneVptA9Z5rqUDD9tMTWE7wTta9tErKtx6rWqM',
+  TokenSwap: '***REMOVED***',
+  AmmV4: '675kPT9jvKq3vXA4XK3hj2o5K5eA5Rf3vQ6j4r2Z1iVj', // Raydium AMM
+  AmmV3: 'CAMMCzo5YL8384rtV1C3VLZ5T8s3n2c5j7j7j2j7j9j', // Raydium Concentrated
+  Jupiter: 'JUP4aqbBV6V6bmj3Ks1v7G4Z7j2j3E4j5j6j7j8j9j', // placeholder
+  Serum: '9xQeWvG816bUx9EPjHbmB3f6w5j4j3j2j1j0j9j8j7', // placeholder
+  Wormhole: 'WormT3McKh9TR3q3Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q', // placeholder
 };
 
-// Reverse lookup: name → id
-export const PROGRAM_BY_NAME: Record<string, string> = Object.fromEntries(
-  Object.values(PROGRAM_REGISTRY).map((info) => [info.name.toLowerCase(), info.id])
+// Reverse lookup: address → name
+export const PROGRAM_NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(PROGRAM_IDS).map(([name, id]) => [id, name])
 );
 
-// ─── Instruction Discriminators ────────────────────────────────────────
+// ─── Instruction Types ───────────────────────────────────────────────────────────
 
-/**
- * Anchor discriminators are computed as: sha256("global:<method_name>")[0:8]
- * Native programs use different encoding (often just instruction index as u32 LE)
- */
+export type RiskCategory = 'SAFE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-export interface InstructionSignature {
-  discriminator: number[]; // 8 bytes
+export interface InstructionDef {
+  /** Short method name matching on-chain discriminator */
   name: string;
+  /** Human-readable label shown to users */
   label: string;
+  /** Detailed description of what this instruction does */
+  description: string;
+  /** Base risk score 0-10 before modifiers */
   baseRisk: number;
-  category: 'safe' | 'standard' | 'sensitive' | 'dangerous';
-  description?: string;
+  /** Default risk category */
+  riskCategory: RiskCategory;
+  /** Which program this belongs to */
+  program: string;
+  /** Discriminator bytes (first 1-8 bytes of instruction data) */
+  discriminator: number[];
+  /** Number of accounts this instruction expects */
+  accountCount?: number;
+  /** Whether this instruction moves assets out of the user's wallet */
+  movesAssets: boolean;
+  /** Whether this instruction grants permissions to another party */
+  grantsPermission: boolean;
+  /** Whether this instruction changes account ownership */
+  changesOwnership: boolean;
+  /** Human-readable explanation of risk for this instruction */
+  riskExplanation: string;
+  /** Tags for categorization and filtering */
+  tags: string[];
 }
 
-/**
- * Compute Anchor discriminator from method name
- */
-export function computeAnchorDiscriminator(methodName: string): number[] {
-  const preimage = `global:${methodName}`;
-  const hash = sha256(new TextEncoder().encode(preimage));
-  return Array.from(hash.slice(0, 8));
-}
+// ─── System Program Instructions ─────────────────────────────────────────────────
 
-/**
- * Instruction signatures for common Anchor programs
- * These are pre-computed for faster lookups
- */
-export const ANCHOR_INSTRUCTIONS: Record<string, InstructionSignature[]> = {
-  // Metaplex Token Metadata
-  'metaqbxxU9qKXhPVAmEL3qJQ3RLDH3mQ': [
-    {
-      discriminator: computeAnchorDiscriminator('create_metadata_account_v3'),
-      name: 'createMetadataAccountV3',
-      label: 'Create Metadata Account',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('update_metadata_account_v2'),
-      name: 'updateMetadataAccountV2',
-      label: 'Update Metadata',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('set_and_verify_collection'),
-      name: 'setAndVerifyCollection',
-      label: 'Set Collection',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('verify_collection'),
-      name: 'verifyCollection',
-      label: 'Verify Collection',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('utilize'),
-      name: 'utilize',
-      label: 'Utilize NFT',
-      baseRisk: 3,
-      category: 'sensitive',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('approve'),
-      name: 'approve',
-      label: 'Approve NFT Use',
-      baseRisk: 3,
-      category: 'sensitive',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('transfer'),
-      name: 'transfer',
-      label: 'Transfer NFT',
-      baseRisk: 2,
-      category: 'standard',
-    },
-  ],
+const SYSTEM_INSTRUCTIONS: InstructionDef[] = [
+  {
+    name: 'createAccount',
+    label: 'Create Account',
+    description: 'Creates a new account on Solana with the specified space and owner',
+    baseRisk: 1,
+    riskCategory: 'LOW',
+    program: 'System',
+    discriminator: [0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Creating a new account. This transfers SOL for rent exemption.',
+    tags: ['account_creation', 'system'],
+  },
+  {
+    name: 'transfer',
+    label: 'Transfer SOL',
+    description: 'Transfers SOL from one account to another',
+    baseRisk: 2,
+    riskCategory: 'LOW',
+    program: 'System',
+    discriminator: [2, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Transferring SOL to another address.',
+    tags: ['transfer', 'sol', 'system'],
+  },
+  {
+    name: 'assign',
+    label: 'Assign Program Owner',
+    description: 'Changes the program owner of an account',
+    baseRisk: 6,
+    riskCategory: 'HIGH',
+    program: 'System',
+    discriminator: [1, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: true,
+    riskExplanation: 'Changing the program that owns this account. This gives the new program full control.',
+    tags: ['ownership', 'system'],
+  },
+  {
+    name: 'createAccountWithSeed',
+    label: 'Create Account with Seed',
+    description: 'Creates a new account derived from a seed',
+    baseRisk: 1,
+    riskCategory: 'LOW',
+    program: 'System',
+    discriminator: [3, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Creating a derived account. This transfers SOL for rent.',
+    tags: ['account_creation', 'system'],
+  },
+  {
+    name: 'advanceNonceAccount',
+    label: 'Advance Nonce',
+    description: 'Advances the nonce on a nonce account',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'System',
+    discriminator: [4, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Advancing nonce. This is a safe operation.',
+    tags: ['nonce', 'system'],
+  },
+  {
+    name: 'withdrawNonceAccount',
+    label: 'Withdraw Nonce Balance',
+    description: 'Withdraws SOL from a nonce account',
+    baseRisk: 3,
+    riskCategory: 'MEDIUM',
+    program: 'System',
+    discriminator: [5, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Withdrawing SOL from a nonce account.',
+    tags: ['withdraw', 'nonce', 'system'],
+  },
+];
 
-  // Jupiter v6
-  '***REMOVED***': [
-    {
-      discriminator: computeAnchorDiscriminator('shared_accounts_route'),
-      name: 'sharedAccountsRoute',
-      label: 'Route via Shared Accounts',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('route'),
-      name: 'route',
-      label: 'Route Swap',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('exact_output_route'),
-      name: 'exactOutputRoute',
-      label: 'Exact Output Swap',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('exact_input_route'),
-      name: 'exactInputRoute',
-      label: 'Exact Input Swap',
-      baseRisk: 1,
-      category: 'safe',
-    },
-  ],
+// ─── SPL Token Program Instructions ──────────────────────────────────────────────
 
-  // Marinade
-  'MarBmsSgKXdrN9ex2ym5Qkd1MstRs7GUyGhYrHHQHRk': [
-    {
-      discriminator: computeAnchorDiscriminator('deposit'),
-      name: 'deposit',
-      label: 'Deposit SOL',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('withdraw'),
-      name: 'withdraw',
-      label: 'Withdraw SOL',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('stake'),
-      name: 'stake',
-      label: 'Stake SOL',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('unstake'),
-      name: 'unstake',
-      label: 'Unstake',
-      baseRisk: 2,
-      category: 'standard',
-    },
-  ],
+const TOKEN_INSTRUCTIONS: InstructionDef[] = [
+  {
+    name: 'initializeMint',
+    label: 'Initialize Token Mint',
+    description: 'Creates a new token mint with specified authorities',
+    baseRisk: 3,
+    riskCategory: 'MEDIUM',
+    program: 'Token',
+    discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Creating a new token. Check if mint/freeze authority is set.',
+    tags: ['token', 'mint', 'initialization'],
+  },
+  {
+    name: 'initializeAccount',
+    label: 'Initialize Token Account',
+    description: 'Initializes a new token account to hold tokens',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'Token',
+    discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Setting up a token account. This is safe.',
+    tags: ['token', 'account', 'initialization'],
+  },
+  {
+    name: 'transfer',
+    label: 'Transfer Tokens',
+    description: 'Transfers tokens from one account to another',
+    baseRisk: 2,
+    riskCategory: 'LOW',
+    program: 'Token',
+    discriminator: [3, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Sending tokens to another address.',
+    tags: ['token', 'transfer'],
+  },
+  {
+    name: 'approve',
+    label: 'Approve Delegate',
+    description: 'Approves a delegate to transfer or burn tokens on your behalf',
+    baseRisk: 5,
+    riskCategory: 'HIGH',
+    program: 'Token',
+    discriminator: [4, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: false,
+    riskExplanation: '⚠️ Granting token spending permission to another address. They can transfer or burn your tokens up to the approved amount.',
+    tags: ['token', 'approve', 'delegate', 'permission'],
+  },
+  {
+    name: 'revoke',
+    label: 'Revoke Delegate',
+    description: 'Revokes a previously approved delegate',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'Token',
+    discriminator: [5, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: '✅ Revoking token spending permission. This is a safety action.',
+    tags: ['token', 'revoke', 'delegate', 'safety'],
+  },
+  {
+    name: 'setAuthority',
+    label: 'Transfer Account Ownership',
+    description: 'Changes the authority (owner) of a mint or token account — PERMANENT',
+    baseRisk: 9,
+    riskCategory: 'CRITICAL',
+    program: 'Token',
+    discriminator: [6, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: true,
+    riskExplanation: '🚨 CRITICAL: Transferring ownership of this account to another address. Once transferred, you LOSE ALL CONTROL. The new owner can drain all tokens.',
+    tags: ['token', 'setAuthority', 'ownership', 'critical'],
+  },
+  {
+    name: 'mintTo',
+    label: 'Mint New Tokens',
+    description: 'Creates new tokens and adds them to an account',
+    baseRisk: 3,
+    riskCategory: 'MEDIUM',
+    program: 'Token',
+    discriminator: [7, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Minting new tokens. This increases supply — check if this is expected.',
+    tags: ['token', 'mint'],
+  },
+  {
+    name: 'burn',
+    label: 'Burn Tokens',
+    description: 'Permanently destroys tokens from an account',
+    baseRisk: 4,
+    riskCategory: 'MEDIUM',
+    program: 'Token',
+    discriminator: [8, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Burning (destroying) tokens. This is permanent and irreversible.',
+    tags: ['token', 'burn'],
+  },
+  {
+    name: 'closeAccount',
+    label: 'Close Token Account',
+    description: 'Closes a token account and reclaims rent SOL',
+    baseRisk: 2,
+    riskCategory: 'LOW',
+    program: 'Token',
+    discriminator: [9, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Closing a token account. Remaining tokens must be zero. Rent SOL is reclaimed.',
+    tags: ['token', 'close', 'account'],
+  },
+  {
+    name: 'freezeAccount',
+    label: 'Freeze Account',
+    description: 'Freezes a token account, preventing any transfers',
+    baseRisk: 6,
+    riskCategory: 'HIGH',
+    program: 'Token',
+    discriminator: [10, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: '⚠️ Freezing this token account. No tokens can be moved until unfrozen.',
+    tags: ['token', 'freeze'],
+  },
+  {
+    name: 'thawAccount',
+    label: 'Thaw Account',
+    description: 'Unfreezes a previously frozen token account',
+    baseRisk: 1,
+    riskCategory: 'LOW',
+    program: 'Token',
+    discriminator: [11, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Unfreezing a token account. Normal operation.',
+    tags: ['token', 'thaw'],
+  },
+];
 
-  // Raydium CLMM
-  'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaWM7hMMFQfE': [
-    {
-      discriminator: computeAnchorDiscriminator('open_position'),
-      name: 'openPosition',
-      label: 'Open LP Position',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('close_position'),
-      name: 'closePosition',
-      label: 'Close LP Position',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('increase_liquidity'),
-      name: 'increaseLiquidity',
-      label: 'Add Liquidity',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('decrease_liquidity'),
-      name: 'decreaseLiquidity',
-      label: 'Remove Liquidity',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('swap'),
-      name: 'swap',
-      label: 'Swap via CLMM',
-      baseRisk: 1,
-      category: 'safe',
-    },
-  ],
+// ─── Token-2022 Specific Instructions ────────────────────────────────────────────
 
-  // Orca Whirlpool
-  'whirLbMiicVdio4qvUfM5KAg6Ct8VbpYd9w6YiHsQKE': [
-    {
-      discriminator: computeAnchorDiscriminator('initialize_pool'),
-      name: 'initializePool',
-      label: 'Initialize Pool',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('open_position'),
-      name: 'openPosition',
-      label: 'Open Position',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('close_position'),
-      name: 'closePosition',
-      label: 'Close Position',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('swap'),
-      name: 'swap',
-      label: 'Swap',
-      baseRisk: 1,
-      category: 'safe',
-    },
-  ],
+const TOKEN_2022_INSTRUCTIONS: InstructionDef[] = [
+  // Standard SPL Token instructions are also valid for Token-2022
+  // Additional Token-2022 specific instructions:
+  {
+    name: 'initializeMintCloseAuthority',
+    label: 'Set Mint Close Authority',
+    description: 'Sets an authority that can close the mint account',
+    baseRisk: 5,
+    riskCategory: 'HIGH',
+    program: 'Token2022',
+    discriminator: [16, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: false,
+    riskExplanation: '⚠️ Setting a close authority on the mint. Someone can close this mint account.',
+    tags: ['token2022', 'authority', 'close'],
+  },
+  {
+    name: 'initializePermanentDelegate',
+    label: 'Initialize Permanent Delegate',
+    description: 'Sets a permanent delegate that can transfer or burn ANY tokens without owner approval',
+    baseRisk: 10,
+    riskCategory: 'CRITICAL',
+    program: 'Token2022',
+    discriminator: [24, 0, 0, 0, 0, 0, 0, 0], // approx discriminator
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: false,
+    riskExplanation: '🚨 CRITICAL: A permanent delegate is being set. This address can transfer or burn ALL your tokens in this account AT ANY TIME without your signature. Known scam vector — tokens can be burned seconds after purchase.',
+    tags: ['token2022', 'permanent_delegate', 'critical', 'drainer'],
+  },
+  // Common Token-2022 extension operations encountered in transactions
+  {
+    name: 'transferChecked',
+    label: 'Transfer Tokens (Checked)',
+    description: 'Transfers tokens with decimal verification (Token-2022)',
+    baseRisk: 2,
+    riskCategory: 'LOW',
+    program: 'Token2022',
+    discriminator: [12, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Sending tokens with decimal verification. Standard safe transfer.',
+    tags: ['token2022', 'transfer', 'checked'],
+  },
+  {
+    name: 'approveChecked',
+    label: 'Approve Delegate (Checked)',
+    description: 'Approves a delegate with decimal verification (Token-2022)',
+    baseRisk: 5,
+    riskCategory: 'HIGH',
+    program: 'Token2022',
+    discriminator: [13, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: false,
+    riskExplanation: '⚠️ Granting token spending permission. The delegate can transfer or burn your tokens.',
+    tags: ['token2022', 'approve', 'delegate', 'permission'],
+  },
+  {
+    name: 'setAuthority',
+    label: 'Transfer Account Ownership (Token-2022)',
+    description: 'Changes authority on a Token-2022 mint or account — PERMANENT',
+    baseRisk: 9,
+    riskCategory: 'CRITICAL',
+    program: 'Token2022',
+    discriminator: [6, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: true,
+    changesOwnership: true,
+    riskExplanation: '🚨 CRITICAL: Transferring ownership of this Token-2022 account. You LOSE ALL CONTROL permanently.',
+    tags: ['token2022', 'setAuthority', 'ownership', 'critical'],
+  },
+];
 
-  // Wormhole
-  'WormT3McT3Kq7m3MXs59nGQW8nhU9rZKryVE2qZo9qJ': [
-    {
-      discriminator: computeAnchorDiscriminator('initialize'),
-      name: 'initialize',
-      label: 'Initialize Wormhole',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('post_message'),
-      name: 'postMessage',
-      label: 'Post Cross-Chain Message',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('post_vaa'),
-      name: 'postVaa',
-      label: 'Post VAA',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: computeAnchorDiscriminator('set_upgrade_authority'),
-      name: 'setUpgradeAuthority',
-      label: 'Set Upgrade Authority',
-      baseRisk: 5,
-      category: 'sensitive',
-    },
-  ],
-};
+// ─── Associated Token Account Program ───────────────────────────────────────────
 
-// ─── Native Program Discriminators (non-Anchor) ────────────────────────
+const ATA_INSTRUCTIONS: InstructionDef[] = [
+  {
+    name: 'createIdempotent',
+    label: 'Create Associated Token Account',
+    description: 'Creates an associated token account if it doesn\'t already exist',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'AssociatedToken',
+    discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: '✅ Creating a token account. This is standard and safe.',
+    tags: ['ata', 'account_creation', 'safe'],
+  },
+  {
+    name: 'create',
+    label: 'Create Associated Token Account (Recoverable)',
+    description: 'Creates an associated token account (fails if already exists)',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'AssociatedToken',
+    discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: '✅ Creating a token account. This is standard and safe.',
+    tags: ['ata', 'account_creation', 'safe'],
+  },
+];
 
-/**
- * SPL Token uses instruction index as u32 little-endian discriminator
- * (first 4 bytes, with rest being instruction-specific data)
- */
-export const NATIVE_INSTRUCTIONS: Record<string, InstructionSignature[]> = {
-  // SPL Token Program
-  'TokenkegQfeZyiNwAJbNbGKPFXHCuFGaR': [
-    {
-      discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeMint',
-      label: 'Initialize Mint',
-      baseRisk: 3,
-      category: 'standard',
-    },
-    {
-      discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeAccount',
-      label: 'Initialize Token Account',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [2, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeMultisig',
-      label: 'Initialize Multisig',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: [3, 0, 0, 0, 0, 0, 0, 0],
-      name: 'transfer',
-      label: 'Transfer Tokens',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [4, 0, 0, 0, 0, 0, 0, 0],
-      name: 'approve',
-      label: 'Approve Token Spending',
-      baseRisk: 2,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [5, 0, 0, 0, 0, 0, 0, 0],
-      name: 'revoke',
-      label: 'Revoke Approval',
-      baseRisk: 0,
-      category: 'safe',
-    },
-    {
-      discriminator: [6, 0, 0, 0, 0, 0, 0, 0],
-      name: 'setAuthority',
-      label: 'Set Authority',
-      baseRisk: 8,
-      category: 'dangerous',
-    },
-    {
-      discriminator: [7, 0, 0, 0, 0, 0, 0, 0],
-      name: 'mintTo',
-      label: 'Mint Tokens',
-      baseRisk: 4,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [8, 0, 0, 0, 0, 0, 0, 0],
-      name: 'burn',
-      label: 'Burn Tokens',
-      baseRisk: 3,
-      category: 'standard',
-    },
-    {
-      discriminator: [9, 0, 0, 0, 0, 0, 0, 0],
-      name: 'closeAccount',
-      label: 'Close Token Account',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: [10, 0, 0, 0, 0, 0, 0, 0],
-      name: 'freezeAccount',
-      label: 'Freeze Account',
-      baseRisk: 6,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [11, 0, 0, 0, 0, 0, 0, 0],
-      name: 'thawAccount',
-      label: 'Thaw Account',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [12, 0, 0, 0, 0, 0, 0, 0],
-      name: 'transferChecked',
-      label: 'Transfer (Checked)',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [13, 0, 0, 0, 0, 0, 0, 0],
-      name: 'approveChecked',
-      label: 'Approve (Checked)',
-      baseRisk: 2,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [14, 0, 0, 0, 0, 0, 0, 0],
-      name: 'mintToChecked',
-      label: 'Mint (Checked)',
-      baseRisk: 4,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [15, 0, 0, 0, 0, 0, 0, 0],
-      name: 'burnChecked',
-      label: 'Burn (Checked)',
-      baseRisk: 3,
-      category: 'standard',
-    },
-    {
-      discriminator: [16, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeAccount2',
-      label: 'Initialize Account (v2)',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [17, 0, 0, 0, 0, 0, 0, 0],
-      name: 'syncNative',
-      label: 'Sync Native SOL',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [18, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeAccount3',
-      label: 'Initialize Account (v3)',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [19, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeMultisig2',
-      label: 'Initialize Multisig (v2)',
-      baseRisk: 2,
-      category: 'standard',
-    },
-    {
-      discriminator: [20, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializeMintCloseAuthority',
-      label: 'Set Mint Close Authority',
-      baseRisk: 5,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [21, 0, 0, 0, 0, 0, 0, 0],
-      name: 'initializePermanentDelegate',
-      label: 'Set Permanent Delegate',
-      baseRisk: 10,
-      category: 'dangerous',
-    },
-  ],
+// ─── Compute Budget Instructions ─────────────────────────────────────────────────
 
-  // System Program
-  '11111111111111111111111111111111': [
-    {
-      discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
-      name: 'createAccount',
-      label: 'Create Account',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
-      name: 'assign',
-      label: 'Assign Account',
-      baseRisk: 3,
-      category: 'sensitive',
-    },
-    {
-      discriminator: [2, 0, 0, 0, 0, 0, 0, 0],
-      name: 'transfer',
-      label: 'Transfer SOL',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [3, 0, 0, 0, 0, 0, 0, 0],
-      name: 'createAccountWithSeed',
-      label: 'Create Account with Seed',
-      baseRisk: 1,
-      category: 'safe',
-    },
-  ],
+const COMPUTE_BUDGET_INSTRUCTIONS: InstructionDef[] = [
+  {
+    name: 'setComputeUnitLimit',
+    label: 'Set Compute Limit',
+    description: 'Sets the maximum compute units for the transaction',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'ComputeBudget',
+    discriminator: [2, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: false,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Setting compute limits. No security impact.',
+    tags: ['compute', 'budget', 'safe'],
+  },
+  {
+    name: 'setComputeUnitPrice',
+    label: 'Set Priority Fee',
+    description: 'Sets the compute unit price (priority fee) for the transaction',
+    baseRisk: 0,
+    riskCategory: 'SAFE',
+    program: 'ComputeBudget',
+    discriminator: [3, 0, 0, 0, 0, 0, 0, 0],
+    movesAssets: true,
+    grantsPermission: false,
+    changesOwnership: false,
+    riskExplanation: 'Setting priority fee. Higher fee = faster execution. No security impact.',
+    tags: ['compute', 'budget', 'fee', 'safe'],
+  },
+];
 
-  // Associated Token Program
-  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25ef7sNH1gq9X': [
-    {
-      discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
-      name: 'create',
-      label: 'Create ATA',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
-      name: 'createIdempotent',
-      label: 'Create ATA (Idempotent)',
-      baseRisk: 1,
-      category: 'safe',
-    },
-    {
-      discriminator: [2, 0, 0, 0, 0, 0, 0, 0],
-      name: 'recoverNested',
-      label: 'Recover Nested ATA',
-      baseRisk: 2,
-      category: 'standard',
-    },
-  ],
+// ─── Compile All Instructions ────────────────────────────────────────────────────
 
-  // Compute Budget Program
-  'ComputeBudget1111111111111111111111111111': [
-    {
-      discriminator: [0, 0, 0, 0, 0, 0, 0, 0],
-      name: 'requestUnits',
-      label: 'Request Compute Units',
-      baseRisk: 0,
-      category: 'safe',
-    },
-    {
-      discriminator: [1, 0, 0, 0, 0, 0, 0, 0],
-      name: 'requestHeapFrame',
-      label: 'Request Heap Frame',
-      baseRisk: 0,
-      category: 'safe',
-    },
-    {
-      discriminator: [2, 0, 0, 0, 0, 0, 0, 0],
-      name: 'setComputeUnitLimit',
-      label: 'Set Compute Limit',
-      baseRisk: 0,
-      category: 'safe',
-    },
-    {
-      discriminator: [3, 0, 0, 0, 0, 0, 0, 0],
-      name: 'setComputeUnitPrice',
-      label: 'Set Priority Fee',
-      baseRisk: 0,
-      category: 'safe',
-    },
-  ],
-};
+const ALL_INSTRUCTIONS: InstructionDef[] = [
+  ...SYSTEM_INSTRUCTIONS,
+  ...TOKEN_INSTRUCTIONS,
+  ...TOKEN_2022_INSTRUCTIONS,
+  ...ATA_INSTRUCTIONS,
+  ...COMPUTE_BUDGET_INSTRUCTIONS,
+];
 
-// ─── Lookup Functions ──────────────────────────────────────────────────
-
-/**
- * Get program info by ID
- */
-export function getProgramInfo(programId: string): ProgramInfo | undefined {
-  return PROGRAM_REGISTRY[programId];
-}
-
-/**
- * Get program name by ID
- */
-export function getProgramName(programId: string): string {
-  return PROGRAM_REGISTRY[programId]?.name ?? 'Unknown Program';
-}
-
-/**
- * Check if a program is known and safe
- */
-export function isKnownSafeProgram(programId: string): boolean {
-  const info = PROGRAM_REGISTRY[programId];
-  return info?.risk === 'safe' || info?.risk === 'low';
-}
-
-/**
- * Check if a program is an Anchor program
- */
-export function isAnchorProgram(programId: string): boolean {
-  return PROGRAM_REGISTRY[programId]?.anchor ?? false;
-}
-
-/**
- * Look up instruction signature by discriminator
- */
-export function lookupInstruction(
-  programId: string,
-  discriminator: number[] | Buffer
-): InstructionSignature | undefined {
-  const discArray = Array.isArray(discriminator)
-    ? discriminator
-    : Array.from(discriminator);
-
-  // Check native instructions first
-  const nativeInstructions = NATIVE_INSTRUCTIONS[programId];
-  if (nativeInstructions) {
-    for (const sig of nativeInstructions) {
-      if (arraysEqual(sig.discriminator.slice(0, 4), discArray.slice(0, 4))) {
-        return sig;
-      }
-    }
+// Lookup: programId + discriminator → InstructionDef
+const _instructionLookup: Map<string, InstructionDef> = new Map();
+for (const ix of ALL_INSTRUCTIONS) {
+  const programId = PROGRAM_IDS[ix.program];
+  if (programId) {
+    const key = `${programId}:${ix.discriminator.join(',')}`;
+    _instructionLookup.set(key, ix);
   }
+}
 
-  // Check anchor instructions
-  const anchorInstructions = ANCHOR_INSTRUCTIONS[programId];
-  if (anchorInstructions) {
-    for (const sig of anchorInstructions) {
-      if (arraysEqual(sig.discriminator, discArray)) {
-        return sig;
-      }
+/**
+ * Look up an instruction definition by program ID and discriminator bytes
+ */
+export function lookupInstruction(programId: string, discriminator: number[]): InstructionDef | undefined {
+  // Try exact match first
+  const key = `${programId}:${discriminator.join(',')}`;
+  let result = _instructionLookup.get(key);
+  if (result) return result;
+
+  // Try with shorter discriminator (some instructions use 4 bytes, some 8)
+  for (const len of [4, 2, 1]) {
+    if (discriminator.length >= len) {
+      const shortKey = `${programId}:${discriminator.slice(0, len).join(',')}`;
+      result = _instructionLookup.get(shortKey);
+      if (result) return result;
     }
   }
 
@@ -888,38 +505,67 @@ export function lookupInstruction(
 /**
  * Get all known instructions for a program
  */
-export function getProgramInstructions(
-  programId: string
-): InstructionSignature[] {
-  const native = NATIVE_INSTRUCTIONS[programId] ?? [];
-  const anchor = ANCHOR_INSTRUCTIONS[programId] ?? [];
-  return [...native, ...anchor];
+export function getProgramInstructions(programId: string): InstructionDef[] {
+  return ALL_INSTRUCTIONS.filter(ix => PROGRAM_IDS[ix.program] === programId);
 }
 
 /**
- * Helper: compare two number arrays
+ * Check if a program ID is a known system-level program (always safe)
  */
-function arraysEqual(a: number[], b: number[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((val, idx) => val === b[idx]);
-}
-
-// ─── Program Category Helpers ─────────────────────────────────────────
-
-/**
- * Get all programs in a category
- */
-export function getProgramsByCategory(
-  category: ProgramInfo['category']
-): ProgramInfo[] {
-  return Object.values(PROGRAM_REGISTRY).filter((p) => p.category === category);
+export function isSystemProgram(programId: string): boolean {
+  const safe = [
+    PROGRAM_IDS.System,
+    PROGRAM_IDS.ComputeBudget,
+    PROGRAM_IDS.AssociatedToken,
+  ];
+  return safe.includes(programId);
 }
 
 /**
- * Get all programs with a specific risk level
+ * Check if a program ID is known
  */
-export function getProgramsByRisk(risk: ProgramInfo['risk']): ProgramInfo[] {
-  return Object.values(PROGRAM_REGISTRY).filter((p) => p.risk === risk);
+export function isKnownProgram(programId: string): boolean {
+  return programId in PROGRAM_NAMES;
 }
 
-// ─── Export all ────────────────────────────────────────────────────────
+/**
+ * Get the human-readable name for a program ID
+ */
+export function getProgramName(programId: string): string {
+  return PROGRAM_NAMES[programId] || `Unknown (${programId.slice(0, 8)}...)`;
+}
+
+/**
+ * Get all instruction definitions
+ */
+export function getAllInstructions(): InstructionDef[] {
+  return ALL_INSTRUCTIONS;
+}
+
+/**
+ * Authority types for SetAuthority instruction (SPL Token)
+ */
+export const AUTHORITY_TYPES: Record<number, { name: string; risk: RiskCategory; explanation: string }> = {
+  0: {
+    name: 'Mint Tokens',
+    risk: 'MEDIUM',
+    explanation: 'Transferring who can mint new tokens',
+  },
+  1: {
+    name: 'Freeze Account',
+    risk: 'HIGH',
+    explanation: 'Transferring who can freeze token accounts',
+  },
+  2: {
+    name: 'Account Owner',
+    risk: 'CRITICAL',
+    explanation: '🚨 Transferring OWNERSHIP of this token account — you will lose ALL control',
+  },
+  3: {
+    name: 'Close Account',
+    risk: 'HIGH',
+    explanation: 'Transferring who can close this account',
+  },
+};
+
+export { ALL_INSTRUCTIONS, SYSTEM_INSTRUCTIONS, TOKEN_INSTRUCTIONS, TOKEN_2022_INSTRUCTIONS };

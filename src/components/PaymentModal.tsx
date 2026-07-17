@@ -34,7 +34,7 @@ export default function PaymentModal({
   isOpen, 
   onClose
 }: PaymentModalProps) {
-  const { user, email, walletAddress, isAuthenticated } = useAuth();
+  const { user, walletAddress } = useAuth();
   const { loading, error, createCheckoutSession, reset } = useStripePayment();
   
   const [selectedPackage, setSelectedPackage] = useState<string | null>('pro');
@@ -62,15 +62,11 @@ export default function PaymentModal({
   const agntcbroAmount = agntcbroPrice > 0 ? (totalCostUSD / agntcbroPrice) : 0;
 
   const handleStripePurchase = async () => {
-    if (!isAuthenticated) {
-      alert('Please sign in or connect your wallet first');
+    if (!user?.id || user.id.startsWith('wallet_')) {
+      alert('Please sign in to purchase credits');
       return;
     }
-
-    const userId = user?.id || walletAddress || 'anonymous';
-    const userEmail = email || user?.email || '';
-
-    await createCheckoutSession(selectedPkg.id, userId, userEmail);
+    await createCheckoutSession(selectedPkg.id);
   };
 
   const handleCryptoPurchase = async (method: PaymentMethod) => {
@@ -148,9 +144,9 @@ export default function PaymentModal({
           <p className="text-3xl font-bold text-white">
             {user?.scan_credits || 0} <span className="text-purple-400 text-lg">credits</span>
           </p>
-          {(user?.free_scans_used ?? 0) < 3 && (
+          {(user?.free_scans_used ?? 0) < 10 && (
             <p className="text-xs text-green-400 mt-1">
-              + {3 - (user?.free_scans_used ?? 0)} free scans remaining
+              + {10 - (user?.free_scans_used ?? 0)} free scans remaining
             </p>
           )}
         </div>
@@ -334,7 +330,7 @@ export default function PaymentModal({
               handleCryptoPurchase(paymentMethod);
             }
           }}
-          disabled={loading || loadingPrice || (!isAuthenticated && paymentMethod === 'stripe') || (!walletAddress && paymentMethod !== 'stripe')}
+          disabled={loading || loadingPrice || (paymentMethod === 'stripe' && (!user?.id || user.id.startsWith('wallet_'))) || (!walletAddress && paymentMethod !== 'stripe')}
           className="w-full py-4 px-6 rounded-xl font-bold text-white text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01]"
           style={{
             background: paymentMethod === 'stripe' 
@@ -398,7 +394,7 @@ export default function PaymentModal({
         </div>
 
         {/* Sign In Prompt */}
-        {!isAuthenticated && paymentMethod === 'stripe' && (
+        {paymentMethod === 'stripe' && (!user?.id || user.id.startsWith('wallet_')) && (
           <div 
             className="mt-4 p-4 rounded-xl text-center"
             style={{
@@ -407,7 +403,7 @@ export default function PaymentModal({
             }}
           >
             <p className="text-yellow-400 text-sm">
-              ⚠️ Please sign in or connect your wallet to purchase credits
+              Please sign in to purchase credits
             </p>
           </div>
         )}

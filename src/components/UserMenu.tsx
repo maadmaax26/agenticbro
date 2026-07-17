@@ -15,6 +15,28 @@ interface UserMenuProps {
   onBuyCreditsClick: () => void;
 }
 
+// ─── Tier Badge ────────────────────────────────────────────────────────────────
+
+function TierBadge({ tier }: { tier: 'free' | 'holder' | 'whale' }) {
+  if (tier === 'whale') {
+    return (
+      <span 
+        className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+        style={{ background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.4)', color: '#818cf8' }}
+      >🐋 Whale</span>
+    );
+  }
+  if (tier === 'holder') {
+    return (
+      <span 
+        className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+        style={{ background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.4)', color: '#c084fc' }}
+      >💎 Holder</span>
+    );
+  }
+  return null;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function UserMenu({ onLoginClick, onBuyCreditsClick }: UserMenuProps) {
@@ -26,12 +48,18 @@ export default function UserMenu({ onLoginClick, onBuyCreditsClick }: UserMenuPr
     loading,
     scanCredits,
     freeScansRemaining,
-    logout 
+    logout,
+    entitlements,
+    tier,
   } = useAuth();
   
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const totalScans = freeScansRemaining + scanCredits;
+  // Use entitlements if available, otherwise fall back to local credits
+  const hasEntitlements = entitlements && !entitlements.loading && !entitlements.error;
+  const totalScans = hasEntitlements
+    ? (entitlements.totalRemaining === -1 ? '∞' : entitlements.totalRemaining)
+    : freeScansRemaining + scanCredits;
 
   if (loading) {
     return (
@@ -119,19 +147,65 @@ export default function UserMenu({ onLoginClick, onBuyCreditsClick }: UserMenuPr
               <p className="text-white font-semibold truncate">
                 {authMethod === 'email' ? email : `${walletAddress?.slice(0, 8)}...${walletAddress?.slice(-4)}`}
               </p>
-              <p className="text-xs text-gray-400 capitalize">{authMethod} account</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs text-gray-400 capitalize">{authMethod} account</p>
+                {tier !== 'free' && <TierBadge tier={tier} />}
+              </div>
             </div>
 
-            {/* Balance */}
+            {/* Balance + Entitlements */}
             <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Free Scans</span>
-                <span className="text-green-400 font-semibold">{freeScansRemaining}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Paid Credits</span>
-                <span className="text-purple-400 font-semibold">{scanCredits}</span>
-              </div>
+              {hasEntitlements ? (
+                <>
+                  {/* Token-gated entitlements display */}
+                  {entitlements.tier !== 'free' && (
+                    <div 
+                      className="p-2 rounded-lg text-xs"
+                      style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-gray-400">$AGNTCBRO Balance</span>
+                        <span className="text-white font-semibold">
+                          {entitlements.balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-gray-400">USD Value</span>
+                        <span className="text-purple-300 font-semibold">
+                          ${entitlements.usdValue.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Monthly Scans</span>
+                        <span className="text-white font-semibold">
+                          {entitlements.totalRemaining === -1 ? '∞ Unlimited' : `${entitlements.totalRemaining} / ${entitlements.monthlyLimit}`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Free Scans</span>
+                    <span className="text-green-400 font-semibold">{entitlements.freeScansRemaining}</span>
+                  </div>
+                  {entitlements.paidCredits > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Paid Credits</span>
+                      <span className="text-purple-400 font-semibold">{entitlements.paidCredits}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Free Scans</span>
+                    <span className="text-green-400 font-semibold">{freeScansRemaining}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Paid Credits</span>
+                    <span className="text-purple-400 font-semibold">{scanCredits}</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <span className="text-white font-semibold">Total Scans</span>
                 <span className="text-white font-bold text-lg">{totalScans}</span>

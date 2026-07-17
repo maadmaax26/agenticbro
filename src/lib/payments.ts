@@ -9,10 +9,11 @@
  * 
  * Track credits by wallet address or email
  * 
- * Free tier: 10 free scans per user (tracked in localStorage)
+ * Free tier: 10 free scans per day (date-stamped in localStorage, auto-resets daily)
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,17 +154,17 @@ export function useStripePayment() {
   });
 
   const createCheckoutSession = useCallback(async (
-    packageId: string,
-    userId: string,
-    email: string
+    packageId: string
   ) => {
     setState({ loading: true, error: null, success: false });
 
     try {
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) throw new Error('Please sign in to purchase credits');
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId, userId, email }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ packageId }),
       });
 
       if (!response.ok) {
@@ -187,7 +188,11 @@ export function useStripePayment() {
     setState({ loading: true, error: null, success: false });
 
     try {
-      const response = await fetch(`/api/verify-payment?session_id=${sessionId}`);
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) throw new Error('Please sign in to verify payment');
+      const response = await fetch(`/api/verify-payment?session_id=${encodeURIComponent(sessionId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -250,10 +255,49 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
   'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
 ]);
 
-export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
+const FREE_SCANS_PER_DAY = 10;
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+/** Read free-scan count from localStorage, resetting if the date has changed. */
+function loadFreeScans(storageKey: string): number {
+  try {
+    const raw = localStorage.getItem(`agenticbro_free_${storageKey}`);
+    if (!raw) return FREE_SCANS_PER_DAY;
+    // New format: { date, count }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.date === getTodayStr()) {
+      return Math.max(0, parsed.count ?? FREE_SCANS_PER_DAY);
+    }
+    // Old format (plain number) or stale date — treat as new day
+    return FREE_SCANS_PER_DAY;
+  } catch {
+    return FREE_SCANS_PER_DAY;
+  }
+}
+
+/** Persist free-scan count (date-stamped for daily reset). */
+function storeFreeScans(storageKey: string, count: number): void {
+  try {
+    localStorage.setItem(
+      `agenticbro_free_${storageKey}`,
+      JSON.stringify({ date: getTodayStr(), count }),
+    );
+  } catch { /* quota — ignore */ }
+}
+
+export function useCredits(
+  userId: string | null,
+  email: string | null,
+  walletAddress: string | null,
+  entitlementsOverride?: { totalRemaining: number; tier: string } | null,
+) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(FREE_SCANS_PER_DAY);
   const [loading, setLoading] = useState(true);
+  const [remoteAuthToken, setRemoteAuthToken] = useState<string | null>(null);
 
   // Storage key based on wallet or email
   const getStorageKey = useCallback(() => {
@@ -263,11 +307,16 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   // Check if this is a test wallet (unlimited scans)
   const isTestWallet = walletAddress && TEST_WALLETS_UNLIMITED.has(walletAddress);
 
+  // Entitlements from associated wallet token balance ($AGNTCBRO)
+  const hasEntitlements = entitlementsOverride !== undefined && entitlementsOverride !== null;
+  const entitlementTotal = entitlementsOverride?.totalRemaining;
+  const entitlementTier = entitlementsOverride?.tier;
+
   // Load credits from storage
   useEffect(() => {
     const loadCredits = async () => {
       setLoading(true);
-      
+
       // Test wallet gets unlimited scans
       if (isTestWallet) {
         setCredits(999999);
@@ -275,22 +324,33 @@ export function useCredits(userId: string | null, email: string | null, walletAd
         setLoading(false);
         return;
       }
-      
+
+      const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      let usingRemote = false;
+      if (session?.access_token) {
+        const response = await fetch('/api/scan-credits', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        if (response.ok) {
+          const data = await response.json();
+          usingRemote = true;
+          setRemoteAuthToken(session.access_token);
+          setCredits(data.paid_credits || 0);
+        }
+      } else {
+        setRemoteAuthToken(null);
+      }
+
       const storageKey = getStorageKey();
       const stored = localStorage.getItem(`agenticbro_credits_${storageKey}`);
-      const storedFree = localStorage.getItem(`agenticbro_free_${storageKey}`);
-      
-      if (stored) {
+
+      if (!usingRemote && stored) {
         setCredits(parseInt(stored, 10) || 0);
       }
-      if (storedFree) {
-        setFreeScansRemaining(Math.max(0, parseInt(storedFree, 10)));
-      } else {
-        // New user gets 5 free scans
-        setFreeScansRemaining(5);
-        localStorage.setItem(`agenticbro_free_${storageKey}`, '5');
-      }
-      
+
+      // Daily-resetting free scan counter
+      const freeRemaining = loadFreeScans(storageKey);
+      storeFreeScans(storageKey, freeRemaining); // write back (normalises old format / stamps today)
+      setFreeScansRemaining(freeRemaining);
+
       setLoading(false);
     };
 
@@ -307,14 +367,27 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   const saveFreeScans = (newFree: number) => {
     if (isTestWallet) return; // Don't save for test wallets
     const storageKey = getStorageKey();
-    localStorage.setItem(`agenticbro_free_${storageKey}`, String(newFree));
+    storeFreeScans(storageKey, newFree);
     setFreeScansRemaining(newFree);
   };
 
-  const useCredit = (): { success: boolean; remaining: number; type: 'free' | 'paid' } => {
+  const useCredit = async (): Promise<{ success: boolean; remaining: number; type: 'free' | 'paid' | 'tier' }> => {
     // Test wallet always succeeds
     if (isTestWallet) {
       return { success: true, remaining: 999999, type: 'free' };
+    }
+
+    // If entitlements are available (from associated wallet), check those first
+    if (hasEntitlements) {
+      // Whale tier = unlimited
+      if (entitlementTier === 'whale' || entitlementTotal === -1) {
+        return { success: true, remaining: -1, type: 'tier' };
+      }
+      // Holder tier — use monthly tier scans
+      if (entitlementTier === 'holder' && entitlementTotal && entitlementTotal > 0) {
+        return { success: true, remaining: entitlementTotal - 1, type: 'tier' };
+      }
+      // Entitlements say no scans remaining — fall through to free/paid
     }
 
     // Try free scans first
@@ -326,6 +399,16 @@ export function useCredits(userId: string | null, email: string | null, walletAd
 
     // Use paid credits
     if (credits > 0) {
+      if (remoteAuthToken) {
+        const response = await fetch('/api/scan-credits?action=deduct', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${remoteAuthToken}` },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) return { success: false, remaining: credits, type: 'paid' };
+        setCredits(data.paid_credits);
+        return { success: true, remaining: data.paid_credits, type: 'paid' };
+      }
       const newCredits = credits - 1;
       saveCredits(newCredits);
       return { success: true, remaining: newCredits, type: 'paid' };
@@ -341,19 +424,31 @@ export function useCredits(userId: string | null, email: string | null, walletAd
   };
 
   // Test wallets always have scans available
-  const hasScans = isTestWallet || freeScansRemaining > 0 || credits > 0;
+  // Entitlements from associated wallet override local credit count
+  const hasScans = isTestWallet
+    || (hasEntitlements && (entitlementTotal === -1 || (entitlementTotal ?? 0) > 0))
+    || (!hasEntitlements && (freeScansRemaining > 0 || credits > 0));
+
+  // Effective total scans for display
+  const effectiveTotal = hasEntitlements && entitlementTotal === -1
+    ? 999999  // unlimited
+    : hasEntitlements && entitlementTotal !== undefined && entitlementTotal >= 0
+      ? Math.max(entitlementTotal, freeScansRemaining + credits)
+      : freeScansRemaining + credits;
 
   return {
     credits,
     freeScansRemaining,
-    totalScans: freeScansRemaining + credits,
+    totalScans: effectiveTotal,
     hasScans,
     loading,
     useCredit,
     addCredits,
     saveCredits,
     saveFreeScans,
-    isTestWallet, // Expose for UI display
+    isTestWallet,
+    tier: entitlementTier || 'free',
+    hasEntitlements,
   };
 }
 

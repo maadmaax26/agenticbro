@@ -1,4 +1,10 @@
 /**
+ * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
+ * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
+ * Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
+ */
+
+/**
  * api/brand-guard/impersonator-scan.ts — Brand Impersonator Detection API
  * ========================================================================
  * POST /api/brand-guard/impersonator-scan
@@ -21,7 +27,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
@@ -62,6 +68,12 @@ interface BrandScanResult {
     handle: string;
     domain?: string;
   };
+  success?: boolean;
+  total_found?: number;
+  risk_level?: string;
+  platforms_scanned?: string[];
+  impersonators?: ImpersonatorResult[];
+  scam_patterns?: { type: string; pattern: string; description: string }[];
   summary: {
     platforms_scanned: string[];
     variants_generated: number;
@@ -354,24 +366,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (!authErr && user) userId = user.id;
   }
 
-  // If authenticated, check credits before allowing scan
+  // If authenticated, verify credits exist before allowing scan
+  // (Frontend handles the actual deduction via /credits/deduct before calling this API)
   if (userId && supabase) {
-    const { data: creditResult, error: creditErr } = await supabase.rpc('deduct_brand_guard_credit', {
-      p_owner_id: userId,
-      p_brand_monitor_id: (req.body?.brand_monitor_id as string) || null,
-      p_scan_id: null, // Will be set after scan ID is generated
-    });
+    const { data: credits, error: creditErr } = await supabase
+      .from('brand_guard_credits')
+      .select('free_credits_total, free_credits_used, paid_credits')
+      .eq('owner_id', userId)
+      .single();
 
-    if (creditErr || !creditResult) {
-      res.status(500).json({ error: 'Failed to check credits', details: creditErr?.message });
+    if (creditErr && creditErr.code !== 'PGRST116') {
+      res.status(500).json({ error: 'Failed to check credits', details: creditErr.message });
       return;
     }
 
-    const result = creditResult as Record<string, unknown>;
-    if (!(result.success as boolean)) {
+    const freeRemaining = credits ? credits.free_credits_total - credits.free_credits_used : 25;
+    const totalRemaining = credits ? freeRemaining + credits.paid_credits : 10;
+
+    if (totalRemaining <= 0) {
       res.status(402).json({
         error: 'Insufficient credits',
-        message: result.message || 'No credits available. Purchase credits or set up a subscription to continue scanning.',
+        message: 'No credits available. Purchase credits or set up a subscription to continue scanning.',
         remaining: 0,
         upgrade_url: '/brand-guard?buy_credits=true',
       });
@@ -392,14 +407,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  // ── Queue-based scan: create pending job, local worker processes it ─────────
   // Generate scan ID
   const scanId = `bg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  // Generate variants
-  const socialVariants = generateBrandVariants(brandHandle, variantLimit);
+  // Determine scan type from request
+  const scanType = (body.scan_type as string) || 'impersonator';
 
-  // Build scan result skeleton
-  const result: BrandScanResult = {
+  // Generate quick variants for immediate preview (theoretical, for UX feedback)
+  const socialVariants = generateBrandVariants(brandHandle, variantLimit);
+  const previewImpersonators = socialVariants.map((v, idx) => ({
+    handle: v.variant,
+    platform: platforms[idx % platforms.length],
+    risk_score: Math.round((0.3 + v.risk_boost) * 10),
+    risk_level: v.risk_boost >= 0.5 ? 'HIGH' : v.risk_boost >= 0.3 ? 'MEDIUM' : 'LOW',
+    type: v.type,
+    method: v.method,
+    status: 'potential',
+  }));
+
+  // Build initial preview result (theoretical variants, not real scans)
+  const previewResult: BrandScanResult = {
     scan_id: scanId,
     scan_date: new Date().toISOString(),
     brand: {
@@ -407,50 +435,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       handle: brandHandle,
       domain: brandDomain || undefined,
     },
+    success: true,
+    total_found: previewImpersonators.length,
+    risk_level: previewImpersonators.some(p => p.risk_level === 'HIGH') ? 'HIGH' : previewImpersonators.some(p => p.risk_level === 'MEDIUM') ? 'MEDIUM' : 'LOW',
+    platforms_scanned: platforms,
+    impersonators: previewImpersonators,
+    scam_patterns: socialVariants.filter(v => v.risk_boost >= 0.5).map(v => ({
+      type: v.type,
+      pattern: v.variant,
+      description: `Potential impersonator: ${v.variant} (${v.method})`,
+    })),
+    variants: {
+      social: socialVariants,
+      domain: [],
+    },
     summary: {
       platforms_scanned: platforms,
       variants_generated: socialVariants.length,
-      profiles_scanned: 0,
-      impersonators_found: 0,
+      profiles_scanned: 0, // Will be updated by worker with real data
+      impersonators_found: previewImpersonators.length,
       scammer_db_matches: 0,
     },
-    variants: {
-      social: socialVariants,
-      domain: [], // Domain variants handled separately by domain-monitor endpoint
-    },
-    impersonator_results: [],
+    impersonator_results: previewImpersonators,
     disclaimer: 'Educational purposes only. Not financial advice. Not a guarantee of safety. Always verify independently.',
+    real_scan_pending: true, // Flag: real platform scans are pending
   };
 
-  // Store in Supabase (async — scan results filled by worker)
+  // Store as pending job in Supabase — local worker will pick it up
   if (supabase) {
     try {
       await supabase.from('brand_guard_scans').insert({
         scan_id: scanId,
+        brand_monitor_id: (body.brand_monitor_id as string) || null,
         brand_name: brandName,
         brand_handle: brandHandle,
         brand_domain: brandDomain || null,
-        status: 'processing',
+        status: 'processing', // Worker will change to 'complete' when done
         platforms: platforms,
         variants_generated: socialVariants.length,
+        profiles_scanned: 0,
+        impersonators_found: 0,
+        scammer_db_matches: 0,
         created_at: new Date().toISOString(),
-        result: result,
+        result: {
+          ...previewResult,
+          scan_type: scanType,
+          real_scan_pending: true, // Tell frontend to poll for real results
+        },
       });
     } catch (err) {
       console.error('[Brand Guard] Supabase insert error:', err);
     }
   }
 
-  // Return the scan ID and variants for the worker to process
-  res.status(202).json({
-    scan_id: scanId,
-    status: 'processing',
-    brand: result.brand,
-    variants_generated: socialVariants.length,
-    platforms: platforms,
-    message: `Scan started. Poll GET /api/brand-guard/impersonator-scan?scan_id=${scanId} for results.`,
-    high_priority_variants: socialVariants.filter(v => v.risk_boost >= 0.5).slice(0, 15),
-    medium_priority_variants: socialVariants.filter(v => v.risk_boost >= 0.3 && v.risk_boost < 0.5).slice(0, 10),
-    disclaimer: 'Educational purposes only. Not financial advice. Not a guarantee of safety. Always verify independently.',
+  // Return preview results immediately + scan_id for polling
+  res.status(200).json({
+    success: true,
+    ...previewResult,
+    real_scan_pending: true, // Frontend should poll for updated results
+    poll_interval: 10, // seconds between polls
   });
 }
