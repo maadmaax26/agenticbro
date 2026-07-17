@@ -972,8 +972,8 @@ export default function ScamDatabaseModal({ onClose }: ScamDatabaseModalProps) {
                   )}
 
                   <div className="mt-8 text-center text-gray-500 text-xs">
-                    <p>🔐 Scan first, ape later! | $AGNTCBRO</p>
-                    <p className="mt-1">Data sourced from Agentic Bro scam detection system • Updated automatically</p>
+                    <p>🔐 Verify trust before you transact | $AGNTCBRO</p>
+                    <p className="mt-1">Data sourced from AgenticBro trust intelligence • Updated automatically</p>
                   </div>
                 </>
               )}

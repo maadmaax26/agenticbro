@@ -35,22 +35,22 @@ export async function generateRoast(options: RoastOptions): Promise<RoastRespons
 
 async function generateRoastWithOllama(options: RoastOptions): Promise<RoastResponse> {
   try {
-    const systemPrompt = `You are AIBRO, a sarcastic AI degen advisor. Your job is to roast people's crypto portfolios brutally but humorously.
+    const systemPrompt = `You are AgenticBro, a concise AI wallet risk analyst. Your job is to explain wallet behavior and trust risk clearly for Web3 users.
 
 Rules:
-- Keep roasts under 280 characters (tweetable)
-- Be specific about their losses and degen behavior
-- Use crypto slang and references
-- Make it funny, not just mean
-- If they did well, give backhanded compliments
-- If they did poorly, emphasize the pain
+- Keep insights under 280 characters
+- Be specific about wallet behavior, trading outcomes, losses, fees, and concentration risk
+- Use plain risk language suitable for consumers and businesses
+- Do not insult the user
+- If the wallet performed well, describe what looks healthier
+- If the wallet performed poorly, explain the main risk signal
 
 Sentiment analysis:
-- 34% win rate or lower: very negative roast
+- 34% win rate or lower: negative risk insight
 - 35-50% win rate: neutral/mildly negative
-- 50%+ win rate: backhanded compliment
-- $100+ gas spent: roast them for gas fees
-- High degen score (70+): emphasize degen behavior`
+- 50%+ win rate: positive but cautious
+- $100+ gas spent: note fee drag
+- High risk score (70+): emphasize high-risk wallet behavior`
 
     const userPrompt = JSON.stringify({
       winRate: options.walletStats.winRate,
@@ -91,7 +91,7 @@ Sentiment analysis:
     }
 
     const data = await response.json()
-    const roastText = data.choices[0]?.message?.content?.trim() || "Your portfolio is so confusing even I can't roast it properly."
+    const roastText = data.choices[0]?.message?.content?.trim() || "This wallet needs more context before AgenticBro can produce a reliable trust insight."
 
     // Determine sentiment
     let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral'
@@ -114,22 +114,22 @@ async function generateRoastWithOpenAI(options: RoastOptions): Promise<RoastResp
   }
 
   try {
-    const systemPrompt = `You are AIBRO, a sarcastic AI degen advisor. Your job is to roast people's crypto portfolios brutally but humorously.
+    const systemPrompt = `You are AgenticBro, a concise AI wallet risk analyst. Your job is to explain wallet behavior and trust risk clearly for Web3 users.
 
 Rules:
-- Keep roasts under 280 characters (tweetable)
-- Be specific about their losses and degen behavior
-- Use crypto slang and references
-- Make it funny, not just mean
-- If they did well, give backhanded compliments
-- If they did poorly, emphasize the pain
+- Keep insights under 280 characters
+- Be specific about wallet behavior, trading outcomes, losses, fees, and concentration risk
+- Use plain risk language suitable for consumers and businesses
+- Do not insult the user
+- If the wallet performed well, describe what looks healthier
+- If the wallet performed poorly, explain the main risk signal
 
 Sentiment analysis:
-- 34% win rate or lower: very negative roast
+- 34% win rate or lower: negative risk insight
 - 35-50% win rate: neutral/mildly negative
-- 50%+ win rate: backhanded compliment
-- $100+ gas spent: roast them for gas fees
-- High degen score (70+): emphasize degen behavior`
+- 50%+ win rate: positive but cautious
+- $100+ gas spent: note fee drag
+- High risk score (70+): emphasize high-risk wallet behavior`
 
     const userPrompt = JSON.stringify({
       winRate: options.walletStats.winRate,
@@ -170,7 +170,7 @@ Sentiment analysis:
     }
 
     const data = await response.json()
-    const roastText = data.choices[0].message.content?.trim() || "Your portfolio is so confusing even I can't roast it properly."
+    const roastText = data.choices[0].message.content?.trim() || "This wallet needs more context before AgenticBro can produce a reliable trust insight."
 
     // Determine sentiment
     let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral'
@@ -192,39 +192,39 @@ function generateMockRoast(options: RoastOptions): RoastResponse {
   const mockRoasts = [
     {
       condition: (stats: any) => stats.gasSpent > 100,
-      text: "You spent more in gas fees than my college tuition. That's not trading, that's charity work for validators.",
+      text: "High fee drag detected: this wallet has spent enough on gas to materially reduce net performance.",
       sentiment: 'negative' as const
     },
     {
       condition: (stats: any) => stats.winRate < 35,
-      text: `${options.walletStats.winRate}% win rate? That's not bad for a blindfolded toddler throwing darts at a ticker tape. Maybe try staking SOL like a normal human.`,
+      text: `${options.walletStats.winRate}% win rate indicates weak trade selection. AgenticBro would flag this wallet for elevated execution risk.`,
       sentiment: 'negative' as const
     },
     {
       condition: (stats: any) => stats.degenScore >= 80,
-      text: "Your degen score is higher than your IQ. You're not investing, you're gambling with extra steps and worse odds.",
+      text: "High wallet risk intensity detected. Frequent speculative activity may require stronger transaction review before trust is assigned.",
       sentiment: 'negative' as const
     },
     {
       condition: (stats: any) => stats.totalLoss > stats.totalProfit * 2,
-      text: "You didn't just get rugged, you sponsored multiple rugs. Your portfolio is more balanced than your therapist after your trading sessions.",
+      text: "Losses materially exceed gains. AgenticBro would treat this wallet history as a caution signal until newer activity improves.",
       sentiment: 'negative' as const
     },
     {
       condition: (stats: any) => stats.winRate >= 50,
-      text: "Congratulations on actually making money! Too bad you're still degen enough to lose it all next week.",
+      text: "Positive wallet performance detected, but continued monitoring is recommended before treating this as a low-risk signal.",
       sentiment: 'neutral' as const
     },
     {
       condition: (stats: any) => stats.totalTrades > 50,
-      text: `${options.walletStats.totalTrades} trades? That's not investing, that's an unpaid internship for liquidity providers.`,
+      text: `${options.walletStats.totalTrades} trades suggests high activity. Review concentration, fee drag, and counterparty exposure before relying on this wallet.`,
       sentiment: 'negative' as const
     },
   ]
 
   const matchingRoast = mockRoasts.find(r => r.condition(walletStats))
   return matchingRoast || {
-    text: "Your portfolio is a mystery wrapped in an enigma, wrapped in terrible decisions. Keep grinding, maybe you'll figure it out eventually.",
+    text: "AgenticBro found mixed wallet signals. More history, counterparties, and token context would improve the trust assessment.",
     sentiment: 'neutral'
   }
 }

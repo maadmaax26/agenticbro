@@ -460,9 +460,9 @@ export default function ScamDetectionDisplay() {
         
         {/* Footer */}
         <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>🔐 Scan first, ape later! | $AGNTCBRO</p>
+          <p>🔐 Verify trust before you transact | $AGNTCBRO</p>
           <p className="mt-2">
-            Data sourced from Agentic Bro scam detection system • Updated automatically
+            Data sourced from AgenticBro trust intelligence • Updated automatically
           </p>
         </div>
       </div>

@@ -38,6 +38,28 @@ import PaymentSuccess from './pages/PaymentSuccess'
 // Vercel serverless functions handle /api/* in production.
 const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? ''
 
+const DEFAULT_META = {
+  title: 'AgenticBro - AI Trust Intelligence Platform',
+  description:
+    'AgenticBro is a hybrid AI trust intelligence platform for scam detection, wallet protection, brand impersonation monitoring, phishing analysis, and online fraud prevention.',
+}
+
+const BRAND_GUARD_META = {
+  title: 'Brand Guard by AgenticBro - AI Brand Protection',
+  description:
+    'Brand Guard monitors impersonator accounts, email spoofing, lookalike domains, vendor fraud, and cross-channel threats with AgenticBro hybrid AI trust intelligence.',
+}
+
+function updateMetaDescription(content: string) {
+  let tag = document.querySelector<HTMLMetaElement>('meta[name="description"]')
+  if (!tag) {
+    tag = document.createElement('meta')
+    tag.name = 'description'
+    document.head.appendChild(tag)
+  }
+  tag.content = content
+}
+
 // ─── Known channel data (module-level so both generateChannelSuccessRate and runScan can access it) ──
 const knownChannels: Record<string, any> = {
   'cryptolordgem': {
@@ -608,34 +630,26 @@ function MainApp() {
         <ScamDatabaseModal onClose={() => setShowScamDatabase(false)} />
       ) : (
         <>
-          {/* ── Dev Phase Banner ── */}
-          <div className="relative z-10 px-4 py-2 text-center text-xs font-semibold"
-            style={{ background: 'linear-gradient(90deg, rgba(34,197,94,0.15), rgba(139,92,246,0.15), rgba(34,197,94,0.15))', borderBottom: '1px solid rgba(34,197,94,0.3)' }}>
-            <span className="text-green-400">🚀 DEVELOPMENT & TESTING PHASE</span>
-            <span className="text-gray-400 mx-2">—</span>
-            <span className="text-gray-300">Holder Tier: <span className="text-green-400 font-bold">100 Priority Scans/month</span> with $100+ in AGNTCBRO. Free tier: 10 scans/day. Hold tokens to unlock more.</span>
-          </div>
-
-          <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md bg-black/40 border-b border-purple-500/20">
+          <header className="relative z-50 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center gap-4 backdrop-blur-md bg-black/45 border-b border-cyan-500/20">
             {/* Left — icon + branding */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <img
                 src="/icon.png"
                 alt="Agentic Bro"
                 className="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover ring-2 ring-purple-500/50"
               />
               <div>
-                <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight">
+                <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight whitespace-nowrap">
                   Agentic Bro
                 </h1>
-                <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#39ff14', textShadow: '0 0 8px #39ff14'}}>
-                  AI-powered scam detection · Scan first, trust later!
+                <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#67e8f9', textShadow: '0 0 8px rgba(103,232,249,0.45)'}}>
+                  Hybrid AI trust ecosystem for Web3, brands, wallets, and identity
                 </p>
               </div>
             </div>
 
             {/* Center — tier access buttons (hidden on mobile) */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden 2xl:flex items-center gap-3 shrink-0">
 
               {/* User Menu (Login/Balance) */}
               <UserMenu 
@@ -674,13 +688,31 @@ function MainApp() {
             </div>
 
             {/* Right — nav + wallet (desktop only) */}
-            <div className="hidden lg:flex items-center gap-2 xl:gap-3">
+            <div className="hidden lg:flex items-center justify-end gap-2 xl:gap-3 shrink-0">
+              <button
+                onClick={() => document.getElementById('trust-ecosystem')?.scrollIntoView({ behavior: 'smooth' })}
+                className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                Ecosystem
+              </button>
+              <button
+                onClick={() => document.getElementById('profile-verifier')?.scrollIntoView({ behavior: 'smooth' })}
+                className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                Scanners
+              </button>
+              <button
+                onClick={() => document.getElementById('wallet-protection')?.scrollIntoView({ behavior: 'smooth' })}
+                className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                Wallet Guard
+              </button>
               <div className="relative group">
                 <button
                   onClick={() => setShowValueProp(true)}
-                  className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors"
+                  className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
                 >
-                  Why Agentic Bro?
+                  Learn
                 </button>
                 <div className="absolute left-0 top-full mt-1 z-50 rounded-xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden min-w-[130px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <a
@@ -701,20 +733,12 @@ function MainApp() {
               </div>
               <a
                 href="https://agenticbro.app/brand-guard"
-                className="px-2 xl:px-3 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded-md text-xs font-semibold transition-colors flex items-center gap-1"
+                className="px-2 xl:px-3 py-1 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 border border-cyan-400/25 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 whitespace-nowrap"
               >
                 🔐 Brand Guard
               </a>
-              <a
-                href="https://pump.fun/coin/52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 xl:px-3 py-1 bg-[#39ff14]/20 hover:bg-[#39ff14]/40 text-[#39ff14] border border-[#39ff14]/40 rounded-md text-xs font-bold transition-colors flex items-center gap-1"
-              >
-                💰 Buy $AGNTCBRO
-              </a>
               <LanguageSelector current={locale} onChange={setLocale} />
-              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-2 !py-1 !rounded-md !h-auto !leading-normal !min-w-[90px]" />
+              <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-2 !rounded-md !h-auto !leading-normal !min-w-[118px] !whitespace-nowrap" />
             </div>
 
             {/* Mobile menu button */}
@@ -760,7 +784,7 @@ function MainApp() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
                         { icon: '🔍', title: 'Priority Scans', desc: '10 free scans per day' },
-                        { icon: '📊', title: 'Portfolio Roast', desc: 'AI-powered portfolio analysis' },
+                        { icon: '📊', title: 'Wallet Intelligence', desc: 'AI-assisted risk and behavior analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
                         <div key={item.title} className="bg-black/30 rounded-xl p-3 border border-purple-500/20">
@@ -781,6 +805,74 @@ function MainApp() {
           )}
 
       <main className="relative z-10 container mx-auto px-4 md:px-6 pb-10">
+        {/* ── Trust Ecosystem Hero ── */}
+        <section id="trust-ecosystem" className="max-w-6xl mx-auto pt-8 md:pt-12 mb-10">
+          <div className="relative overflow-hidden rounded-3xl border border-cyan-400/20 bg-black/55 backdrop-blur-md">
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'radial-gradient(circle at 15% 15%, rgba(34,211,238,0.18), transparent 30%), radial-gradient(circle at 85% 25%, rgba(168,85,247,0.16), transparent 32%), linear-gradient(135deg, rgba(255,255,255,0.04), transparent 45%)',
+            }} />
+            <div className="relative grid lg:grid-cols-[1.1fr_0.9fr] gap-8 p-6 md:p-10 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 text-xs font-bold mb-5">
+                  <span>Hybrid AI trust ecosystem</span>
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-5">
+                  Verify trust before users, wallets, or brands are exposed.
+                </h2>
+                <p className="text-gray-300 text-lg leading-relaxed max-w-3xl mb-6">
+                  AgenticBro combines local AI agents, cloud reasoning, durable queues, and multi-source threat intelligence
+                  to detect risk across Web3 transactions, social identities, websites, phone numbers, domains, and brand impersonation.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                  <button
+                    onClick={() => document.getElementById('profile-verifier')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black transition-colors"
+                  >
+                    Start a Trust Scan
+                  </button>
+                  <a
+                    href="/brand-guard"
+                    className="px-6 py-3 rounded-xl border border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/10 font-bold transition-colors text-center"
+                  >
+                    Explore Brand Guard
+                  </a>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Web3 wallets', 'Token risk', 'Brand impersonation', 'Phone fraud', 'Website phishing', 'Domain spoofing'].map((item) => (
+                    <span key={item} className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-xs text-gray-300">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/35 p-5">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {[
+                    ['Local AI', 'Cron jobs, routing, and routine scoring'],
+                    ['Cloud AI', 'Advanced reasoning and investigation reports'],
+                    ['OpenClaw', 'Agent orchestration and local execution'],
+                    ['Supabase', 'Durable queues, realtime status, and history'],
+                  ].map(([title, desc]) => (
+                    <div key={title} className="rounded-xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4">
+                      <div className="text-white font-bold text-sm mb-1">{title}</div>
+                      <div className="text-gray-400 text-xs leading-relaxed">{desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-xl border border-purple-400/20 bg-purple-500/[0.06] p-4">
+                  <div className="text-sm font-bold text-purple-100 mb-2">Unified trust outputs</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+                    {['Risk scores', 'Alerts', 'Takedown evidence', 'Plain-English reports'].map((item) => (
+                      <div key={item} className="rounded-lg bg-black/30 px-3 py-2 border border-white/10">{item}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── AGNTCBRO Balance Tracker — shows after wallet connect ── */}
         <AgntcbroBalanceTracker />
 
@@ -853,7 +945,7 @@ function MainApp() {
                 {/* ── Scan mode tabs ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
                   {([
-                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Track alpha signals for a wallet' },
+                    { id: 'wallet',   icon: '👛', label: 'Wallet Scan',  hint: 'Analyze wallet behavior and risk signals' },
                     { id: 'channels', icon: '📡', label: 'Channel Scan', hint: 'Deep-scan a Telegram channel' },
                     { id: 'token',    icon: '🔍', label: 'Token Scan',   hint: 'Find all calls for a token' },
                     { id: 'social',   icon: '🛡️', label: 'Social Scan',  hint: 'Scan Instagram/TikTok/FB profiles' },
@@ -1099,6 +1191,68 @@ function MainApp() {
           </div>
         </div>
 
+        {/* ── Technical Innovation ── */}
+        <div className="max-w-6xl mx-auto mb-10">
+          <div className="bg-black/45 backdrop-blur-md rounded-2xl border border-cyan-500/25 overflow-hidden">
+            <div className="p-6 md:p-8 border-b border-white/10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-xs font-bold mb-4">
+                <span>⚙️</span>
+                <span>Hybrid AI trust infrastructure</span>
+              </div>
+              <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 items-start">
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-black text-white mb-4">
+                    The innovation is the orchestration layer, not just the scanners.
+                  </h3>
+                  <p className="text-gray-300 leading-relaxed mb-4">
+                    AgenticBro routes each investigation through a production queue that can hand work from the public website
+                    to local OpenClaw agents, local AI models, cloud reasoning models, and threat-intelligence APIs. That lets
+                    the platform run fast, recurring scans without depending on one expensive model or one rate-limited provider.
+                  </p>
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    This hybrid design is built for scale: routine checks stay close to the local agent infrastructure, while
+                    complex investigations escalate to cloud AI for deeper reasoning, correlation, and report generation.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ['Local AI', 'Self-hosted models handle routing, routine analysis, and scheduled jobs.'],
+                    ['Cloud AI', 'Advanced reasoning models handle complex fraud investigations.'],
+                    ['Durable Queue', 'Supabase coordinates scan status, priority, retries, and realtime results.'],
+                    ['Threat Fusion', 'Web, wallet, social, phone, domain, and email signals become one risk picture.'],
+                  ].map(([title, desc]) => (
+                    <div key={title} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="font-bold text-white text-sm mb-2">{title}</div>
+                      <div className="text-xs text-gray-400 leading-relaxed">{desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-5 gap-px bg-white/10">
+              {[
+                ['1', 'agenticbro.app', 'User scan or recurring monitor'],
+                ['2', 'Job queue', 'Priority, retries, and status'],
+                ['3', 'OpenClaw agent', 'Local execution and browser work'],
+                ['4', 'AI routing', 'Local models plus cloud reasoning'],
+                ['5', 'Trust report', 'Risk score, alert, or takedown output'],
+              ].map(([step, title, desc]) => (
+                <div key={step} className="bg-[#050812] p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-black border border-cyan-500/25">
+                      {step}
+                    </span>
+                    <span className="text-sm font-bold text-white">{title}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* ── Scam Detection System — for logged-in users ── */}
         {connected && publicKey && (
           <ScamDetectionSection walletAddress={publicKey.toBase58()} tokenPriceUsd={tokenPriceUsd} />
@@ -1114,17 +1268,18 @@ function MainApp() {
 
             {/* Hero Message */}
             <div className="text-center mb-10 pt-6">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/40 bg-red-950/30 text-red-300 text-xs font-semibold mb-4">
-                <span>🛡️</span> AI-Powered Crypto Protection
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-950/30 text-cyan-200 text-xs font-semibold mb-4">
+                <span>🛡️</span> Hybrid AI Trust Intelligence
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
-                Stop Gambling.<br />
+                Trust decisions need evidence.<br />
                 <span style={{background: 'linear-gradient(90deg, #a855f7, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
-                  Start Investigating.
+                  AgenticBro finds it.
                 </span>
               </h2>
               <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
-                The crypto space is full of scammers, rug pulls, and fake alpha. Agentic Bro arms you with AI-powered investigation tools to protect your capital and make every trade count.
+                Web3 users, creators, and businesses face risk across wallets, social identities, websites, phone numbers,
+                domains, and impersonator brands. AgenticBro turns those fragmented signals into clear trust intelligence.
               </p>
             </div>
 
@@ -1151,20 +1306,21 @@ function MainApp() {
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)'}}>🔍</div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Scam Detection System</h3>
-                    <p className="text-xs text-red-400 font-semibold">Your on-chain lie detector</p>
+                    <h3 className="text-xl font-bold text-white">Trust Detection System</h3>
+                    <p className="text-xs text-red-400 font-semibold">Cross-channel risk intelligence</p>
                   </div>
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  Cross-reference any wallet, Telegram channel, or token against our live scammer database. Get a full risk report with red flags, on-chain behaviour patterns, and a plain-English verdict before you ape in.
+                  Cross-reference any wallet, Telegram channel, token, social profile, or web property against live risk signals.
+                  Get red flags, behavioral patterns, and a plain-English verdict before you transact, promote, hire, or trust.
                 </p>
                 <div className="space-y-2">
                   {[
-                    '🚨 Cross-reference 260+ known scammer wallets',
-                    '📊 On-chain behaviour pattern analysis',
-                    '💬 Telegram channel credibility scoring',
+                    '🚨 Cross-reference 260+ known scam and abuse records',
+                    '📊 Wallet and transaction behavior analysis',
+                    '💬 Social and channel credibility scoring',
                     '🪙 Token rug-pull risk assessment',
-                    '📝 Plain-English investigation report',
+                    '📝 Plain-English trust report',
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-2 text-sm text-gray-300">
                       <span>{item.slice(0, 2)}</span>
@@ -1184,11 +1340,12 @@ function MainApp() {
                   </div>
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  Run a deep-dive investigation on any wallet, Telegram channel, or token in under 30 seconds. Get alpha signals, risk scores, and actionable insights so you trade with conviction — not hope.
+                  Run a deeper investigation on a wallet, Telegram channel, token, social account, phone number, or website.
+                  Get risk scores and actionable context for safer Web3 decisions.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   {[
-                    { icon: '👛', label: 'Wallet Scan', desc: 'Track alpha signals and risk profile' },
+                    { icon: '👛', label: 'Wallet Scan', desc: 'Analyze wallet behavior and risk profile' },
                     { icon: '📡', label: 'Channel Scan', desc: 'Verify Telegram channel credibility' },
                     { icon: '🪙', label: 'Token Scan', desc: 'Find all calls and rug-pull risk' },
                   ].map((mode) => (
@@ -1210,8 +1367,8 @@ function MainApp() {
             <PreConnectScanWidget lang={locale} />
             {/* Connect CTA */}
             <div className="text-center py-8 bg-black/20 rounded-2xl border border-purple-500/20">
-              <p className="text-white font-bold text-xl mb-2">Ready to protect your capital?</p>
-              <p className="text-gray-400 text-sm mb-6">Connect your Solana wallet to run your first free scan — no token required to start.</p>
+              <p className="text-white font-bold text-xl mb-2">Ready to verify trust?</p>
+              <p className="text-gray-400 text-sm mb-6">Connect your Solana wallet to run your first scans — no token required to start.</p>
               <div className="flex justify-center">
                 <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-bold !text-base !px-8 !py-3 !rounded-xl" />
               </div>
@@ -1240,7 +1397,7 @@ function MainApp() {
       {!showValueProp && !showRoadmap && !showTierPage && !showScamDatabase && !showWalletProtection && (
         <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
           <p className="text-gray-500">
-            Built for degens, by degens •{' '}
+            Hybrid AI trust intelligence for Web3 users and businesses •{' '}
             <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300">@AgenticBro11</a>
             {' '}•{' '}
             <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
@@ -1271,6 +1428,12 @@ function MainApp() {
 
 function App() {
   const location = useLocation()
+
+  useEffect(() => {
+    const meta = location.pathname.startsWith('/brand-guard') ? BRAND_GUARD_META : DEFAULT_META
+    document.title = meta.title
+    updateMetaDescription(meta.description)
+  }, [location.pathname])
 
   if (location.pathname === '/payment-success') {
     const sessionId = new URLSearchParams(location.search).get('session_id') || ''
