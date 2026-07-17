@@ -10,8 +10,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandGuardDraftsReview from '../components/brand-guard/BrandGuardDraftsReview';
-import BrandGuardProspectHunter from '../components/brand-guard/BrandGuardProspectHunter';
-import BrandGuardProspectsList from '../components/brand-guard/BrandGuardProspectsList';
 
 // Mobile breakpoint hook
 const useIsMobile = () => {
@@ -114,8 +112,8 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'outreach'>('outreach');
-  const [outreachTab, setOutreachTab] = useState<'review' | 'hunt' | 'prospects'>('review');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'threats'>('threats');
+  const [outreachTab, setOutreachTab] = useState<'review'>('review');
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -490,7 +488,7 @@ export function BrandGuardAdminPage() {
         {/* Tabs — dropdown on mobile, scrollable bar on desktop */}
         {(() => {
           const tabs = [
-            { id: 'outreach', label: '🎯 Outreach' },
+            { id: 'threats', label: '🔍 Threat Intel' },
             { id: 'users', label: '👥 Users' },
             { id: 'stats', label: '📊 Stats' },
             { id: 'activity', label: '🕐 Activity' },
@@ -917,7 +915,7 @@ export function BrandGuardAdminPage() {
             </div>
           </div>
         )}
-        {activeTab === 'outreach' && (
+        {activeTab === 'threats' && (
           <div>
             {/* Outreach sub-tab nav */}
             <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
@@ -949,8 +947,6 @@ export function BrandGuardAdminPage() {
 
             {/* Sub-tab content */}
             {outreachTab === 'review' && <BrandGuardDraftsReview authToken={authToken} />}
-            {outreachTab === 'hunt' && <BrandGuardProspectHunter authToken={authToken || ''} />}
-            {outreachTab === 'prospects' && <BrandGuardProspectsList authToken={authToken} />}
           </div>
         )}
       </div>

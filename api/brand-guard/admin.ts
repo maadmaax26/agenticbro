@@ -23,7 +23,6 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
-import { runSendWorker } from '../_lib/outreach-sender.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -1061,21 +1060,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // POST /send-approved-drafts — Immediately create Gmail drafts for all
-  // approved, unsent outreach email drafts (channels A and B).
-  // Proxies to cron-send-drafts.ts so the same logic runs on-demand and
-  // on the 15-minute cron schedule.
+  // POST /send-approved-drafts — Disabled (outreach pipeline removed)
   // ══════════════════════════════════════════════════════════════════════════
   if (req.method === 'POST' && path === '/send-approved-drafts') {
-    const { processed, results, error } = await runSendWorker(50);
-    if (error) {
-      res.status(200).json({ success: false, error, processed: 0, results: [] });
-      return;
-    }
-    const created = results.filter(r => r.status === 'created').length;
-    const skipped = results.filter(r => r.status === 'skipped').length;
-    const failed  = results.filter(r => r.status === 'error').length;
-    res.status(200).json({ success: true, processed, created, skipped, failed, results });
+    res.status(410).json({ error: 'This endpoint has been disabled.' });
     return;
   }
 
