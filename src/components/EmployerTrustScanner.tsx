@@ -200,11 +200,11 @@ export function EmployerTrustScanner() {
 
       {/* Scan Input */}
       <div className="space-y-3">
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
-            className="rounded-lg bg-black/50 border border-purple-500/20 text-white px-3 py-2 text-sm"
+            className="w-full sm:w-auto rounded-lg bg-black/50 border border-purple-500/20 text-white px-3 py-2 text-sm"
           >
             <option value="x">X (Twitter)</option>
             <option value="instagram">Instagram</option>
@@ -217,13 +217,13 @@ export function EmployerTrustScanner() {
             placeholder="@employer_handle"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            className="flex-1 rounded-lg bg-black/50 border border-purple-500/20 text-white px-4 py-2 text-sm placeholder-gray-500"
+            className="w-full flex-1 rounded-lg bg-black/50 border border-purple-500/20 text-white px-4 py-2 text-sm placeholder-gray-500"
             onKeyDown={(e) => e.key === 'Enter' && runScan()}
           />
           <button
             onClick={runScan}
             disabled={scanning}
-            className="rounded-lg bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto rounded-lg bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {scanning ? 'Scanning...' : 'Scan'}
           </button>

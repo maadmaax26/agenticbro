@@ -354,6 +354,68 @@ export function BrandGuardPricingPage() {
         </div>
       </section>
 
+      {/* ── Infrastructure ──────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-sm font-semibold mb-4">
+              Hybrid AI infrastructure
+            </div>
+            <h2 className="text-3xl font-bold mb-4">Built on AgenticBro trust intelligence</h2>
+            <p className="text-gray-400 text-lg max-w-3xl mx-auto">
+              Brand Guard runs on the same queue-based AgenticBro infrastructure that routes scan jobs between the public app,
+              local AI workers, cloud reasoning models, and external threat intelligence sources.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-8 items-stretch">
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-6 sm:p-8">
+              <h3 className="text-xl font-bold text-white mb-5">Production scan pipeline</h3>
+              <div className="space-y-3">
+                {[
+                  ['agenticbro.app', 'Customers submit scans, monitor brands, and receive alerts.'],
+                  ['Durable job queue', 'Supabase coordinates priority, retries, status, and realtime results.'],
+                  ['OpenClaw local agents', 'Dedicated local workers execute scheduled scans and browser-based investigations.'],
+                  ['Local + cloud AI', 'Local models handle routine work while cloud models support advanced reasoning.'],
+                  ['Unified trust engine', 'Signals are combined into risk scores, reports, alerts, and takedown workflows.'],
+                ].map(([label, desc], i) => (
+                  <div key={label} className="flex gap-4">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-300 text-sm font-bold">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white">{label}</div>
+                      <div className="text-sm text-gray-400">{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+              <h3 className="text-xl font-bold text-white mb-5">Why it matters</h3>
+              <div className="space-y-4 text-sm text-gray-400">
+                <p>
+                  Continuous brand protection needs more than one API call. It requires recurring scans, model routing,
+                  cached intelligence, evidence generation, and resilient execution when outside providers rate-limit or fail.
+                </p>
+                <p>
+                  AgenticBro is designed to scale that workload by combining owned local compute with elastic cloud AI for
+                  the investigations that need deeper context.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                {['Queue orchestration', 'Local inference', 'Cloud reasoning', 'Scheduled monitoring'].map((item) => (
+                  <div key={item} className="rounded-xl border border-cyan-500/15 bg-cyan-500/5 px-3 py-3 text-sm font-semibold text-cyan-100">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Pricing ───────────────────────────────────────────────────────────── */}
       <section className="py-20 px-4 sm:px-6 lg:px-8" id="pricing">
         <div className="max-w-7xl mx-auto">

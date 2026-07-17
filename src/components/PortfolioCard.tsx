@@ -11,7 +11,7 @@ interface WalletStats {
   avgTradeSize: number
   gasSpent: number
   topToken: string
-  degenScore: number // 0-100
+  degenScore: number // 0-100 risk intensity score
 }
 
 export default function PortfolioCard() {
@@ -51,7 +51,7 @@ export default function PortfolioCard() {
     <div className="bg-black/40 backdrop-blur-md rounded-2xl p-6 border border-purple-500/20 animate-slide-in">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span>📊</span> Portfolio Analysis
+          <span>📊</span> Wallet Intelligence
         </h2>
         <button
           onClick={fetchWalletStatsData}
@@ -72,7 +72,7 @@ export default function PortfolioCard() {
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <RefreshCw className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Analyzing your degen behavior...</p>
+            <p className="text-gray-400">Analyzing wallet risk signals...</p>
           </div>
         </div>
       ) : stats ? (
@@ -135,16 +135,16 @@ export default function PortfolioCard() {
             </div>
           </div>
 
-          {/* Degen Score */}
-          <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-4 rounded-xl border border-purple-500/30">
+          {/* Wallet Risk Score */}
+          <div className="bg-gradient-to-r from-cyan-900/40 to-purple-900/40 p-4 rounded-xl border border-cyan-500/30">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-white font-semibold">Degen Score</span>
-              <span className="text-3xl font-bold text-purple-300">{stats.degenScore}</span>
+              <span className="text-white font-semibold">Wallet Risk Score</span>
+              <span className="text-3xl font-bold text-cyan-200">{stats.degenScore}</span>
             </div>
             <p className="text-sm text-gray-300">
-              {stats.degenScore >= 80 ? "🔥 You're absolutely cooked" :
-               stats.degenScore >= 60 ? "⚠️ Moderate degen behavior" :
-               "💀 Certified degen"}
+              {stats.degenScore >= 80 ? "High-risk trading pattern detected" :
+               stats.degenScore >= 60 ? "Moderate risk concentration detected" :
+               "Lower-risk wallet behavior detected"}
             </p>
           </div>
 
