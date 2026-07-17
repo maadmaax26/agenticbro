@@ -1,9 +1,0 @@
-{
-  "id": "c1ab286b",
-  "search_url": "https://x.com/search?q=\"do%20not%20trust\"%20this%20account&f=live",
-  "search_query": "\"do not trust\" this account",
-  "category": "user_reports",
-  "priority": "HIGH",
-  "discovered_at": "2026-04-04T18:00:25.479086",
-  "status": "pending_scan"
-}
