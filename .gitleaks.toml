@@ -1,0 +1,16 @@
+title = "AgenticBro gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "ignore-public-token-address"
+description = "Ignore public Solana token contract addresses"
+regex = '''52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump'''
+tags = ["ignore"]
+
+[allowlist]
+description = "Allowlist for false positives"
+regexes = [
+    '''52bJEa5NDpJyDbzKFaRDLgRCxALGb15W86x4Hbzopump''',
+]
