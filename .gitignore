@@ -109,3 +109,94 @@ member-welcome-state.json
 .openclaw/
 .claude/***REMOVED****
 .env*.local
+
+# ── Cleanup additions (2026-07-17) ───────────────────────────
+*.json.bak
+impersonation_scan_*.json
+enhanced_scan_*.json
+*.plist
+*.json.bak
+investigation_*.json
+metrics/
+agents/agentic-bro/agent/config.json
+agents/agentic-bro/agent/routing.json
+jaas/config/
+
+# Internal docs (removed from public repo)
+GATEWAY_LOAD_BALANCER_FAILED.md
+GLM5_MIGRATION_HANDOFF.md
+LOCAL_ROUTER_HANDOFF.md
+MOLTBOOK_SETUP.md
+MULTI_AGENT_OPTIMIZATION.md
+MULTI_AGENT_ROUTING_IMPLEMENTATION.md
+MULTI_AGENT_ARCHITECTURE.md
+AGENT_ROUTING_SUMMARY.md
+SYSTEM_SERVICES.md
+TOOLS.md
+DEPLOY_COMMANDS.sh
+DEPLOY_COMMANDS.md
+QUICK_DEPLOY.md
+DEPLOYMENT_CHECKLIST.md
+DEPLOY.md
+DEPLOYMENT_GUIDE.md
+BOOT.md
+USER.md
+SCRIPTS.md
+TELEGRAM_SETUP.md
+
+# High-risk optics (removed from public repo)
+cherry-bot-raid-guide.md
+crypto-group-moderation-guide.md
+ama-talking-points*.md
+agenticbro-growth-strategy.md
+agenticbro-ama-description.md
+raid-contest-tracking.md
+x-posts/
+x-growth-templates.md
+
+# Status / completion files
+FACEBOOK_PAGE_SCANNING_COMPLETE.md
+TELEGRAM_BOT_SCAM_DETECTION_COMPLETE.md
+PROFILE_VERIFIER_TEST_RESULTS.md
+PERFORMANCE_MONITORING*.md
+LEVEL_4_*.md
+OPTION_1_*.md
+CODING_STATUS.md
+REBRANDING*.md
+AGENT_TESTING*.md
+AIRDROP_WALLET_MONITOR.md
+AI_INTEGRATION.md
+SCAN_SCANNER_UPDATE_SUMMARY.md
+STATUS_TEST.md
+SWITCH_TO_GLM.md
+PROFILE_VERIFIER_CDP_INTEGRATION.md
+WHITEPAPER_*.md
+BRAND_GUARD_DEPLOYMENT_CHECKLIST.md
+
+# Debug/one-off scripts
+browser_scan.js
+check_html.js
+debug_page*.js
+extract_*.js
+final_*.js
+fresh_scan.js
+get_followers.js
+get_stats.js
+
+# Outreach/prospects (removed from public repo)
+brand-guard-outreach*.md
+brand-guard-prospects*.json
+agntcbro_outreach.mp3
+api/_lib/outreach-sender.ts
+api/brand-guard/prospect-hunter.ts
+src/components/brand-guard/BrandGuardProspectHunter.tsx
+src/components/brand-guard/BrandGuardProspectsList.tsx
+
+# Chrome profile artifacts
+~/Library/
+
+# agentic-bro output
+agentic-bro/output/
+
+# Supabase temp (auto-generated)
+supabase/.temp/
