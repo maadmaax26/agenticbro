@@ -1,234 +1,223 @@
 /**
- * Roadmap Page - Scam Detection Focus
+ * Roadmap Page - Hybrid AI Trust Ecosystem
  *
- * Product Roadmap 2026–2027
- * Focus: AI-Powered Scam Detection for Crypto Users
+ * Product Roadmap 2026-2027
+ * Focus: hybrid local/cloud AI trust infrastructure for Web3, brands, identity, and fraud prevention.
  */
 
 function Roadmap({ onBack }: { onBack: () => void }) {
   const phases = [
     {
       number: '1',
-      title: 'Scam Detection Foundation',
-      period: 'Q2 2026',
+      title: 'Production Trust Intelligence Foundation',
+      period: 'Completed / Current',
       color: 'green',
       metrics: [
-        { value: '547+', label: 'Scans Completed' },
-        { value: '5,000+', label: 'Users Protected' },
-        { value: '$125K+', label: '$SOL Protected' },
-        { value: '500+', label: 'Known Scammers' },
-        { value: '12+', label: 'Scammers Detected' },
-        { value: '10', label: 'Red Flag Types' },
+        { value: 'Live', label: 'agenticbro.app' },
+        { value: '10', label: 'Free Daily Scans' },
+        { value: '7+', label: 'Trust Surfaces' },
+        { value: 'Hybrid', label: 'Local + Cloud AI' },
       ],
       sections: [
         {
-          title: 'Core Scam Detection',
+          title: 'User-Facing Trust Tools',
           items: [
-            { done: true, text: 'Website Launch: agenticbro.app' },
-            { done: true, text: 'Dashboard: Signal feed, trade analysis, alert feed' },
-            { done: true, text: 'Daily Market Report: Prices, liquidation levels, AI insights' },
-            { done: true, text: 'Value Proposition Page: Full feature breakdown' },
-            { done: true, text: 'Scam Detection System: AI-powered risk assessment for X/Telegram' },
-            { done: true, text: 'Gem Advisor Framework: Quality-gated alpha channel analysis' },
-            { done: true, text: 'Enhanced Priority Scan: 4 modes (Wallet, Channel, Token, Scam)' },
-            { done: true, text: 'Free Scan Limit: Free tier: 5 scans per user' },
-            { done: false, text: 'Wallet Integration: Solana wallet (Phantom, Solflare)' },
-            { done: false, text: 'Token Gating: Holder / Whale tier validation' },
+            { done: true, text: 'Profile Verifier for social identity risk checks' },
+            { done: true, text: 'Priority Scan for wallets, channels, tokens, phones, websites, and profiles' },
+            { done: true, text: 'Website and phishing analysis for suspicious domains' },
+            { done: true, text: 'Phone scam and credibility checks' },
+            { done: true, text: 'Token impersonation and contract risk scanning' },
+            { done: true, text: 'Credibility History Analyzer for promotion and claim history' },
           ],
         },
         {
-          title: 'Detection Capabilities',
+          title: 'Brand Protection',
           items: [
-            { done: true, text: 'Guaranteed Returns Detection: +15 pts weight' },
-            { done: true, text: 'Private Alpha Scams: +15 pts weight' },
-            { done: true, text: 'Unrealistic Claims Detection: +15 pts weight' },
-            { done: true, text: 'Urgency Tactics Detection: +10 pts weight' },
-            { done: true, text: 'No Track Record Detection: +10 pts weight' },
-            { done: true, text: 'Crypto Request Scams: +10 pts weight' },
-            { done: true, text: 'Paid Promoter Detection: +15 pts weight' },
-            { done: false, text: 'Deepfake Detection: AI-generated profile images' },
-            { done: false, text: 'Multi-Language Analysis: Non-English scam patterns' },
+            { done: true, text: 'Brand Guard dashboard for impersonation monitoring' },
+            { done: true, text: 'Lookalike domain and email spoofing workflows' },
+            { done: true, text: 'Evidence collection for takedown workflows' },
+            { done: true, text: 'Stripe-based Brand Guard onboarding and credits' },
+            { done: false, text: 'Expanded automated brand monitoring bundles' },
           ],
         },
         {
-          title: 'Platform Infrastructure',
+          title: 'Hybrid AI Infrastructure',
           items: [
-            { done: true, text: 'Website: agenticbro.app live' },
-            { done: true, text: 'Payment System: Stripe + USDC + AGNTCBRO' },
-            { done: true, text: 'Credit System: 3 free scans per user' },
-            { done: true, text: 'Tier System: Holder (10K) and Whale (100K) tiers' },
-            { done: true, text: 'DePIN Infrastructure: Mac Studio nodes for local inference' },
-            { done: false, text: 'Browser Extension: Chrome/Firefox scam warnings' },
-            { done: false, text: 'Mobile App: iOS/Android on-device scanning' },
+            { done: true, text: 'Queue-based scan dispatch from agenticbro.app' },
+            { done: true, text: 'OpenClaw local agent execution for scheduled work' },
+            { done: true, text: 'Mac Studio local AI path for owned inference capacity' },
+            { done: true, text: 'Cloud AI reasoning path for deeper investigations' },
+            { done: false, text: 'More resilient worker monitoring, retries, and queue observability' },
           ],
         },
       ],
     },
     {
       number: '2',
-      title: 'Advanced Detection & Alerts',
-      period: 'Q3 2026',
+      title: 'Scale Scanning Capacity and Reliability',
+      period: 'Next 3-6 Months',
       color: 'blue',
       metrics: [
-        { value: '10K+', label: 'Active Users' },
-        { value: '50+', label: 'Daily Scans' },
-        { value: '$1M+', label: '$SOL Protected' },
-        { value: '1000+', label: 'Known Scammers' },
+        { value: '20x', label: 'Target Throughput' },
+        { value: '<30s', label: 'Target Common Scan' },
+        { value: '24/7', label: 'Monitoring Goal' },
+        { value: 'Multi-API', label: 'Provider Resilience' },
       ],
       sections: [
         {
-          title: 'Real-Time Protection',
+          title: 'Capacity Expansion',
           items: [
-            { done: false, text: 'Browser Extension: Real-time X/Twitter warnings' },
-            { done: false, text: 'Telegram Bot: In-channel scam detection' },
-            { done: false, text: 'Wallet Integration: Phantom/Solflare alerts' },
-            { done: false, text: 'Push Notifications: New scam alerts' },
-            { done: false, text: 'Email Digest: Weekly scam report' },
+            { done: false, text: 'Increase AI API tiers to reduce rate-limit bottlenecks' },
+            { done: false, text: 'Add higher-capacity cloud reasoning for complex investigations' },
+            { done: false, text: 'Expand local model routing for routine and scheduled scans' },
+            { done: false, text: 'Introduce cost-aware routing between local and cloud models' },
+            { done: false, text: 'Track scan cost, latency, queue age, and throughput metrics' },
           ],
         },
         {
-          title: 'Advanced Analytics',
+          title: 'Data and Signal Coverage',
           items: [
-            { done: false, text: 'Wallet Forensics: Transaction pattern analysis' },
-            { done: false, text: 'Deepfake Detection: AI-generated content flags' },
-            { done: false, text: 'Multi-Chain Support: Ethereum, BSC, Base' },
-            { done: false, text: 'Historical Scam Data: Trend analysis' },
-            { done: false, text: 'Risk Heat Maps: Visual threat intelligence' },
+            { done: false, text: 'Add stronger domain, WHOIS, DNS, and certificate intelligence' },
+            { done: false, text: 'Expand wallet intelligence with richer blockchain provider coverage' },
+            { done: false, text: 'Improve phone, social, and website correlation signals' },
+            { done: false, text: 'Build reusable trust evidence records for repeat scans' },
           ],
         },
         {
-          title: 'Community Protection',
+          title: 'Operational Reliability',
           items: [
-            { done: false, text: 'Community Warnings: Telegram group alerts' },
-            { done: false, text: 'Scam Reporter: User submission system' },
-            { done: false, text: 'Reputation System: Trusted reporter badges' },
-            { done: false, text: 'Victim Support: Recovery guidance resources' },
+            { done: false, text: 'Queue health dashboard for pending, failed, and retried jobs' },
+            { done: false, text: 'Automated fallback when a model or data provider is rate-limited' },
+            { done: false, text: 'Scheduled monitoring for brands, domains, wallets, and websites' },
+            { done: false, text: 'Better alert delivery and weekly trust briefings' },
           ],
         },
       ],
     },
     {
       number: '3',
-      title: 'AI & Machine Learning',
-      period: 'Q4 2026',
+      title: 'Trust Intelligence Engine',
+      period: '6-12 Months',
       color: 'purple',
       metrics: [
-        { value: '50K+', label: 'Active Users' },
-        { value: '500+', label: 'Daily Scans' },
-        { value: '$10M+', label: '$SOL Protected' },
-        { value: '5000+', label: 'Known Scammers' },
+        { value: 'Graph', label: 'Trust Memory' },
+        { value: 'Explainable', label: 'Risk Scoring' },
+        { value: 'Cross-Surface', label: 'Correlation' },
+        { value: 'API', label: 'Partner Access' },
       ],
       sections: [
         {
-          title: 'AI Enhancement',
+          title: 'Model and Scoring R&D',
           items: [
-            { done: false, text: 'ML Risk Model: Pattern recognition across scams' },
-            { done: false, text: 'NLP Analysis: Bio/tweet sentiment scoring' },
-            { done: false, text: 'Image Analysis: Fake profile picture detection' },
-            { done: false, text: 'Behavioral Analysis: Account age + activity patterns' },
-            { done: false, text: 'Cross-Platform Correlation: X + Telegram + Discord' },
+            { done: false, text: 'Explainable trust scoring across on-chain and off-chain signals' },
+            { done: false, text: 'Fine-tuned fraud classifiers for repeated scam patterns' },
+            { done: false, text: 'Evaluation datasets for phishing, impersonation, and wallet risk' },
+            { done: false, text: 'Confidence scoring that separates evidence from speculation' },
           ],
         },
         {
-          title: 'Enterprise Features',
+          title: 'Knowledge Graph',
           items: [
-            { done: false, text: 'API Access: Enterprise scan quotas' },
-            { done: false, text: 'Custom Rules: Organization-specific detection' },
-            { done: false, text: 'White-Label: Branded scam detection' },
-            { done: false, text: 'Audit Reports: Compliance documentation' },
+            { done: false, text: 'Entity graph linking wallets, domains, profiles, phone numbers, and brands' },
+            { done: false, text: 'Historical memory for repeated actors and evolving campaigns' },
+            { done: false, text: 'Cross-channel campaign detection for coordinated impersonation' },
+            { done: false, text: 'Reusable evidence packages for alerts, reports, and takedowns' },
+          ],
+        },
+        {
+          title: 'Commercial Readiness',
+          items: [
+            { done: false, text: 'Enterprise API for brand, wallet, and website trust checks' },
+            { done: false, text: 'Team dashboards for businesses, communities, and agencies' },
+            { done: false, text: 'Audit-ready reports for brand protection and fraud prevention' },
+            { done: false, text: 'Partner pilots with Web3, fintech, and online-safety organizations' },
           ],
         },
       ],
     },
     {
       number: '4',
-      title: 'Ecosystem Expansion',
+      title: 'Hybrid AI Trust Ecosystem',
       period: '2027+',
       color: 'yellow',
       metrics: [
-        { value: '100K+', label: 'Active Users' },
-        { value: '5K+', label: 'Daily Scans' },
-        { value: '$50M+', label: '$SOL Protected' },
-        { value: '50K+', label: 'Known Scammers' },
+        { value: 'Multi-Chain', label: 'Wallet Coverage' },
+        { value: 'Always-On', label: 'Monitoring' },
+        { value: 'Enterprise', label: 'Trust APIs' },
+        { value: 'Public Benefit', label: 'Fraud Prevention' },
       ],
       sections: [
         {
-          title: 'Cross-Chain & Platform',
+          title: 'Ecosystem Expansion',
           items: [
-            { done: false, text: 'Multi-Chain: 10+ blockchain support' },
-            { done: false, text: 'NFT Scam Detection: Fake collection warnings' },
-            { done: false, text: 'DeFi Protection: Rug pull detection' },
-            { done: false, text: 'Social Media: Instagram/TikTok scams' },
-            { done: false, text: 'Job Scams: Employment fraud detection' },
+            { done: false, text: 'Broader multichain coverage beyond Solana' },
+            { done: false, text: 'Browser extension and mobile trust warnings' },
+            { done: false, text: 'DeFi, NFT, creator, employer, and marketplace trust workflows' },
+            { done: false, text: 'Public scam intelligence feeds and community reporting loops' },
           ],
         },
         {
-          title: 'AI Safety Layer',
+          title: 'Autonomous Investigations',
           items: [
-            { done: false, text: 'Romance Scam Detection: Relationship fraud' },
-            { done: false, text: 'Deepfake Detection: AI video/image verification' },
-            { done: false, text: 'Phishing Protection: Website risk scoring' },
-            { done: false, text: 'AI Agent Safety: Protection from malicious agents' },
+            { done: false, text: 'Multi-agent investigations that gather evidence across sources' },
+            { done: false, text: 'Autonomous monitoring of brands, domains, wallets, and communities' },
+            { done: false, text: 'AI-generated incident summaries with human review paths' },
+            { done: false, text: 'Predictive detection of suspicious infrastructure before broad abuse' },
+          ],
+        },
+        {
+          title: 'Grant and Research Alignment',
+          items: [
+            { done: false, text: 'NSF SBIR project pitch around hybrid AI trust infrastructure' },
+            { done: false, text: 'Benchmarks for cost-aware local/cloud AI orchestration' },
+            { done: false, text: 'Research on explainable multi-source fraud risk scoring' },
+            { done: false, text: 'Commercial pilots that prove measurable fraud reduction' },
           ],
         },
       ],
     },
   ];
 
-  const tokenParams = [
-    { param: 'Token Symbol', value: 'JEEEVS' },
-    { param: 'Total Supply', value: '1,000,000,000' },
-    { param: 'Standard', value: 'Token-2022' },
-    { param: 'Free Tier', value: '3 scans (no token required)' },
-    { param: 'Holder Tier', value: '20 free scans/month' },
-    { param: 'Whale Tier', value: 'Unlimited scans + API access' },
-  ];
-
-  const tokenUtility = [
-    { utility: 'Scam Protection', description: 'Token-gated access to premium features' },
-    { utility: 'Staking Rewards', description: 'Earn yield by locking JEEEVS' },
-    { utility: 'Governance', description: 'Vote on detection rules and priorities' },
-    { utility: 'Fee Discounts', description: 'Reduced scan costs for holders' },
-    { utility: 'Early Access', description: 'Priority access to new detection features' },
-    { utility: 'API Access', description: 'Enterprise integration for Whale tier' },
+  const infrastructureLayers = [
+    { layer: 'Public App', current: 'agenticbro.app scans and Brand Guard', next: 'Role-based dashboards and partner APIs' },
+    { layer: 'Queue', current: 'Supabase-backed scan dispatch and status', next: 'Priority routing, retries, observability, and worker health' },
+    { layer: 'Local AI', current: 'Mac Studio and OpenClaw agent execution', next: 'More local workers, embeddings, classifiers, and scheduled monitors' },
+    { layer: 'Cloud AI', current: 'Cloud reasoning for advanced reports', next: 'Provider redundancy, long-context investigations, and consensus checks' },
+    { layer: 'Trust Engine', current: 'Risk scores and scan reports', next: 'Knowledge graph, explainability, and reusable evidence records' },
   ];
 
   const milestones = {
     nearTerm: [
-      { milestone: 'Browser extension beta launch', target: 'Q2 2026' },
-      { milestone: 'Wallet forensics integration', target: 'Q2 2026' },
-      { milestone: 'Telegram bot scam detection', target: 'Q3 2026' },
-      { milestone: 'Mobile app iOS beta', target: 'Q3 2026' },
-      { milestone: 'Deepfake detection v1', target: 'Q3 2026' },
-      { milestone: 'Multi-chain support (ETH, BSC)', target: 'Q4 2026' },
-      { milestone: 'Enterprise API launch', target: 'Q4 2026' },
-      { milestone: 'ML risk model training', target: 'Q4 2026' },
+      { milestone: 'Remove remaining rate-limit bottlenecks from core scan paths', target: 'Q3 2026' },
+      { milestone: 'Expand queue observability for local OpenClaw jobs', target: 'Q3 2026' },
+      { milestone: 'Increase Brand Guard recurring monitoring capacity', target: 'Q3 2026' },
+      { milestone: 'Prepare NSF SBIR Project Pitch narrative and technical roadmap', target: 'Q3 2026' },
+      { milestone: 'Add stronger domain and website intelligence providers', target: 'Q4 2026' },
+      { milestone: 'Ship enterprise-ready trust report exports', target: 'Q4 2026' },
     ],
     midTerm: [
-      'Browser extension full release',
-      'Mobile app Android launch',
-      'NFT scam detection',
-      'DeFi rug pull detection',
-      'Cross-platform correlation engine',
-      'Community reputation system',
-      'Victim recovery resources',
-      'White-label enterprise offering',
+      'Hybrid local/cloud model routing dashboard',
+      'Trust knowledge graph for wallets, domains, profiles, and brands',
+      'Fine-tuned fraud classifier evaluation set',
+      'Cross-surface alert correlation for Brand Guard',
+      'Browser extension beta for trust warnings',
+      'Enterprise API pilot for brand and wallet trust checks',
     ],
     longTerm: [
-      '10+ blockchain support',
-      'AI safety layer for internet',
-      'Romance scam detection',
-      'Job scam detection',
-      'Social media protection (Instagram, TikTok)',
-      '100K+ active users',
+      'Always-on digital trust monitoring',
+      'Multichain wallet and token risk coverage',
+      'Autonomous evidence-gathering investigation agents',
+      'Public benefit fraud-prevention partnerships',
+      'Measurable loss-prevention and safety-impact reporting',
+      'Hybrid AI trust infrastructure as a commercial platform',
     ],
   };
 
-  const detectionStats = [
-    { value: '10', label: 'Red Flag Types' },
-    { value: '90', label: 'Max Points' },
-    { value: '6', label: 'Verification Levels' },
-    { value: '98%', label: 'Gross Margin' },
+  const summaryStats = [
+    { value: '7+', label: 'Trust Surfaces' },
+    { value: '10', label: 'Free Daily Scans' },
+    { value: 'Hybrid', label: 'Local + Cloud AI' },
+    { value: 'Queue', label: 'Agent Orchestration' },
   ];
 
   const colorMap: Record<string, string> = {
@@ -257,21 +246,21 @@ function Roadmap({ onBack }: { onBack: () => void }) {
             <span>Back to Dashboard</span>
           </button>
           <div className="text-center py-12">
-            <div className="text-sm font-mono text-purple-400 mb-2 tracking-widest uppercase">
-              AI-Powered Scam Detection · April 2026 · Active Development
+            <div className="text-sm font-mono text-cyan-300 mb-2 tracking-widest uppercase">
+              Hybrid AI Trust Ecosystem · 2026-2027 · Active Development
             </div>
-            <h1 className="text-5xl font-bold text-white mb-4">Scam Detection Roadmap</h1>
-            <p className="text-xl text-purple-300 max-w-3xl mx-auto mb-8">
-              Protecting crypto users from scams with AI-powered risk analysis. 10-point red flag system, real-time Chrome CDP scanning, and a growing database of known scammers.
+            <h1 className="text-5xl font-bold text-white mb-4">AgenticBro Roadmap</h1>
+            <p className="text-xl text-cyan-100 max-w-3xl mx-auto mb-8">
+              Scaling AgenticBro from a production scan platform into hybrid AI trust infrastructure for Web3 users,
+              brands, wallets, identities, domains, websites, and fraud prevention workflows.
             </p>
             <p className="text-lg text-gray-300 italic max-w-2xl mx-auto">
-              "Scan first. Ape later." 🔐
+              Verify trust before users, wallets, or brands are exposed.
             </p>
-            {/* Summary stats */}
-            <div className="grid grid-cols-4 gap-4 mt-10 max-w-4xl mx-auto">
-              {detectionStats.map((stat, idx) => (
-                <div key={idx} className="bg-black/30 rounded-xl p-4 border border-purple-500/30">
-                  <div className="text-2xl font-bold text-purple-300">{stat.value}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10 max-w-4xl mx-auto">
+              {summaryStats.map((stat, idx) => (
+                <div key={idx} className="bg-black/30 rounded-xl p-4 border border-cyan-500/30">
+                  <div className="text-2xl font-bold text-cyan-200">{stat.value}</div>
                   <div className="text-xs text-gray-400 mt-1">{stat.label}</div>
                 </div>
               ))}
@@ -281,52 +270,30 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       </header>
 
       <main className="relative z-10 container mx-auto px-6 pb-20">
-
-        {/* Red Flag System */}
         <section className="mb-20">
-          <h2 className="text-3xl font-bold text-white mb-10 text-center">10-Point Red Flag System</h2>
-          <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 p-8">
-            <p className="text-gray-300 mb-6 text-center">
-              Our weighted scoring system detects scams with 90 total possible points. Risk levels: LOW (0-3), MEDIUM (3-5), HIGH (5-7), CRITICAL (7-10).
+          <h2 className="text-3xl font-bold text-white mb-10 text-center">Hybrid AI Infrastructure Layers</h2>
+          <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-8">
+            <p className="text-gray-300 mb-6 text-center max-w-3xl mx-auto">
+              AgenticBro is built around orchestration: public scan requests move through a durable queue,
+              local OpenClaw agents, local AI workers, cloud reasoning models, and external intelligence APIs.
             </p>
             <div className="grid md:grid-cols-5 gap-4">
-              {[
-                { flag: 'Guaranteed Returns', weight: '+15 pts', severity: 'HIGH' },
-                { flag: 'Private Alpha/Giveaway', weight: '+15 pts', severity: 'HIGH' },
-                { flag: 'Unrealistic Claims', weight: '+15 pts', severity: 'HIGH' },
-                { flag: 'Urgency Tactics', weight: '+10 pts', severity: 'MEDIUM' },
-                { flag: 'No Track Record', weight: '+10 pts', severity: 'MEDIUM' },
-                { flag: 'Requests Crypto', weight: '+10 pts', severity: 'MEDIUM' },
-                { flag: 'No Verification', weight: '+5 pts', severity: 'LOW' },
-                { flag: 'Fake Followers', weight: '+5 pts', severity: 'LOW' },
-                { flag: 'New Account', weight: '+3 pts', severity: 'LOW' },
-                { flag: 'VIP Upsell', weight: '+2 pts', severity: 'LOW' },
-              ].map((item, idx) => (
-                <div key={idx} className="bg-black/40 rounded-lg p-4 border border-purple-500/20">
-                  <div className="text-sm text-white font-semibold">{item.flag}</div>
-                  <div className="text-lg font-bold text-red-400 mt-1">{item.weight}</div>
-                  <div className={`text-xs mt-1 ${item.severity === 'HIGH' ? 'text-red-400' : item.severity === 'MEDIUM' ? 'text-yellow-400' : 'text-green-400'}`}>
-                    {item.severity}
-                  </div>
+              {infrastructureLayers.map((item, idx) => (
+                <div key={idx} className="bg-black/40 rounded-xl p-4 border border-cyan-500/20">
+                  <div className="text-sm text-white font-bold mb-2">{item.layer}</div>
+                  <div className="text-xs text-gray-400 mb-3">{item.current}</div>
+                  <div className="text-xs text-cyan-200">{item.next}</div>
                 </div>
               ))}
-            </div>
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-400">
-                <span className="text-purple-300 font-semibold">Verification Levels:</span>{' '}
-                UNVERIFIED → PARTIALLY VERIFIED → VERIFIED → LEGITIMATE → PAID PROMOTER → HIGH RISK
-              </p>
             </div>
           </div>
         </section>
 
-        {/* Phases */}
         <section className="mb-20">
           <h2 className="text-3xl font-bold text-white mb-10 text-center">Development Phases</h2>
           <div className="space-y-8">
             {phases.map((phase) => (
               <div key={phase.number} className={`rounded-2xl border p-8 ${colorMap[phase.color]}`}>
-                {/* Phase header */}
                 <div className="flex flex-wrap items-center gap-4 mb-6">
                   <div className={`text-xs font-bold px-3 py-1 rounded-full ${badgeMap[phase.color]}`}>
                     Phase {phase.number}
@@ -335,7 +302,6 @@ function Roadmap({ onBack }: { onBack: () => void }) {
                   <span className="text-gray-400 font-mono text-sm">{phase.period}</span>
                 </div>
 
-                {/* Metrics */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   {phase.metrics.map((m, idx) => (
                     <div key={idx} className="bg-black/30 rounded-xl p-4 text-center">
@@ -345,11 +311,10 @@ function Roadmap({ onBack }: { onBack: () => void }) {
                   ))}
                 </div>
 
-                {/* Sections */}
                 <div className="grid md:grid-cols-3 gap-6">
                   {phase.sections.map((section, sidx) => (
                     <div key={sidx}>
-                      <h4 className="text-sm font-semibold text-purple-300 uppercase tracking-wider mb-3">
+                      <h4 className="text-sm font-semibold text-cyan-200 uppercase tracking-wider mb-3">
                         {section.title}
                       </h4>
                       <ul className="space-y-2">
@@ -372,120 +337,11 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           </div>
         </section>
 
-        {/* Token Economics */}
-        <section className="mb-20">
-          <h2 className="text-3xl font-bold text-white mb-10 text-center">$JEEEVS Token Economics</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Parameters */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/30 overflow-hidden">
-              <div className="px-6 py-4 border-b border-purple-500/20">
-                <h3 className="text-lg font-bold text-white">Token Parameters</h3>
-              </div>
-              <table className="w-full">
-                <tbody>
-                  {tokenParams.map((row, idx) => (
-                    <tr key={idx} className="border-b border-purple-500/10">
-                      <td className="px-6 py-3 text-sm text-gray-400">{row.param}</td>
-                      <td className="px-6 py-3 text-sm text-white font-semibold">{row.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Utility */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/30 overflow-hidden">
-              <div className="px-6 py-4 border-b border-purple-500/20">
-                <h3 className="text-lg font-bold text-white">Token Utility</h3>
-              </div>
-              <table className="w-full">
-                <tbody>
-                  {tokenUtility.map((row, idx) => (
-                    <tr key={idx} className="border-b border-purple-500/10">
-                      <td className="px-6 py-3 text-sm text-purple-300 font-semibold whitespace-nowrap">{row.utility}</td>
-                      <td className="px-6 py-3 text-sm text-gray-300">{row.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-400">
-              <span className="text-green-400 font-semibold">30% Burn:</span> 30% of JEEEVS payments are burned, creating deflationary pressure.
-            </p>
-          </div>
-        </section>
-
-        {/* DePIN Infrastructure */}
-        <section className="mb-20">
-          <h2 className="text-3xl font-bold text-white mb-10 text-center">DePIN Infrastructure</h2>
-          <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-purple-500/30 p-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-xl font-bold text-purple-300 mb-4">Why DePIN?</h3>
-                <ul className="space-y-3">
-                  {[
-                    { title: 'Sovereign Inference', desc: 'Mac Studio nodes run local AI models' },
-                    { title: 'Zero Marginal Cost', desc: 'Electricity-only cost after hardware' },
-                    { title: 'No Rate Limits', desc: 'Own the hardware, own the limits' },
-                    { title: 'Data Privacy', desc: 'Scans never leave your node' },
-                    { title: '98% Gross Margin', desc: 'Fixed hardware, near-zero marginal cost' },
-                  ].map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-3">
-                      <span className="text-green-400 mt-0.5">✓</span>
-                      <div>
-                        <div className="text-white font-semibold">{item.title}</div>
-                        <div className="text-sm text-gray-400">{item.desc}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-purple-300 mb-4">Competitive Advantage</h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-purple-500/30">
-                      <th className="text-left py-2 text-gray-400">Layer</th>
-                      <th className="text-left py-2 text-gray-400">Traditional AI-Crypto</th>
-                      <th className="text-left py-2 text-purple-300">Jeeevs</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-gray-300">
-                    <tr className="border-b border-purple-500/10">
-                      <td className="py-2">Inference</td>
-                      <td className="py-2">Cloud API</td>
-                      <td className="py-2 text-green-400">Mac Studio local</td>
-                    </tr>
-                    <tr className="border-b border-purple-500/10">
-                      <td className="py-2">Cost</td>
-                      <td className="py-2">$0.02/query</td>
-                      <td className="py-2 text-green-400">$0.001/query</td>
-                    </tr>
-                    <tr className="border-b border-purple-500/10">
-                      <td className="py-2">Rate Limits</td>
-                      <td className="py-2">Yes (tiered)</td>
-                      <td className="py-2 text-green-400">No (own hardware)</td>
-                    </tr>
-                    <tr className="border-b border-purple-500/10">
-                      <td className="py-2">Data Privacy</td>
-                      <td className="py-2">Third-party</td>
-                      <td className="py-2 text-green-400">Sovereign (local)</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Milestones */}
         <section className="mb-20">
           <h2 className="text-3xl font-bold text-white mb-10 text-center">Key Milestones</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Near-term */}
             <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-green-500/30 p-6">
-              <h3 className="text-lg font-bold text-green-300 mb-4">Near-Term · 3–6 Months</h3>
+              <h3 className="text-lg font-bold text-green-300 mb-4">Near-Term · 3-6 Months</h3>
               <div className="space-y-3">
                 {milestones.nearTerm.map((m, idx) => (
                   <div key={idx} className="flex items-start gap-3">
@@ -498,9 +354,9 @@ function Roadmap({ onBack }: { onBack: () => void }) {
                 ))}
               </div>
             </div>
-            {/* Mid-term */}
+
             <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-blue-500/30 p-6">
-              <h3 className="text-lg font-bold text-blue-300 mb-4">Mid-Term · 6–12 Months</h3>
+              <h3 className="text-lg font-bold text-blue-300 mb-4">Mid-Term · 6-12 Months</h3>
               <ul className="space-y-3">
                 {milestones.midTerm.map((m, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
@@ -510,9 +366,9 @@ function Roadmap({ onBack }: { onBack: () => void }) {
                 ))}
               </ul>
             </div>
-            {/* Long-term */}
+
             <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-yellow-500/30 p-6">
-              <h3 className="text-lg font-bold text-yellow-300 mb-4">Long-Term · 12–24 Months</h3>
+              <h3 className="text-lg font-bold text-yellow-300 mb-4">Long-Term · 12-24 Months</h3>
               <ul className="space-y-3">
                 {milestones.longTerm.map((m, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
@@ -525,10 +381,49 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           </div>
         </section>
 
-        {/* CTA */}
+        <section className="mb-20">
+          <h2 className="text-3xl font-bold text-white mb-10 text-center">Funding Priorities</h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-cyan-500/30 p-6">
+              <h3 className="text-lg font-bold text-white mb-4">What Capital Unlocks</h3>
+              <ul className="space-y-3">
+                {[
+                  'Higher API tiers for AI, threat intelligence, blockchain, phone, domain, and website data',
+                  'More local inference capacity for scheduled scans and routine analysis',
+                  'Cloud AI capacity for advanced reasoning and long-context investigations',
+                  'Queue reliability, monitoring, retry logic, and operational dashboards',
+                  'Research datasets, model evaluation, and explainable trust scoring',
+                ].map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                    <span className="text-cyan-300 mt-0.5">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-black/30 backdrop-blur-sm rounded-xl border border-purple-500/30 p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Grant-Ready Technical Themes</h3>
+              <ul className="space-y-3">
+                {[
+                  'Hybrid local/cloud AI orchestration for cost-aware fraud analysis',
+                  'Multi-source trust fusion across identity, wallet, web, phone, and brand signals',
+                  'Explainable AI risk scoring for online financial fraud prevention',
+                  'Autonomous evidence gathering for phishing and impersonation campaigns',
+                  'Commercial trust APIs for consumers, businesses, and ecosystem partners',
+                ].map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                    <span className="text-purple-300 mt-0.5">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
         <section className="text-center py-12">
           <p className="text-sm text-gray-500 mb-6 font-mono">
-            Protecting crypto users since 2026 · agenticbro.app · @AgenticBro1 · t.me/Agenticbro1
+            Hybrid AI trust intelligence · agenticbro.app · @AgenticBro11 · t.me/Agenticbro1
           </p>
           <button
             onClick={onBack}
@@ -540,7 +435,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
       </main>
 
       <footer className="relative z-10 text-center p-4 text-sm text-gray-500">
-        <p>Scam Detection Platform · April 2026 · Built for crypto users, by crypto users · <a href="https://twitter.com/AgenticBro" className="text-purple-400 hover:text-purple-300">@AgenticBro</a></p>
+        <p>Hybrid AI Trust Ecosystem · Built for Web3 users, brands, and online safety workflows</p>
       </footer>
     </div>
   );

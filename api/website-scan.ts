@@ -1,421 +1,977 @@
 /**
  * api/website-scan.ts — Website Security Scanner API
- * 
- * Detects wallet drainers, fake airdrops, phishing sites, and wallet theft attempts
- * 
+ * =====================================================
+ * Enhanced with:
+ *   1. Google Safe Browsing API (live phishing/malware database)
+ *   2. urlscan.io integration (independent verdict + IP/ASN/screenshot)
+ *   3. TLD risk scoring (.xyz, .tk, .ml, .top, etc.)
+ *   4. Redirect chain detection (expose multi-hop redirects)
+ *   5. IP & hosting analysis (ipwho.is — country, ISP, bulletproof flag)
+ *   6. Own community reports (website_community_reports Supabase table)
+ *
  * POST /api/website-scan
- * Body: { url: string }
- * Returns: WebsiteScanResult
+ * Body: { url: string, brand_monitor_id?: string }
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+export const config = { maxDuration: 25 };
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type ThreatDetection = {
-  type: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  type:        string;
+  severity:    'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   description: string;
-  evidence?: string;
-  weight: number;
+  evidence?:   string;
+  weight:      number;
 };
 
 interface ReputationResult {
-  source: string;
-  score?: number;
-  verdict: string;
+  source:   string;
+  score?:   number;
+  verdict:  string;
   details?: string;
 }
 
+interface DomainInfo {
+  registeredDate?: string;
+  domainAgeDays?:  number;
+  registrar?:      string;
+  isNewDomain?:    boolean;
+}
+
+interface PaymentAnalysis {
+  detectedMethods:  string[];
+  safeMethods:      string[];
+  riskyMethods:     string[];
+  paymentProviders: string[];
+  hasBuyerProtection: boolean;
+  riskAssessment:   'SAFE' | 'MIXED' | 'RISKY' | 'DANGEROUS';
+}
+
+interface SafeBrowsingResult {
+  flagged:  boolean;
+  threats:  { type: string; platform: string }[];
+}
+
+interface UrlScanIoResult {
+  found:        boolean;
+  verdict:      'malicious' | 'suspicious' | 'benign' | 'unknown';
+  score:        number | null;
+  screenshotUrl: string | null;
+  reportUrl:    string | null;
+  country:      string | null;
+  asnName:      string | null;
+  scanDate:     string | null;
+}
+
+interface IPHostingInfo {
+  ip:              string | null;
+  country:         string | null;
+  countryCode:     string | null;
+  city:            string | null;
+  isp:             string | null;
+  org:             string | null;
+  asn:             string | null;
+  isHosting:       boolean;
+  isBulletproof:   boolean;
+  hostingProvider: string | null;
+}
+
 interface WebsiteScanResult {
-  success: boolean;
-  url: string;
-  domain: string;
-  riskScore: number;
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  threats: ThreatDetection[];
+  success:      boolean;
+  url:          string;
+  finalUrl?:    string;
+  domain:       string;
+  riskScore:    number;
+  riskLevel:    'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  threats:      ThreatDetection[];
   recommendations: string[];
-  reputation?: ReputationResult[];
+  reputation?:  ReputationResult[];
   scamIndicators?: string[];
   webSearchResults?: SearchResult[];
-  deepScanId?: string;
+  deepScanId?:  string;
   deepScanPollUrl?: string;
-  scanDate: string;
+  scanDate:     string;
+  scanCategory?: 'general' | 'ticket' | 'crypto_casino' | 'brand_impersonation';
+  domainInfo?:  DomainInfo;
+  paymentAnalysis?: PaymentAnalysis;
+  brandImpersonationInfo?: { is_lookalike: boolean; brand_domain: string | null; similarity: number; variant_type: string } | null;
+  // ── New enhanced fields ──
+  redirectChain?:       string[];
+  safeBrowsing?:        SafeBrowsingResult | null;
+  urlScanInfo?:         UrlScanIoResult | null;
+  ipInfo?:              IPHostingInfo | null;
+  ownCommunityReports?: number;
+  findings?:            { title: string; detail: string; icon?: string }[];
 }
 
-// ─── Known Scam Domains (Regulatory Warnings) ────────────────────────────────
+// ─── High-Risk TLDs ───────────────────────────────────────────────────────────
 
-const KNOWN_SCAM_DOMAINS: Record<string, { regulator: string; warning: string }> = {
-  // FCA Warned - Trade Vector AI variants
-  'tradevectorai-app.org': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
-  'fastinvest.com': { regulator: 'MULTIPLE', warning: 'Multiple scam reports - investment fraud, no withdrawals, regulatory warning from Hellenic Commission' },
-  'trade-vectorai.net': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
-  'tradevectorai.net': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
-  'tradevectorai-official.com': { regulator: 'FCA', warning: 'UK FCA warning - unauthorised investment firm' },
-  'trade.errors-app.org': { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
-  'trade-errors-app.org': { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
+const HIGH_RISK_TLDS: Record<string, { score: number; severity: 'LOW' | 'MEDIUM' | 'HIGH'; reason: string }> = {
+  tk:     { score: 20, severity: 'HIGH',   reason: 'Free TLD with highest global scam/phishing rate' },
+  ml:     { score: 20, severity: 'HIGH',   reason: 'Free TLD — extremely high malware and phishing rate' },
+  ga:     { score: 20, severity: 'HIGH',   reason: 'Free TLD — extremely high scam rate' },
+  cf:     { score: 20, severity: 'HIGH',   reason: 'Free TLD — among highest phishing rates worldwide' },
+  gq:     { score: 20, severity: 'HIGH',   reason: 'Free TLD — extremely high scam rate' },
+  xyz:    { score: 15, severity: 'MEDIUM', reason: 'Very cheap TLD heavily abused by scammers and phishers' },
+  top:    { score: 15, severity: 'MEDIUM', reason: 'Among highest scam rates of any paid TLD' },
+  click:  { score: 15, severity: 'MEDIUM', reason: 'Frequently used in phishing and malvertising campaigns' },
+  work:   { score: 12, severity: 'MEDIUM', reason: 'Commonly used in job scams and investment fraud' },
+  online: { score: 10, severity: 'MEDIUM', reason: 'Common in fake stores and phishing sites' },
+  site:   { score: 10, severity: 'MEDIUM', reason: 'High usage in scam and phishing sites' },
+  club:   { score: 8,  severity: 'LOW',    reason: 'Frequently used in crypto and investment scam sites' },
+  live:   { score: 8,  severity: 'LOW',    reason: 'Common in streaming and tech support scams' },
+  shop:   { score: 6,  severity: 'LOW',    reason: 'High fake store/counterfeit scam usage' },
+  store:  { score: 6,  severity: 'LOW',    reason: 'Common in fake merchandise and dropship scams' },
+  info:   { score: 5,  severity: 'LOW',    reason: 'Historically high spam and scam usage' },
+  biz:    { score: 5,  severity: 'LOW',    reason: 'Historically higher scam rate than .com/.org' },
 };
 
-// ─── Scam Domain Patterns ───────────────────────────────────────────────────
+// ─── Bulletproof / high-risk hosting providers ───────────────────────────────
+
+const BULLETPROOF_HOSTING_PATTERNS = [
+  'colocrossing', 'colox', 'serverius', 'combahton', 'ecatel',
+  'quasi networks', 'frantech', 'buyvm', 'voxility', 'marosnet',
+  'baxet', 'selectel', 'serverplace', 'verdina', 'netzbetrieb',
+];
+
+// ─── Known Scam Domains ───────────────────────────────────────────────────────
+
+const KNOWN_SCAM_DOMAINS: Record<string, { regulator: string; warning: string }> = {
+  'tradevectorai-app.org':       { regulator: 'FCA',        warning: 'UK FCA warning — unauthorised investment firm' },
+  'fastinvest.com':              { regulator: 'MULTIPLE',   warning: 'Multiple scam reports — no withdrawals, regulatory warning' },
+  'trade-vectorai.net':          { regulator: 'FCA',        warning: 'UK FCA warning — unauthorised investment firm' },
+  'tradevectorai.net':           { regulator: 'FCA',        warning: 'UK FCA warning — unauthorised investment firm' },
+  'tradevectorai-official.com':  { regulator: 'FCA',        warning: 'UK FCA warning — unauthorised investment firm' },
+  'trade.errors-app.org':        { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
+  'trade-errors-app.org':        { regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern associated with scams' },
+  'fifa2026tickets.com':         { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site — FIFA.com is the ONLY authorized seller' },
+  'worldcup2026tickets.com':     { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site — NOT authorized by FIFA' },
+  'fifaworldcup2026tickets.com': { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site — FIFA.com is the ONLY source' },
+  'wc2026tickets.com':           { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket reseller — unauthorized' },
+  '2026worldcuptickets.com':     { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site — not authorized by FIFA' },
+  'worldcuptickets2026.com':     { regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site — FIFA is the ONLY official source' },
+  'fifatickets2026.com':         { regulator: 'FIFA',       warning: 'Impersonates FIFA — only FIFA.com/tickets is official' },
+  'fifa2026official.com':        { regulator: 'FIFA',       warning: 'Fake FIFA official site — FIFA only uses FIFA.com domain' },
+  'fifafans2026.com':            { regulator: 'FIFA',       warning: 'Fake FIFA fan site used for ticket scams' },
+  'worldcup-hospitality.com':    { regulator: 'FIFA',       warning: 'Fake hospitality reseller — FIFA Hospitality is the ONLY authorized program' },
+  'matchhospitality2026.com':    { regulator: 'FIFA',       warning: 'Fake hospitality reseller — not affiliated with FIFA/MATCH Hospitality' },
+};
 
 const SCAM_DOMAIN_PATTERNS = [
-  { pattern: /tradevectorai/i, regulator: 'FCA', warning: 'UK FCA warned entity', weight: 30 },
-  { pattern: /trade-vectorai/i, regulator: 'FCA', warning: 'UK FCA warned entity', weight: 30 },
-  { pattern: /errors-app/i, regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern', weight: 25 },
-  { pattern: /vectorai-app/i, regulator: 'FCA', warning: 'Associated with FCA warned entity', weight: 25 },
+  { pattern: /tradevectorai/i,     regulator: 'FCA',        warning: 'UK FCA warned entity', weight: 30 },
+  { pattern: /trade-vectorai/i,    regulator: 'FCA',        warning: 'UK FCA warned entity', weight: 30 },
+  { pattern: /errors-app/i,        regulator: 'SUSPICIOUS', warning: 'Suspicious domain pattern', weight: 25 },
+  { pattern: /vectorai-app/i,      regulator: 'FCA',        warning: 'Associated with FCA warned entity', weight: 25 },
+  { pattern: /fifa.*2026.*ticket/i, regulator: 'FIFA',       warning: 'Fake FIFA World Cup 2026 ticket site', weight: 30 },
+  { pattern: /worldcup.*2026.*ticket/i, regulator: 'FIFA',   warning: 'Fake World Cup 2026 ticket site', weight: 30 },
+  { pattern: /2026.*worldcup.*ticket/i, regulator: 'FIFA',   warning: 'Fake World Cup 2026 ticket site', weight: 30 },
+  { pattern: /wc2026.*ticket/i,    regulator: 'FIFA',       warning: 'Fake World Cup 2026 ticket site', weight: 30 },
+  { pattern: /fifaticket/i,        regulator: 'FIFA',       warning: 'Impersonates FIFA ticket sales', weight: 30 },
+  { pattern: /worldcup.*hospitality/i, regulator: 'FIFA',   warning: 'Fake World Cup hospitality reseller', weight: 25 },
+  { pattern: /copa.*america.*2026.*ticket/i, regulator: 'CONCACAF', warning: 'Suspect Copa America 2026 ticket reseller', weight: 20 },
 ];
 
-// ─── Wallet Drainer Patterns ────────────────────────────────────────────────
+// ─── Content Keyword Lists (unchanged from original) ─────────────────────────
 
 const WALLET_DRAINER_SIGNATURES = [
-  { pattern: 'seed phrase', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'recovery phrase', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'mnemonic', type: 'seed_harvesting', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'private key', type: 'key_harvesting', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'enter your seed', type: 'seed_harvesting', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'import wallet', type: 'wallet_import', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'drainer', type: 'drainer_script', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'sign drain', type: 'drainer_script', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'claim free', type: 'fake_airdrop', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'free airdrop', type: 'fake_airdrop', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'connect to claim', type: 'fake_airdrop', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'verify your wallet', type: 'phishing', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'wallet verification', type: 'phishing', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'suspicious activity', type: 'phishing', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'seed phrase',       type: 'seed_harvesting',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'recovery phrase',   type: 'seed_harvesting',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'mnemonic',          type: 'seed_harvesting',  weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'private key',       type: 'key_harvesting',   weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'enter your seed',   type: 'seed_harvesting',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'import wallet',     type: 'wallet_import',    weight: 15, severity: 'HIGH' as const },
+  { pattern: 'drainer',           type: 'drainer_script',   weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'sign drain',        type: 'drainer_script',   weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'claim free',        type: 'fake_airdrop',     weight: 15, severity: 'HIGH' as const },
+  { pattern: 'free airdrop',      type: 'fake_airdrop',     weight: 15, severity: 'HIGH' as const },
+  { pattern: 'connect to claim',  type: 'fake_airdrop',     weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'verify your wallet', type: 'phishing',        weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'wallet verification', type: 'phishing',       weight: 20, severity: 'CRITICAL' as const },
+  { pattern: 'suspicious activity', type: 'phishing',       weight: 15, severity: 'HIGH' as const },
 ];
-
-// ─── Investment Fraud Keywords ──────────────────────────────────────────────
 
 const INVESTMENT_FRAUD_KEYWORDS = [
-  { pattern: 'recover your investment', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'recover your funds', type: 'investment_fraud', weight: 25, severity: 'CRITICAL' as const },
-  { pattern: 'fund recovery', type: 'investment_fraud', weight: 20, severity: 'CRITICAL' as const },
-  { pattern: 'account suspended', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
-  { pattern: 'account locked', type: 'brokerage_phishing', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'recover your investment', type: 'investment_fraud',     weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'recover your funds',      type: 'investment_fraud',     weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fund recovery',           type: 'investment_fraud',     weight: 20, severity: 'HIGH' as const },
+  { pattern: 'account suspended',       type: 'brokerage_phishing',   weight: 15, severity: 'HIGH' as const },
+  { pattern: 'account locked',          type: 'brokerage_phishing',   weight: 15, severity: 'HIGH' as const },
 ];
 
-// ─── Legitimate Domains ─────────────────────────────────────────────────────
+const EVENT_TICKET_SCAM_KEYWORDS = [
+  { pattern: 'world cup 2026 tickets',      type: 'fake_event_ticket',   weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fifa 2026 tickets',           type: 'fake_event_ticket',   weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'guaranteed world cup tickets', type: 'fake_event_ticket',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'buy world cup tickets',        type: 'fake_event_ticket',  weight: 20, severity: 'HIGH' as const },
+  { pattern: 'world cup tickets for sale',   type: 'fake_event_ticket',  weight: 20, severity: 'HIGH' as const },
+  { pattern: 'cheap world cup tickets',      type: 'fake_event_ticket',  weight: 20, severity: 'HIGH' as const },
+  { pattern: 'official ticket reseller',     type: 'fake_event_ticket',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'authorized ticket vendor',     type: 'fake_event_ticket',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'fifa approved seller',         type: 'fake_event_ticket',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: '100% guaranteed tickets',      type: 'fake_event_ticket',  weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'below face value',             type: 'fake_event_ticket',  weight: 20, severity: 'HIGH' as const },
+  { pattern: 'selling fast',                 type: 'ticket_urgency',     weight: 15, severity: 'HIGH' as const },
+  { pattern: 'last chance tickets',          type: 'ticket_urgency',     weight: 15, severity: 'HIGH' as const },
+  { pattern: 'wire transfer only',           type: 'suspicious_payment', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'western union',               type: 'suspicious_payment', weight: 25, severity: 'CRITICAL' as const },
+  { pattern: 'crypto payment only',          type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'pay via bitcoin',             type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'cash only',                   type: 'suspicious_payment', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'whatsapp ticket',             type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'telegram ticket',             type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+  { pattern: 'dm for tickets',              type: 'ticket_scam_method', weight: 20, severity: 'HIGH' as const },
+];
 
+const CRYPTO_CASINO_KEYWORDS = [
+  { pattern: 'crypto casino',       type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'blockchain casino',   type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'bitcoin casino',      type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'solana casino',       type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'online casino',       type: 'fake_casino',      weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'crypto slots',        type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'crypto betting',      type: 'fake_casino',      weight: 20, severity: 'HIGH' as const },
+  { pattern: 'provably fair',       type: 'fake_casino',      weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'crash game',          type: 'fake_casino',      weight: 15, severity: 'MEDIUM' as const },
+  { pattern: 'plinko',              type: 'fake_casino',      weight: 10, severity: 'LOW' as const },
+  { pattern: 'deposit bonus',       type: 'casino_lure',      weight: 15, severity: 'HIGH' as const },
+  { pattern: 'no deposit bonus',    type: 'casino_lure',      weight: 15, severity: 'HIGH' as const },
+  { pattern: 'free spins',          type: 'casino_lure',      weight: 10, severity: 'MEDIUM' as const },
+  { pattern: 'wagering requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'wager requirement',   type: 'casino_withhold',  weight: 15, severity: 'HIGH' as const },
+  { pattern: 'playthrough requirement', type: 'casino_withhold', weight: 15, severity: 'HIGH' as const },
+  { pattern: 'withdrawal pending',  type: 'casino_withhold',  weight: 20, severity: 'HIGH' as const },
+];
+
+const FIFA_OFFICIAL_DOMAINS   = ['fifa.com', 'fifa.org', 'fifaworldcup.com', 'fifaworldcup26.com'];
+const AUTHORIZED_TICKET_SELLERS = ['fifa.com', 'fifaworldcup.com', 'match-hospitality.com', 'stubhub.com', 'ticketmaster.com', 'viagogo.com', 'seatgeek.com', 'vivaticket.com'];
 const LEGITIMATE_DOMAINS = [
-  'phantom.app', 'metamask.io', 'uniswap.org', 'jupiter.ag',
-  'raydium.io', 'pump.fun', 'magiceden.io', 'opensea.io',
-  'dexscreener.com', 'coingecko.com', 'coinmarketcap.com',
-  'binance.com', 'coinbase.com', 'kraken.com', 'bybit.com',
-  'okx.com', 'kucoin.com', 'crypto.com', 'gate.io',
-  'robinhood.com', 'webull.com', 'etrade.com', 'fidelity.com',
-  'schwab.com', 'vanguard.com', 'sofi.com',
+  'phantom.app', 'metamask.io', 'uniswap.org', 'jupiter.ag', 'raydium.io',
+  'pump.fun', 'magiceden.io', 'opensea.io', 'dexscreener.com', 'coingecko.com',
+  'coinmarketcap.com', 'binance.com', 'coinbase.com', 'kraken.com', 'bybit.com',
+  'okx.com', 'kucoin.com', 'crypto.com', 'gate.io', 'robinhood.com',
+  'webull.com', 'etrade.com', 'fidelity.com', 'schwab.com', 'vanguard.com',
+  'sofi.com', 'agenticbro.app',
+  'fifa.com', 'fifaworldcup.com', 'fifa.org',
+  'stubhub.com', 'ticketmaster.com', 'viagogo.com', 'seatgeek.com',
+  'vivaticket.com', 'match-hospitality.com',
+  // DeFi / trading platforms (wallet connection is expected behavior)
+  'bullpen.fi', 'hyperliquid.xyz', 'polymarket.com',
+  'driftprotocol.com', 'zeta.markets', 'photon.xyz',
+  'axiom.trade', 'bloomtrade.com', 'trojanonbase.com',
+  'pumpportal.com', 'birdeye.so', 'rugcheck.xyz',
+  'solscan.io', 'solana.fm', 'explorer.solana.com',
 ];
 
-// ─── Helper Functions ────────────────────────────────────────────────────────
+// ─── Known Legitimate Domain Details ────────────────────────────────────────
 
-function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace('www.', '');
-  } catch {
-    return url;
-  }
-}
+const LEGITIMATE_DOMAIN_INFO: Record<string, { platform: string; description: string; walletConnect: boolean; notes: string }> = {
+  'bullpen.fi': {
+    platform: 'Bullpen',
+    description: 'Non-custodial Solana trading terminal — combines Polymarket, Hyperliquid, and Jupiter Ultra',
+    walletConnect: true,
+    notes: 'Wallet connection is expected behavior for this DeFi trading platform. Referral links (?ref=) are standard for Bullpen\'s airdrop and growth campaigns.',
+  },
+  'hyperliquid.xyz': {
+    platform: 'Hyperliquid',
+    description: 'Decentralized perpetual exchange on its own L1 blockchain',
+    walletConnect: true,
+    notes: 'Wallet connection is expected for trading. Non-custodial — users control their own funds.',
+  },
+  'polymarket.com': {
+    platform: 'Polymarket',
+    description: 'Decentralized prediction market platform',
+    walletConnect: true,
+    notes: 'Wallet connection required for trading. Well-known platform in the crypto space.',
+  },
+  'driftprotocol.com': {
+    platform: 'Drift Protocol',
+    description: 'Decentralized perpetual futures exchange on Solana',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi trading protocol. Wallet connection is standard.',
+  },
+  'zeta.markets': {
+    platform: 'Zeta Markets',
+    description: 'Decentralized options and perpetuals exchange on Solana',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi protocol. Wallet connection is expected.',
+  },
+  'photon.xyz': {
+    platform: 'Photon',
+    description: 'Solana memecoin trading terminal with real-time data',
+    walletConnect: true,
+    notes: 'Trading platform for Solana tokens. Wallet connection is required for trading.',
+  },
+  'axiom.trade': {
+    platform: 'Axiom',
+    description: 'Solana trading terminal for meme coins',
+    walletConnect: true,
+    notes: 'Non-custodial trading platform. Wallet connection is standard behavior.',
+  },
+  'pumpportal.com': {
+    platform: 'PumpPortal',
+    description: 'Pump.fun token launch and trading platform',
+    walletConnect: true,
+    notes: 'Official platform for pump.fun token creation and trading.',
+  },
+  'birdeye.so': {
+    platform: 'Birdeye',
+    description: 'Solana token analytics and charting platform',
+    walletConnect: false,
+    notes: 'Analytics platform. Read-only data, wallet connection optional for portfolio tracking.',
+  },
+  'rugcheck.xyz': {
+    platform: 'RugCheck',
+    description: 'Solana token safety checker and rug pull detector',
+    walletConnect: false,
+    notes: 'Security analysis tool. No wallet connection required for basic checks.',
+  },
+  'solscan.io': {
+    platform: 'Solscan',
+    description: 'Solana blockchain explorer and analytics',
+    walletConnect: false,
+    notes: 'Official Solana blockchain explorer. Read-only data.',
+  },
+  'solana.fm': {
+    platform: 'SolanaFM',
+    description: 'Solana blockchain explorer',
+    walletConnect: false,
+    notes: 'Blockchain explorer. Read-only data, no wallet connection needed.',
+  },
+  'explorer.solana.com': {
+    platform: 'Solana Explorer',
+    description: 'Official Solana blockchain explorer',
+    walletConnect: false,
+    notes: 'Official Solana Foundation explorer. Read-only.',
+  },
+  'phantom.app': {
+    platform: 'Phantom',
+    description: 'Leading Solana wallet',
+    walletConnect: false,
+    notes: 'Official Phantom wallet app. Never download wallets from unofficial sources.',
+  },
+  'jupiter.ag': {
+    platform: 'Jupiter',
+    description: 'Solana\'s largest DEX aggregator',
+    walletConnect: true,
+    notes: 'Non-custodial swap aggregator. Wallet connection is required for trading.',
+  },
+  'raydium.io': {
+    platform: 'Raydium',
+    description: 'Solana AMM and liquidity provider',
+    walletConnect: true,
+    notes: 'Non-custodial DeFi protocol. Wallet connection is standard for liquidity provision and swapping.',
+  },
+  'dexscreener.com': {
+    platform: 'DexScreener',
+    description: 'DEX token price tracker and charting',
+    walletConnect: false,
+    notes: 'Analytics platform. Read-only data, no wallet connection required.',
+  },
+  'coingecko.com': {
+    platform: 'CoinGecko',
+    description: 'Cryptocurrency price tracking and analytics',
+    walletConnect: false,
+    notes: 'Well-known crypto data aggregator. Read-only.',
+  },
+  'coinmarketcap.com': {
+    platform: 'CoinMarketCap',
+    description: 'Cryptocurrency market capitalization tracker',
+    walletConnect: false,
+    notes: 'Industry standard crypto data platform. Read-only.',
+  },
+  'pump.fun': {
+    platform: 'Pump.fun',
+    description: 'Solana memecoin launch platform',
+    walletConnect: true,
+    notes: 'Token launch platform. Wallet connection is required for creating or trading tokens.',
+  },
+};
 
-function isLegitimateDomain(domain: string): boolean {
-  return LEGITIMATE_DOMAINS.some(legit => 
-    domain === legit || domain.endsWith('.' + legit)
-  );
-}
-
-function checkKnownScamDomain(domain: string): ThreatDetection | null {
-  const lowerDomain = domain.toLowerCase();
-  
-  // Check exact matches first
-  if (KNOWN_SCAM_DOMAINS[lowerDomain]) {
-    const info = KNOWN_SCAM_DOMAINS[lowerDomain];
-    return {
-      type: 'regulatory_warning',
-      severity: 'CRITICAL',
-      description: `${info.regulator} Warning: ${info.warning}`,
-      evidence: `Domain: ${domain}`,
-      weight: 30,
-    };
+function getLegitimateDomainInfo(domain: string): { platform: string; description: string; walletConnect: boolean; notes: string } | null {
+  // Try exact match first, then parent domain
+  const lower = domain.toLowerCase();
+  if (LEGITIMATE_DOMAIN_INFO[lower]) return LEGITIMATE_DOMAIN_INFO[lower];
+  // Try matching parent domain (e.g. app.bullpen.fi → bullpen.fi)
+  for (const [key, info] of Object.entries(LEGITIMATE_DOMAIN_INFO)) {
+    if (lower === key || lower.endsWith('.' + key)) return info;
   }
-  
-  // Check pattern matches
-  for (const { pattern, regulator, warning, weight } of SCAM_DOMAIN_PATTERNS) {
-    if (pattern.test(lowerDomain)) {
-      return {
-        type: 'regulatory_warning',
-        severity: 'CRITICAL',
-        description: `${regulator} Warning: ${warning}`,
-        evidence: `Pattern match: ${pattern.source}`,
-        weight,
-      };
-    }
-  }
-  
   return null;
 }
 
-function analyzeContent(html: string, _domain: string): ThreatDetection[] {
+function extractDomain(url: string): string {
+  try { return new URL(url).hostname.replace('www.', ''); }
+  catch { return url; }
+}
+
+function isLegitimateDomain(domain: string): boolean {
+  return LEGITIMATE_DOMAINS.some(l => domain === l || domain.endsWith('.' + l));
+}
+
+// ─── Levenshtein distance ─────────────────────────────────────────────────────
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+// ─── 1. TLD Risk Scoring ──────────────────────────────────────────────────────
+
+function checkTLDRisk(domain: string): ThreatDetection | null {
+  const parts = domain.split('.');
+  const tld = parts[parts.length - 1].toLowerCase();
+  const risk = HIGH_RISK_TLDS[tld];
+  if (!risk) return null;
+  return {
+    type:        'high_risk_tld',
+    severity:    risk.severity,
+    description: `High-risk TLD (.${tld}): ${risk.reason}`,
+    evidence:    `Domain extension: .${tld}`,
+    weight:      risk.score,
+  };
+}
+
+// ─── 2. Redirect Chain Detection ─────────────────────────────────────────────
+
+async function followRedirectChain(url: string, maxHops = 6): Promise<{ chain: string[]; finalUrl: string }> {
+  const chain: string[] = [url];
+  let current = url;
+
+  for (let i = 0; i < maxHops; i++) {
+    try {
+      const res = await fetch(current, {
+        method:   'HEAD',
+        redirect: 'manual',
+        headers:  { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' },
+        signal:   AbortSignal.timeout(3000),
+      });
+      const location = res.headers.get('location');
+      if (!location || res.status < 300 || res.status >= 400) break;
+      const next = location.startsWith('http') ? location : new URL(location, current).href;
+      if (next === current) break;
+      chain.push(next);
+      current = next;
+    } catch {
+      break;
+    }
+  }
+  return { chain, finalUrl: current };
+}
+
+// ─── 3. Google Safe Browsing ──────────────────────────────────────────────────
+
+async function checkGoogleSafeBrowsing(url: string): Promise<SafeBrowsingResult> {
+  const apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
+  if (!apiKey) return { flagged: false, threats: [] };
+
+  try {
+    const res = await fetch(
+      `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: { clientId: 'agenticbro', clientVersion: '2.0' },
+          threatInfo: {
+            threatTypes:      ['MALWARE', 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE', 'POTENTIALLY_HARMFUL_APPLICATION'],
+            platformTypes:    ['ANY_PLATFORM'],
+            threatEntryTypes: ['URL'],
+            threatEntries:    [{ url }],
+          },
+        }),
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+    if (!res.ok) return { flagged: false, threats: [] };
+    const data = await res.json();
+    if (!data.matches?.length) return { flagged: false, threats: [] };
+    return {
+      flagged:  true,
+      threats:  data.matches.map((m: any) => ({ type: m.threatType, platform: m.platformType })),
+    };
+  } catch {
+    return { flagged: false, threats: [] };
+  }
+}
+
+// ─── 4. urlscan.io ────────────────────────────────────────────────────────────
+
+interface SearchResult {
+  title:       string;
+  url:         string;
+  description: string;
+}
+
+async function searchUrlScan(domain: string): Promise<UrlScanIoResult> {
+  const dflt: UrlScanIoResult = { found: false, verdict: 'unknown', score: null, screenshotUrl: null, reportUrl: null, country: null, asnName: null, scanDate: null };
+  try {
+    const res = await fetch(
+      `https://urlscan.io/api/v1/search/?q=domain:${encodeURIComponent(domain)}&size=1`,
+      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return dflt;
+    const data = await res.json();
+    if (!data.results?.length) return dflt;
+
+    const scan     = data.results[0];
+    const verdicts = scan.verdicts?.overall;
+    return {
+      found:         true,
+      verdict:       verdicts?.malicious ? 'malicious' : verdicts?.suspicious ? 'suspicious' : 'benign',
+      score:         verdicts?.score ?? null,
+      screenshotUrl: scan.screenshot ?? `https://urlscan.io/screenshots/${scan.id}.png`,
+      reportUrl:     `https://urlscan.io/result/${scan.id}/`,
+      country:       scan.page?.country ?? null,
+      asnName:       scan.page?.asnname ?? null,
+      scanDate:      scan.task?.time ?? null,
+    };
+  } catch {
+    return dflt;
+  }
+}
+
+// ─── 5. IP & Hosting Analysis ─────────────────────────────────────────────────
+
+async function getIPHostingInfo(domain: string): Promise<IPHostingInfo> {
+  const dflt: IPHostingInfo = { ip: null, country: null, countryCode: null, city: null, isp: null, org: null, asn: null, isHosting: false, isBulletproof: false, hostingProvider: null };
+  try {
+    const res = await fetch(
+      `https://ipwho.is/${domain}`,
+      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return dflt;
+    const d = await res.json();
+    if (!d.success) return dflt;
+
+    const isp      = d.connection?.isp  || '';
+    const org      = d.connection?.org  || '';
+    const ispLower = isp.toLowerCase();
+    const orgLower = org.toLowerCase();
+
+    const isBulletproof = BULLETPROOF_HOSTING_PATTERNS.some(p => ispLower.includes(p) || orgLower.includes(p));
+    const isHosting     = d.type === 'hosting' || isBulletproof;
+
+    return {
+      ip:              d.ip              || null,
+      country:         d.country         || null,
+      countryCode:     d.country_code    || null,
+      city:            d.city            || null,
+      isp:             isp               || null,
+      org:             org               || null,
+      asn:             d.connection?.asn ? `AS${d.connection.asn}` : null,
+      isHosting,
+      isBulletproof,
+      hostingProvider: isp || org || null,
+    };
+  } catch {
+    return dflt;
+  }
+}
+
+// ─── 6. Own Community Reports ─────────────────────────────────────────────────
+
+async function queryOwnWebsiteReports(domain: string): Promise<number> {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
+    if (!supabaseUrl || !supabaseKey) return 0;
+    const { createClient } = await import('@supabase/supabase-js');
+    const sb = createClient(supabaseUrl, supabaseKey);
+    const { count } = await sb
+      .from('website_community_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('domain', domain);
+    return count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Known Scam Domain Check ──────────────────────────────────────────────────
+
+function checkKnownScamDomain(domain: string): ThreatDetection | null {
+  const lower = domain.toLowerCase();
+  if (KNOWN_SCAM_DOMAINS[lower]) {
+    const info = KNOWN_SCAM_DOMAINS[lower];
+    return { type: 'regulatory_warning', severity: 'CRITICAL', description: `${info.regulator} Warning: ${info.warning}`, evidence: `Domain: ${domain}`, weight: 30 };
+  }
+  for (const { pattern, regulator, warning, weight } of SCAM_DOMAIN_PATTERNS) {
+    if (pattern.test(lower)) {
+      return { type: 'regulatory_warning', severity: 'CRITICAL', description: `${regulator} Warning: ${warning}`, evidence: `Pattern match on: ${domain}`, weight };
+    }
+  }
+  return null;
+}
+
+// ─── Content Analysis ─────────────────────────────────────────────────────────
+
+function analyzeContent(html: string, _domain: string, isLegit: boolean = false): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
-  const lowerHtml = html.toLowerCase();
-  
-  // Check wallet drainer patterns
+  const lower   = html.toLowerCase();
+  const domain  = _domain.toLowerCase();
+
   for (const sig of WALLET_DRAINER_SIGNATURES) {
-    if (lowerHtml.includes(sig.pattern)) {
-      threats.push({
-        type: sig.type,
-        severity: sig.severity,
-        description: getThreatDescription(sig.type),
-        evidence: `Pattern: "${sig.pattern}"`,
-        weight: sig.weight,
-      });
+    if (lower.includes(sig.pattern)) threats.push({ type: sig.type, severity: sig.severity, description: getThreatDescription(sig.type), evidence: `Pattern: "${sig.pattern}"`, weight: sig.weight });
+  }
+  for (const kw of INVESTMENT_FRAUD_KEYWORDS) {
+    if (lower.includes(kw.pattern)) threats.push({ type: kw.type, severity: kw.severity, description: getThreatDescription(kw.type), evidence: `Keyword: "${kw.pattern}"`, weight: kw.weight });
+  }
+
+  let casinoHitCount = 0;
+  for (const kw of CRYPTO_CASINO_KEYWORDS) {
+    if (lower.includes(kw.pattern)) { casinoHitCount++; threats.push({ type: kw.type, severity: kw.severity, description: getThreatDescription(kw.type), evidence: `Casino keyword: "${kw.pattern}"`, weight: kw.weight }); }
+  }
+
+  const isLikelyCasino = casinoHitCount >= 2;
+  if (!isLikelyCasino) {
+    for (const kw of EVENT_TICKET_SCAM_KEYWORDS) {
+      if (lower.includes(kw.pattern)) threats.push({ type: kw.type, severity: kw.severity, description: getThreatDescription(kw.type), evidence: `Ticket scam keyword: "${kw.pattern}"`, weight: kw.weight });
     }
   }
-  
-  // Check investment fraud keywords
-  for (const keyword of INVESTMENT_FRAUD_KEYWORDS) {
-    if (lowerHtml.includes(keyword.pattern)) {
-      threats.push({
-        type: keyword.type,
-        severity: keyword.severity,
-        description: getThreatDescription(keyword.type),
-        evidence: `Keyword: "${keyword.pattern}"`,
-        weight: keyword.weight,
-      });
+
+  if (lower.includes('eval(') || lower.includes('atob(')) threats.push({ type: 'obfuscated_code', severity: 'HIGH', description: 'Obfuscated JavaScript — often hides malicious code', weight: 15 });
+  if (!isLegit && (lower.includes('connect wallet') || lower.includes('walletconnect'))) threats.push({ type: 'wallet_connect', severity: 'MEDIUM', description: 'Wallet connection requested', weight: 10 });
+  if (lower.includes('cloudflare') && lower.includes('blocked')) threats.push({ type: 'cloudflare_block', severity: 'MEDIUM', description: 'Site blocking automated access — could hide malicious content', evidence: 'Cloudflare challenge detected', weight: 10 });
+
+  if (!isLikelyCasino) {
+    const isFifaOfficial = FIFA_OFFICIAL_DOMAINS.some(d => domain === d || domain.endsWith('.' + d));
+    if (!isFifaOfficial) {
+      const fifaPatterns = [
+        { p: 'official fifa partner', w: 30 }, { p: 'fifa authorized', w: 30 },
+        { p: 'fifa approved', w: 30 }, { p: 'fifa certified', w: 25 },
+        { p: 'authorized fifa ticket', w: 30 }, { p: 'fifa official reseller', w: 30 },
+      ];
+      for (const { p, w } of fifaPatterns) {
+        if (lower.includes(p)) threats.push({ type: 'fifa_impersonation', severity: 'CRITICAL', description: 'Claiming FIFA authorization — FIFA.com is the ONLY authorized World Cup 2026 ticket source', evidence: `Pattern: "${p}" on non-FIFA domain`, weight: w });
+      }
+    }
+
+    if (!lower.includes('copyright 2026') && lower.includes('ticket') || (lower.includes('copyright 2026') && lower.includes('ticket'))) {
+      if (lower.includes('copyright 2026') && lower.includes('ticket')) {
+        threats.push({ type: 'recent_domain_ticket', severity: 'HIGH', description: 'Site appears newly created for 2026 event ticket sales — common scam pattern', evidence: 'Copyright 2026 + ticket keywords on same page', weight: 15 });
+      }
+    }
+
+    const hasTicketKeywords = lower.includes('ticket') && (lower.includes('world cup') || lower.includes('fifa') || lower.includes('2026'));
+    const hasContactInfo    = lower.includes('address') && (lower.includes('street') || lower.includes('ave') || lower.includes('road'));
+    const hasCompanyInfo    = lower.includes('llc') || lower.includes('inc.') || lower.includes('ltd') || lower.includes('corp');
+    if (hasTicketKeywords && !hasContactInfo && !hasCompanyInfo) {
+      threats.push({ type: 'no_seller_info', severity: 'MEDIUM', description: 'Ticket selling site with no verifiable business address or company info', evidence: 'Ticket keywords present but no company/address details found', weight: 10 });
     }
   }
-  
-  // Check for Cloudflare block (suspicious for financial sites)
-  if (lowerHtml.includes('cloudflare') && lowerHtml.includes('blocked')) {
-    threats.push({
-      type: 'cloudflare_block',
-      severity: 'MEDIUM',
-      description: 'Site is blocking automated access - could be hiding malicious content',
-      evidence: 'Cloudflare challenge page detected',
-      weight: 10,
-    });
+
+  // ── Payment method analysis — only for commerce/checkout contexts ──
+  // Sites that merely mention crypto terms (e.g. token analytics dashboards,
+  // blockchain explorers, DeFi info sites) should NOT trigger payment-method
+  // threats unless they actually ask the user to PAY for something.
+  const paymentAnalysis = analyzePaymentMethods(html, _domain);
+  const isCommerceSite = detectCommerceContext(lower);
+
+  if (isCommerceSite) {
+    for (const method of paymentAnalysis.riskyMethods) {
+      const cryptoMethods = ['bitcoin', 'ethereum', 'cryptocurrency', 'crypto', 'usdt', 'usdc', 'tether'];
+      if (isLegitimateDomain(_domain) && cryptoMethods.includes(method)) continue;
+      const severity = ['wire transfer', 'western union', 'moneygram'].includes(method) ? 'CRITICAL' as const : ['bitcoin', 'cryptocurrency', 'crypto', 'gift card', 'prepaid card'].includes(method) ? 'HIGH' as const : 'MEDIUM' as const;
+      const weight   = severity === 'CRITICAL' ? 25 : severity === 'HIGH' ? 20 : 10;
+      threats.push({ type: 'risky_payment_method', severity, description: `Non-standard payment method: ${method} — no buyer protection`, evidence: `Payment method "${method}" found on site`, weight });
+    }
+    if (paymentAnalysis.detectedMethods.length > 0 && paymentAnalysis.safeMethods.length === 0 && paymentAnalysis.riskyMethods.length > 0) {
+      threats.push({ type: 'no_safe_payment', severity: 'CRITICAL', description: 'Site only accepts non-standard payment methods — no buyer protection', evidence: `Only accepts: ${paymentAnalysis.riskyMethods.join(', ')}`, weight: 25 });
+    }
   }
-  
-  // Check for obfuscated code
-  if (lowerHtml.includes('eval(') || lowerHtml.includes('atob(')) {
-    threats.push({
-      type: 'obfuscated_code',
-      severity: 'HIGH',
-      description: 'Obfuscated JavaScript - often hides malicious code',
-      weight: 15,
-    });
-  }
-  
-  // Check for wallet connection
-  if (lowerHtml.includes('connect wallet') || lowerHtml.includes('walletconnect')) {
-    threats.push({
-      type: 'wallet_connect',
-      severity: 'MEDIUM',
-      description: 'Wallet connection requested',
-      weight: 10,
-    });
-  }
-  
+
   return threats;
 }
 
-function getThreatDescription(type: string): string {
-  const descriptions: Record<string, string> = {
-    drainer_script: 'Wallet drainer script - steals all assets',
-    seed_harvesting: 'Seed phrase harvesting - NEVER enter your seed phrase',
-    key_harvesting: 'Private key theft - NEVER share your private key',
-    fake_airdrop: 'Fake airdrop scam - drains wallet',
-    regulatory_warning: 'Regulatory warning - official fraud alert',
-    investment_fraud: 'Investment fraud - recovery/claim scam',
-    brokerage_phishing: 'Brokerage phishing - attempts to steal credentials',
-    phishing: 'Phishing attempt - steals credentials',
-    wallet_connect: 'Wallet connection - verify site first',
-    obfuscated_code: 'Hidden malicious code',
-    cloudflare_block: 'Site blocking scanners - suspicious behavior',
-  };
-  return descriptions[type] || 'Suspicious activity';
+// ── Commerce context detection ──────────────────────────────────────────────
+// Only flag payment methods when the site is actually selling something.
+// This prevents false positives on crypto analytics sites, blockchain explorers,
+// token dashboards, and informational pages that merely mention crypto terms.
+function detectCommerceContext(lowerHtml: string): boolean {
+  // Strong commerce signals — site has a checkout / payment / cart / buy flow
+  const COMMERCE_STRONG = [
+    'checkout', 'add to cart', 'shopping cart', 'buy now', 'purchase',
+    'add to basket', 'proceed to payment', 'order summary', 'payment method',
+    'select payment', 'choose payment', 'pay with', 'subtotal',
+    'shipping address', 'billing address', 'credit card number',
+    'card number', 'cvv', 'expiry date', 'order total',
+    'complete your purchase', 'secure checkout', 'pay $', 'pay usd',
+  ];
+  for (const s of COMMERCE_STRONG) {
+    if (lowerHtml.includes(s)) return true;
+  }
+
+  // Form-based payment signals — actual payment forms on the page
+  const hasPaymentForm = lowerHtml.includes('<form') && (
+    lowerHtml.includes('card-number') ||
+    lowerHtml.includes('cc-number') ||
+    lowerHtml.includes('payment-form') ||
+    lowerHtml.includes('checkout-form') ||
+    lowerHtml.includes('data-stripe') ||
+    lowerHtml.includes('data-razorpay')
+  );
+  if (hasPaymentForm) return true;
+
+  // E-commerce platform signals
+  const ECOMMERCE_PLATFORMS = ['shopify', 'woocommerce', 'magento', 'bigcommerce', 'opencart', 'prestashop'];
+  for (const p of ECOMMERCE_PLATFORMS) {
+    if (lowerHtml.includes(p)) return true;
+  }
+
+  // Ticket/casino deposit signals — these are inherently commerce
+  if (lowerHtml.includes('buy tickets') || lowerHtml.includes('book tickets') || lowerHtml.includes('deposit now') || lowerHtml.includes('make a deposit')) return true;
+
+  return false;
 }
+
+// ─── Payment Method Analysis (unchanged) ─────────────────────────────────────
+
+function analyzePaymentMethods(html: string, _domain: string): PaymentAnalysis {
+  const lower = html.toLowerCase();
+  const analysis: PaymentAnalysis = { detectedMethods: [], safeMethods: [], riskyMethods: [], paymentProviders: [], hasBuyerProtection: false, riskAssessment: 'SAFE' };
+
+  const SAFE_PROVIDERS = [
+    { pattern: 'stripe.com', name: 'Stripe' }, { pattern: 'js.stripe.com', name: 'Stripe' },
+    { pattern: 'paypal.com/sdk', name: 'PayPal' }, { pattern: 'paypalobjects.com', name: 'PayPal' },
+    { pattern: 'squareup.com', name: 'Square' }, { pattern: 'shopify.com/s', name: 'Shopify Payments' },
+    { pattern: 'braintreegateway.com', name: 'Braintree' }, { pattern: 'authorize.net', name: 'Authorize.net' },
+    { pattern: 'adyen.com', name: 'Adyen' }, { pattern: 'checkout.com', name: 'Checkout.com' },
+    { pattern: 'klarna.com', name: 'Klarna' }, { pattern: 'afterpay.com', name: 'Afterpay' },
+  ];
+  for (const p of SAFE_PROVIDERS) { if (lower.includes(p.pattern)) { analysis.paymentProviders.push(p.name); analysis.hasBuyerProtection = true; } }
+
+  const SAFE_METHODS = [
+    { pattern: 'credit card', name: 'Credit Card' }, { pattern: 'visa', name: 'Visa' },
+    { pattern: 'mastercard', name: 'Mastercard' }, { pattern: 'american express', name: 'American Express' },
+    { pattern: 'apple pay', name: 'Apple Pay' }, { pattern: 'google pay', name: 'Google Pay' },
+    { pattern: 'paypal', name: 'PayPal' }, { pattern: 'debit card', name: 'Debit Card' },
+  ];
+  for (const m of SAFE_METHODS) { if (lower.includes(m.pattern)) { analysis.safeMethods.push(m.name); analysis.hasBuyerProtection = true; } }
+
+  const RISKY_METHODS = [
+    { pattern: 'wire transfer', name: 'wire transfer' }, { pattern: 'bank wire', name: 'wire transfer' },
+    { pattern: 'swift transfer', name: 'wire transfer' }, { pattern: 'western union', name: 'Western Union' },
+    { pattern: 'moneygram', name: 'MoneyGram' }, { pattern: 'bitcoin', name: 'bitcoin' },
+    { pattern: 'ethereum', name: 'ethereum' }, { pattern: 'usdt', name: 'cryptocurrency' },
+    { pattern: 'crypto payment', name: 'cryptocurrency' }, { pattern: 'pay with crypto', name: 'cryptocurrency' },
+    { pattern: 'gift card', name: 'gift card' }, { pattern: 'prepaid card', name: 'prepaid card' },
+    { pattern: 'zelle', name: 'Zelle' }, { pattern: 'venmo', name: 'Venmo' },
+    { pattern: 'cash app', name: 'Cash App' }, { pattern: 'cash only', name: 'cash' },
+    { pattern: 'money order', name: 'money order' }, { pattern: 'cashier check', name: "cashier's check" },
+  ];
+  for (const m of RISKY_METHODS) { if (lower.includes(m.pattern) && !analysis.riskyMethods.includes(m.name)) analysis.riskyMethods.push(m.name); }
+
+  analysis.detectedMethods = Array.from(new Set([...analysis.safeMethods, ...analysis.riskyMethods]));
+
+  const hasCritical = analysis.riskyMethods.some(m => ['wire transfer', 'Western Union', 'MoneyGram'].includes(m));
+  const hasHigh     = analysis.riskyMethods.some(m => ['bitcoin', 'ethereum', 'cryptocurrency', 'gift card', 'prepaid card', 'cash'].includes(m));
+
+  if (hasCritical && !analysis.hasBuyerProtection)              analysis.riskAssessment = 'DANGEROUS';
+  else if ((hasCritical || hasHigh) && analysis.hasBuyerProtection) analysis.riskAssessment = 'MIXED';
+  else if (analysis.riskyMethods.length > 0)                    analysis.riskAssessment = 'RISKY';
+
+  return analysis;
+}
+
+// ─── Threat Descriptions ──────────────────────────────────────────────────────
+
+function getThreatDescription(type: string): string {
+  const d: Record<string, string> = {
+    drainer_script:         'Wallet drainer script — steals all assets on connection',
+    seed_harvesting:        'Seed phrase harvesting — NEVER enter your seed phrase anywhere',
+    key_harvesting:         'Private key theft — NEVER share your private key',
+    fake_airdrop:           'Fake airdrop scam — drains your wallet on interaction',
+    regulatory_warning:     'Official regulatory fraud alert',
+    investment_fraud:       'Investment fraud — fund recovery/claim scam',
+    brokerage_phishing:     'Brokerage phishing — steals trading credentials',
+    phishing:               'Phishing attempt — steals login credentials',
+    wallet_connect:         'Wallet connection requested — verify site legitimacy first',
+    obfuscated_code:        'Hidden/obfuscated JavaScript — frequently used to hide malicious code',
+    cloudflare_block:       'Site blocking security scanners — suspicious for legitimate sites',
+    fake_event_ticket:      'Fake event ticket scam — buy tickets only from official sources',
+    ticket_urgency:         'High-pressure ticket sales tactics — designed to force rushed decisions',
+    suspicious_payment:     'Suspicious payment method — no buyer protection',
+    ticket_scam_method:     'Dodgy ticket selling channel — high risk of non-delivery',
+    fake_casino:            'Fake or unlicensed crypto casino — fund theft or rigged games',
+    casino_lure:            'Casino deposit/bonus lure — withdrawal trap with impossible terms',
+    casino_withhold:        'Withdrawal restrictions — scam casinos block or delay payouts',
+    fifa_impersonation:     'FIFA impersonation — only FIFA.com sells official World Cup 2026 tickets',
+    recent_domain_ticket:   'Newly created site selling event tickets — common scam pattern',
+    no_seller_info:         'No verifiable business info — legitimate ticket sellers always provide details',
+    risky_payment_method:   'Non-standard payment — no buyer protection, money not recoverable',
+    no_safe_payment:        'No safe payment options — site only accepts irreversible methods',
+    newly_registered_domain:'Domain registered recently — scam sites are often newly created',
+    high_risk_tld:          'High-risk domain extension — disproportionately used by scammers',
+    redirect_chain:         'Multiple URL redirects — can hide the true destination',
+    redirect_domain_change: 'Redirects to a different domain — common phishing technique',
+    google_safe_browsing:   '⚠️ Flagged by Google Safe Browsing — in live phishing/malware database',
+    urlscan_malicious:      'Flagged as malicious by urlscan.io community scans',
+    urlscan_suspicious:     'Flagged as suspicious by urlscan.io community scans',
+    bulletproof_hosting:    'Hosted on known bulletproof/abuse-tolerant hosting provider',
+    brand_domain_lookalike: 'Domain closely resembles a legitimate brand — likely impersonation',
+  };
+  return d[type] || 'Suspicious activity detected';
+}
+
+// ─── Reputation Check (Brave Search + static links) ─────────────────────────
+
+async function searchScamReports(domain: string, isTicketRelated?: boolean): Promise<{ results: SearchResult[]; scamIndicators: string[] }> {
+  const key = process.env.BRAVE_SEARCH_API_KEY;
+  if (!key) return { results: [], scamIndicators: [] };
+  try {
+    const q = isTicketRelated
+      ? `${domain} scam fake tickets legit review FIFA World Cup 2026`
+      : `${domain} scam legit review warning`;
+    const res = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=10`,
+      { headers: { Accept: 'application/json', 'X-Subscription-Token': key } }
+    );
+    if (!res.ok) return { results: [], scamIndicators: [] };
+    const data = await res.json();
+    const results: SearchResult[] = (data.web?.results || []).map((r: any) => ({ title: r.title, url: r.url, description: r.description }));
+    const domainRoot = domain.split('.')[0].toLowerCase();
+    const scamPatterns = [/scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i, /fake/i, /suspicious/i, /phishing/i];
+    const scamIndicators: string[] = [];
+    for (const r of results) {
+      const text = `${r.title} ${r.description}`.toLowerCase();
+      if (!text.includes(domain) && !text.includes(domainRoot) && !r.url.toLowerCase().includes(domain)) continue;
+      for (const p of scamPatterns) { if (p.test(text)) { scamIndicators.push(r.title); break; } }
+    }
+    return { results, scamIndicators: Array.from(new Set(scamIndicators)) };
+  } catch {
+    return { results: [], scamIndicators: [] };
+  }
+}
+
+async function checkReputation(domain: string, isTicketRelated?: boolean): Promise<{ results: ReputationResult[]; webSearchResults?: SearchResult[] }> {
+  const reps: ReputationResult[] = [
+    { source: 'ScamAdviser',   verdict: 'Check recommended', details: `https://www.scamadviser.com/check-website/${domain}` },
+    { source: 'Scam Detector', verdict: 'Check recommended', details: `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/` },
+    { source: 'Trustpilot',    verdict: 'Check reviews',     details: `https://www.trustpilot.com/review/${domain}` },
+  ];
+  if (isTicketRelated) {
+    reps.push({ source: 'FIFA Official', verdict: 'Official tickets only at FIFA.com', details: 'https://www.fifa.com/tickets' });
+    reps.push({ source: 'WHOIS',         verdict: 'Check domain age',                  details: `https://who.is/whois/${domain}` });
+  }
+  const { results: searchResults, scamIndicators } = await searchScamReports(domain, isTicketRelated);
+  if (searchResults.length > 0) {
+    reps.push({ source: 'Web Search', verdict: scamIndicators.length > 0 ? `${scamIndicators.length} potential scam indicators` : 'No obvious scam indicators', details: scamIndicators.slice(0, 3).join('; ') || 'Search completed' });
+    return { results: reps, webSearchResults: searchResults };
+  }
+  return { results: reps };
+}
+
+// ─── Domain Age Check ─────────────────────────────────────────────────────────
+
+async function checkDomainAge(domain: string): Promise<DomainInfo> {
+  const info: DomainInfo = {};
+  try {
+    const tld = domain.split('.').pop() || '';
+    const rdapUrls: Record<string, string> = {
+      com: 'https://rdap.verisign.com/com/v1/domain/',
+      net: 'https://rdap.verisign.com/net/v1/domain/',
+      org: 'https://rdap.publicinterestregistry.org/rdap/domain/',
+    };
+    const rdapBase = rdapUrls[tld] || `https://rdap.${tld}/v1/domain/`;
+    const res = await fetch(`${rdapBase}${domain}`, { headers: { Accept: 'application/rdap+json' }, signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      const data = await res.json();
+      for (const ev of (data.events || [])) {
+        if (ev.eventAction === 'registration') { info.registeredDate = ev.eventDate; break; }
+      }
+      for (const entity of (data.entities || [])) {
+        if (entity.roles?.includes('registrar')) info.registrar = entity.vcardArray?.[1]?.find((v: any[]) => v[0] === 'fn')?.[3];
+      }
+      if (info.registeredDate) {
+        info.domainAgeDays = Math.floor((Date.now() - new Date(info.registeredDate).getTime()) / 86400000);
+        info.isNewDomain   = info.domainAgeDays < 180;
+      }
+    }
+  } catch {
+    try {
+      const res = await fetch(`https://who.is/whois/${domain}`, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.ok) {
+        const text = await res.text();
+        const m = text.match(/(?:Creation Date|Registered On|created|Registration Date)[:\s]+(\d{4}-\d{2}-\d{2})/i);
+        if (m) {
+          info.registeredDate = m[1];
+          info.domainAgeDays  = Math.floor((Date.now() - new Date(m[1]).getTime()) / 86400000);
+          info.isNewDomain    = info.domainAgeDays < 180;
+        }
+      }
+    } catch { /* both failed */ }
+  }
+  return info;
+}
+
+// ─── Risk Score + Level ───────────────────────────────────────────────────────
 
 function calculateRiskScore(threats: ThreatDetection[], scamIndicators: string[] = []): number {
-  const totalWeight = threats.reduce((sum, t) => sum + t.weight, 0);
-  
-  // Add weight for scam indicators from web search (2 points each, max 10)
-  const indicatorWeight = Math.min(scamIndicators.length * 2, 10);
-  
-  const combinedWeight = totalWeight + indicatorWeight;
-  
-  // 30+ points = CRITICAL (10), 20+ = HIGH (7), 10+ = MEDIUM (5)
-  if (combinedWeight >= 30) return Math.min(10, Math.round(combinedWeight / 5));
-  if (combinedWeight >= 20) return Math.min(8, Math.round(combinedWeight / 4));
-  if (combinedWeight >= 10) return Math.min(5, Math.round(combinedWeight / 3));
-  if (combinedWeight >= 5) return Math.min(4, Math.round(combinedWeight / 2));
-  return Math.min(Math.round((combinedWeight / 10) * 10) / 10, 10);
+  const total    = threats.reduce((s, t) => s + t.weight, 0);
+  const indWeight = Math.min(scamIndicators.length * 2, 10);
+  const combined = total + indWeight;
+  if (combined >= 30) return Math.min(10, Math.round(combined / 5));
+  if (combined >= 20) return Math.min(8,  Math.round(combined / 4));
+  if (combined >= 10) return Math.min(5,  Math.round(combined / 3));
+  if (combined >= 5)  return Math.min(4,  Math.round(combined / 2));
+  return Math.min(Math.round((combined / 10) * 10) / 10, 10);
 }
 
-function getRiskLevel(score: number, threats: ThreatDetection[] = [], scamIndicators: string[] = []): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-  // Any CRITICAL threat automatically elevates to CRITICAL level
-  if (threats.some(t => t.severity === 'CRITICAL')) {
-    return 'CRITICAL';
-  }
-  // Multiple scam indicators from web search elevates risk
-  if (scamIndicators.length >= 5) return 'HIGH';
-  if (scamIndicators.length >= 3) return 'MEDIUM';
-  
+function getRiskLevel(score: number, threats: ThreatDetection[] = [], scamIndicators: string[] = [], isLegitimate = false): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  if (isLegitimate && !threats.some(t => t.severity === 'CRITICAL')) return 'LOW';
+  if (threats.some(t => t.severity === 'CRITICAL'))  return 'CRITICAL';
+  if (scamIndicators.length >= 5)  return 'HIGH';
+  if (scamIndicators.length >= 3)  return 'MEDIUM';
   if (score >= 7) return 'CRITICAL';
   if (score >= 5) return 'HIGH';
   if (score >= 3) return 'MEDIUM';
   return 'LOW';
 }
 
-// ─── External Reputation Check via Brave Search API ─────────────────────────
+// ─── Recommendations ──────────────────────────────────────────────────────────
 
-interface SearchResult {
-  title: string;
-  url: string;
-  description: string;
-}
+function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, domain?: string): string[] {
+  if (isLegit) return ['✅ Known legitimate domain', '🔐 Still verify the URL is correct'];
 
-async function searchScamReports(domain: string): Promise<{ results: SearchResult[]; scamIndicators: string[] }> {
-  const BRAVE_API_KEY = process.env.BRAVE_SEARCH_API_KEY;
-  
-  if (!BRAVE_API_KEY) {
-    // Fallback to static reputation links if no API key
-    return {
-      results: [],
-      scamIndicators: [],
-    };
-  }
-  
-  try {
-    const searchQuery = `${domain} scam legit review warning`;
-    const response = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=10`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'X-Subscription-Token': BRAVE_API_KEY,
-        },
-      }
-    );
-    
-    if (!response.ok) {
-      return { results: [], scamIndicators: [] };
-    }
-    
-    const data = await response.json();
-    const results: SearchResult[] = (data.web?.results || []).map((r: any) => ({
-      title: r.title,
-      url: r.url,
-      description: r.description,
-    }));
-    
-    // Extract scam indicators from descriptions
-    const scamIndicators: string[] = [];
-    const scamPatterns = [
-      /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
-      /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
-    ];
-    
-    for (const result of results) {
-      const text = `${result.title} ${result.description}`.toLowerCase();
-      for (const pattern of scamPatterns) {
-        if (pattern.test(text)) {
-          scamIndicators.push(result.title);
-          break;
-        }
-      }
-    }
-    
-    return { results, scamIndicators: [...new Set(scamIndicators)] };
-  } catch {
-    return { results: [], scamIndicators: [] };
-  }
-}
-
-async function checkReputation(domain: string): Promise<{ results: ReputationResult[]; webSearchResults?: SearchResult[] }> {
-  const reputationResults: ReputationResult[] = [];
-  
-  // Always add static reputation links
-  reputationResults.push({
-    source: 'ScamAdviser',
-    verdict: 'Check recommended',
-    details: `https://www.scamadviser.com/check-website/${domain}`,
-  });
-  reputationResults.push({
-    source: 'Scam Detector',
-    verdict: 'Check recommended',
-    details: `https://www.scam-detector.com/validator/${domain.replace('.', '-')}-review/`,
-  });
-  reputationResults.push({
-    source: 'Trustpilot',
-    verdict: 'Check reviews',
-    details: `https://www.trustpilot.com/review/${domain}`,
-  });
-  
-  // Try to get live search results if API key is available
-  const { results: searchResults, scamIndicators } = await searchScamReports(domain);
-  
-  if (searchResults.length > 0) {
-    reputationResults.push({
-      source: 'Web Search',
-      verdict: scamIndicators.length > 0 ? `${scamIndicators.length} potential scam indicators found` : 'No obvious scam indicators',
-      details: scamIndicators.slice(0, 3).join('; ') || 'Search completed',
-    });
-    return { results: reputationResults, webSearchResults: searchResults };
-  }
-  
-  return { results: reputationResults };
-}
-
-function generateRecommendations(threats: ThreatDetection[], isLegit: boolean, _reputation?: ReputationResult[]): string[] {
-  if (isLegit) {
-    return ['✅ Known legitimate domain', '🔐 Still verify URL is correct'];
-  }
-  
   const recs: string[] = [];
-  
-  if (threats.some(t => t.type === 'regulatory_warning')) {
-    recs.push('🚨 CRITICAL: Regulatory warning - known scam/fraud');
-    recs.push('❌ Do NOT interact with this site');
-    recs.push('📋 Report: https://reportfraud.ftc.gov');
-  }
-  
-  if (threats.some(t => t.type === 'investment_fraud')) {
-    recs.push('🚨 CRITICAL: Investment fraud detected');
-    recs.push('❌ Do NOT send money or provide banking info');
-    recs.push('📋 Report to FTC: reportfraud.ftc.gov');
-  }
-  
-  if (threats.some(t => t.type === 'seed_harvesting' || t.type === 'key_harvesting')) {
-    recs.push('🚨 CRITICAL: Site asks for seed phrase/private key - NEVER share');
-    recs.push('❌ Close immediately and never return');
-  }
-  
-  if (threats.some(t => t.type === 'drainer_script')) {
-    recs.push('🚨 Wallet drainer detected - will steal all assets');
-    recs.push('❌ Do NOT connect wallet');
-  }
-  
-  if (threats.some(t => t.type === 'fake_airdrop')) {
-    recs.push('⚠️ Fake airdrop scam');
-    recs.push('🔍 Verify official project website');
-  }
-  
-  if (threats.some(t => t.type === 'phishing' || t.type === 'brokerage_phishing')) {
-    recs.push('⚠️ Phishing site detected');
-    recs.push('❌ Do NOT enter login credentials');
-  }
-  
-  if (threats.some(t => t.type === 'cloudflare_block')) {
-    recs.push('⚠️ Site is blocking security scanners');
-    recs.push('🔍 This is suspicious for a legitimate financial site');
-  }
-  
+  const has = (type: string) => threats.some(t => t.type === type);
+
+  if (has('google_safe_browsing')) { recs.push('🚨 CRITICAL: Flagged by Google Safe Browsing — do NOT visit or enter credentials'); recs.push('❌ Google\'s live database has classified this as phishing or malware'); }
+  if (has('urlscan_malicious'))    { recs.push('🚨 CRITICAL: urlscan.io community marked this domain as malicious'); recs.push('❌ Do NOT interact with this site'); }
+  if (has('urlscan_suspicious'))   { recs.push('⚠️ urlscan.io has flagged this domain as suspicious'); }
+  if (has('redirect_domain_change')) { recs.push('⚠️ URL redirects to a completely different domain — classic phishing technique'); recs.push('🔍 Verify the final destination is what you expected'); }
+  if (has('bulletproof_hosting'))  { recs.push('⚠️ Hosted on a known bulletproof/abuse-tolerant provider — scam sites use these to avoid takedowns'); }
+  if (has('high_risk_tld'))        { recs.push('⚠️ High-risk domain extension — verify this site carefully before entering any information'); }
+  if (has('regulatory_warning'))   { recs.push('🚨 CRITICAL: Regulatory warning — known scam/fraud site'); recs.push('❌ Do NOT interact with this site'); recs.push('📋 Report: https://reportfraud.ftc.gov'); }
+  if (has('investment_fraud'))     { recs.push('🚨 CRITICAL: Investment fraud detected'); recs.push('❌ Do NOT send money or provide banking info'); }
+  if (has('seed_harvesting') || has('key_harvesting')) { recs.push('🚨 CRITICAL: Site asks for seed phrase/private key — NEVER share these'); recs.push('❌ Close immediately and never return'); }
+  if (has('drainer_script'))       { recs.push('🚨 Wallet drainer detected — will steal all assets'); recs.push('❌ Do NOT connect wallet to this site'); }
+  if (has('fake_casino'))          { recs.push('🎰 CRITICAL: Fake or unlicensed crypto casino detected'); recs.push('❌ Do NOT deposit funds — scam casinos often refuse withdrawals'); }
+  if (has('casino_withhold'))      { recs.push('🚨 Withdrawal restrictions detected — classic casino scam pattern'); recs.push('⚠️ Wagering requirements mean you must bet your deposit many times over'); }
+  if (has('fifa_impersonation'))   { recs.push('🚨 CRITICAL: FIFA impersonation — only FIFA.com/tickets is the official source'); recs.push('❌ Do NOT purchase from this site'); }
+  if (has('fake_event_ticket'))    { recs.push('🚨 CRITICAL: Potential fake event ticket scam detected'); recs.push('⚽ World Cup 2026 tickets — ONLY via FIFA.com/tickets'); }
+  if (has('suspicious_payment') || has('no_safe_payment')) { recs.push('🚨 CRITICAL: No safe payment methods — wire/crypto/gift cards have NO buyer protection'); recs.push('❌ Once sent, your money cannot be recovered'); }
+  if (has('newly_registered_domain')) { recs.push('🆕 Domain registered very recently — scam sites are often newly created'); recs.push(`🔗 Verify domain age: https://who.is/whois/${domain || 'DOMAIN'}`); }
+  if (has('phishing') || has('brokerage_phishing')) { recs.push('⚠️ Phishing site detected — do NOT enter login credentials'); }
+
   if (threats.length === 0) {
-    recs.push('✅ No obvious threats detected');
-    recs.push('🔍 Still verify URL matches official site');
+    recs.push('✅ No obvious threats detected by automated scan');
+    recs.push('🔍 Always verify the URL matches the official site before entering credentials');
+    recs.push('🔗 Cross-check at ScamAdviser, Trustpilot, and Google Safe Browsing');
   }
-  
-  return recs.length > 0 ? recs : ['⚠️ Exercise caution', '🔍 Verify site legitimacy'];
+
+  return recs.length > 0 ? recs : ['⚠️ Exercise caution', '🔍 Verify site legitimacy before proceeding'];
 }
 
-// ─── Main Handler ────────────────────────────────────────────────────────────
+// ─── Main Handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -423,15 +979,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST')    return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url } = req.body as { url?: string };
-
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'URL is required' });
-  }
+  const { url, brand_monitor_id } = req.body as { url?: string; brand_monitor_id?: string };
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
 
   let validUrl: string;
   try {
@@ -442,107 +993,332 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const domain = extractDomain(validUrl);
-  const isLegit = isLegitimateDomain(domain);
-  const threats: ThreatDetection[] = [];
-  let reputation: ReputationResult[] | undefined;
-  let webSearchResults: SearchResult[] | undefined;
-  
-  // ALWAYS check known scam domains FIRST (even if fetch fails later)
-  const knownScamThreat = checkKnownScamDomain(domain);
-  if (knownScamThreat) {
-    threats.push(knownScamThreat);
-  }
-  
-  // Run reputation check in parallel with content fetch
-  let scamIndicators: string[] = [];
-  const [reputationResults] = await Promise.allSettled([
-    checkReputation(domain),
-  ]);
-  
-  if (reputationResults.status === 'fulfilled') {
-    reputation = reputationResults.value.results;
-    webSearchResults = reputationResults.value.webSearchResults;
-    // Extract scam indicators from web search results
-    if (reputationResults.value.webSearchResults) {
-      const scamPatterns = [
-        /scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i,
-        /withdrawal/i, /no response/i, /fake/i, /suspicious/i,
-      ];
-      
-      for (const result of reputationResults.value.webSearchResults) {
-        const text = `${result.title} ${result.description}`.toLowerCase();
-        for (const pattern of scamPatterns) {
-          if (pattern.test(text)) {
-            scamIndicators.push(result.title);
-            break;
-          }
-        }
+
+  // ── Brand domain lookup ────────────────────────────────────────────────────
+  let brandDomain: string | null = null;
+  if (brand_monitor_id) {
+    try {
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const sb = createClient(supabaseUrl, supabaseKey);
+        const { data: brand } = await sb.from('brand_monitors').select('brand_domain').eq('id', brand_monitor_id).single();
+        if (brand?.brand_domain) brandDomain = brand.brand_domain.replace(/^https?:\/\//, '').replace(/\/.+$/, '').toLowerCase();
       }
-      scamIndicators = [...new Set(scamIndicators)];
-    }
+    } catch (e) { console.error('[website-scan] brand domain lookup:', e); }
   }
-  
-  try {
-    const response = await fetch(validUrl, {
-      method: 'GET',
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' },
-      signal: AbortSignal.timeout(10000),
-    });
+
+  const dynamicLegitDomains = [...LEGITIMATE_DOMAINS];
+  if (brandDomain && !dynamicLegitDomains.includes(brandDomain)) dynamicLegitDomains.push(brandDomain);
+  const isLegit = dynamicLegitDomains.some(l => domain === l || domain.endsWith('.' + l));
+
+  // ── Early return for known legit domains ──────────────────────────────────
+  if (isLegit) {
+    const domainInfoData = getLegitimateDomainInfo(domain);
+    const findings: { title: string; detail: string; icon?: string }[] = [];
     
-    const html = await response.text();
-    const contentThreats = analyzeContent(html, domain);
-    threats.push(...contentThreats);
-    
-  } catch (error: any) {
-    // Fetch failed - but we still check domain reputation
-    if (threats.length === 0) {
-      threats.push({
-        type: 'fetch_error',
-        severity: 'LOW',
-        description: 'Could not fetch page - site may be down or blocking scanners',
-        weight: 0,
+    if (domainInfoData) {
+      findings.push({
+        title: 'Verified Platform',
+        detail: `${domainInfoData.platform} — ${domainInfoData.description}`,
+        icon: '✅',
+      });
+      findings.push({
+        title: 'Wallet Connection',
+        detail: domainInfoData.walletConnect
+          ? 'Wallet connection is expected behavior for this platform. Always verify you are on the correct domain before connecting.'
+          : 'No wallet connection required for this platform.',
+        icon: domainInfoData.walletConnect ? '🔐' : 'ℹ️',
+      });
+      findings.push({
+        title: 'Safety Notes',
+        detail: domainInfoData.notes,
+        icon: '📋',
+      });
+    } else {
+      findings.push({
+        title: 'Known Legitimate Domain',
+        detail: 'This domain is in the Agentic Bro trusted domains database.',
+        icon: '✅',
       });
     }
+
+    // Parse URL path/ref for additional context
+    try {
+      const urlObj = new URL(validUrl);
+      const refParam = urlObj.searchParams.get('ref');
+      if (refParam) {
+        findings.push({
+          title: 'Referral Parameter Detected',
+          detail: `URL contains ?ref=${refParam}. This is a referral link. Referral links are standard for crypto platforms but always verify the referrer is who they claim to be.`,
+          icon: '🔗',
+        });
+      }
+      const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+      if (pathSegments.length >= 2) {
+        findings.push({
+          title: 'URL Path Analysis',
+          detail: `Path: /${pathSegments.join('/')} — Always verify the full URL matches the official platform. Phishing sites use lookalike domains with similar paths.`,
+          icon: '🔍',
+        });
+      }
+    } catch {}
+
+    return res.status(200).json({
+      success: true, url: validUrl, domain,
+      riskScore: 0, riskLevel: 'LOW', threats: [], scamIndicators: [],
+      recommendations: brandDomain && domain === brandDomain
+        ? ['✅ This is your verified brand domain', '🔐 Monitor for lookalike domains that impersonate your brand']
+        : ['✅ Known legitimate domain', '🔐 Still verify the URL is correct', '🔗 Verify any referral parameters before connecting wallet'],
+      legitimate: true, scanDate: new Date().toISOString(),
+      scanCategory: 'general',
+      findings,
+    });
   }
-  
+
+  const threats: ThreatDetection[] = [];
+
+  // ── Synchronous checks ─────────────────────────────────────────────────────
+  const tldThreat       = checkTLDRisk(domain);
+  const knownScamThreat = checkKnownScamDomain(domain);
+  if (tldThreat)       threats.push(tldThreat);
+  if (knownScamThreat) threats.push(knownScamThreat);
+
+  // ── Brand impersonation ────────────────────────────────────────────────────
+  let brandImpersonationInfo: WebsiteScanResult['brandImpersonationInfo'] = null;
+  if (brandDomain && domain !== brandDomain) {
+    const bp = brandDomain.split('.')[0].toLowerCase();
+    const dp = domain.split('.')[0].toLowerCase();
+    const levDist    = levenshtein(dp, bp);
+    const maxLen     = Math.max(dp.length, bp.length);
+    const similarity = maxLen > 0 ? Math.round((1 - levDist / maxLen) * 1000) / 1000 : 0;
+    let variantType  = 'unknown';
+    let isLookalike  = false;
+    const dTld = '.' + domain.split('.').slice(1).join('.');
+    const bTld = '.' + brandDomain.split('.').slice(1).join('.');
+    if (dp === bp && dTld !== bTld)                                           { variantType = 'tld_swap';         isLookalike = true; }
+    else if (dp.startsWith(bp) && dp !== bp)                                  { variantType = 'phishing_prefix'; isLookalike = true; }
+    else if (dp.endsWith(bp)   && dp !== bp)                                  { variantType = 'phishing_suffix'; isLookalike = true; }
+    else if (similarity >= 0.6 && dp !== bp)                                  { variantType = 'homoglyph';       isLookalike = true; }
+    else if (domain.includes(brandDomain) && domain !== brandDomain)          { variantType = 'subdomain_phishing'; isLookalike = true; }
+    if (isLookalike) {
+      brandImpersonationInfo = { is_lookalike: true, brand_domain: brandDomain, similarity, variant_type: variantType };
+      const sev = similarity >= 0.9 ? 'CRITICAL' : similarity >= 0.75 ? 'HIGH' : similarity >= 0.5 ? 'MEDIUM' : 'LOW';
+      threats.push({ type: 'brand_domain_lookalike', severity: sev as any, description: `"${domain}" is a ${variantType.replace(/_/g, ' ')} of brand domain "${brandDomain}" (${Math.round(similarity * 100)}% similar)`, evidence: `Scanned: ${domain} | Brand: ${brandDomain} | Similarity: ${Math.round(similarity * 100)}%`, weight: similarity >= 0.9 ? 30 : similarity >= 0.75 ? 25 : similarity >= 0.5 ? 15 : 8 });
+    }
+  }
+
+  const isTicketRelated = !['casino','bet','slot'].some(t => domain.includes(t)) && ['ticket','fifa','worldcup','wc2026','hospitality'].some(t => domain.includes(t));
+
+  // ── Parallel async checks ──────────────────────────────────────────────────
+  const [
+    reputationRes,
+    domainAgeRes,
+    safeBrowsingRes,
+    urlScanRes,
+    ipInfoRes,
+    communityRes,
+    redirectRes,
+  ] = await Promise.allSettled([
+    checkReputation(domain, isTicketRelated),
+    checkDomainAge(domain),
+    checkGoogleSafeBrowsing(validUrl),
+    searchUrlScan(domain),
+    getIPHostingInfo(domain),
+    queryOwnWebsiteReports(domain),
+    followRedirectChain(validUrl),
+  ]);
+
+  const reputation          = reputationRes.status === 'fulfilled'   ? reputationRes.value.results        : undefined;
+  const webSearchResults    = reputationRes.status === 'fulfilled'   ? reputationRes.value.webSearchResults : undefined;
+  const domainInfo: DomainInfo = domainAgeRes.status === 'fulfilled' ? domainAgeRes.value                  : {};
+  const safeBrowsing        = safeBrowsingRes.status === 'fulfilled' ? safeBrowsingRes.value               : null;
+  const urlScanInfo         = urlScanRes.status === 'fulfilled'      ? urlScanRes.value                    : null;
+  const ipInfo              = ipInfoRes.status === 'fulfilled'       ? ipInfoRes.value                     : null;
+  const ownCommunityReports = communityRes.status === 'fulfilled'    ? communityRes.value                  : 0;
+  const { chain: redirectChain, finalUrl } = redirectRes.status === 'fulfilled' ? redirectRes.value : { chain: [validUrl], finalUrl: validUrl };
+  const finalDomain = extractDomain(finalUrl);
+
+  // ── Add redirect threats ───────────────────────────────────────────────────
+  if (redirectChain.length > 2) {
+    threats.push({ type: 'redirect_chain', severity: 'MEDIUM', description: `URL redirects through ${redirectChain.length - 1} hop(s) before reaching final destination`, evidence: redirectChain.join(' → '), weight: Math.min((redirectChain.length - 1) * 5, 15) });
+  }
+  if (finalDomain !== domain && !isLegitimateDomain(finalDomain)) {
+    threats.push({ type: 'redirect_domain_change', severity: 'HIGH', description: `URL redirects to a completely different domain: ${finalDomain}`, evidence: `Input domain: ${domain} → Final domain: ${finalDomain}`, weight: 20 });
+  }
+
+  // ── Add Google Safe Browsing threats ──────────────────────────────────────
+  if (safeBrowsing?.flagged) {
+    threats.push({ type: 'google_safe_browsing', severity: 'CRITICAL', description: `Flagged by Google Safe Browsing: ${safeBrowsing.threats.map(t => t.type.replace('_', ' ').toLowerCase()).join(', ')}`, evidence: 'Listed in Google\'s live phishing/malware database', weight: 35 });
+  }
+
+  // ── Add urlscan.io threats ─────────────────────────────────────────────────
+  if (urlScanInfo?.found) {
+    if (urlScanInfo.verdict === 'malicious')  threats.push({ type: 'urlscan_malicious',  severity: 'CRITICAL', description: 'Flagged as malicious by urlscan.io community',  evidence: `Score: ${urlScanInfo.score ?? 'n/a'} | Report: ${urlScanInfo.reportUrl}`, weight: 30 });
+    if (urlScanInfo.verdict === 'suspicious') threats.push({ type: 'urlscan_suspicious', severity: 'HIGH',     description: 'Flagged as suspicious by urlscan.io',           evidence: `Score: ${urlScanInfo.score ?? 'n/a'} | Report: ${urlScanInfo.reportUrl}`, weight: 20 });
+  }
+
+  // ── Add IP/hosting threats ────────────────────────────────────────────────
+  if (ipInfo?.isBulletproof) {
+    threats.push({ type: 'bulletproof_hosting', severity: 'HIGH', description: `Hosted on known bulletproof/abuse-tolerant provider: ${ipInfo.hostingProvider}`, evidence: `ISP: ${ipInfo.isp} | ASN: ${ipInfo.asn} | Country: ${ipInfo.country}`, weight: 20 });
+  }
+
+  // ── Extract scam indicators from web search ───────────────────────────────
+  let scamIndicators: string[] = [];
+  if (webSearchResults) {
+    const domainRoot   = domain.split('.')[0].toLowerCase();
+    const scamPatterns = [/scam/i, /fraud/i, /warning/i, /avoid/i, /stolen/i, /fake/i, /suspicious/i];
+    for (const r of webSearchResults) {
+      const text = `${r.title} ${r.description}`.toLowerCase();
+      if (!text.includes(domain) && !text.includes(domainRoot) && !r.url.toLowerCase().includes(domain)) continue;
+      for (const p of scamPatterns) { if (p.test(text)) { scamIndicators.push(r.title); break; } }
+    }
+    scamIndicators = Array.from(new Set(scamIndicators));
+  }
+
+  // ── Fetch HTML from final URL ─────────────────────────────────────────────
+  let paymentAnalysis: PaymentAnalysis | undefined;
+  try {
+    const pageRes = await fetch(finalUrl, { method: 'GET', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AgenticBro Scanner)' }, signal: AbortSignal.timeout(8000) });
+    const html    = await pageRes.text();
+    threats.push(...analyzeContent(html, finalDomain, isLegit));
+    // Only include payment analysis in results if the site is actually commerce-oriented
+    const lowerHtml = html.toLowerCase();
+    if (detectCommerceContext(lowerHtml)) {
+      paymentAnalysis = analyzePaymentMethods(html, finalDomain);
+    }
+  } catch {
+    if (threats.length === 0) threats.push({ type: 'fetch_error', severity: 'LOW', description: 'Could not fetch page — site may be down or blocking scanners', weight: 0 });
+  }
+
+  // ── Domain age threats ────────────────────────────────────────────────────
+  if (domainInfo.isNewDomain) {
+    threats.push({ type: 'newly_registered_domain', severity: 'HIGH', description: `Domain registered only ${domainInfo.domainAgeDays} days ago — scam sites are often newly created`, evidence: `Registered: ${domainInfo.registeredDate} (${domainInfo.domainAgeDays} days old)`, weight: 20 });
+  } else if (domainInfo.domainAgeDays && domainInfo.domainAgeDays < 365) {
+    threats.push({ type: 'newly_registered_domain', severity: 'MEDIUM', description: `Domain is less than 1 year old (${domainInfo.domainAgeDays} days) — newer domains carry more risk`, evidence: `Registered: ${domainInfo.registeredDate}`, weight: 10 });
+  }
+
+  // ── Score + level ─────────────────────────────────────────────────────────
   const riskScore = calculateRiskScore(threats, scamIndicators);
   const riskLevel = getRiskLevel(riskScore, threats, scamIndicators);
-  const recommendations = generateRecommendations(threats, isLegit, reputation);
-  
-  // Queue deep scan if basic scan is inconclusive (fetch error or LOW risk with no threats)
+  const recommendations = generateRecommendations(threats, isLegit, domain);
+
+  // ── Scan category ─────────────────────────────────────────────────────────
+  const hasTicketKw    = threats.some(t => ['fake_event_ticket','ticket_urgency','ticket_scam_method','fifa_impersonation','recent_domain_ticket'].includes(t.type));
+  const hasCasinoKw    = threats.some(t => ['fake_casino','casino_lure','casino_withhold'].includes(t.type));
+  const hasBrandLook   = threats.some(t => t.type === 'brand_domain_lookalike');
+  let scanCategory: WebsiteScanResult['scanCategory'] = 'general';
+  if (hasBrandLook)                                          scanCategory = 'brand_impersonation';
+  else if (hasCasinoKw || /casino|bet|slot/.test(domain))   scanCategory = 'crypto_casino';
+  else if (hasTicketKw || isTicketRelated)                   scanCategory = 'ticket';
+
+  // ── Deep scan queue (for inconclusive scans) ──────────────────────────────
   let deepScanId: string | undefined;
-  const shouldQueueDeepScan = threats.some(t => t.type === 'fetch_error') || 
-    (riskLevel === 'LOW' && threats.length === 0);
-  
-  if (shouldQueueDeepScan) {
-    const scanId = `deep-${domain}-${Date.now()}`;
-    deepScanId = scanId;
-    
-    // Trigger immediate wake event to OpenClaw agent
-    // Agent will process with web_search and store results in session
+  if (threats.some(t => t.type === 'fetch_error') || (riskLevel === 'LOW' && threats.length === 0)) {
+    deepScanId = `deep-${domain}-${Date.now()}`;
     fetch('https://gateway.openclaw.ai/api/cron/wake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        mode: 'now',
-        text: `DEEP SCAN REQUEST: ${validUrl}
+      body: JSON.stringify({ mode: 'now', text: `DEEP SCAN REQUEST: ${validUrl}\nScan ID: ${deepScanId}\nDomain: ${domain}\nCategory: ${scanCategory}\n\nResearch this domain for scam reports, regulatory warnings, user reviews and respond with findings.` }),
+    }).catch(() => {});
+  }
 
-Scan ID: ${scanId}
-Domain: ${domain}
+  // ── Analytics ─────────────────────────────────────────────────────────────
+  try {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
+    if (supabaseUrl && supabaseKey) {
+      const { createClient } = await import('@supabase/supabase-js');
+      await createClient(supabaseUrl, supabaseKey).rpc('record_scan_event', { p_event_type: 'website', p_platform: 'website', p_username: domain, p_risk_score: riskScore, p_risk_level: riskLevel, p_source: 'website' });
+    }
+  } catch (e) { console.error('[website-scan] analytics:', e); }
 
-Use web_search to research this domain for scam reports, regulatory warnings, user reviews. 
-Then respond with detailed findings including risk level, scam indicators, and recommendations.
-
-Format response as JSON for the user to see.`,
-      }),
-    }).catch(() => {
-      // Ignore errors - best effort
+  // ── Build findings for non-legitimate domains ─────────────────────────────
+  const findings: { title: string; detail: string; icon?: string }[] = [];
+  
+  if (threats.filter(t => t.type !== 'fetch_error').length > 0) {
+    findings.push({
+      title: 'Threat Analysis',
+      detail: `${threats.filter(t => t.type !== 'fetch_error').length} threat(s) detected. See Detected Threats section for details.`,
+      icon: '🚨',
     });
   }
   
+  if (safeBrowsing?.flagged) {
+    findings.push({
+      title: 'Google Safe Browsing',
+      detail: `Flagged as: ${safeBrowsing.threats.map(t => t.type.replace(/_/g, ' ')).join(', ')}. This site is in Google\'s phishing/malware database.`,
+      icon: '🔴',
+    });
+  } else if (safeBrowsing && !safeBrowsing.flagged) {
+    findings.push({
+      title: 'Google Safe Browsing',
+      detail: 'Not in phishing/malware database — no automated flags from Google.',
+      icon: '✅',
+    });
+  }
+  
+  if (urlScanInfo?.found) {
+    findings.push({
+      title: 'urlscan.io',
+      detail: `Verdict: ${urlScanInfo.verdict}. ${urlScanInfo.country ? `Hosted in ${urlScanInfo.country}.` : ''} ${urlScanInfo.asnName ? `Provider: ${urlScanInfo.asnName}.` : ''}`,
+      icon: urlScanInfo.verdict === 'malicious' ? '🔴' : urlScanInfo.verdict === 'suspicious' ? '🟠' : '🟢',
+    });
+  }
+  
+  if (domainInfo.isNewDomain) {
+    findings.push({
+      title: 'Domain Age Warning',
+      detail: `Domain is ${domainInfo.domainAgeDays} days old (less than 6 months). Newly registered domains are high-risk for scams.`,
+      icon: '🆕',
+    });
+  }
+  
+  if (ipInfo?.isBulletproof) {
+    findings.push({
+      title: 'Bulletproof Hosting',
+      detail: `This site is hosted on a bulletproof provider known for hosting scam infrastructure. IP: ${ipInfo.ip}`,
+      icon: '⚠️',
+    });
+  }
+  
+  if (redirectChain.length > 1) {
+    findings.push({
+      title: 'Redirect Chain',
+      detail: `URL redirects through ${redirectChain.length - 1} hop(s) to a different domain. Final destination: ${redirectChain[redirectChain.length - 1]}`,
+      icon: '🔀',
+    });
+  }
+  
+  if (brandImpersonationInfo?.is_lookalike) {
+    findings.push({
+      title: 'Brand Impersonation',
+      detail: `This domain appears to impersonate ${brandImpersonationInfo.brand_domain} (similarity: ${Math.round(brandImpersonationInfo.similarity * 100)}%, type: ${brandImpersonationInfo.variant_type}).`,
+      icon: '🎭',
+    });
+  }
+  
+  if (scamIndicators.length > 0) {
+    findings.push({
+      title: 'Web Search Analysis',
+      detail: `${scamIndicators.length} potential scam indicator(s) found in web search results.`,
+      icon: '🔍',
+    });
+  }
+  
+  if (findings.length === 0) {
+    findings.push({
+      title: 'No Major Threats Found',
+      detail: 'Automated scan did not detect obvious threats. Still verify the URL matches the official site before entering credentials or connecting a wallet.',
+      icon: 'ℹ️',
+    });
+  }
+
   const result: WebsiteScanResult = {
     success: true,
     url: validUrl,
+    finalUrl: finalUrl !== validUrl ? finalUrl : undefined,
     domain,
     riskScore,
     riskLevel,
@@ -554,7 +1330,17 @@ Format response as JSON for the user to see.`,
     deepScanId,
     deepScanPollUrl: deepScanId ? `/api/website-deep-scan?scanId=${deepScanId}` : undefined,
     scanDate: new Date().toISOString(),
+    scanCategory,
+    domainInfo: Object.keys(domainInfo).length > 0 ? domainInfo : undefined,
+    paymentAnalysis,
+    brandImpersonationInfo,
+    redirectChain: redirectChain.length > 1 ? redirectChain : undefined,
+    safeBrowsing,
+    urlScanInfo: urlScanInfo?.found ? urlScanInfo : undefined,
+    ipInfo: ipInfo?.ip ? ipInfo : undefined,
+    ownCommunityReports,
+    findings,
   };
-  
+
   return res.status(200).json(result);
 }

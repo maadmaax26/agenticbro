@@ -1,6 +1,6 @@
 /**
  * Value Proposition Page -- Why Agentic Bro
- * Focused on Scam Detection and Priority Scan
+ * Focused on the hybrid AI trust ecosystem
  */
 
 interface FeatureCard {
@@ -17,31 +17,31 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
       name: 'profile-verifier',
       icon: '🔍',
       title: 'Profile Verifier Scanner',
-      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. 5 free scans, then $1/scan.',
+      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. First 10 scans free, then $1/scan.',
     },
     {
       name: 'token-impersonation',
       icon: '🪙',
       title: 'Token Impersonation Scanner',
-      description: 'Protect yourself from fake tokens impersonating legitimate projects. Enter any contract address and instantly identify copycat tokens, honeypots, and rug pulls before you invest.',
+      description: 'Protect yourself from fake tokens impersonating legitimate projects. Enter any contract address and identify copycat tokens, honeypots, and contract risk before you transact.',
     },
     {
       name: 'scam-detection',
       icon: '🛡',
-      title: 'Scam Detection System',
-      description: 'Deep-dive AI investigation into Telegram channels, X accounts, and token projects. Instantly exposes rug pulls, fake influencers, and honeypots before you lose a single dollar.',
+      title: 'Trust Detection System',
+      description: 'Deep-dive AI investigation into Telegram channels, X accounts, token projects, websites, and wallet behavior. Exposes coordinated risk before users or brands are harmed.',
     },
     {
       name: 'priority-scan',
       icon: '⚡',
       title: 'Priority Scan',
-      description: 'Scan any wallet, Telegram channel, or token address for hidden risk signals. Uncover insider patterns, suspicious flows, and low-trust actors -- all in seconds.',
+      description: 'Scan any wallet, Telegram channel, token address, social profile, phone number, or website for hidden risk signals and low-trust actors.',
     },
     {
       name: 'wallet-forensics',
       icon: '📊',
-      title: 'On-Chain Wallet Analysis',
-      description: 'Trace wallet activity, detect bot wallets, identify coordinated pump groups, and map fund flows across the Solana ecosystem with precision.',
+      title: 'Wallet Intelligence',
+      description: 'Trace wallet activity, detect bot-like patterns, identify coordinated flows, and map fund movement across Web3 ecosystems with precision.',
     },
     {
       name: 'victim-reports',
@@ -52,17 +52,17 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
   ];
 
   const howItWorks = [
-    { step: '01', title: 'Connect Your Wallet', description: 'Link your Solana wallet to unlock full access to Scam Detection and Priority Scan features.' },
-    { step: '02', title: 'Enter Any Target', description: 'Paste a Telegram channel, X username, wallet address, or token contract you want investigated.' },
-    { step: '03', title: 'AI Runs the Investigation', description: 'Agentic Bro cross-references on-chain data, social signals, and the scammer database to generate a full risk report.' },
-    { step: '04', title: 'Trade with Confidence', description: 'Get a clear trust score, red flags, and a recommendation -- so you can act decisively with full information.' },
+    { step: '01', title: 'Choose a Trust Surface', description: 'Start with a wallet, token, profile, website, phone number, domain, Telegram channel, or brand.' },
+    { step: '02', title: 'Submit the Target', description: 'AgenticBro queues the scan and routes it to the right local or cloud AI workflow.' },
+    { step: '03', title: 'AI Runs the Investigation', description: 'AgenticBro cross-references on-chain data, social signals, website intelligence, phone data, and the scammer database.' },
+    { step: '04', title: 'Act with Evidence', description: 'Get a clear trust score, red flags, and a recommendation so you can transact, hire, promote, or report with better information.' },
   ];
 
   const stats = [
     { value: '6', label: 'Platforms Supported' },
     { value: '5,000+', label: 'Known Scammers in Database' },
     { value: '< 30s', label: 'Average Scan Time' },
-    { value: '5 Free', label: 'Scans for Every User' },
+    { value: '10 Free', label: 'Scans for Every User' },
   ];
 
   return (
@@ -79,12 +79,12 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
           </button>
           <div className="text-center">
             <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-full px-4 py-2 text-sm text-red-400 font-medium mb-4">
-              🛡 Protecting Degens Since Day One
+              🛡 Hybrid AI Trust Ecosystem
             </div>
-            <h1 className="text-5xl font-black text-white mb-4">Why Agentic Bro?</h1>
+            <h1 className="text-5xl font-black text-white mb-4">Why AgenticBro?</h1>
             <p className="text-xl text-purple-300 max-w-3xl mx-auto">
-              The crypto space is full of scammers, rug pulls, and fake alpha. Agentic Bro arms you with
-              AI-powered investigation tools to protect your capital and make every trade count.
+              Web3 trust now spans wallets, tokens, identities, websites, domains, phone numbers, and brand impersonation.
+              AgenticBro turns those fragmented signals into AI-powered trust intelligence.
             </p>
           </div>
         </div>
@@ -105,7 +105,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
 
         <section className="mb-20">
           <h2 className="text-3xl font-bold text-white mb-2 text-center">Core Strengths</h2>
-          <p className="text-gray-400 text-center mb-10">Everything Agentic Bro does is built around one mission: keeping your money safe</p>
+          <p className="text-gray-400 text-center mb-10">Everything AgenticBro does is built around one mission: helping people verify trust before risk spreads</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {coreStrengths.map((feature, index) => (
               <div key={index} className="bg-gray-900/60 border border-gray-700/40 rounded-2xl p-6 hover:border-purple-500/40 transition-all group">
@@ -124,14 +124,14 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-full px-3 py-1 text-sm text-red-400 mb-4">
                   🚨 Featured Tool
                 </div>
-                <h2 className="text-4xl font-black text-white mb-4">Scam Detection System</h2>
+                <h2 className="text-4xl font-black text-white mb-4">Trust Detection System</h2>
                 <p className="text-gray-300 text-lg mb-6">
-                  Before you ape into a new project or follow a signal channel, run an Agentic Bro investigation.
-                  Our AI cross-references on-chain wallet forensics, historical rug-pull patterns, social media
+                  Before you transact with a new project, follow a signal channel, hire a Web3 employer, or trust a brand,
+                  run an AgenticBro investigation. Our AI cross-references wallet forensics, abuse patterns, social media
                   behaviour, and our growing scammer database to give you a complete risk picture.
                 </p>
                 <ul className="space-y-3">
-                  {['Telegram and X channel credibility scoring', 'Token contract risk analysis (honeypots, mint authority, bundled buys)', 'Wallet forensics -- who is really behind the project?', 'Victim report cross-referencing', 'Clear verdict: Safe / Caution / High Risk / Known Scam'].map((item, i) => (
+                  {['Telegram and X channel credibility scoring', 'Token contract risk analysis (honeypots, mint authority, bundled buys)', 'Wallet forensics -- who is really behind the project?', 'Victim report cross-referencing', 'Clear verdict: Verified / Caution / High Risk / Known Threat'].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-gray-300">
                       <span className="text-red-400 mt-0.5 flex-shrink-0">✔</span>
                       {item}
@@ -146,7 +146,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                   <div className="text-sm text-gray-500">Sample output</div>
                 </div>
                 <div className="space-y-3 text-sm">
-                  {[{ label: 'Trust Score', value: '12 / 100', color: 'text-red-400' }, { label: 'Risk Level', value: 'CRITICAL', color: 'text-red-500 font-bold' }, { label: 'Rug Pulls', value: '3 confirmed', color: 'text-red-400' }, { label: 'Wallet Age', value: '6 days', color: 'text-yellow-400' }, { label: 'DB Match', value: 'Known scammer', color: 'text-red-400' }, { label: 'Verdict', value: '🚫 DO NOT INVEST', color: 'text-red-500 font-bold' }].map((row, i) => (
+                  {[{ label: 'Trust Score', value: '12 / 100', color: 'text-red-400' }, { label: 'Risk Level', value: 'CRITICAL', color: 'text-red-500 font-bold' }, { label: 'Confirmed Abuse', value: '3 reports', color: 'text-red-400' }, { label: 'Wallet Age', value: '6 days', color: 'text-yellow-400' }, { label: 'DB Match', value: 'Known threat', color: 'text-red-400' }, { label: 'Verdict', value: '🚫 DO NOT TRUST', color: 'text-red-500 font-bold' }].map((row, i) => (
                     <div key={i} className="flex justify-between items-center border-b border-gray-800/50 pb-2">
                       <span className="text-gray-500">{row.label}</span>
                       <span className={row.color}>{row.value}</span>
@@ -183,11 +183,11 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 <h2 className="text-4xl font-black text-white mb-4">Priority Scan</h2>
                 <p className="text-gray-300 text-lg mb-6">
                   Not all intelligence tools are equal. Priority Scan goes beyond surface-level data to give you
-                  deep, actionable intelligence on any wallet, channel, or token -- so you can enter positions
-                  with full situational awareness.
+                  actionable intelligence on any wallet, channel, token, social profile, phone number, or website --
+                  so you can make trust decisions with full situational awareness.
                 </p>
                 <ul className="space-y-3">
-                  {['Identify signal channels by actual win/loss record, not hype', 'Detect early whale accumulation before price moves', 'Spot bot activity and coordinated pump-and-dump setups', 'Get risk-adjusted trade recommendations based on real data', 'Holder Tier: 50 ALL scans/month (Profile, Phone, Token, Channel)', 'Whale Tier: Unlimited scans'].map((item, i) => (
+                  {['Identify channels by historical outcomes, not hype', 'Detect suspicious wallet and transaction patterns', 'Spot bot activity and coordinated manipulation', 'Get risk-adjusted recommendations based on real data', 'Holder Tier: 100 scans/month across trust surfaces', 'Whale Tier: Unlimited scans'].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-gray-300">
                       <span className="text-purple-400 mt-0.5 flex-shrink-0">✔</span>
                       {item}
@@ -228,7 +228,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 </ul>
                 <div className="mt-6 flex items-center gap-4">
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-4 py-2">
-                    <span className="text-cyan-400 font-bold">5 Free Scans</span>
+                    <span className="text-cyan-400 font-bold">10 Free Scans</span>
                   </div>
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2">
                     <span className="text-purple-400 font-bold">$1/scan after</span>
@@ -256,7 +256,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
 
         <section className="mb-20">
           <h2 className="text-3xl font-bold text-white mb-2 text-center">How It Works</h2>
-          <p className="text-gray-400 text-center mb-10">From wallet connect to trade-ready intelligence in under a minute</p>
+          <p className="text-gray-400 text-center mb-10">From target submission to trust-ready intelligence in under a minute</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {howItWorks.map((step, index) => (
               <div key={index} className="relative bg-gray-900/60 border border-gray-700/40 rounded-2xl p-6 hover:border-purple-500/40 transition-all">
@@ -273,9 +273,9 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
 
         <section className="mb-20">
           <h2 className="text-3xl font-bold text-white mb-2 text-center">Competitive Advantages</h2>
-          <p className="text-gray-400 text-center mb-10">Why Agentic Bro stands apart in a crowded space</p>
+          <p className="text-gray-400 text-center mb-10">Why AgenticBro stands apart in a crowded trust and security market</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[{ icon: '🤖', title: 'AI-Native Investigation', desc: 'Unlike static blacklists, Agentic Bro uses live AI analysis that adapts to new scam patterns as they emerge -- not 3 months later.' }, { icon: '⛓', title: 'On-Chain Truth', desc: 'Every verdict is backed by verifiable on-chain data -- wallet history, transaction flows, contract code. No guesswork, no opinions.' }, { icon: '🤝', title: 'Community-Powered Database', desc: 'The scammer database grows with every user report. The more the community uses Agentic Bro, the smarter and safer it gets for everyone.' }].map((item, i) => (
+            {[{ icon: '🤖', title: 'AI-Native Investigation', desc: 'Unlike static blacklists, AgenticBro uses live AI analysis that adapts to new scam and impersonation patterns as they emerge.' }, { icon: '⛓', title: 'On-Chain and Off-Chain Evidence', desc: 'Verdicts combine wallet history, transaction flows, contract signals, social context, domains, websites, and phone intelligence.' }, { icon: '🤝', title: 'Community-Powered Intelligence', desc: 'The risk database grows with every report and scan. The more the ecosystem uses AgenticBro, the more useful the intelligence layer becomes.' }].map((item, i) => (
               <div key={i} className="bg-gray-900/60 border border-gray-700/40 rounded-2xl p-6 text-center hover:border-purple-500/40 transition-all">
                 <div className="text-4xl mb-4">{item.icon}</div>
                 <h3 className="text-xl font-bold text-white mb-3">{item.title}</h3>
@@ -288,10 +288,10 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
         <section className="text-center">
           <div className="bg-gradient-to-br from-purple-900/30 to-gray-900/60 border border-purple-500/20 rounded-3xl p-12">
             <div className="text-5xl mb-4">🛡</div>
-            <h2 className="text-4xl font-bold text-white mb-4">Stop Gambling. Start Investigating.</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">Verify trust before you act.</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-              Every scan you skip is a risk you could have avoided. Agentic Bro gives you 5 free scans --
-              start protecting your portfolio today.
+              Every scan you skip is a signal you did not check. AgenticBro gives you your first scans free so you can
+              protect wallets, users, and brands with better evidence.
             </p>
             <button onClick={onBack} className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-10 rounded-xl text-lg transition-all transform hover:scale-105">
               Run Your First Scan →

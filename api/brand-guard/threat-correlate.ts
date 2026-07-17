@@ -1,4 +1,10 @@
 /**
+ * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
+ * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
+ * Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
+ */
+
+/**
  * api/brand-guard/threat-correlate.ts — Cross-Channel Threat Correlation API
  * ========================================================================
  * Links threats across social media, phone, domains, and wallet addresses
@@ -105,7 +111,8 @@ function calculateAggregateRisk(
   socialResults: Array<{ risk_score: number }> | undefined,
   phoneResults: Array<{ risk_score: number; verification?: { score: number } }> | undefined,
   domainResults: Array<{ risk_score: number }> | undefined,
-  scammerMatchCount: number
+  scammerMatchCount: number,
+  channels?: Record<string, Array<Record<string, unknown>>>
 ): { score: number; level: string; threatType: string; channelCount: number; crossBonus: number; riskScores: Record<string, unknown>; evidence: string[] } {
   const riskScores: Record<string, unknown> = {};
   const evidence: string[] = [];
@@ -163,6 +170,20 @@ function calculateAggregateRisk(
 
   // Cross-channel bonus
   let crossBonus = 0;
+  // If no scan results were provided but we have channels with brand threats, calculate from channels
+  if (totalWeight === 0 && channels && Object.keys(channels).length > 0) {
+    channelCount = Object.keys(channels).length;
+    // Base risk from channel presence
+    for (const [ch, items] of Object.entries(channels)) {
+      const maxItemRisk = Array.isArray(items) ? Math.max(...items.map((i: Record<string, unknown>) => Number(i.risk_score || 0)), 0) : 0;
+      const weight = ch === 'social' ? 0.35 : ch === 'domain' ? 0.25 : ch === 'telegram' ? 0.2 : 0.15;
+      const normalized = Math.min(10, maxItemRisk);
+      riskScores[ch] = { max: normalized, count: Array.isArray(items) ? items.length : 0, weight };
+      weightedSum += normalized * weight;
+      totalWeight += weight;
+    }
+    aggregateRisk = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  }
   if (channelCount >= 3) {
     crossBonus = 2.0;
     evidence.push('🚨 CROSS-CHANNEL THREAT: Confirmed across 3+ channels — coordinated operation likely');
@@ -337,9 +358,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
+  // Query scammer DB for brand-related threats
+  if (supabase) {
+    try {
+      const { data: scammerMatches } = await supabase
+        .from('scan_events')
+        .select('platform, username, risk_score, risk_level, scam_type, target')
+        .or(`target.ilike.%${brandName}%,target.ilike.%${brandHandle}%`)
+        .gte('risk_score', 5)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (scammerMatches && scammerMatches.length > 0) {
+        scammerMatchCount = scammerMatches.length;
+        for (const match of scammerMatches) {
+          const platform = match.platform || 'unknown';
+          if (!channels[platform]) channels[platform] = [];
+          channels[platform].push(match as Record<string, unknown>);
+          linkedEntities.push({
+            type: 'scammer',
+            value: match.username || match.target || 'unknown',
+            source: `${platform}:scammer_db`,
+            confidence: 'high',
+            link_type: 'known_scammer',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[Brand Guard] Scammer DB query error:', err);
+    }
+  }
+
   // Calculate aggregate risk
   const riskResult = calculateAggregateRisk(
-    scanResults.social, scanResults.phone, scanResults.domain, scammerMatchCount
+    scanResults.social, scanResults.phone, scanResults.domain, scammerMatchCount, channels
   );
 
   // Generate takedowns
@@ -396,7 +448,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
-  res.status(200).json({ success: true, result: profile });
+  res.status(200).json({
+    success: true,
+    result: {
+      ...profile,
+      // Flatten key fields for frontend compatibility
+      aggregate_risk_score: profile.risk_profile.aggregate_risk_score,
+      risk_level: profile.risk_profile.aggregate_risk_level,
+      threat_indicators: profile.risk_profile.evidence.map((e: Record<string, unknown>, i: number) => ({
+        type: e.type || 'threat',
+        description: e.description || String(e),
+        risk_score: e.risk_score ?? profile.risk_profile.aggregate_risk_score,
+        channel: e.channel || 'unknown',
+      })),
+      channels_analyzed: Object.keys(profile.channels).length,
+      recommendations: profile.takedown_recommendations.map((t: Record<string, unknown>) => String(t.action || t.description || t)),
+    },
+  });
 }
 
 export const config = {

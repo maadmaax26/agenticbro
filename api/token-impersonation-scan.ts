@@ -11,9 +11,9 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 
 interface VercelResponse extends ServerResponse {
-  status: (code: number) => this
+  status: (code: number) => VercelResponse
   json: (data: unknown) => void
-  setHeader: (name: string, value: string) => this
+  setHeader: (name: string, value: string) => VercelResponse
   end: () => void
 }
 
@@ -294,6 +294,26 @@ export default async function handler(req: IncomingMessage, res: VercelResponse)
       impersonators.high_risk.length +
       impersonators.medium_risk.length +
       impersonators.low_risk.length
+
+    // Track token impersonation scan to analytics
+    try {
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const sb = createClient(supabaseUrl, supabaseKey);
+        await sb.rpc('record_scan_event', {
+          p_event_type: 'token',
+          p_platform: 'solana',
+          p_username: legitimateToken?.symbol || 'unknown',
+          p_risk_score: totalSuspicious > 3 ? 8 : totalSuspicious > 1 ? 5 : 2,
+          p_risk_level: totalSuspicious > 3 ? 'CRITICAL' : totalSuspicious > 1 ? 'HIGH' : 'LOW',
+          p_source: 'website',
+        });
+      }
+    } catch (analyticsErr) {
+      console.error('[token-impersonation] analytics error:', analyticsErr);
+    }
 
     res.status(200).json({
       success: true,

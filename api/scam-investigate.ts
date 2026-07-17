@@ -36,7 +36,7 @@ try {
 // ─── Supabase live database lookup ────────────────────────────────────────────
 async function fetchFromSupabase(handle: string): Promise<any | null> {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return null
@@ -631,7 +631,6 @@ function computeRiskScore(
     if (level === 'verified' || level === 'high risk' || level === 'legitimate') {
       // Known scammer or verified safe
       if (level === 'high risk' || level === 'verified') score += 4  // Known scammer - high boost
-      else if (level === 'verified') score += 2  // Verified scammer
       else if (level === 'legitimate') score -= 3  // Known safe
     } else if (level === 'partially verified') {
       score += 1.5

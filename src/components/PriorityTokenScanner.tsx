@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
+import { useTokenGating, isTestWallet as isTestWalletGating } from '../hooks/useTokenGating';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,8 +74,12 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
   const walletAddress = publicKey?.toBase58() || null;
   
   // Get credits
-  const { credits, freeScansRemaining, hasScans, useCredit, isTestWallet } = useCredits(null, null, walletAddress);
+  const { credits, freeScansRemaining, hasScans, useCredit: consumeCredit, isTestWallet } = useCredits(null, null, walletAddress);
   const isAuthenticated = !!walletAddress;
+
+  // Wallet tier gating — Holder ($100+) gets 100/mo, Whale ($1K+) gets unlimited
+  const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
+  const isTierTest = isTestWalletGating(walletAddress ?? '');
   
   // State
   const [contractAddress, setContractAddress] = useState('');
@@ -106,7 +111,7 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
     setResult(null);
 
     // Use a credit
-    const creditResult = useCredit();
+    const creditResult = await consumeCredit();
     if (!creditResult.success && !isTestWallet) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);
@@ -416,24 +421,28 @@ export default function PriorityTokenScanner({ onLoginRequired }: { onLoginRequi
         <div className="flex items-center justify-between mt-4 text-xs">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
             style={{
-              background: freeScansRemaining > 0 || isTestWallet ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-              border: freeScansRemaining > 0 || isTestWallet ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
-              color: freeScansRemaining > 0 || isTestWallet ? '#4ade80' : '#fbbf24',
+              background: isTierTest ? 'rgba(168,85,247,0.15)' : whaleTierUnlocked ? 'rgba(129,140,248,0.15)' : holderTierUnlocked ? 'rgba(192,132,252,0.15)' : freeScansRemaining > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+              border: isTierTest ? '1px solid rgba(168,85,247,0.4)' : whaleTierUnlocked ? '1px solid rgba(129,140,248,0.4)' : holderTierUnlocked ? '1px solid rgba(192,132,252,0.4)' : freeScansRemaining > 0 ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(245,158,11,0.4)',
+              color: isTierTest ? '#c084fc' : whaleTierUnlocked ? '#818cf8' : holderTierUnlocked ? '#c084fc' : freeScansRemaining > 0 ? '#4ade80' : '#fbbf24',
             }}>
             <span>🎁</span>
             <span>
-              {isTestWallet 
-                ? '∞ Unlimited (Test)' 
-                : freeScansRemaining > 0 
-                  ? `${freeScansRemaining} Free` 
-                  : 'No Free Scans'}
+              {isTierTest
+                ? '∞ Unlimited (Test)'
+                : whaleTierUnlocked
+                  ? '🐋 Whale — Unlimited'
+                  : holderTierUnlocked
+                    ? '💎 Holder — 100/mo'
+                    : freeScansRemaining > 0
+                      ? `${freeScansRemaining} Free`
+                      : 'No Free Scans'}
             </span>
-            {credits > 0 && !isTestWallet && (
+            {credits > 0 && !isTierTest && !holderTierUnlocked && !whaleTierUnlocked && (
               <span className="text-purple-400 ml-2">+ {credits} Paid</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-gray-400">
-            <span>Free: 5 | Holder: 50/mo | Whale: Unlimited</span>
+            <span>Free: 5 | Holder: 100/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
           </div>
         </div>
 

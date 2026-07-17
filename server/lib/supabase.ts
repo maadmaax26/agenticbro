@@ -247,7 +247,7 @@ export async function bulkInsertKnownScammers(
   }
 
   let inserted = 0
-  let skipped = 0
+  const skipped = 0
   let errors = 0
 
   // Process in batches of 50

@@ -12,6 +12,32 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+
+// ── Inline scan event tracking for analytics ──────────────────────────────
+const _supabase = process.env.SUPABASE_URL
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_API_KEY!)
+  : null;
+
+async function trackScanEvent(params: { scan_type: string; platform?: string | null; target: string; risk_score?: number | null; risk_level?: string | null; source?: string; country_code?: string | null }) {
+  if (!_supabase) return;
+  try {
+    await _supabase.from('scan_events').insert({
+      scan_type: params.scan_type,
+      platform: params.platform ?? null,
+      target: params.target,
+      username: params.target,
+      risk_score: params.risk_score ?? null,
+      risk_level: params.risk_level ?? null,
+      source: params.source ?? 'website',
+      source_table: 'direct_insert',
+      event_date: new Date().toISOString().split('T')[0],
+      country_code: params.country_code ?? null,
+    });
+  } catch (e) {
+    console.error('[scan-tracking] Error:', e);
+  }
+}
 
 interface DeepScanRequest {
   url: string;
@@ -144,6 +170,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     await store.set(`scan:${scanId}`, updatedScan);
     
+    // Record to unified scan_events table for analytics
+    try {
+      await trackScanEvent({
+        scan_type: 'website',
+        target: existingScan.url,
+        risk_score: riskScore,
+        risk_level: riskLevel as any,
+        source: 'website',
+      });
+    } catch (e) {
+      console.error('[scan-tracking] website-deep-scan result event error:', e);
+    }
+    
     return res.status(200).json({
       success: true,
       message: 'Scan result updated',
@@ -184,6 +223,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   
   await store.set(`scan:${scanId}`, scanStatus);
+
+  // Record to unified scan_events table for analytics
+  try {
+    
+    await trackScanEvent({
+      scan_type: 'website',
+      target: validUrl,
+      source: 'website',
+    });
+  } catch (e) {
+    console.error('[scan-tracking] website-deep-scan queue event error:', e);
+  }
 
   // OpenClaw agent will pick this up via cron job checking /pending
   return res.status(202).json({

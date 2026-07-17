@@ -57,7 +57,7 @@ function analyzeTransactions(transactions: any[]): WalletStats {
     }
 
     // Calculate trade metrics
-    let totalTrades = swapTransactions.length
+    const totalTrades = swapTransactions.length
     let profitableTrades = 0
     let totalProfit = 0
     let totalLoss = 0

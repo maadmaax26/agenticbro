@@ -1,519 +1,332 @@
-# 🤖 Agentic Bro - Project Summary
+# 🛡️ AgenticBro — Brand Guard
 
-**Agentic Bro** is your agentic degen advisor — a Solana-based meme coin with real utility. Connect your wallet, and Agentic Bro will roast your portfolio brutally but humorously.
+**AI-powered brand protection for businesses of every size.**
 
-**Powered by:** AutonomousAlpha.io — AI Trading Infrastructure
+> One Shield. Total Protection. · Detect. Monitor. Protect.
 
----
-
-## Core Features
-- **Portfolio Analysis:** Analyze last 7 days of trades
-- **Degen Detection:** Calculate degen score (0-100)
-- **Agentic AI Roasts:** Powered by Ollama Cloud, never repeats
-- **Shareable:** Copy to clipboard or share to X
-- **AutonomousAlpha Integration:** Upsell to AI Trading Playbook & bot services
+**Live at:** [agenticbro.app/brand-guard](https://agenticbro.app/brand-guard)  
+**Admin CRM:** [agenticbro.app/brand-guard/admin](https://agenticbro.app/brand-guard/admin) *(restricted)*  
+**Built by:** Agentic Insights LLC · Earl B. Finney Jr.
 
 ---
 
-## Token Information
-- **Name:** Agentic Bro
-- **Ticker:** $AGNTCBRO
-- **Supply:** 1,000,000,000
-- **Platform:** Solana / pump.fun
-- **Domain:** agenticbro.io
-- **Social:** @AgenticBro
+## What This Is
+
+Brand Guard is a production B2B brand protection platform built on the AgenticBro infrastructure. It monitors businesses across domains, social platforms, email channels, phone numbers, and marketplaces — detecting impersonation threats in real time and generating ready-to-submit takedown reports.
+
+The platform emerged from AgenticBro's original Web3/crypto scam detection capability and has been expanded into a full SMB brand protection SaaS, targeting fintech, healthcare, ecommerce, and Web3 companies facing brand impersonation, email spoofing, and domain compromise.
+
+---
+
+## Platform Status
+
+| Layer | Status |
+|-------|--------|
+| 6 scan features | ✅ Live |
+| Supabase backend + RLS | ✅ Live |
+| Stripe 7 products/prices | ✅ Live |
+| Webhook endpoint | ✅ Live |
+| 4 payment rails | ✅ Live |
+| Auth + auto-confirm | ✅ Live |
+| Mobile-responsive dashboard | ✅ Live |
+| Admin CRM (Prospect Hunter) | ✅ Live |
+| Billing end-to-end (credit deduction, tier enforcement) | 🔧 In progress |
+| Domain monitoring cron | 🔧 In progress |
+| Takedown Generator | 🔧 In progress |
+| Marketplace Scanner (Shopify/Etsy) | 🔧 Planned |
+| Visual Fingerprinting (pHash) | 🔧 Planned |
+| Alert notifications (email + Telegram) | 🔧 Planned |
+
+---
+
+## Brand Guard Features
+
+### 🔍 Impersonator Scan
+Detects fake accounts mimicking a brand across social platforms. Scans X, Instagram, TikTok, Facebook, LinkedIn, and Telegram for copycats, squatting accounts, and impersonation patterns using Chrome CDP + behavioral AI scoring.
+
+### 🌐 Domain Monitor
+Scans Certificate Transparency logs via crt.sh for lookalike domain registrations. Catches TLD swaps (.xyz, .shop, .crypto), phishing suffixes (-login.app, -signin.app), and prefix attacks (login-, secure-, verify-) at registration — before the fake site goes live. Each result gets a HIGH/MEDIUM/LOW risk rating.
+
+### 📧 Email Spoof Check
+Full SPF/DKIM/DMARC/MX analysis on a 100-point scale:
+- SPF: 35 pts
+- DMARC: 40 pts
+- DKIM: 15 pts
+- MX: 10 pts
+
+Ratings: PROTECTED (80+) / LOW (60–79) / MEDIUM (40–59) / HIGH (20–39) / CRITICAL (0–19)
+
+Uses Google DNS-over-HTTPS + crt.sh. No external API dependency.
+
+### 🌍 Website Scan
+Scans any URL for threats, phishing indicators, and malware signals using the existing AgenticBro Website Deep Scanner infrastructure and Supabase job queue.
+
+### ⚡ Threat Correlate
+Cross-channel risk correlation. Takes signals from multiple scan types — social impersonation, lookalike domains, email spoof risk, phone fraud — and combines them into a unified risk picture and campaign risk score for a brand.
+
+### 📞 Vendor Verify
+Phone number fraud check. Validates whether a number is VOIP, disposable, premium rate, spoofed, or tied to high-risk countries. Uses the same 12-signal, 90-point scoring engine as the AgenticBro Phone Identifier, including FTC complaint database integration and STIR-SHAKEN detection.
+
+---
+
+## Pricing
+
+| Tier | Price | Target |
+|------|-------|--------|
+| **Guardian** | $29/month | SMBs, small ecommerce, freelancers |
+| **Sentinel** | $79/month | Growing brands, fintech, healthcare |
+| **Fortress** | $199/month | Enterprise, agencies, crypto projects |
+
+**Free trial:** 7 days — no credit card required.
+
+---
+
+## Payment Rails
+
+Four payment methods accepted:
+- Stripe card (primary)
+- USDC on Solana
+- USDC on Base
+- $AGNTCBRO token
 
 ---
 
 ## Tech Stack
-- **Frontend:** React 19 + Vite + TypeScript
-- **Styling:** TailwindCSS + custom gradients
-- **Wallet:** Solana Wallet Adapter (Phantom)
-- **Backend:** Supabase (database + auth)
-- **AI:** Ollama Cloud (`glm-4.7:cloud`) — **FREE with Ollama Pro**
-- **Data:** Helius API (Solana indexer)
-- **Partner:** AutonomousAlpha.io — AI Trading Playbook & Bot Services
+
+| Component | Technology |
+|-----------|------------|
+| Frontend | React + TypeScript + TailwindCSS (aibro/) |
+| Backend API | Node.js / TypeScript / Express — port 8080 |
+| Database | Supabase (PostgreSQL + RLS) |
+| Auth | Supabase Auth + auto-confirm endpoint |
+| Payments | Stripe (7 products/prices, webhook live) |
+| Email | Zoho Mail (agenticbro@agenticbro.app) |
+| Cold email infra | Gmail alias (agenticbro@agenticbro.app) via send-as |
+| Social scanning | Chrome CDP — port 18800 |
+| Local inference | Ollama (Qwen3 suite, GLM-5:cloud primary) |
+| Agent framework | OpenClaw — workspace at ~/.openclaw/workspace/agentic-bro/ |
+| Execution hardware | Mac Studio M4 Max 36GB ("Jeeevs") |
+| Networking | Tailscale mesh |
+| Alerts | Telegram bot (@Jeeevs222_bot) |
 
 ---
 
-## Integration with AutonomousAlpha
-
-### How It Works
-
-Agentic Bro serves as a viral funnel for AutonomousAlpha products:
+## Repository Structure
 
 ```
-User Flow:
-1. Connect wallet → Agentic Bro roasts portfolio
-2. Agentic Bro says "You need this" → Links to AutonomousAlpha
-3. User buys AI Trading Playbook → $79 (with $AGNTCBRO discount)
-4. User upgrades to bot services → $99-$199/mo
-5. Token demand increases → $AGNTCBRO pumps
-```
-
-### Upsell Features
-
-| Roast Count | Upsell Shown |
-|-------------|--------------|
-| 1–2 | AutonomousAlpha Playbook promo |
-| 3+ | Bot services promo |
-| 5+ | Complete bundle offer |
-
-### Discount Codes
-
-| Product | Discount Code | Price |
-|---------|---------------|-------|
-| AI Trading Playbook | `AGNTCBRO20` | $79 (was $99) |
-| Strategy Pack | `AGNTCBRO10` | $39 (was $49) |
-| Zero to Bot Course | `AGNTCBRO30` | $169 (was $199) |
-| Complete Kit | `AGNTCBRO40` | $209 (was $249) |
-
----
-
-## Project Structure
-
-```
-aibro/
-├── src/
-│   ├── components/
-│   │   ├── PortfolioCard.tsx      # Wallet analysis UI
-│   │   ├── RoastDisplay.tsx       # AI roast UI
-│   │   ├── AutonomousAlphaUpsell.tsx  # Playbook promo
-│   │   └── BotServiceUpsell.tsx    # Bot services promo
-│   ├── lib/
-│   │   ├── supabase.ts           # Database client
-│   │   ├── openai.ts             # AI roast generation
-│   │   └── helius.ts             # Wallet data fetch
-│   ├── utils/
-│   │   ├── cn.ts                 # Classname utility
-│   │   └── i18n.ts               # i18n stub
-│   ├── App.tsx                   # Main app
-│   ├── main.tsx                  # Entry point
-│   └── index.css                 # Global styles
-├── .env.local.example            # Env vars template
-├── package.json                  # Dependencies
-├── vite.config.ts                # Vite config
-├── tailwind.config.js            # Tailwind config
-├── tsconfig.json                 # TypeScript config
-├── README.md                     # This file
-├── QUICKSTART.md                 # Quick start guide
-├── DEPLOY.md                     # Deployment guide
-├── QUICK_DEPLOY.md               # Quick deploy commands
-├── REBRANDING_COMPLETE.md        # Rebranding summary
-└── LAUNCH_GUIDE.md              # Launch strategy
+agenticbro/
+├── aibro/                        # React frontend (Next.js/Vite)
+│   └── src/
+│       ├── pages/
+│       │   └── brand-guard/      # Brand Guard dashboard + admin
+│       └── components/
+│           └── brand-guard/      # Scan UI components
+├── server/                       # Express API (port 8080)
+│   └── routes/
+│       └── brand-guard/          # Scan endpoints
+├── services/                     # Core scan services
+│   ├── profile-verifier/         # CDP-based social scanner (85 tests passing)
+│   ├── takedown-generator/       # [In progress] Report templates
+│   └── marketplace-scanner/      # [Planned] Shopify/Etsy crawler + pHash
+├── supabase/
+│   └── migrations/               # DB schema (RLS, credits, subscriptions)
+├── .openclaw/                    # OpenClaw agent configuration
+├── src/                          # Shared utilities
+├── scripts/                      # Start/stop scripts (launchd)
+└── memory/                       # Agent memory system
 ```
 
 ---
 
-## Getting Started
+## API Endpoints — Brand Guard
 
-### 1. Install & Run Locally
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/brand-guard/scan/impersonator` | Social platform scan |
+| POST | `/api/brand-guard/scan/domain` | CT log lookalike scan |
+| POST | `/api/brand-guard/scan/email` | SPF/DKIM/DMARC check |
+| POST | `/api/brand-guard/scan/website` | URL threat scan |
+| POST | `/api/brand-guard/scan/correlate` | Cross-channel correlation |
+| POST | `/api/brand-guard/scan/vendor` | Phone fraud check |
+| POST | `/api/brand-guard/takedown/generate` | [In progress] Takedown report |
+| POST | `/api/brand-guard/marketplace/scan` | [Planned] Shopify/Etsy scan |
+| POST | `/api/brand-guard/fingerprint/register` | [Planned] Image hash registration |
+
+---
+
+## Supabase Schema
+
+Core tables:
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Supabase Auth |
+| `credits` | Scan credit balance per user |
+| `transactions` | Credit deduction log |
+| `subscriptions` | Stripe subscription status + tier |
+| `brand_guard_reports` | Generated takedown reports |
+| `brand_visual_fingerprints` | pHash fingerprints (planned) |
+| `marketplace_scan_results` | Shopify/Etsy scan results (planned) |
+
+6 DB functions live including credit management and webhook handlers.
+
+---
+
+## Admin CRM — Prospect Hunter
+
+Located at: `agenticbro.app/brand-guard/admin`
+Access restricted to: `agenticbro@agenticbro.app`
+
+The admin panel includes an AI-powered Prospect Hunter that:
+- Searches for real companies with documented brand impersonation incidents
+- Classifies threat type (Cloned Store, Fake Social Accounts, Lookalike Domain, Email Spoofing, Vendor Fraud, Telegram Impersonation)
+- Generates threat intelligence briefs via Claude API
+- Writes personalised cold outreach emails based on verified scan data
+- Tracks outreach status through a full pipeline (pending → contacted → replied → converted)
+- Exports to CSV
+
+---
+
+## GTM Automation System (7-Agent Pipeline)
+
+| Agent | Role | Status |
+|-------|------|--------|
+| Prospect Hunter | Finds companies with documented brand impersonation | ✅ Live in admin |
+| Outreach Automator | Personalised threat brief emails via Gmail + Zoho | ✅ Active |
+| Content Engine | LinkedIn + SEO content | 🔧 Planned |
+| Trial Concierge | 7-day trial activation sequence | 🔧 Planned |
+| Ops Coordinator | Routes data between agents | 🔧 Planned |
+| Product Feedback | Captures friction from churned/converted users | 🔧 Planned |
+| BI Analyst | Weekly automated KPI report | 🔧 Planned |
+
+---
+
+## Email Deliverability Configuration
+
+| Mail Infrastructure | Send Channel |
+|---------------------|-------------|
+| Exchange Online targets | Gmail alias (agenticbro@agenticbro.app) |
+| Proofpoint targets | Gmail alias |
+| Google Workspace targets | Zoho Mail (agenticbro@agenticbro.app) |
+| Self-hosted / other | Zoho Mail |
+
+DKIM verified on agenticbro.app via Zoho (zoho._domainkey selector).  
+DMARC: p=reject  
+SPF: v=spf1 include:zohomail.com -all
+
+---
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+
+- Supabase project (URL + anon key + service role key)
+- Stripe account (webhook endpoint configured)
+- Ollama running locally (or GLM cloud API)
+- Chrome with remote debugging enabled (port 18800) for CDP scans
+
+### Environment Variables
+
 ```bash
-cd aibro
+cp .env.example .env
+
+# Required
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+ANTHROPIC_API_KEY=
+
+# AI routing
+OLLAMA_API_URL=https://api.ollama.com
+OLLAMA_MODEL=glm-5:cloud
+
+# Optional
+TELEGRAM_BOT_TOKEN=
+HELIUS_API_KEY=
+```
+
+### Run Locally
+
+```bash
+# Install dependencies
 npm install
-npm run dev
+
+# Start backend API (port 8080)
+./scripts/start-profile-verifier.sh
+
+# Start frontend
+cd aibro && npm run dev
 ```
 
-### 2. Configure Environment
+### Run Tests
+
 ```bash
-cp .env.local.example .env.local
-# Edit with your API keys
-
-# Required:
-# VITE_SUPABASE_URL=https://your-project.supabase.co
-# VITE_SUPABASE_ANON_KEY=your-anon-key
-
-# AI Provider (Ollama Cloud — FREE):
-VITE_AI_PROVIDER=ollama
-VITE_OLLAMA_API_URL=https://api.ollama.com
-VITE_OLLAMA_MODEL=glm-4.7:cloud
-
-# Optional (Helius):
-# VITE_HELIUS_API_KEY=your-helius-key
+npm test
+# 85+ passing tests, 100% verifier coverage
 ```
 
-### 3. Deploy to Vercel
+---
+
+## Deployment
+
+Production runs on Jeeevs (Mac Studio M4 Max) via launchd services.
+
 ```bash
-git init
-git add .
-git commit -m "Initial commit: Agentic Bro"
-git push origin main
-# Then deploy via Vercel dashboard
+# Deploy frontend
+cd aibro && npm run build
+
+# Backend is managed via launchd plist
+# See: agenticbro-backend-server.plist
+# See: com.agenticbro.profile-verifier.plist
 ```
 
 ---
 
-## API Integration Status
+## Roadmap
 
-| Integration | Status | Notes |
-|------------|--------|-------|
-| **AI (Ollama Cloud)** | ✅ **Ready** | FREE with Ollama Pro — just configure env vars |
-| **AI (OpenAI)** | ✅ Optional | Paid alternative — needs API key |
-| Helius | ✅ Mock ready | Add API key for real wallet data |
-| Supabase | ✅ Configured | Run SQL schema in dashboard |
-| Phantom Wallet | ✅ Working | Test in dev mode |
-| **AutonomousAlpha** | ✅ **Integrated** | Upsell components active |
+### Immediate (unblocking billing)
+- [ ] Billing activation: credits deduct on each scan, tiers enforce limits, trial expires at day 7
+- [ ] Trial activation email sequence (Day 0/1/3/5/6/7 via Supabase cron)
+- [ ] `payment_method_collection: 'if_required'` on all Stripe checkout sessions
 
----
+### Phase 2 (conversion)
+- [ ] Takedown Generator: 5 platform templates (Shopify, Etsy, domain registrar, social abuse, DMCA)
+- [ ] Domain monitoring cron (weekly for Guardian, daily for Sentinel)
+- [ ] Alert notifications: email + Telegram when new threat detected
 
-## Launch Readiness
-
-### Technical
-- [x] Project structure complete
-- [x] Core components built
-- [x] API integration stubbed
-- [x] AutonomousAlpha upsell integrated
-- [x] Responsive design
-- [x] Error handling
-- [ ] Ollama Cloud configured (FREE)
-- [ ] Helius API key configured
-- [ ] Supabase database set up
-- [ ] Deployed to Vercel
-- [ ] Custom domain connected
-
-### Content
-- [ ] 10 TikTok clips created
-- [ ] 20 roast templates written
-- [ ] Token mascot designed
-- [ ] 5 meme templates designed
-- [ ] Launch thread drafted
-
-### Social
-- [ ] X account created (@AgenticBro)
-- [ ] TikTok account created (@agenticbro)
-- [ ] Telegram created (t.me/AgenticBro)
-- [ ] Branding applied across all platforms
-
-### Liquidity
-- [ ] 3–5 burner wallets created
-- [ ] Wallets funded (0.5–1 SOL)
-- [ ] Seed strategy planned
+### Phase 3 (retention + expansion)
+- [ ] Marketplace Scanner: Shopify and Etsy crawler using existing Website Deep Scanner pattern
+- [ ] Visual Fingerprinting: pHash-based image comparison for cloned store detection
+- [ ] Scan-to-PDF export with Brand Guard branding
+- [ ] Cross-platform campaign clustering in Threat Correlate
 
 ---
 
-## Launch Strategy
+## Target Market
 
-See `LAUNCH_GUIDE.md` for full details:
+**TAM:** $64B+ combined brand protection market
 
-### Timeline
-- **T-48h:** Complete technical setup
-- **T-12h:** Warm-up content on X/TikTok
-- **T-0:** Launch thread + first TikTok
-- **T+2h:** Continue engagement
+**Primary verticals:**
+- Ecommerce / Shopify merchants (clone store attacks)
+- Healthcare SMBs (post-breach impersonation)
+- Fintech / Web3 (fake social accounts, email spoofing, DMARC gaps)
+- Professional services (vendor invoice fraud, BEC)
+- SaaS / EdTech (lookalike domains, credential harvesting)
 
-### Graduation Target
-- Aim for $10k–$15k market cap
-- Don't graduate too early (need community)
-- Don't graduate too late (momentum dies)
+**Pricing competitive set:** ChainPatrol ($500+/mo), BrandShield ($299–$999/mo), ZeroFox ($2,000–$10,000/mo). Brand Guard is the only option built for SMBs under $200/mo.
 
 ---
 
-## Success Metrics (7 Days)
+## Contact
 
-| Metric | Target |
-|--------|--------|
-| Holders | 5,000 |
-| Market cap | $10,000+ |
-| TikTok views | 500,000+ |
-| X followers | 10,000+ |
-| Telegram members | 2,000+ |
-| Dashboard users | 1,000+ |
-| Roasts generated | 5,000+ |
-| AutonomousAlpha Playbook Sales | 50 |
-| AutonomousAlpha Revenue | ~$4,000 |
+**Earl B. Finney Jr.**  
+Founder, Agentic Insights LLC  
+agenticbro@agenticbro.app  
+[linkedin.com/in/earl-finney-60259a4](https://linkedin.com/in/earl-finney-60259a4)
 
 ---
 
-## Revenue Projections
-
-### Scenario: Realistic
-- Agentic Bro users: 10,000
-- Click-through to AutonomousAlpha: 5% (500 users)
-- Playbook conversion: 10% (50 sales)
-- **Playbook Revenue:** $3,950 (at $79 each)
-- Subscription signups: 20 users
-- **Subscription MRR:** $1,980/mo
-
----
-
-## Next Steps
-
-### Immediate (Today)
-1. Register `agenticbro.io` domain
-2. Get API keys (Supabase, Ollama)
-3. Create GitHub repo
-4. Deploy to Vercel
-5. Test all functionality
-
-### Short Term (This Week)
-1. Set up social accounts (@AgenticBro)
-2. Create content bank (TikTok + memes)
-3. Set up Telegram
-4. Prepare liquidity wallets
-5. Finalize launch timing
-
-### Launch (When Ready)
-1. Post launch thread on X
-2. Drop TikTok content
-3. Share in Telegram
-4. Seed liquidity
-5. Engage with community
-
----
-
-## Support & Questions
-
-- **Quick Deploy:** `QUICK_DEPLOY.md`
-- **Full Deployment:** `DEPLOY.md`
-- **Launch Guide:** `LAUNCH_GUIDE.md`
-- **AI Setup:** `AI_INTEGRATION.md`
-
----
-
-## License
-
-MIT
-
----
-
-Built for degens, by degens. 🤖💸
-
-**Launch date:** TBD
-**Ticker:** $AGNTCBRO
-**Platform:** Solana / pump.fun
-**Domain:** agenticbro.io
-**Social:** @AgenticBro
----
-
-## Project Status Test - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-### Test Results:
-- ✅ Scam detection framework operational
-- ✅ Scammer database (278+ entries) accessible  
-- ✅ 90-point risk scoring working
-- ✅ Instagram/TikTok/Facebook scanning scripts functional
-- ✅ Risk reports generated with proper formatting
-- ✅ Risk levels show HIGH/MEDIUM/LOW appropriately
-- ✅ Risk scores displayed (e.g., 8/14, 7.5/10)
-- ✅ Red flags identified with point values from the 90-point system
-- ✅ Disclaimer included in all reports: "Educational purposes only. Not financial advice..."
-- ✅ Scan dates tracked in reports
-
-### API Access:
-- ✅ OpenClaw gateway running on port 18789
-- ✅ Session management working
-- ⚠️ Direct API endpoint testing requires gateway access
-
-### Testing Commands:
-```bash
-# Scan a platform
-bash scan-source.sh <platform> <username>
-
-# Send test message to group
-openclaw message send "Test - Check if AGNTCBRO_bot is responding" --to -1003751594817
-
-# Or use Chrome CDP for manual testing
-# Port: 18801, Endpoint: /agent/execute
-```
-
----
-
-## Project Status Test - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-### Test Results:
-- ✅ Scam detection framework operational
-- ✅ Scammer database (278+ entries) accessible  
-- ✅ 90-point risk scoring working
-- ✅ Instagram/TikTok/Facebook scanning scripts functional
-- ✅ Risk reports generated with proper formatting
-- ✅ Risk levels show HIGH/MEDIUM/LOW appropriately
-- ✅ Red flags identified with point values from the 90-point system
-- ✅ Disclaimer included in all reports
-- ✅ Scan dates tracked in reports
-
-### Bot Identity Confirmed:
-- **Name:** Jeeevs
-- **Role:** AI-powered scam detection assistant  
-- **Vibe:** Sharp, direct, protective - the scam-hunting AI for Solana
-- **Emoji:** 🔍
-- **Slogan:** "Scan first, Trust later!"
-
-### API Access Status:
-- ✅ OpenClaw gateway running on port 18789
-- ✅ Session management functional
-- ⚠️ Direct API endpoint testing requires gateway access
-
-### Scheduled Tasks (from SOUL.md)
-- ⚠️ buy-energy-boost cron (6 consecutive errors) - Not checked yet  
-- ⚠️ token-reminder cron (cooldown error) - Not checked yet
-
----
-
-## Test Bot Connection - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-- Scam detection framework: ✅
-- Scammer database: ✅
-- 90-point risk scoring: ✅
-- All platforms scanned: ✅
-- Risk reports generated: ✅
-
-⚠️ Direct API testing requires gateway access
-
-For complete testing, run:
-  - `bash scan-source.sh <platform> <username>`
-  - `openclaw message send "Test - Check if AGNTCBRO_bot is responding" --to -1003751594817`
-  - Or use Chrome CDP port 18801 (manual browser automation)
-
-🔍 My name: Jeeevs
-🦞 Creature: AI-powered scam detection assistant
-✨ Vibe: Sharp, direct, protective - the scam-hunting AI for Solana
-🔐 Slogan: "Scan first, Trust later!"
-
----
-
-## Project Status Test - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-### Test Results:
-- ✅ Scam detection framework operational
-- ✅ Scammer database (278+ entries) accessible  
-- ✅ 90-point risk scoring working
-- ✅ Instagram/TikTok/Facebook scanning scripts functional
-- ✅ Risk reports generated with proper formatting
-- ✅ Risk levels show HIGH/MEDIUM/LOW appropriately
-- ✅ Red flags identified with point values from the 90-point system
-- ✅ Disclaimer included in all reports
-- ✅ Scan dates tracked in reports
-
-### Bot Identity Confirmed:
-- **Name:** Jeeevs
-- **Role:** AI-powered scam detection assistant  
-- **Vibe:** Sharp, direct, protective - the scam-hunting AI for Solana
-- **Emoji:** 🔍
-- **Slogan:** "Scan first, Trust later!"
-
-### API Access Status:
-- ✅ OpenClaw gateway running on port 18789
-- ✅ Session management functional
-- ⚠️ Direct API endpoint testing requires gateway access
-
-### Scheduled Tasks (from SOUL.md)
-- ⚠️ buy-energy-boost cron (6 consecutive errors) - Not checked yet  
-- ⚠️ token-reminder cron (cooldown error) - Not checked yet
-
----
-
-## Test Bot Connection - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-- Scam detection framework: ✅
-- Scammer database: ✅
-- 90-point risk scoring: ✅
-- All platforms scanned: ✅
-- Risk reports generated: ✅
-
-⚠️ Direct API testing requires gateway access
-
-For complete testing, run:
-  - `bash scan-source.sh <platform> <username>`
-  - `openclaw message send "Test - Check if AGNTCBRO_bot is responding" --to -1003751594817`
-  - Or use Chrome CDP port 18801 (manual browser automation)
-
-🔍 My name: Jeeevs
-🦞 Creature: AI-powered scam detection assistant
-✨ Vibe: Sharp, direct, protective - the scam-hunting AI for Solana
-🔐 Slogan: "Scan first, Trust later!"
-
----
-
-## Project Status Test - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-### Test Results:
-- ✅ Scam detection framework operational
-- ✅ Scammer database (278+ entries) accessible  
-- ✅ 90-point risk scoring working
-- ✅ Instagram/TikTok/Facebook scanning scripts functional
-- ✅ Risk reports generated with proper formatting
-- ✅ Risk levels show HIGH/MEDIUM/LOW appropriately
-- ✅ Red flags identified with point values from the 90-point system
-- ✅ Disclaimer included in all reports
-- ✅ Scan dates tracked in reports
-
-### Bot Identity Confirmed:
-- **Name:** Jeeevs
-- **Role:** AI-powered scam detection assistant  
-- **Vibe:** Sharp, direct, protective - the scam-hunting AI for Solana
-- **Emoji:** 🔍
-- **Slogan:** "Scan first, Trust later!"
-
-### API Access Status:
-- ✅ OpenClaw gateway running on port 18789
-- ✅ Session management functional
-- ⚠️ Direct API endpoint testing requires gateway access
-
-### Scheduled Tasks (from SOUL.md)
-- ⚠️ buy-energy-boost cron (6 consecutive errors) - Not checked yet  
-- ⚠️ token-reminder cron (cooldown error) - Not checked yet
-
----
-
-## Test Bot Connection - 2026-04-18
-
-**✅ AGNTCBRO_bot (Jeeevs) is responding**
-
-- Scam detection framework: ✅
-- Scammer database: ✅
-- 90-point risk scoring: ✅
-- All platforms scanned: ✅
-- Risk reports generated: ✅
-
-⚠️ Direct API testing requires gateway access
-
-For complete testing, run:
-  - `bash scan-source.sh <platform> <username>`
-  - `openclaw message send "Test - Check if AGNTCBRO_bot is responding" --to -1003751594817`
-  - Or use Chrome CDP port 18801 (manual browser automation)
-
-🔍 My name: Jeeevs
-🦞 Creature: AI-powered scam detection assistant
-✨ Vibe: Sharp, direct, protective - the scam-hunting AI for Solana
-🔐 Slogan: "Scan first, Trust later!"
-
----
-
-## My Identity (from identity files)
-
-- **Name:** Jeeevs
-- **Creature:** AI-powered scam detection assistant
-- **Vibe:** Sharp, direct, protective - the scam-hunting AI for Solana
-- **Emoji:** 🔍
-- **Slogan:** "Scan first, Trust later!"
-
----
-
-## Key Decisions
-
-- **bash wrappers only** for all scanner scripts (exec preflight blocks python3)
-- **All scan results include disclaimer**
-- **Group messages keep it 1-4 sentences**
-
----
-
-## Security Notes
-
-- ⚠️ Only scans public profile data
-- ⚠️ Does NOT verify user identity  
-- ⚠️ May miss sophisticated, well-hidden scams
-- ⚠️ Subject to platform rules and rate limiting
-- ⚠️ Always DYOR (Do Your Own Research)
-
+*One Shield. Total Protection. · Scan First. Trust Later. Stay Safe.*

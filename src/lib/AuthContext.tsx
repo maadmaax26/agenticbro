@@ -18,6 +18,7 @@ import {
   linkWalletToUser,
   UserProfile,
 } from './supabase';
+import { useWalletEntitlements, WalletEntitlements } from '../hooks/useWalletEntitlements';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,12 +41,21 @@ interface AuthContextType {
   
   // Wallet linking
   linkWallet: () => Promise<{ error: string | null }>;
+  linkWalletToEmailAccount: (walletAddress: string) => Promise<{ error: string | null }>;
   
   // Scan tracking
   scanCredits: number;
   freeScansRemaining: number;
   useScanCredit: () => boolean;
   addScanCredits: (amount: number) => void;
+  
+  // Entitlements (from associated wallet token balance)
+  entitlements: WalletEntitlements | null;
+  refreshEntitlements: () => void;
+  // Derived scan allowance
+  hasScanAccess: boolean;
+  scansRemaining: number; // -1 = unlimited
+  tier: 'free' | 'holder' | 'whale';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,7 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanCredits, setScanCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
+
+  // Wallet entitlements — checks $AGNTCBRO balance for tier/scan allowance
+  // Uses connected wallet OR wallet address linked to email account
+  const associatedWallet = user?.wallet_address || undefined;
+  const entitlements = useWalletEntitlements(associatedWallet, user?.id);
 
   // Get storage key for current user
   const getStorageKey = useCallback(() => {
@@ -118,7 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const currentUser = await getCurrentUser();
           if (currentUser) {
             const profile = await getUserProfile(currentUser.id);
-            setUser(profile);
+            setUser(profile || {
+              id: currentUser.id,
+              email: currentUser.email || undefined,
+              scan_credits: 0,
+              free_scans_used: 0,
+              created_at: currentUser.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
           }
         }
         // Check localStorage fallback
@@ -275,11 +297,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(updatedUser);
       localStorage.setItem('agenticbro_current_user', JSON.stringify(updatedUser));
       
+      // Refresh entitlements for the newly linked wallet
+      setTimeout(() => entitlements.refresh(), 500);
+      
       return { error: null };
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Failed to link wallet' };
     }
-  }, [user, publicKey]);
+  }, [user, publicKey, entitlements]);
+
+  // Link a wallet address to an email account (called after wallet connect from AuthModal)
+  const linkWalletToEmailAccount = useCallback(async (walletAddress: string) => {
+    if (!user) {
+      return { error: 'No user logged in' };
+    }
+
+    try {
+      if (supabase) {
+        await linkWalletToUser(user.id, walletAddress);
+      }
+      
+      const updatedUser = {
+        ...user,
+        wallet_address: walletAddress,
+        updated_at: new Date().toISOString(),
+      };
+      
+      setUser(updatedUser);
+      localStorage.setItem('agenticbro_current_user', JSON.stringify(updatedUser));
+      
+      // Refresh entitlements for the newly linked wallet
+      setTimeout(() => entitlements.refresh(), 500);
+      
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Failed to link wallet to account' };
+    }
+  }, [user, entitlements]);
 
   // ─── Scan Credits ────────────────────────────────────────────────────────────
 
@@ -312,6 +366,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(`agenticbro_credits_${key}`, String(newCredits));
   }, [scanCredits, getStorageKey]);
 
+  // ─── Derived scan access ──────────────────────────────────────────────────
+  
+  const tier = entitlements.tier;
+  const scansRemaining = entitlements.totalRemaining;
+  const hasScanAccess = scansRemaining !== 0; // -1 = unlimited, > 0 = has scans
+
   // ─── Context Value ───────────────────────────────────────────────────────────
 
   const value: AuthContextType = {
@@ -326,10 +386,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithWallet,
     logout,
     linkWallet,
+    linkWalletToEmailAccount,
     scanCredits,
     freeScansRemaining,
     useScanCredit,
     addScanCredits,
+    entitlements,
+    refreshEntitlements: entitlements.refresh,
+    hasScanAccess,
+    scansRemaining,
+    tier,
   };
 
   return (

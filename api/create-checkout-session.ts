@@ -6,13 +6,12 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireScanCreditUser } from './_lib/scan-credit-auth.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CheckoutRequest {
   packageId: string;
-  userId: string;
-  email: string;
 }
 
 interface CreditPackage {
@@ -27,9 +26,9 @@ interface CreditPackage {
 
 const PACKAGES: Record<string, CreditPackage> = {
   'starter': { id: 'starter', name: 'Starter', credits: 5, price: 500 }, // $5.00 in cents
-  'basic': { id: 'basic', name: 'Basic', credits: 10, price: 900, bonus: 1 }, // $9.00
-  'pro': { id: 'pro', name: 'Pro', credits: 25, price: 2000, bonus: 5 }, // $20.00
-  'whale': { id: 'whale', name: 'Whale', credits: 100, price: 7500, bonus: 25 }, // $75.00
+  'basic': { id: 'basic', name: 'Basic', credits: 10, price: 1000 }, // $10.00
+  'pro': { id: 'pro', name: 'Pro', credits: 25, price: 2500 }, // $25.00
+  'whale': { id: 'whale', name: 'Whale', credits: 100, price: 10000, bonus: 10 }, // $100.00
 };
 
 // ─── Stripe Integration ───────────────────────────────────────────────────────
@@ -61,13 +60,11 @@ async function createStripeCheckoutSession(
     quantity: 1,
   };
 
-  const successUrl = `${process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
-  
-  const cancelUrl = `${process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:5173'}/payment-cancelled`;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_ENV === 'production'
+    ? 'https://agenticbro.app'
+    : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173')).replace(/\/$/, '');
+  const successUrl = `${siteUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${siteUrl}/payment-cancelled`;
 
   // Create checkout session via Stripe API
   const response = await fetch(`${STRIPE_API}/checkout/sessions`, {
@@ -86,10 +83,11 @@ async function createStripeCheckoutSession(
       'mode': 'payment',
       'success_url': successUrl,
       'cancel_url': cancelUrl,
-      'customer_email': email,
       'metadata[user_id]': userId,
       'metadata[credits]': String(totalCredits),
       'metadata[package_id]': package_.id,
+      'metadata[type]': 'scan_credits',
+      ...(email ? { customer_email: email } : {}),
     }).toString(),
   });
 
@@ -116,7 +114,7 @@ export default async function handler(
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
@@ -128,7 +126,7 @@ export default async function handler(
   }
 
   // Get Stripe secret key from environment
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripeSecretKey = (process.env.STRIPE_SECRET_KEY || '').trim();
   if (!stripeSecretKey) {
     console.error('STRIPE_SECRET_KEY not configured');
     return res.status(500).json({ 
@@ -137,12 +135,14 @@ export default async function handler(
   }
 
   try {
-    const { packageId, userId, email } = req.body as CheckoutRequest;
+    const authenticated = await requireScanCreditUser(req, res);
+    if (!authenticated) return;
+    const { packageId } = req.body as CheckoutRequest;
 
     // Validate request
-    if (!packageId || !userId) {
+    if (!packageId) {
       return res.status(400).json({ 
-        error: 'Missing required fields: packageId, userId' 
+        error: 'Missing required field: packageId'
       });
     }
 
@@ -157,8 +157,8 @@ export default async function handler(
     // Create Stripe checkout session
     const { url, sessionId } = await createStripeCheckoutSession(
       package_,
-      userId,
-      email || '',
+      authenticated.userId,
+      authenticated.email,
       stripeSecretKey
     );
 

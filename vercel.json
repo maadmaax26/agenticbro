@@ -3,6 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
+    "api/profile-verify.ts": {
+      "maxDuration": 30
+    },
     "api/scam-investigate.ts": {
       "maxDuration": 30,
       "includeFiles": "api/scammer-database.json"
@@ -17,16 +20,31 @@
       "maxDuration": 30
     },
     "api/scan.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/social-scan.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/phone-verify.ts": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/phone-scan.ts": {
       "maxDuration": 15
+    },
+    "api/x-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
+    },
+    "api/website-deep-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
+    },
+    "api/token-impersonation-scan.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/scan-tracking.ts"
     },
     "api/scan/[job_id].ts": {
       "maxDuration": 10
@@ -47,12 +65,75 @@
       "maxDuration": 15
     },
     "api/brand-guard/domain-monitor.ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     },
     "api/brand-guard/threat-correlate.ts": {
       "maxDuration": 15
     },
     "api/brand-guard/vendor-verify.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/admin.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/email-spoof.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/takedown.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/fingerprint.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/marketplace.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/monitor-worker.ts": {
+      "maxDuration": 300
+    },
+    "api/brand-guard/alert-delivery.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/scheduled-scan-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/domain-monitor-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/queue-scheduler.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/api-keys.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/delivery.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/enterprise.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/weekly-briefing-worker.ts": {
+      "maxDuration": 300
+    },
+    "api/brand-guard/dmarc-ingest.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/domain-watch-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/cron-send-drafts.ts": {
+      "maxDuration": 60
+    },
+    "api/v1/brand-guard.ts": {
+      "maxDuration": 15
+    },
+    "api/brand-guard/alerts/deliver.ts": {
+      "maxDuration": 30
+    },
+    "api/brand-guard/stripe/checkout.ts": {
+      "maxDuration": 15
+    },
+    "api/contact.ts": {
       "maxDuration": 15
     }
   },
@@ -62,7 +143,50 @@
     { "source": "/api/phone-scan/:job_id", "destination": "/api/phone-scan/[job_id].ts" },
     { "source": "/api/phone-scan", "destination": "/api/phone-scan.ts" },
     { "source": "/api/brand-guard/stripe-webhook", "destination": "/api/brand-guard/stripe-webhook.ts" },
+    { "source": "/api/brand-guard/credits/:path*", "destination": "/api/brand-guard/credits.ts" },
+    { "source": "/api/brand-guard/brands/:path*", "destination": "/api/brand-guard/brands.ts" },
+    { "source": "/api/brand-guard/dashboard/:path*", "destination": "/api/brand-guard/dashboard.ts" },
+    { "source": "/api/brand-guard/admin/:path*", "destination": "/api/brand-guard/admin.ts" },
+    { "source": "/api/brand-guard/api-keys", "destination": "/api/brand-guard/api-keys.ts" },
+    { "source": "/api/brand-guard/delivery", "destination": "/api/brand-guard/delivery.ts" },
+    { "source": "/api/brand-guard/delivery/:path*", "destination": "/api/brand-guard/delivery.ts" },
+    { "source": "/api/brand-guard/enterprise", "destination": "/api/brand-guard/enterprise.ts" },
+    { "source": "/api/brand-guard/enterprise/:path*", "destination": "/api/brand-guard/enterprise.ts" },
+    { "source": "/api/v1/brand-guard/:path*", "destination": "/api/v1/brand-guard.ts" },
+    { "source": "/api/brand-guard/impersonator-scan/:path*", "destination": "/api/brand-guard/impersonator-scan.ts" },
+    { "source": "/api/brand-guard/takedown/:path*", "destination": "/api/brand-guard/takedown.ts" },
+    { "source": "/api/brand-guard/fingerprint/:path*", "destination": "/api/brand-guard/fingerprint.ts" },
+    { "source": "/api/brand-guard/marketplace/:path*", "destination": "/api/brand-guard/marketplace.ts" },
+    { "source": "/api/brand-guard/monitor-worker", "destination": "/api/brand-guard/monitor-worker.ts" },
+    { "source": "/api/brand-guard/alert-delivery", "destination": "/api/brand-guard/alert-delivery.ts" },
+    { "source": "/api/brand-guard/:path*", "destination": "/api/brand-guard/:path*" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/brand-guard/monitor-worker",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/brand-guard/alert-delivery",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/queue-scheduler",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/weekly-briefing-worker",
+      "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/brand-guard/domain-watch-worker",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/cron-send-drafts",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }

@@ -12,7 +12,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { PublicKey } from '@solana/web3.js';
 import { WalletProxyProvider, TransactionDecision } from './WalletProxyProvider';
 import type { ParsedTransaction } from './TransactionParser';
-import { RiskEngine } from './RiskEngine';
 import type { EnhancedRiskAssessment } from './RiskEngine';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -87,7 +86,8 @@ export function useWalletSimulator() {
   // ── Initialize Wallet Proxy ──────────────────────────────────────────────────────
 
   useEffect(() => {
-    const _riskEngine = new RiskEngine(); // Used for risk assessment
+    // WalletProxyProvider is initialized below
+    // RiskEngine is used internally by WalletProxyProvider
 
     walletProxyRef.current = new WalletProxyProvider({
       realWallet: null, // Demo mode
@@ -122,9 +122,8 @@ export function useWalletSimulator() {
           }));
         });
       },
-      onBlockedTransaction: (tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
+      onBlockedTransaction: (_tx: ParsedTransaction, risk: EnhancedRiskAssessment) => {
         // Log blocked transaction
-        // _tx is parsed transaction, _risk is risk assessment
         console.warn('[WalletSimulator] Blocked transaction:', {
           riskScore: risk.score,
           flags: risk.flags,

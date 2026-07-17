@@ -6,20 +6,32 @@
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
+import { startBrandGuardWorker } from './lib/brand-guard-worker.js';
+import { startBrandGuardQueueWorker } from './lib/brand-guard-queue-worker.js';
+import { startTakedownWorker } from './lib/takedown-worker.js';
+import { startDeliveryWorker } from './lib/delivery-worker.js';
+import { startDomainWatcherWorker } from './lib/domain-watcher-worker.js';
+import { startThreatIntelDispatchWorker } from './lib/threat-intel-dispatch-worker.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Supabase client
 const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  console.error('Missing SUPABASE_URL or SUPABASE_SECRET_API_KEY');
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+startBrandGuardQueueWorker(supabase);
+startTakedownWorker(supabase);
+startDeliveryWorker(supabase);
+startDomainWatcherWorker(supabase);
+startThreatIntelDispatchWorker(supabase);
 
 app.use(cors());
 app.use(express.json());
@@ -183,6 +195,10 @@ app.listen(PORT, () => {
   console.log(`Agentic Bro API server running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
   console.log(`Submit scan: POST http://localhost:${PORT}/api/scan`);
+
+  // Start Brand Guard background worker (polls Supabase for processing scans,
+  // runs real X impersonator checks via Chrome CDP at localhost:18801)
+  startBrandGuardWorker(supabase);
 });
 
 export default app;

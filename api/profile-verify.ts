@@ -61,7 +61,7 @@ interface ProfileVerifyResult {
 // Submits a profile scan job to Supabase; Mac Studio OpenClaw worker picks it up async.
 async function callLocalScanner(platform: string, username: string): Promise<any> {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
         console.warn('[profile-verify] Supabase env vars not set — skipping queue scan');
@@ -92,8 +92,8 @@ async function callLocalScanner(platform: string, username: string): Promise<any
 
       console.log('[profile-verify] Job enqueued:', job.id);
 
-      // 2. Poll for completion (max 30 s, 1 s interval)
-      const deadline = Date.now() + 30_000;
+      // 2. Poll for completion (max 15 s, 1 s interval)
+      const deadline = Date.now() + 15_000;
         while (Date.now() < deadline) {
                 await new Promise((r) => setTimeout(r, 1000));
                 const { data: row } = await supabase
@@ -215,7 +215,7 @@ async function checkKnownScammers(username: string): Promise<{
 
   try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseKey = process.env.SUPABASE_SECRET_API_KEY;
 
       console.log('[profile-verify] Checking known scammers for:', handle);
 
@@ -540,6 +540,182 @@ function calculateBotScoreLite(input: {
   return { botScore, classification, flags, engagementAnalysis };
 }
 
+// ─── Nitter Web Scrape for X/Twitter ──────────────────────────────────────────────
+// Tries multiple Nitter mirrors to scrape profile data and calculate risk score.
+// Uses the same 90-point unified scoring as the local scanner.
+const NITTER_INSTANCES = [
+  'https://nitter.net',
+  'https://nitter.privacydev.net',
+  'https://nitter.poast.org',
+  'https://nitter.1d4.us',
+  'https://xcancel.com',
+];
+
+async function scanXViaNitter(username: string): Promise<ProfileVerifyResult | null> {
+  for (const instance of NITTER_INSTANCES) {
+    try {
+      const url = `${instance}/${username}`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+        signal: AbortSignal.timeout(8000),
+        redirect: 'follow',
+      });
+
+      if (!res.ok) continue;
+      const html = await res.text();
+
+      // Check for not-found / error pages
+      if (html.includes('not found') || html.includes('does not exist') || html.includes('No status found')) continue;
+
+      // Parse profile data from Nitter HTML
+      const bioMatch = html.match(/<div[^>]*class="profile-bio"[^>]*>([\s\S]*?)<\/div>/i);
+      const followersMatch = html.match(/Followers<\/span[^>]*>[\s\S]*?<span[^>]*>([\d,\.]+[KkMm]?)<\/span>/i);
+      const followingMatch = html.match(/Following<\/span[^>]*>[\s\S]*?<span[^>]*>([\d,\.]+[KkMm]?)<\/span>/i);
+      const joinDateMatch = html.match(/Joined\s*([\w\s]+\d{4})/i);
+      const displayNameMatch = html.match(/<div[^>]*class="profile-fullname"[^>]*>([\s\S]*?)<\/div>/i);
+      const verifiedMatch = html.match(/verified-icon|blue-check/i);
+      const locationMatch = html.match(/<div[^>]*class="profile-location"[^>]*>([\s\S]*?)<\/div>/i);
+      const websiteMatch = html.match(/<a[^>]*class="profile-website"[^>]*href="([^"]+)"/i);
+
+      // Extract text values
+      const bio = bioMatch ? bioMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+      const parseCount = (s: string) => {
+        if (!s) return 0;
+        const lower = s.toLowerCase().replace(/,/g, '');
+        if (lower.endsWith('k')) return Math.round(parseFloat(lower) * 1000);
+        if (lower.endsWith('m')) return Math.round(parseFloat(lower) * 1000000);
+        return parseInt(lower) || 0;
+      };
+      const followers = followersMatch ? parseCount(followersMatch[1]) : 0;
+      const following = followingMatch ? parseCount(followingMatch[1]) : 0;
+      const displayName = displayNameMatch ? displayNameMatch[1].replace(/<[^>]+>/g, '').trim() : username;
+      const verified = !!verifiedMatch;
+      const location = locationMatch ? locationMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+      const website = websiteMatch ? websiteMatch[1] : '';
+      const joinDate = joinDateMatch ? joinDateMatch[1].trim() : '';
+
+      // ── Calculate risk score using 90-point unified scoring ──
+      const allText = `${bio} ${displayName} ${username}`.toLowerCase();
+      let totalPoints = 0;
+      const redFlags: string[] = [];
+
+      // guaranteed_returns (25pts)
+      if (/guarantee|100%|risk.?free|can'?t lose|sure.?thing|guaranteed.?return|safe.?bet/i.test(allText)) {
+        redFlags.push('guaranteed_returns (25pts) — Claims of guaranteed profits');
+        totalPoints += 25;
+      }
+      // giveaway_airdrop (20pts)
+      if (/giveaway|airdrop|free.*token|free.*crypto|claim.*now|give.?away|raffle/i.test(allText)) {
+        redFlags.push('giveaway_airdrop (20pts) — Giveaway or airdrop promotion');
+        totalPoints += 20;
+      }
+      // dm_solicitation (15pts)
+      if (/dm.?for|dm.?me|slide.?into|slide.?dm|dm.?to.?join|dm.?lfg|dm.?now|message.?me|hit.?my.?dm|check.?dm|sent.?dm|dm.?for.?details/i.test(allText)) {
+        redFlags.push('dm_solicitation (15pts) — Requests to DM for more information');
+        totalPoints += 15;
+      }
+      // free_crypto (15pts)
+      if (/free.*crypto|free.*sol|free.*btc|free.*eth|mining.*reward|passive.*income|stake.*earn|earn.*free/i.test(allText)) {
+        redFlags.push('free_crypto (15pts) — Free crypto/money offers');
+        totalPoints += 15;
+      }
+      // alpha_dm_scheme (15pts)
+      if (/private.*alpha|vip.*group|exclusive.*signal|signal.*group|premium.*group|inner.?circle|secret.?group|t\.me\//i.test(allText)) {
+        redFlags.push('alpha_dm_scheme (15pts) — Alpha/DM scheme — private group funnel');
+        totalPoints += 15;
+      }
+      // unrealistic_claims (10pts)
+      if (/\d+x(?!.*size)|100x|1000x|moonshot|to.?the.?moon|get.?rich|lamborghini|financial.?freedom|10x.?100x/i.test(allText)) {
+        redFlags.push('unrealistic_claims (10pts) — Unrealistic profit claims');
+        totalPoints += 10;
+      }
+      // download_install (10pts)
+      if (/download|install.*app|get.*app|app.?store|play.?store|download.*now/i.test(allText)) {
+        redFlags.push('download_install (10pts) — Download/install request');
+        totalPoints += 10;
+      }
+      // urgency_tactics (10pts)
+      if (/limited.*spot|act.?now|last.?chance|hurry|time.?sensitive|ending.?soon|closing.?soon|few.?left|don'?t.?wait|fomo/i.test(allText)) {
+        redFlags.push('urgency_tactics (10pts) — Urgency tactics');
+        totalPoints += 10;
+      }
+      // emotional_manipulation (10pts)
+      if (/you'?ll.?regret|don'?t.?miss.?out|life.?changing|once.?in.?lifetime|never.?again|must.?have|opportunity.?of/i.test(allText)) {
+        redFlags.push('emotional_manipulation (10pts) — Emotional manipulation');
+        totalPoints += 10;
+      }
+      // low_credibility (10pts) — suspicious follower ratios
+      const followRatio = followers > 0 ? following / followers : 0;
+      if (followRatio > 2.0 && followers < 5000) {
+        redFlags.push(`low_credibility (10pts) — Suspicious follower ratio (${following}/${followers})`);
+        totalPoints += 10;
+      } else if (followRatio > 0.5 && following > 10000 && followers < following * 0.3) {
+        redFlags.push('low_credibility (10pts) — Engagement pod pattern (following >> followers)');
+        totalPoints += 10;
+      } else if (followers < 100) {
+        redFlags.push('low_credibility (10pts) — Very low follower count');
+        totalPoints += 10;
+      }
+      // marketing/shill (5pts bonus)
+      if (/advertis|market.*agency|promo.*service|shill|paid.*promo|sponsored.*post|marketing.*expert/i.test(allText)) {
+        redFlags.push('marketing_shill (5pts) — Marketing/advertising service (paid shill account)');
+        totalPoints += 5;
+      }
+      // telegram link (5pts bonus, only if not already caught by alpha_dm_scheme)
+      if (/t\.me\/|telegram\.me\//i.test(allText) && !redFlags.some(f => f.includes('alpha_dm_scheme'))) {
+        redFlags.push('telegram_link (5pts) — Telegram link in bio (common scam vector)');
+        totalPoints += 5;
+      }
+
+      // Convert 90-point total to 0-100 scale (for API consistency)
+      const riskScore0to10 = Math.min(totalPoints / 9, 10);
+      const apiRiskScore = Math.round(riskScore0to10 * 10); // 0-100 scale
+      const riskLevel = calculateRiskLevel(apiRiskScore);
+
+      // Bot detection
+      const botDetection = calculateBotScoreLite({
+        followers, following,
+        bio, username,
+        joinDate, location, website, verified,
+      });
+
+      return {
+        success: true,
+        platform: 'twitter',
+        username: username, // parameter, not outer scope
+        displayName,
+        verified,
+        riskScore: apiRiskScore,
+        riskLevel,
+        verificationLevel: determineVerificationLevel(apiRiskScore, verified),
+        redFlags: redFlags.length > 0 ? redFlags : ['Profile analyzed via web scan — no major scam indicators found in bio/display name'],
+        evidence: redFlags.length > 0
+          ? ['Web scan completed via Nitter', `${redFlags.length} risk indicator(s) detected from profile text`]
+          : ['Web scan completed — no significant scam indicators found'],
+        recommendation: generateRecommendation(riskLevel, 'twitter'),
+        profileData: {
+          followers: followers || undefined,
+          following: following || undefined,
+          bio: bio || undefined,
+          location: location || undefined,
+          website: website || undefined,
+          joinDate: joinDate || undefined,
+          accountAge: joinDate ? formatAccountAge(Math.floor((Date.now() - new Date(joinDate).getTime()) / (1000 * 60 * 60 * 24))) : undefined,
+        },
+        confidence: 'MEDIUM', // Web scan is less confident than CDP
+        scanDate: new Date().toISOString(),
+        dataSource: 'nitter_web',
+        botDetection,
+      };
+    } catch (err: any) {
+      console.warn(`[profile-verify] Nitter ${instance} failed:`, err?.message || err);
+      continue;
+    }
+  }
+  // All Nitter instances failed
+  return null;
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -572,6 +748,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // ── Try Supabase queue scan (Twitter only) ──────────────────────────────────
       if (platform === 'twitter') {
+              // Try CDP queue scan with 15s timeout (reduced from 30s)
               const scannerResult = await callLocalScanner(platform, cleanUsername);
 
           if (scannerResult && scannerResult.success) {
@@ -664,6 +841,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 };
                     return res.status(200).json(result);
           }
+      }
+
+      // ── X/Twitter: If queue scan failed, try Nitter web scrape ──────────────────
+      if (platform === 'twitter') {
+              const nitterResult = await scanXViaNitter(cleanUsername);
+              if (nitterResult) {
+                    // Also check known scammers DB
+                    const knownScammer = await checkKnownScammers(cleanUsername);
+                    if (knownScammer?.found) {
+                              if (knownScammer.level === 'HIGH RISK' || knownScammer.level === 'CRITICAL') {
+                                            nitterResult.riskScore = Math.max(nitterResult.riskScore, 80);
+                                            nitterResult.redFlags.unshift('KNOWN SCAMMER - In database as HIGH RISK');
+                                            nitterResult.verificationLevel = 'HIGH RISK';
+                              } else if (knownScammer.level === 'PAID PROMOTER') {
+                                            nitterResult.riskScore = Math.max(nitterResult.riskScore, 30);
+                                            nitterResult.redFlags.unshift('Known paid promoter - verify promoted projects independently');
+                                            nitterResult.verificationLevel = 'PAID PROMOTER';
+                              }
+                              if (knownScammer.scamType) nitterResult.scamType = knownScammer.scamType;
+                    }
+                    nitterResult.riskLevel = calculateRiskLevel(nitterResult.riskScore);
+                    nitterResult.riskScore = Math.round(nitterResult.riskScore);
+                    return res.status(200).json(nitterResult);
+              }
       }
 
       // ── Fallback: pattern-based detection ──────────────────────────────────────

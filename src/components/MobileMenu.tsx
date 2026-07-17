@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Shield, Map, Users, LogIn, ShieldAlert } from 'lucide-react'
+import { Menu, X, Shield, Map, Users, LogIn, ShieldAlert, Wallet, Scan, Briefcase, Coins, Search } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 
 interface MobileMenuProps {
@@ -141,17 +141,86 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
 
             {/* Navigation */}
             <nav className="flex flex-col p-4 gap-3">
+              {/* ── Scan Sections ── */}
+              <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-gray-500">Scan Tools</div>
+
               <button
-                onClick={() => handleNavigate('scanners')}
-                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/40 text-left w-full border border-red-500/30 transition-colors"
+                onClick={() => handleNavigate('profile-verifier')}
+                className="flex items-center gap-4 px-5 py-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-left w-full border border-cyan-500/20 transition-colors"
                 type="button"
               >
-                <ShieldAlert className="h-7 w-7 text-red-400 flex-shrink-0" />
+                <Search className="h-6 w-6 text-cyan-400 flex-shrink-0" />
                 <div>
-                  <span className="text-white font-semibold text-xl">Scam Detection</span>
-                  <p className="text-xs text-red-300/80 mt-0.5">Profile • Token • Wallet scans</p>
+                  <span className="text-white font-semibold text-base">Profile Verifier</span>
+                  <p className="text-xs text-cyan-300/70 mt-0.5">Scan X, IG, TikTok, FB, Telegram</p>
                 </div>
               </button>
+
+              <button
+                onClick={() => handleNavigate('employer-scanner')}
+                className="flex items-center gap-4 px-5 py-3 rounded-xl bg-purple-500/15 hover:bg-purple-500/30 text-left w-full border border-purple-500/20 transition-colors"
+                type="button"
+              >
+                <Briefcase className="h-6 w-6 text-purple-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-base">Employer Trust Scan</span>
+                  <p className="text-xs text-purple-300/70 mt-0.5">Verify employers before accepting work</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('priority-scan')}
+                className="flex items-center gap-4 px-5 py-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-left w-full border border-cyan-500/20 transition-colors"
+                type="button"
+              >
+                <Scan className="h-6 w-6 text-cyan-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-base">Priority Scan</span>
+                  <p className="text-xs text-cyan-300/70 mt-0.5">Wallet, Telegram, token deep scan</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('token-scanner')}
+                className="flex items-center gap-4 px-5 py-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-left w-full border border-cyan-500/20 transition-colors"
+                type="button"
+              >
+                <Coins className="h-6 w-6 text-cyan-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-base">Token Scanner</span>
+                  <p className="text-xs text-cyan-300/70 mt-0.5">Contract, priority, impersonation</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('wallet-protection-scroll')}
+                className="flex items-center gap-4 px-5 py-3 rounded-xl bg-green-500/15 hover:bg-green-500/30 text-left w-full border border-green-500/20 transition-colors"
+                type="button"
+              >
+                <Wallet className="h-6 w-6 text-green-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-base">Wallet Protection</span>
+                  <p className="text-xs text-green-300/70 mt-0.5">Analyze transactions before signing</p>
+                </div>
+              </button>
+
+              <div className="border-t border-purple-500/30 my-3" />
+
+              {/* ── Other Sections ── */}
+              <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-gray-500">More</div>
+
+              <a
+                href="https://agenticbro.app/brand-guard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-purple-500/20 hover:bg-purple-500/40 text-left w-full border border-purple-500/30 transition-colors"
+              >
+                <ShieldAlert className="h-7 w-7 text-purple-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-xl">Brand Guard</span>
+                  <p className="text-xs text-purple-300/80 mt-0.5">Impersonator • Domain • Threat scans</p>
+                </div>
+              </a>
 
               <button
                 onClick={() => handleNavigate('features')}

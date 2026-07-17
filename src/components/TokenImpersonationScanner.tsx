@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useCredits } from '../lib/payments';
+import { useTokenGating, isTestWallet } from '../hooks/useTokenGating';
 
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -124,8 +125,12 @@ export default function TokenImpersonationScanner() {
     credits, 
     freeScansRemaining, 
     hasScans, 
-    useCredit 
+    useCredit: consumeCredit
   } = useCredits(null, null, walletAddress);
+
+  // Wallet tier gating — Holder ($100+) gets 100/mo, Whale ($1K+) gets unlimited
+  const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
+  const isTest = isTestWallet(walletAddress ?? '');
 
   const handleScan = async () => {
     if (!contractAddress.trim()) {
@@ -144,7 +149,7 @@ export default function TokenImpersonationScanner() {
     setResult(null);
 
     // Use a credit (free first, then paid)
-    const creditResult = useCredit();
+    const creditResult = await consumeCredit();
     if (!creditResult.success) {
       setError('Failed to use scan credit. Please try again.');
       setScanning(false);
@@ -202,13 +207,16 @@ export default function TokenImpersonationScanner() {
     }
   };
 
-  // Scan counter colour
+  // Scan counter colour — tier-aware
   const counterColour =
-    !hasScans      ? '#f87171'  // red — no scans
+    isTest ? '#a78bfa'
+    : whaleTierUnlocked ? '#818cf8'
+    : holderTierUnlocked ? '#c084fc'
+    : !hasScans      ? '#f87171'  // red — no scans
     : freeScansRemaining === 1 ? '#fbbf24'  // amber — last free scan
     : '#4ade80';                          // green — scans available
 
-  const totalScansRemaining = freeScansRemaining + credits;
+  const totalScansRemaining = isTest ? 999999 : whaleTierUnlocked ? 999999 : holderTierUnlocked ? 100 : freeScansRemaining + credits;
 
   return (
     <div className="space-y-6">
@@ -243,24 +251,40 @@ export default function TokenImpersonationScanner() {
               Scans
             </span>
             <span className="text-xl font-black" style={{ color: counterColour }}>
-              {totalScansRemaining}
+              {isTest ? '∞' : whaleTierUnlocked ? '∞' : holderTierUnlocked ? '100' : totalScansRemaining}
             </span>
-            {freeScansRemaining > 0 && (
-              <span className="text-xs text-green-400">
-                {freeScansRemaining} free
-              </span>
-            )}
-            {credits > 0 && (
+            {isTest ? (
               <span className="text-xs text-purple-400">
-                {credits} paid
+                ∞ Unlimited
               </span>
+            ) : whaleTierUnlocked ? (
+              <span className="text-xs text-indigo-400">
+                🐋 Whale — ∞
+              </span>
+            ) : holderTierUnlocked ? (
+              <span className="text-xs text-purple-400">
+                💎 Holder — 100/mo
+              </span>
+            ) : (
+              <>
+                {freeScansRemaining > 0 && (
+                  <span className="text-xs text-green-400">
+                    {freeScansRemaining} free
+                  </span>
+                )}
+                {credits > 0 && (
+                  <span className="text-xs text-purple-400">
+                    {credits} paid
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Tier scan counts */}
         <div className="text-xs text-gray-500 mb-4">
-          <span>Free: 5 | Holder: 50/mo | Whale: Unlimited</span>
+          <span>Free: 5 | Holder: 100/mo ($100+ AGNTCBRO) | Whale: Unlimited ($1K+ AGNTCBRO)</span>
         </div>
 
         {/* ── No scans remaining ── */}

@@ -45,26 +45,24 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     id: 'basic',
     name: 'Basic',
     credits: 10,
-    price: 9,
-    bonus: 1,
-    description: '10 scans + 1 bonus for $9',
+    price: 10,
+    description: '10 scans for $10',
   },
   {
     id: 'pro',
     name: 'Pro',
     credits: 25,
-    price: 20,
-    bonus: 5,
+    price: 25,
     popular: true,
-    description: '25 scans + 5 bonus for $20',
+    description: '25 scans for $25',
   },
   {
     id: 'whale',
     name: 'Whale',
     credits: 100,
-    price: 75,
-    bonus: 25,
-    description: '100 scans + 25 bonus for $75',
+    price: 100,
+    bonus: 10,
+    description: '100 scans + 10 bonus for $100',
   },
 ];
 
@@ -175,7 +173,7 @@ export async function loadStripe(): Promise<any | null> {
 
 export function useCredits(userId: string | null, email: string | null, walletAddress: string | null) {
   const [credits, setCredits] = useState(0);
-  const [freeScansRemaining, setFreeScansRemaining] = useState(5);
+  const [freeScansRemaining, setFreeScansRemaining] = useState(10);
   const [loading, setLoading] = useState(true);
 
   // Load credits from storage or API

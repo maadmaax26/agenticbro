@@ -2,7 +2,7 @@
  * Profile Verifier Scanner Component
  *
  * Allows users to verify social media profiles for scam detection
- * 10 free scans available, then $1/scan via Stripe, USDC, or AGNTCBRO
+ * 5 free scans available, then $1/scan via Stripe, USDC, or AGNTCBRO
  * Credits tracked by wallet address or email
  */
 
@@ -28,7 +28,7 @@ import {
 } from '../lib/engagement-analysis';
 
 // ─── Supabase upload helper ─────────────────────────────────────────────────────
-const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
+const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const _supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function uploadScanToSupabase(scanResult: ProfileScanResult): Promise<void> {
@@ -242,7 +242,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
   const effectiveWalletAddress = publicKey?.toString() || authWalletAddress || null;
   const effectiveEmail = email || null;
 
-  // Get tier status from useTokenGating (Holder: $100+ = 50 scans/month, Whale: $1000+ = unlimited)
+  // Get tier status from useTokenGating (Holder: $100+ = 100 scans/month, Whale: $1000+ = unlimited)
   const { holderTierUnlocked, whaleTierUnlocked } = useTokenGating();
 
   // Use the credits system ($1/scan, tracked by wallet/email)
@@ -250,7 +250,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     credits,
     freeScansRemaining,
     hasScans: hasScansFromCredits,
-    useCredit,
+    useCredit: consumeCredit,
     isTestWallet
   } = useCredits(null, effectiveEmail, effectiveWalletAddress);
 
@@ -260,9 +260,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
 
   // Calculate display text based on tier
   // Free: 5 scans
-  // Holder ($100+): 50 ALL scans/month
+  // Holder ($100+): 100 ALL scans/month
   // Whale ($1000+): Unlimited
-  const displayScans = isTestWallet ? '∞ Unlimited' : whaleTierUnlocked ? '∞ Unlimited' : holderTierUnlocked ? '50 ALL' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`;
+  const displayScans = isTestWallet ? '∞ Unlimited' : whaleTierUnlocked ? '∞ Unlimited' : holderTierUnlocked ? '100 ALL' : freeScansRemaining > 0 ? `${freeScansRemaining} free` : `${credits} credits`;
 
   // ── Watch Realtime job updates ─────────────────────────────────────────────
   useEffect(() => {
@@ -389,10 +389,10 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
 
     // Only use a credit if not in a holder/whale tier
-    // Holder tier: 50 free scans/month (no credit deduction)
+    // Holder tier: 100 free scans/month (no credit deduction)
     // Whale tier: Unlimited free scans (no credit deduction)
     if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
-      const creditResult = useCredit();
+      const creditResult = await consumeCredit();
       if (!creditResult.success) {
         setError('Failed to use scan credit. Please try again.');
         setScanning(false);
@@ -462,7 +462,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       // ── STEP 2: Direct serverless scan for IG/TikTok/FB (works via web fetch) ──
       const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
 
-      if (['instagram', 'tiktok', 'facebook'].includes(platform)) {
+      if (['instagram', 'tiktok', 'facebook', 'telegram'].includes(platform)) {
         try {
           setScanStatus(`Scanning ${platform} profile...`);
           const scanRes = await fetch(`${apiBase}/api/social-scan`, {
@@ -489,26 +489,33 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
                 });
                 botDetection = calculateBotScore(botInput, platform, workerEngagement);
                 engagementAnalysis = botDetection.engagementAnalysis;
-              } catch (_) { /* skip if insufficient data */ }
+              } catch { /* skip if insufficient data */ }
 
               const apiResult: ProfileScanResult = {
                 success: true,
                 platform: platform as any,
                 username: cleanUsername,
-                verified: false,
-                riskScore: Math.round(d.riskScore * 10),
+                displayName: d.displayName || d.profileData?.displayName,
+                verified: d.verified ?? d.profileData?.verified ?? false,
+                riskScore: normalizeRiskScore(d.riskScore),
                 riskLevel: d.riskLevel || 'LOW',
                 scamType: undefined,
-                redFlags: d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) - ${f.description}`) || [],
-                evidence: [],
-                recommendation: `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected.`,
+                redFlags: d.redFlags || d.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts) - ${f.description}`) || [],
+                evidence: d.evidence || [],
+                recommendation: d.recommendation || `Profile analyzed via serverless scan. ${d.redFlagsDetected} flag(s) detected.`,
                 profileData: {
-                  followers: d.followers ?? undefined,
+                  followers: d.profileData?.followers ?? d.followers ?? undefined,
+                  following: d.profileData?.following ?? d.following ?? undefined,
+                  posts: d.profileData?.posts ?? d.posts ?? undefined,
+                  bio: d.profileData?.bio ?? d.bio ?? undefined,
+                  location: d.profileData?.location ?? d.location ?? undefined,
+                  website: d.profileData?.website ?? d.website ?? undefined,
+                  profileImage: d.profileData?.profileImage ?? d.profileImage ?? undefined,
                 },
-                confidence: d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM',
-                scanDate: d.scanTimestamp || new Date().toISOString(),
-                botDetection,
-                engagementAnalysis,
+                confidence: d.confidence || (d.redFlagsDetected > 0 ? 'HIGH' : 'MEDIUM'),
+                scanDate: d.scanDate || d.scanTimestamp || new Date().toISOString(),
+                botDetection: d.botDetection || botDetection,
+                engagementAnalysis: d.engagementAnalysis || engagementAnalysis,
               };
               setResult(apiResult);
               uploadScanToSupabase(apiResult).catch(() => {});
@@ -523,25 +530,10 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
         }
       }
 
-      // ── STEP 3: X/Twitter - try web scan first, then CDP queue ──
+      // ── STEP 3: X/Twitter - CDP queue first (full scan), Nitter as last resort ──
       if (platform === 'twitter') {
-        // First attempt: web-based scan via Nitter (public mirror)
-        try {
-          setScanStatus('Scanning X profile via web...');
-          const webResult = await scanXProfileWeb(cleanUsername);
-          if (webResult.success) {
-            setResult(webResult);
-            uploadScanToSupabase(webResult).catch(() => {});
-            setScanStatus(null);
-            setScanning(false);
-            return;
-          }
-          console.warn('[X-Scan] Web scan failed, falling back to CDP queue');
-        } catch (webErr) {
-          console.warn('[X-Scan] Web scan error:', webErr);
-        }
-
-        // Second attempt: queue for CDP worker
+        // First attempt: queue for CDP worker (full Chrome scan with tweets)
+        // This produces much better results than the Nitter bio-only scan.
         if (_supabaseAnonKey) {
           try {
             const client = createClient(_supabaseUrl, _supabaseAnonKey);
@@ -573,8 +565,73 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             console.warn('[X-Scan] Queue error:', queueErr);
           }
         }
-        
-        // Final fallback: Show instruction message
+
+        // Fallback 2: web-based scan via Nitter (bio-only, less accurate than CDP)
+        try {
+          setScanStatus('Trying Nitter web scan...');
+          const webResult = await scanXProfileWeb(cleanUsername);
+          if (webResult.success) {
+            setResult(webResult);
+            uploadScanToSupabase(webResult).catch(() => {});
+            setScanStatus(null);
+            setScanning(false);
+            return;
+          }
+          console.warn('[X-Scan] Nitter web scan failed');
+        } catch (webErr) {
+          console.warn('[X-Scan] Nitter web scan error:', webErr);
+        }
+
+        // Final fallback: Try profile-verify API (has Nitter + pattern analysis)
+        try {
+          setScanStatus('Trying alternative scan method...');
+          const apiBase = (import.meta as { env: Record<string, string> }).env.VITE_API_URL ?? '';
+          const pvRes = await fetch(`${apiBase}/api/profile-verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: 'twitter', username: cleanUsername }),
+          });
+
+          if (pvRes.ok) {
+            const pvData = await pvRes.json();
+            if (pvData.success && pvData.riskScore > 0) {
+              const pvResult: ProfileScanResult = {
+                success: true,
+                platform: 'twitter',
+                username: cleanUsername,
+                displayName: pvData.displayName || pvData.username || cleanUsername,
+                verified: pvData.verified ?? false,
+                riskScore: pvData.riskScore ?? 0,
+                riskLevel: pvData.riskLevel || 'LOW',
+                scamType: pvData.scamType,
+                redFlags: pvData.redFlags || [],
+                evidence: pvData.evidence || [],
+                recommendation: pvData.recommendation || 'Profile analyzed via alternative method.',
+                profileData: pvData.profileData ? {
+                  followers: pvData.profileData.followers,
+                  following: pvData.profileData.following,
+                  posts: pvData.profileData.posts,
+                  bio: pvData.profileData.bio,
+                  location: pvData.profileData.location,
+                  website: pvData.profileData.website,
+                  joinDate: pvData.profileData.joinDate,
+                } : undefined,
+                confidence: pvData.confidence || 'MEDIUM',
+                scanDate: pvData.scanDate || new Date().toISOString(),
+                botDetection: pvData.botDetection,
+              };
+              setResult(pvResult);
+              uploadScanToSupabase(pvResult).catch(() => {});
+              setScanStatus(null);
+              setScanning(false);
+              return;
+            }
+          }
+        } catch (pvErr) {
+          console.warn('[X-Scan] profile-verify fallback failed:', pvErr);
+        }
+
+        // Absolute final fallback: Show instruction message
         const xResult: ProfileScanResult = {
           success: false,
           platform: 'twitter',
@@ -639,6 +696,13 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     }
   };
 
+  const normalizeRiskScore = (score: unknown): number => {
+    const numeric = Number(score ?? 0);
+    if (!Number.isFinite(numeric)) return 0;
+    const normalized = numeric <= 10 ? numeric * 10 : numeric;
+    return Math.max(0, Math.min(100, Math.round(normalized)));
+  };
+
   // Normalize backend response to frontend format
   const normalizeResult = (data: any, platform: string, username: string): ProfileScanResult => {
     // Compute bot detection from available data
@@ -652,17 +716,19 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
       console.warn('[BotDetection] Failed to compute bot score:', e);
     }
 
+    const riskScore = normalizeRiskScore(data.riskScore ?? data.risk_score);
+
     return {
       success: data.success ?? true,
       platform: data.platform || platform,
       username: data.username || username,
       displayName: data.displayName || data.profileData?.displayName,
       verified: data.verified ?? data.profileData?.verified ?? false,
-      riskScore: data.riskScore ?? 0,
-      riskLevel: data.riskLevel || calculateRiskLevel(data.riskScore ?? 0),
+      riskScore,
+      riskLevel: data.riskLevel || calculateRiskLevel(riskScore),
       scamType: data.scamType,
-      redFlags: data.redFlags || data.flags || [],
-      evidence: data.evidence || [],
+      redFlags: data.redFlags || data.flags || data.flagDetails?.map((f: any) => `${f.flag || f.id} (${f.weight || f.points || 0}pts) - ${f.description || f.name || 'Flag detected'}`) || [],
+      evidence: data.evidence || data.flagDetails?.map((f: any) => `Matched ${f.flag || f.id}: ${f.patternMatched || f.description || f.name}`) || [],
       recommendation: data.recommendation || data.recommendation || 'Profile analyzed successfully',
       profileData: {
         followers: data.profileData?.followers,
@@ -696,7 +762,7 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
     
     // Only use a credit for cross-platform scan if not in holder/whale tier
     if (!holderTierUnlocked && !whaleTierUnlocked && !isTestWallet) {
-      const creditResult = useCredit();
+      const creditResult = await consumeCredit();
       if (!creditResult.success) {
         setError('Failed to use scan credit. Please try again.');
         setScanning(false);
@@ -724,9 +790,9 @@ export default function ProfileVerifierScanner({ onLoginRequired }: ProfileVerif
             results.push({
               platform: platformLabel,
               success: data.success ?? false,
-              riskScore: Math.round((data.riskScore ?? 0) * 10),
+              riskScore: normalizeRiskScore(data.riskScore),
               riskLevel: data.riskLevel ?? 'UNKNOWN',
-              redFlags: data.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts)`) || [],
+              redFlags: data.redFlags || data.flagDetails?.map((f: any) => `${f.flag} (${f.weight}pts)`) || [],
               scannedAt: new Date().toISOString(),
             });
           } else {
@@ -926,7 +992,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 : whaleTierUnlocked
                   ? '∞ Unlimited (Whale)'
                   : holderTierUnlocked
-                    ? '50 ALL Scans (Holder)'
+                    ? '100 ALL Scans (Holder)'
                     : freeScansRemaining > 0
                       ? `${freeScansRemaining} Free Scan${freeScansRemaining !== 1 ? 's' : ''}`
                       : 'No Free Scans'}
@@ -1113,10 +1179,10 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   <div 
                     className="h-full rounded-full transition-all duration-1000"
                     style={{
-                      width: `${(result.riskScore / 10) * 100}%`,
+                      width: `${result.riskScore}%`,
                       background: `linear-gradient(90deg, #4ade80, #fbbf24, #fb923c, #f87171)`,
                       backgroundSize: '300% 100%',
-                      backgroundPosition: `${(result.riskScore / 10) * 100}% 0`,
+                      backgroundPosition: `${result.riskScore}% 0`,
                     }}
                   />
                 </div>
@@ -1145,18 +1211,22 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 {result.displayName}
               </p>
             )}
-            {(result.profileData?.followers !== undefined || result.profileData?.following !== undefined || result.profileData?.posts !== undefined) && (
+            {result.profileData && (
+              (result.profileData?.followers !== undefined && result.profileData.followers !== null) ||
+              (result.profileData?.following !== undefined && result.profileData.following !== null) ||
+              (result.profileData?.posts !== undefined && result.profileData.posts !== null)
+            ) && (
               <p className="text-sm text-gray-300 mt-1">
                 <span className="text-gray-500">- </span>
-                {result.profileData.followers !== undefined && (
+                {result.profileData?.followers !== undefined && result.profileData.followers !== null && (
                   <>Followers: <span className="text-white font-medium">{result.profileData.followers >= 1000000 ? `${(result.profileData.followers / 1000000).toFixed(1)}M` : result.profileData.followers >= 1000 ? `${(result.profileData.followers / 1000).toFixed(1)}K` : result.profileData.followers.toLocaleString()}</span>{' | '}
                   </>
                 )}
-                {result.profileData.following !== undefined && (
+                {result.profileData?.following !== undefined && result.profileData.following !== null && (
                   <>Following: <span className="text-white font-medium">{result.profileData.following >= 1000 ? `${(result.profileData.following / 1000).toFixed(1)}K` : result.profileData.following.toLocaleString()}</span>{' | '}
                   </>
                 )}
-                {result.profileData.posts !== undefined && (
+                {result.profileData?.posts !== undefined && result.profileData.posts !== null && (
                   <>Posts: <span className="text-white font-medium">{result.profileData.posts >= 1000 ? `${(result.profileData.posts / 1000).toFixed(1)}K` : result.profileData.posts.toLocaleString()}</span>
                   </>
                 )}
@@ -1202,7 +1272,13 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
               </h3>
               
               <div className="space-y-1.5">
-                {result.redFlags.map((flag, index) => {
+                {result.redFlags
+                  .filter(flag => {
+                    // Filter out technical error messages that shouldnt be shown to users
+                    const isError = flag.includes('Error:') || flag.includes('Error') || flag.includes('CDP') || flag.includes('Chrome');
+                    return !isError;
+                  })
+                  .map((flag, index) => {
                   const pointMatch = flag.match(/\((\d+)pts?\)/);
                   const points = pointMatch ? parseInt(pointMatch[1]) : 0;
                   const hasPoints = pointMatch !== null;
@@ -1227,11 +1303,13 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                 })}
               </div>
               
-              <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
-                <p className="text-xs text-gray-600">
-                  Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
-                </p>
-              </div>
+              {result.redFlags.some(flag => !flag.includes('Error:') && !flag.includes('Error') && !flag.includes('CDP') && !flag.includes('Chrome')) && (
+                <div className="mt-3 pt-2" style={{ borderTop: '1px solid rgba(239,68,68,0.1)' }}>
+                  <p className="text-xs text-gray-600">
+                    Flag values: guaranteed_returns(25) • giveaway_airdrop(20) • dm_solicitation(15) • free_crypto(15) • alpha_dm_scheme(15) • unrealistic_claims(10) • download_install(10) • urgency_tactics(10) • emotional_manipulation(10) • low_credibility(10)
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1254,7 +1332,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   : '1px solid rgba(16,185,129,0.2)',
               }}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold" style={{ color: formatBotClassification(result.botDetection.classification).color }}>
                   🤖 BOT ACTIVITY ASSESSMENT
                 </h3>
@@ -1341,7 +1419,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                   : '1px solid rgba(59,130,246,0.2)',
               }}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold" style={{ color: formatEngagementClassification(result.engagementAnalysis.overallScore).color }}>
                   📊 ENGAGEMENT ANALYSIS
                 </h3>
@@ -1404,7 +1482,7 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
                     <span className="font-medium">View Inflation:</span>{' '}
                     {result.engagementAnalysis.patterns.viewInflation.views >= 1000
                       ? `${(result.engagementAnalysis.patterns.viewInflation.views / 1000).toFixed(1)}K`
-                      : result.engagementAnalysis.patterns.viewInflation.views} views / {result.engagementAnalysis.patterns.viewInflation.followers.toLocaleString()} followers ({result.engagementAnalysis.patterns.viewInflation.ratio}x ratio)
+                      : result.engagementAnalysis.patterns.viewInflation.views} views / {(result.engagementAnalysis.patterns.viewInflation.followers ?? 0).toLocaleString()} followers ({result.engagementAnalysis.patterns.viewInflation.ratio}x ratio)
                   </div>
                 )}
 
@@ -1544,6 +1622,8 @@ ${result.redFlags.map(f => `• ${f}`).join('\n')}\n\nBehavioral Pattern: ${resu
 // ─── Helper: Scan X profile via web (Nitter) ──────────────────────────────────────────
 async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
   // Nitter instances to try (public X mirrors)
+  // NOTE: These will likely fail with CORS errors from the browser.
+  // The real scan happens via CDP queue + profile-verify API fallback.
   const nitterInstances = [
     'https://nitter.net',
     'https://nitter.privacydev.net',
@@ -1554,11 +1634,16 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
   for (const instance of nitterInstances) {
     try {
       const url = `${instance}/${username}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
       const res = await fetch(url, {
+        signal: controller.signal,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       });
+      clearTimeout(timeout);
 
       if (!res.ok) continue;
 
@@ -1628,14 +1713,15 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
         riskScore += 10;
       }
 
-      // Cap at 90
+      // Cap at 90 points, then convert to 0-100 API scale (90pts → 100, each point → 100/90)
       riskScore = Math.min(riskScore, 90);
+      const apiRiskScore = Math.round((riskScore / 90) * 100);
 
-      // Determine risk level
+      // Determine risk level (on 0-100 scale)
       const riskLevel: ProfileScanResult['riskLevel'] =
-        riskScore >= 75 ? 'CRITICAL' :
-        riskScore >= 50 ? 'HIGH' :
-        riskScore >= 30 ? 'MEDIUM' : 'LOW';
+        apiRiskScore >= 75 ? 'CRITICAL' :
+        apiRiskScore >= 50 ? 'HIGH' :
+        apiRiskScore >= 30 ? 'MEDIUM' : 'LOW';
 
       return {
         success: true,
@@ -1643,7 +1729,7 @@ async function scanXProfileWeb(username: string): Promise<ProfileScanResult> {
         username,
         displayName,
         verified,
-        riskScore,
+        riskScore: apiRiskScore,
         riskLevel,
         redFlags: flags.map(f => `${f.flag} (${f.weight}pts) — ${f.description}`),
         evidence: [],

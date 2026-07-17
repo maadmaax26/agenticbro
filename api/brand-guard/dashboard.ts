@@ -1,5 +1,11 @@
 /**
- * api/brand-guard/dashboard.ts — Reputation Dashboard API
+ * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
+ * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
+ * Commercial use restrictions apply - contact agenticbro@agenticbro.app for licensing.
+ */
+
+/**
+ * api/brand-guard/dashboard.ts - Reputation Dashboard API
  * ========================================================================
  * Aggregates data from all Brand Guard features into a unified dashboard.
  * Provides threat feed, brand health score, takedown actions, and alerts.
@@ -21,17 +27,12 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createClient } from '@supabase/supabase-js';
-
-// ── Supabase Client ──────────────────────────────────────────────────────────
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ThreatItem {
   id: string;
-  type: 'social_impersonator' | 'phone_scam' | 'domain_lookalike' | 'cross_channel' | 'scammer_db';
+  type: 'social_impersonator' | 'phone_scam' | 'domain_lookalike' | 'cross_channel' | 'scammer_db' | 'email';
   severity: 'critical' | 'high' | 'medium' | 'low';
   platform: string;
   target: string;
@@ -39,7 +40,7 @@ interface ThreatItem {
   risk_level: string;
   evidence: string[];
   detected_at: string;
-  status: 'new' | 'monitoring' | 'reported' | 'resolved' | 'dismissed';
+  status: 'new' | 'monitoring' | 'reported' | 'resolved' | 'dismissed' | 'active';
   takedown_actions: TakedownAction[];
 }
 
@@ -63,9 +64,11 @@ interface BrandHealthScore {
   breakdown: {
     social_health: number;
     domain_health: number;
+    email_health: number;
     phone_health: number;
-    scammer_db_exposure: number;
+    web_reputation: number;
   };
+  improvement_tips: Record<string, string[]>;
   trend: 'improving' | 'stable' | 'declining';
   last_scan: string;
   recommendations: string[];
@@ -109,16 +112,52 @@ interface DashboardData {
     scan_date: string;
     results_count: number;
   }>;
+  live_feeds: {
+    updated_at: string;
+    dns: Array<{
+      id: string;
+      domain: string;
+      resolves: boolean;
+      ip_addresses: string[];
+      mx_records: string[];
+      checked_at: string;
+    }>;
+    dmarc: Array<{
+      id: string;
+      reporter: string;
+      message_count: number;
+      failed_count: number;
+      unauthorized_sources: number;
+      period_end: string;
+    }>;
+    threat_intel: Array<{
+      id: string;
+      target: string;
+      threat_type: string;
+      status: string;
+      job_status: string;
+      attempt_count: number;
+      confidence: number;
+      severity: number;
+      fingerprint: string | null;
+      updated_at: string;
+    }>;
+  };
 }
 
 // ── Brand Health Score Calculation ────────────────────────────────────────────
 function calculateHealthScore(
   socialThreats: number,
   domainThreats: number,
+  emailThreats: number,
   phoneThreats: number,
-  scammerDbMatches: number,
+  webReputationFlags: number,
   criticalCount: number,
-  highCount: number
+  highCount: number,
+  domainCriticalCount: number,
+  domainHighCount: number,
+  domainMediumCount: number,
+  domainLowCount: number
 ): BrandHealthScore {
   // Start at 100 (perfect health), subtract for threats
   let score = 100;
@@ -128,14 +167,20 @@ function calculateHealthScore(
   score -= Math.min(20, criticalCount * 10);
   score -= Math.min(15, highCount * 5);
 
-  // Domain threats: -2 per threat
-  score -= Math.min(20, domainThreats * 2);
+  // Domain threats: weighted by severity (not raw count, since variants inflate numbers)
+  score -= Math.min(25, domainCriticalCount * 15);
+  score -= Math.min(15, domainHighCount * 5);
+  score -= Math.min(10, domainMediumCount);
+  score -= Math.min(5, domainLowCount);
+
+  // Email threats: -5 per threat (spoofable domains are serious)
+  score -= Math.min(20, emailThreats * 5);
 
   // Phone threats: -2 per threat
   score -= Math.min(10, phoneThreats * 2);
 
-  // Scammer DB exposure: -5 per match
-  score -= Math.min(20, scammerDbMatches * 5);
+  // Web reputation flags: -5 per flag
+  score -= Math.min(20, webReputationFlags * 5);
 
   // Floor at 0
   score = Math.max(0, Math.min(100, score));
@@ -148,7 +193,7 @@ function calculateHealthScore(
   else if (score >= 20) level = 'POOR';
   else level = 'CRITICAL';
 
-  // Determine trend (would need historical data in production)
+  // Determine trend
   const trend: string = score >= 60 ? 'stable' : 'declining';
 
   // Generate recommendations
@@ -156,19 +201,65 @@ function calculateHealthScore(
   if (criticalCount > 0) recommendations.push('File urgent abuse reports for all critical threats');
   if (highCount > 0) recommendations.push('Monitor high-threat profiles and file abuse reports within 48 hours');
   if (domainThreats > 0) recommendations.push('Register key domain variants to prevent typosquatting');
-  if (scammerDbMatches > 0) recommendations.push('Review scammer database entries and update monitoring keywords');
+  if (emailThreats > 0) recommendations.push('Set up DMARC p=reject and DKIM to prevent email spoofing');
+  if (webReputationFlags > 0) recommendations.push('Check ScamAdviser and review any negative web reputation signals');
   if (socialThreats > 5) recommendations.push('Consider increasing scan frequency to daily for this brand');
   if (phoneThreats > 0) recommendations.push('Set up call screening for reported phone numbers');
+
+  // Per-category health scores
+  const socialHealth = Math.max(0, 100 - Math.min(60, socialThreats * 5) - Math.min(30, criticalCount * 15));
+  const domainHealth = Math.max(0, 100 - Math.min(25, domainCriticalCount * 15) - Math.min(15, domainHighCount * 5) - Math.min(10, domainMediumCount) - Math.min(5, domainLowCount));
+  const emailHealth = Math.max(0, 100 - Math.min(70, emailThreats * 10));
+  const phoneHealth = Math.max(0, 100 - Math.min(40, phoneThreats * 10));
+  const webRep = Math.max(0, 100 - Math.min(50, webReputationFlags * 10));
+
+  // Generate per-category improvement tips
+  const improvement_tips: Record<string, string[]> = {};
+  if (socialHealth < 80) {
+    improvement_tips.social = [];
+    if (socialThreats > 0) improvement_tips.social.push('Report fake accounts on each platform to reduce active impersonators');
+    if (criticalCount > 0) improvement_tips.social.push('File urgent abuse reports — critical threats drag your score down 15pts each');
+    improvement_tips.social.push('Verify official accounts on all platforms to establish authenticity');
+    improvement_tips.social.push('Increase scan frequency to catch new impersonators faster');
+  }
+  if (domainHealth < 80) {
+    improvement_tips.domain = [];
+    improvement_tips.domain.push('Register top .com, .net, .org, .io variants of your domain');
+    improvement_tips.domain.push('File abuse reports with registrars for phishing domains');
+    improvement_tips.domain.push('Set up DNS monitoring to catch new registrations immediately');
+    if (domainThreats > 10) improvement_tips.domain.push('Focus on CRITICAL/HIGH variants first — they hurt your score most');
+  }
+  if (emailHealth < 80) {
+    improvement_tips.email = [];
+    improvement_tips.email.push('Set up DMARC with p=reject policy to block spoofed emails');
+    improvement_tips.email.push('Publish DKIM records for all sending domains');
+    improvement_tips.email.push('Configure SPF to authorize only your mail servers');
+    improvement_tips.email.push('Monitor CertStream for lookalike domain registrations');
+  }
+  if (phoneHealth < 80) {
+    improvement_tips.phone = [];
+    improvement_tips.phone.push('Report scam numbers to the FTC and carrier abuse lines');
+    improvement_tips.phone.push('Set up call screening for reported numbers');
+    improvement_tips.phone.push('Add scam numbers to your brand\'s block list');
+  }
+  if (webRep < 80) {
+    improvement_tips.web = [];
+    improvement_tips.web.push('Claim and verify your business on Google, Trustpilot, and BBB');
+    improvement_tips.web.push('Respond to negative reviews to improve reputation signals');
+    improvement_tips.web.push('Submit takedown requests for scam listings impersonating your brand');
+  }
 
   return {
     overall_score: score,
     overall_level: level,
     breakdown: {
-      social_health: Math.max(0, 100 - socialThreats * 5 - criticalCount * 15),
-      domain_health: Math.max(0, 100 - domainThreats * 5),
-      phone_health: Math.max(0, 100 - phoneThreats * 10),
-      scammer_db_exposure: Math.max(0, 100 - scammerDbMatches * 15),
+      social_health: socialHealth,
+      domain_health: domainHealth,
+      email_health: emailHealth,
+      phone_health: phoneHealth,
+      web_reputation: webRep,
     },
+    improvement_tips,
     trend: trend as 'improving' | 'stable' | 'declining',
     last_scan: new Date().toISOString(),
     recommendations,
@@ -192,6 +283,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'GET') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
+  const entitlement = await requireBrandGuardEntitlement(req, res, 'dashboard');
+  if (!entitlement) return;
+  const supabase = entitlement.db;
+
   const brandId = (req.url?.split('brand_id=')[1]?.split('&')[0]) || '';
   const section = (req.url?.split('section=')[1]?.split('&')[0]) || 'all';
 
@@ -202,37 +297,138 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   // ── Fetch brand data from Supabase ────────────────────────────────────────
   let brand: Record<string, unknown> | null = null;
-  let threats: ThreatItem[] = [];
+  const threats: ThreatItem[] = [];
   let takedownActions: TakedownAction[] = [];
-  let alerts: AlertItem[] = [];
+  const alerts: AlertItem[] = [];
   let scanHistory: Array<Record<string, unknown>> = [];
+  let liveFeeds: DashboardData['live_feeds'] = {
+    updated_at: new Date().toISOString(),
+    dns: [],
+    dmarc: [],
+    threat_intel: [],
+  };
 
-  if (supabase) {
+  {
     // Fetch brand
     const { data: brandData } = await supabase
       .from('brand_monitors')
       .select('*')
       .eq('id', brandId)
+      .eq('owner_id', entitlement.ownerId)
       .single();
     brand = brandData;
+    if (!brand) {
+      res.status(404).json({ error: 'Brand not found' });
+      return;
+    }
 
-    // Fetch impersonator threats
+    // Premium live feeds. Each query is scoped to the already-authorized brand.
+    // Missing tables during a rolling migration intentionally produce empty feeds.
+    const [dnsResult, dmarcResult, dmarcSourcesResult, detectedThreatsResult] = await Promise.all([
+      supabase.from('brand_guard_dns_observations')
+        .select('id, domain, resolves, ip_addresses, mx_records, checked_at')
+        .eq('brand_monitor_id', brandId).order('checked_at', { ascending: false }).limit(20),
+      supabase.from('brand_guard_dmarc_reports')
+        .select('id, reporter, message_count, failed_count, period_end, created_at')
+        .eq('brand_monitor_id', brandId).order('period_end', { ascending: false }).limit(12),
+      supabase.from('brand_guard_dmarc_sources')
+        .select('report_id, unauthorized').eq('brand_monitor_id', brandId).eq('unauthorized', true).limit(500),
+      supabase.from('brand_guard_detected_threats')
+        .select('id, target, threat_type, status, confidence, severity, phishing_kit_fingerprint, updated_at')
+        .eq('brand_monitor_id', brandId).order('updated_at', { ascending: false }).limit(20),
+    ]);
+
+    const unauthorizedByReport = new Map<string, number>();
+    for (const source of dmarcSourcesResult.data || []) {
+      const reportId = String(source.report_id || '');
+      unauthorizedByReport.set(reportId, (unauthorizedByReport.get(reportId) || 0) + 1);
+    }
+    const threatIds = (detectedThreatsResult.data || []).map(row => String(row.id));
+    const intelJobsResult = threatIds.length
+      ? await supabase.from('brand_guard_threat_intel_jobs')
+        .select('threat_id, status, attempt_count, updated_at').in('threat_id', threatIds)
+      : { data: [] as Array<Record<string, unknown>> };
+    const intelJobsByThreat = new Map((intelJobsResult.data || []).map(job => [String(job.threat_id), job]));
+    liveFeeds = {
+      updated_at: new Date().toISOString(),
+      dns: (dnsResult.data || []).map(row => ({
+        id: String(row.id), domain: String(row.domain), resolves: Boolean(row.resolves),
+        ip_addresses: Array.isArray(row.ip_addresses) ? row.ip_addresses.map(String) : [],
+        mx_records: Array.isArray(row.mx_records) ? row.mx_records.map(String) : [],
+        checked_at: String(row.checked_at),
+      })),
+      dmarc: (dmarcResult.data || []).map(row => ({
+        id: String(row.id), reporter: String(row.reporter || 'Unknown reporter'),
+        message_count: Number(row.message_count || 0), failed_count: Number(row.failed_count || 0),
+        unauthorized_sources: unauthorizedByReport.get(String(row.id)) || 0,
+        period_end: String(row.period_end || row.created_at),
+      })),
+      threat_intel: (detectedThreatsResult.data || []).map(row => {
+        const job = intelJobsByThreat.get(String(row.id));
+        return {
+          id: String(row.id), target: String(row.target), threat_type: String(row.threat_type),
+          status: String(row.status), job_status: String(job?.status || 'not_queued'),
+          attempt_count: Number(job?.attempt_count || 0), confidence: Number(row.confidence || 0),
+          severity: Number(row.severity || 1),
+          fingerprint: row.phishing_kit_fingerprint ? String(row.phishing_kit_fingerprint) : null,
+          updated_at: String(job?.updated_at || row.updated_at),
+        };
+      }),
+    };
+
+    // Fetch impersonator threats from brand_guard_scans (primary source)
+    // Falls back to brand_impersonators if available
+    const { data: impScans } = await supabase
+      .from('brand_guard_scans')
+      .select('*')
+      .eq('brand_monitor_id', brandId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (impScans) {
+      for (const scan of impScans) {
+        const result = scan.result as Record<string, unknown> | null;
+        if (!result) continue;
+        const impersonators = (result.impersonators || result.impersonator_results || []) as Record<string, unknown>[];
+        for (const imp of impersonators) {
+          const riskLevel = (imp.risk_level as string) || 'LOW';
+          threats.push({
+            id: `${scan.scan_id}-${imp.handle}`,
+            type: 'social_impersonator',
+            severity: riskLevel === 'CRITICAL' ? 'critical' : riskLevel === 'HIGH' ? 'high' : riskLevel === 'MEDIUM' ? 'medium' : 'low',
+            platform: (imp.platform as string) || 'unknown',
+            target: (imp.handle as string) || 'unknown',
+            risk_score: (imp.risk_score as number) || 0,
+            risk_level: riskLevel,
+            evidence: [(imp.type as string) || 'Impersonator', (imp.method as string) || ''].filter(Boolean),
+            detected_at: (scan.created_at as string) || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
+      }
+    }
+
+    // Also check brand_impersonators table (legacy / direct entries)
     const { data: impersonators } = await supabase
       .from('brand_impersonators')
       .select('*')
       .eq('brand_monitor_id', brandId)
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (impersonators) {
       for (const imp of impersonators) {
+        // Skip duplicates already added from brand_guard_scans
+        const existing = threats.some(t => t.target === (imp.username || imp.handle) && t.type === 'social_impersonator');
+        if (existing) continue;
         threats.push({
           id: imp.id,
           type: 'social_impersonator',
           severity: imp.risk_level === 'CRITICAL' ? 'critical' : imp.risk_level === 'HIGH' ? 'high' : imp.risk_level === 'MEDIUM' ? 'medium' : 'low',
           platform: imp.platform || 'unknown',
-          target: imp.username || 'unknown',
-          risk_score: imp.impersonation_score || 0,
+          target: imp.username || imp.handle || 'unknown',
+          risk_score: imp.impersonation_score || imp.risk_score || 0,
           risk_level: imp.risk_level || 'LOW',
           evidence: imp.evidence || [],
           detected_at: imp.first_seen_at || imp.created_at || new Date().toISOString(),
@@ -242,29 +438,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
     }
 
-    // Fetch domain lookalikes
+    // Fetch domain lookalikes - expand each variant into its own threat
     const { data: domains } = await supabase
       .from('domain_lookalikes')
       .select('*')
+      .eq('domain', ((brand as Record<string, unknown>)?.brand_domain as string) || ((brand as Record<string, unknown>)?.brand_handle as string) || '')
       .order('created_at', { ascending: false })
-      .limit(20);
-    
+      .limit(10);
+
     if (domains) {
       for (const dom of domains) {
+        const variants = (dom.variants as Record<string, unknown>[]) || [];
         const summary = dom.summary as Record<string, number> || {};
-        threats.push({
-          id: dom.scan_id || dom.id,
-          type: 'domain_lookalike',
-          severity: (summary.critical || 0) > 0 ? 'critical' : (summary.high || 0) > 0 ? 'high' : 'medium',
-          platform: 'domain',
-          target: dom.domain || 'unknown',
-          risk_score: 0,
-          risk_level: (summary.critical || 0) > 0 ? 'CRITICAL' : (summary.high || 0) > 0 ? 'HIGH' : 'MEDIUM',
-          evidence: [],
-          detected_at: dom.created_at || new Date().toISOString(),
-          status: 'new',
-          takedown_actions: [],
-        });
+        // Show top variants as individual threats
+        const topVariants = variants.slice(0, 10);
+        for (const v of topVariants) {
+          const vScore = (v.risk_score as number) || 0;
+          const vLevel = (v.risk_level as string) || 'LOW';
+          const vType = (v.variant_type as string) || 'unknown';
+          const vDomain = (v.domain as string) || 'unknown';
+          threats.push({
+            id: `${dom.scan_id || dom.id}-${vDomain}`,
+            type: 'domain_lookalike',
+            severity: vLevel === 'CRITICAL' ? 'critical' : vLevel === 'HIGH' ? 'high' : vLevel === 'MEDIUM' ? 'medium' : 'low',
+            platform: 'domain',
+            target: vDomain,
+            risk_score: vScore,
+            risk_level: vLevel,
+            evidence: (v.evidence as string[]) || [`${vType.replace(/_/g, ' ')} of ${dom.domain}`],
+            detected_at: dom.created_at || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
+        // If no variants parsed, add a single summary threat
+        if (topVariants.length === 0) {
+          threats.push({
+            id: dom.scan_id || dom.id,
+            type: 'domain_lookalike',
+            severity: (summary.critical || 0) > 0 ? 'critical' : (summary.high || 0) > 0 ? 'high' : 'medium',
+            platform: 'domain',
+            target: dom.domain || 'unknown',
+            risk_score: Math.max(summary.critical || 0, summary.high || 0, 1),
+            risk_level: (summary.critical || 0) > 0 ? 'CRITICAL' : (summary.high || 0) > 0 ? 'HIGH' : 'MEDIUM',
+            evidence: [`${(summary.critical || 0) + (summary.high || 0)} high-risk variants found`],
+            detected_at: dom.created_at || new Date().toISOString(),
+            status: 'new',
+            takedown_actions: [],
+          });
+        }
       }
     }
 
@@ -276,7 +498,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .or('verification_level=eq.LIKELY_FRAUDULENT')
       .order('created_at', { ascending: false })
       .limit(20);
-    
+
     if (verifications) {
       for (const v of verifications) {
         threats.push({
@@ -301,18 +523,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (takedowns) {
       takedownActions = takedowns.map((t: Record<string, unknown>) => ({
-        id: t.id,
-        platform: t.platform || 'unknown',
-        action_type: t.action_type || 'report',
-        target: t.evidence_url || 'unknown',
+        id: String(t.id || ''),
+        platform: String(t.platform || 'unknown'),
+        action_type: String(t.action_type || 'report') as TakedownAction['action_type'],
+        target: String(t.evidence_url || 'unknown'),
         url: '',
-        status: t.status || 'pending',
-        priority: t.status === 'pending' ? 'urgent' : 'medium',
+        status: String(t.status || 'pending') as TakedownAction['status'],
+        priority: t.status === 'pending' ? 'urgent' as const : 'medium' as const,
         evidence_needed: [],
-        created_at: t.created_at || new Date().toISOString(),
+        created_at: String(t.created_at || new Date().toISOString()),
       }));
     }
 
@@ -337,25 +559,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           risk_level: tp.risk_level as string || 'UNKNOWN',
           evidence: (riskProfile.evidence as string[]) || [],
           detected_at: tp.created_at as string || new Date().toISOString(),
-          status: tp.status as string || 'active',
+          status: ['new','monitoring','reported','resolved','dismissed','active'].includes(String(tp.status)) ? String(tp.status) as ThreatItem['status'] : 'active' as ThreatItem['status'],
           takedown_actions: [],
         });
       }
     }
 
+    // Fetch email spoof check threats
+    const { data: emailSpoofChecks } = await supabase
+      .from('email_spoof_checks')
+      .select('*')
+      .eq('brand_monitor_id', brandId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (emailSpoofChecks) {
+      for (const esc of emailSpoofChecks) {
+        const result = esc.result as Record<string, unknown> || {};
+        const emailSec = result.email_security as Record<string, unknown> || {};
+        const newDomainThreats = (Array.isArray(result.new_domain_threats) ? result.new_domain_threats : []) as Record<string, unknown>[];
+
+        // Add email vulnerability as a threat if spoofable
+        if (emailSec.spoofable === true) {
+          threats.push({
+            id: `es-${esc.scan_id}`,
+            type: 'email',
+            severity: 'high',
+            platform: 'email',
+            target: esc.domain || 'unknown',
+            risk_score: 100 - (emailSec.overall_score as number || 0) / 10,
+            risk_level: emailSec.vulnerability_level as string || 'HIGH',
+            evidence: (Array.isArray(emailSec.spoof_methods) ? emailSec.spoof_methods as string[] : []).slice(0, 3),
+            detected_at: esc.created_at as string || new Date().toISOString(),
+            status: 'active',
+            takedown_actions: [],
+          });
+        }
+
+        // Add lookalike domain threats from CertStream
+        for (const dt of newDomainThreats.slice(0, 10)) {
+          threats.push({
+            id: `es-dt-${esc.scan_id}-${dt.domain}`,
+            type: 'email',
+            severity: (dt.riskLevel === 'CRITICAL' || dt.riskLevel === 'HIGH') ? 'high' : (dt.riskLevel === 'MEDIUM') ? 'medium' : 'low',
+            platform: 'email',
+            target: (dt.domain as string) || 'unknown',
+            risk_score: Math.round((dt.similarity as number || 0) * 10),
+            risk_level: (dt.riskLevel as string) || 'LOW',
+            evidence: (Array.isArray(dt.evidence) ? dt.evidence as string[] : []).slice(0, 3),
+            detected_at: esc.created_at as string || new Date().toISOString(),
+            status: 'active',
+            takedown_actions: [],
+          });
+        }
+
+        // Add to scan history
+        scanHistory.push({
+          scan_type: 'email_spoof',
+          scan_date: esc.created_at as string || new Date().toISOString(),
+          results_count: 1 + newDomainThreats.length,
+        });
+      }
+    }
+
     // Build scan history from brand_guard_scans
-    const { data: scans } = await supabase
+    const { data: scanRows } = await supabase
       .from('brand_guard_scans')
-      .select('scan_id, created_at, status, platforms')
+      .select('scan_id, created_at, status, platforms, impersonators_found')
       .eq('brand_monitor_id', brandId)
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (scans) {
-      scanHistory = scans.map((s: Record<string, unknown>) => ({
+    if (scanRows) {
+      scanHistory = scanRows.map((s: Record<string, unknown>) => ({
         scan_type: 'impersonator_scan',
         scan_date: s.created_at || new Date().toISOString(),
-        results_count: s.status === 'complete' ? 1 : 0,
+        results_count: (s.impersonators_found as number) || (s.status === 'complete' || s.status === 'completed' ? 1 : 0),
       }));
     }
   }
@@ -374,10 +653,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const healthScore = calculateHealthScore(
     threats.filter(t => t.type === 'social_impersonator').length,
     threats.filter(t => t.type === 'domain_lookalike').length,
+    threats.filter(t => t.type === 'email').length,
     threats.filter(t => t.type === 'phone_scam').length,
-    threats.filter(t => t.type === 'scammer_db').length,
+    threats.filter(t => t.type === 'cross_channel').length,
     criticalCount,
     highCount,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'critical').length,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'high').length,
+    threats.filter(t => t.type === 'domain_lookalike' && t.severity === 'medium').length,
+    Math.max(0, threats.filter(t => t.type === 'domain_lookalike').length - threats.filter(t => t.type === 'domain_lookalike' && ['critical','high','medium'].includes(t.severity)).length),
   );
 
   const summary = {
@@ -404,6 +688,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     alerts,
     summary,
     scan_history: scanHistory as DashboardData['scan_history'],
+    live_feeds: liveFeeds,
   };
 
   // ── Return section or full dashboard ──────────────────────────────────────
