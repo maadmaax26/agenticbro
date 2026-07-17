@@ -4,6 +4,15 @@
 
 **Live:** [agenticbro.app](https://agenticbro.app) · **Built by:** Agentic Insights LLC · Earl B. Finney Jr.
 
+<p align="center">
+  <img src="screenshots/dashboard-home.png" alt="AgenticBro Dashboard" width="800"/>
+  <br/>
+  <img src="screenshots/scanners-section.png" alt="Scanners" width="800"/>
+  <br/>
+  <img src="screenshots/architecture-section.png" alt="Hybrid AI Architecture" width="800"/>
+</a>
+</p>
+
 ---
 
 ## What This Is
