@@ -4,7 +4,7 @@
   "framework": "vite",
   "functions": {
     "api/profile-verify.ts": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/scam-investigate.ts": {
       "maxDuration": 30,
@@ -175,6 +175,10 @@
     {
       "path": "/api/brand-guard/queue-scheduler",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/marketplace/run-scheduled",
+      "schedule": "0 */6 * * *"
     },
     {
       "path": "/api/brand-guard/weekly-briefing-worker",

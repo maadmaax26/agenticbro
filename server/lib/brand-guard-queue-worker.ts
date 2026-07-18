@@ -61,6 +61,12 @@ async function dispatchJob(db: SupabaseClient, job: QueueJob): Promise<void> {
       brand_domain: job.payload.brand_domain,
       platforms: job.payload.platforms,
     };
+    const marketplacePayload = {
+      brandId: job.brand_monitor_id,
+      brandName: job.payload.brand_name,
+      brandWebsite: job.payload.brand_domain,
+      platforms: ['shopify', 'etsy'],
+    };
     if (job.job_type === 'domain') {
       const result = await callEndpoint('/api/brand-guard/domain-monitor', {
         domain: job.payload.brand_domain,
@@ -97,6 +103,9 @@ async function dispatchJob(db: SupabaseClient, job: QueueJob): Promise<void> {
             brand_name: job.payload.brand_name,
             brand_monitor_id: job.brand_monitor_id,
           }) : Promise.resolve(null),
+          job.brand_monitor_id && job.payload.brand_name
+            ? callEndpoint('/api/brand-guard/marketplace/scan', marketplacePayload)
+            : Promise.resolve(null),
         ])
       : [];
     await db.from('brand_guard_scan_queue').update({
