@@ -35,6 +35,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           items: [
             { done: true, text: 'Brand Guard dashboard for impersonation monitoring' },
             { done: true, text: 'Lookalike domain and email spoofing workflows' },
+            { done: true, text: 'Live Shopify and Etsy marketplace monitoring for clone-store detection' },
             { done: true, text: 'Evidence collection for takedown workflows' },
             { done: true, text: 'Stripe-based Brand Guard onboarding and credits' },
             { done: false, text: 'Expanded automated brand monitoring bundles' },
@@ -88,7 +89,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           items: [
             { done: false, text: 'Queue health dashboard for pending, failed, and retried jobs' },
             { done: false, text: 'Automated fallback when a model or data provider is rate-limited' },
-            { done: false, text: 'Scheduled monitoring for brands, domains, wallets, and websites' },
+            { done: true, text: 'Scheduled monitoring for brands, domains, websites, Shopify, and Etsy' },
             { done: false, text: 'Better alert delivery and weekly trust briefings' },
           ],
         },
@@ -152,7 +153,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
           items: [
             { done: false, text: 'Broader multichain coverage beyond Solana' },
             { done: false, text: 'Browser extension and mobile trust warnings' },
-            { done: false, text: 'DeFi, NFT, creator, employer, and marketplace trust workflows' },
+            { done: false, text: 'DeFi, NFT, creator, employer, and expanded marketplace trust workflows' },
             { done: false, text: 'Public scam intelligence feeds and community reporting loops' },
           ],
         },
@@ -179,7 +180,7 @@ function Roadmap({ onBack }: { onBack: () => void }) {
   ];
 
   const infrastructureLayers = [
-    { layer: 'Public App', current: 'agenticbro.app scans and Brand Guard', next: 'Role-based dashboards and partner APIs' },
+    { layer: 'Public App', current: 'agenticbro.app scans and Brand Guard with live Shopify/Etsy monitoring', next: 'Role-based dashboards and partner APIs' },
     { layer: 'Queue', current: 'Supabase-backed scan dispatch and status', next: 'Priority routing, retries, observability, and worker health' },
     { layer: 'Local AI', current: 'Mac Studio and OpenClaw agent execution', next: 'More local workers, embeddings, classifiers, and scheduled monitors' },
     { layer: 'Cloud AI', current: 'Cloud reasoning for advanced reports', next: 'Provider redundancy, long-context investigations, and consensus checks' },
