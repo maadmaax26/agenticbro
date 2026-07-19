@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/admin",
+      "dest": "/public/admin/index.html"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/public/admin/$1"
+    },
+    {
+      "src": "/api/guardian/pending",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/dashboard",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/approve",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/guardian/reject",
+      "dest": "/api/guardian-admin.ts"
+    },
+    {
+      "src": "/api/brand-guard/sla-status",
+      "dest": "/api/brand-guard-sla.ts"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/src/index.js"
+    }
+  ],
+  "public": true
+}
