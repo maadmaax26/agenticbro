@@ -213,7 +213,7 @@ export function CompactRiskBadge({ score, className = '' }: CompactRiskBadgeProp
 
   return (
     <span
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${config.bgColor} border ${config.borderColor}`}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${config.bgColor} border ${config.borderColor} ${className}`}
     >
       <span className={`text-sm font-bold ${config.textColor}`}>
         {score.toFixed(0)}

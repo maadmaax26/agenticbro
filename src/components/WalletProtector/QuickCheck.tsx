@@ -14,7 +14,7 @@ import {
   Copy,
   Shield,
 } from 'lucide-react';
-import { analyzeTransaction, fullRiskAssessment } from '../../lib/wallet-protection-client';
+import { analyzeTransaction } from '../../lib/wallet-protection-client';
 import type { TransactionAnalysisResult } from '../../lib/wallet-protection-client';
 import { RiskBadge, RiskScoreBar } from './RiskBadge';
 

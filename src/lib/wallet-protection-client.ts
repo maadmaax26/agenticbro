@@ -86,9 +86,9 @@ export async function analyzeTransaction(
   format: 'base58' | 'base64' = 'base58'
 ): Promise<TransactionAnalysisResult> {
   try {
-    const payload = format === 'base58'
-      ? { transaction: typeof transaction === 'string' ? transaction : Buffer.from(transaction).toString('base58') }
-      : { base64: typeof transaction === 'string' ? transaction : Buffer.from(transaction).toString('base64') };
+    const payload = typeof transaction === 'string'
+      ? (format === 'base58' ? { transaction } : { base64: transaction })
+      : { base64: Buffer.from(transaction).toString('base64') };
 
     const response = await fetch(`${API_BASE}/api/transaction-analyze`, {
       method: 'POST',

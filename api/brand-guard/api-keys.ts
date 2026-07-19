@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     const { data: subscription } = await db.from('brand_guard_subscriptions').select('plan_id')
-      .eq('owner_id', ownerId).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      .eq('owner_id', ownerId).in('status', ['active', 'trialing', 'trial_ending']).order('created_at', { ascending: false }).limit(1).maybeSingle();
     const plan = subscription?.plan_id || 'free';
     const planLimit = PLAN_RATE_LIMITS[plan] || PLAN_RATE_LIMITS.free;
     const rawKey = `bg_live_${randomBytes(24).toString('base64url')}`;

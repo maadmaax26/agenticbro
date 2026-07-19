@@ -14,7 +14,7 @@
  *   const { alerts, unreadCount, markRead } = useBrandGuardAlerts(userId);
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -48,8 +48,6 @@ export function useBrandGuardAlerts(userId: string | null) {
   const [alerts, setAlerts] = useState<BrandGuardAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<Array<{ id: string; alert: BrandGuardAlert; timestamp: number }>>([]);
-
-  const channelRef: any = null;
 
   // ── Fetch initial alerts ─────────────────────────────────────────────────
   const fetchAlerts = useCallback(async () => {
@@ -129,9 +127,10 @@ export function useBrandGuardAlerts(userId: string | null) {
     fetchAlerts();
 
     if (!supabase || !userId) return;
+    const client = supabase;
 
     // Subscribe to new alerts on brand_guard_alerts table
-    const channel = supabase
+    const channel = client
       .channel('brand-guard-alerts')
       .on(
         'postgres_changes',
@@ -180,7 +179,7 @@ export function useBrandGuardAlerts(userId: string | null) {
 
     return () => {
       if (channel) {
-        supabase.removeChannel(channel);
+        client.removeChannel(channel);
       }
     };
   }, [userId, fetchAlerts]);

@@ -92,7 +92,7 @@ export interface KnownScammer {
 
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function signUpWithEmail(email: string, password: string, metadata: Record<string, unknown> = {}) {
   if (!supabase) {
     // Fallback to localStorage
     const users = JSON.parse(localStorage.getItem('agenticbro_users') || '[]');
@@ -120,6 +120,7 @@ export async function signUpWithEmail(email: string, password: string) {
       data: {
         source: 'brand-guard',
         app: 'brand-guard',
+        ...metadata,
       },
       emailRedirectTo: `${window.location.origin}/brand-guard`,
     },

@@ -43,10 +43,29 @@ export interface PendingRequest {
   reject: (error: Error) => void;
 }
 
+function createSafeRiskAssessment(explanation: string): EnhancedRiskAssessment {
+  return {
+    score: 0,
+    level: 'SAFE',
+    flags: [],
+    recommendation: 'APPROVE',
+    explanation,
+    instructionRisks: [],
+    combinedPatterns: [],
+    addressFlags: [],
+    walletImpact: {
+      solAtRisk: 0,
+      tokensAtRisk: 0,
+      approvalsRequested: 0,
+      authorityChanges: 0,
+      totalDrainRisk: false,
+    },
+  };
+}
+
 // ─── Wallet Proxy Provider ──────────────────────────────────────────────────────
 
-// @ts-expect-error - WalletAdapter types have incompatible EventEmitter signatures
-export class WalletProxyProvider implements WalletAdapter {
+export class WalletProxyProvider {
   // WalletAdapter properties
   public name: WalletName = 'Agentic Bro Wallet Guard' as WalletName;
   public icon = '/agenticbro-icon.png';
@@ -139,15 +158,7 @@ export class WalletProxyProvider implements WalletAdapter {
     
     // For now, use a simple risk assessment
     // In production, this would call RiskEngine.assessRisk()
-    const risk: EnhancedRiskAssessment = {
-      score: 0,
-      level: 'SAFE',
-      flags: [],
-      recommendation: 'APPROVE',
-      explanation: 'Transaction analysis pending',
-      instructionRisks: [],
-      addressFlags: [],
-    };
+    const risk = createSafeRiskAssessment('Transaction analysis pending');
 
     // Check auto-approve threshold
     if (risk.score <= this.autoApproveThreshold && risk.recommendation === 'APPROVE') {
@@ -176,15 +187,7 @@ export class WalletProxyProvider implements WalletAdapter {
     const results = txs.map((tx) => {
       const parsed = parseTransaction(tx as Transaction);
       // Simple risk assessment for now
-      const risk: EnhancedRiskAssessment = {
-        score: 0,
-        level: 'SAFE',
-        flags: [],
-        recommendation: 'APPROVE',
-        explanation: 'Transaction analysis pending',
-        instructionRisks: [],
-        addressFlags: [],
-      };
+      const risk = createSafeRiskAssessment('Transaction analysis pending');
       return { tx, parsed, risk };
     });
 
@@ -215,25 +218,17 @@ export class WalletProxyProvider implements WalletAdapter {
     this.ensureConnected();
 
     const parsed = parseTransaction(tx as Transaction);
-    const risk: EnhancedRiskAssessment = {
-      score: 0,
-      level: 'SAFE',
-      flags: [],
-      recommendation: 'APPROVE',
-      explanation: 'Transaction analysis pending',
-      instructionRisks: [],
-      addressFlags: [],
-    };
+    const risk = createSafeRiskAssessment('Transaction analysis pending');
 
     if (risk.score <= this.autoApproveThreshold && risk.recommendation === 'APPROVE') {
-      return this.forwardToRealWallet(tx, 'signAndSendTransaction', options);
+      return this.forwardToRealWallet(tx, 'signAndSendTransaction', options) as unknown as Promise<{ signature: string }>;
     }
 
     const decision = await this.requestUserDecision(parsed, risk);
 
     switch (decision) {
       case 'approve':
-        return this.forwardToRealWallet(tx, 'signAndSendTransaction', options);
+        return this.forwardToRealWallet(tx, 'signAndSendTransaction', options) as unknown as Promise<{ signature: string }>;
       case 'reject':
         throw new Error('User rejected transaction');
       case 'block':
@@ -253,15 +248,7 @@ export class WalletProxyProvider implements WalletAdapter {
           message: message,
           messagePreview: new TextDecoder().decode(message.slice(0, 100)),
         } as unknown as ParsedTransaction,
-        {
-          score: 0,
-          level: 'SAFE',
-          flags: [],
-          recommendation: 'APPROVE',
-          explanation: 'Message signing request',
-          instructionRisks: [],
-          addressFlags: [],
-        }
+        createSafeRiskAssessment('Message signing request')
       );
 
       if (decision === 'reject') {
@@ -306,10 +293,7 @@ export class WalletProxyProvider implements WalletAdapter {
 
   private ensureConnected(): void {
     if (!this.connected || !this.publicKey) {
-      throw new WalletNotReadyError(
-        new Error('Wallet not connected'),
-        this.readyState
-      );
+      throw new WalletNotReadyError('Wallet not connected');
     }
   }
 
@@ -340,13 +324,13 @@ export class WalletProxyProvider implements WalletAdapter {
 
     switch (method) {
       case 'signTransaction':
-        return this.realWallet.signTransaction!(payload as Transaction | VersionedTransaction) as Promise<T>;
+        return (this.realWallet as any).signTransaction(payload as Transaction | VersionedTransaction) as Promise<T>;
       case 'signAllTransactions':
-        return this.realWallet.signAllTransactions!(payload as (Transaction | VersionedTransaction)[]) as Promise<T>;
+        return (this.realWallet as any).signAllTransactions(payload as (Transaction | VersionedTransaction)[]) as Promise<T>;
       case 'signAndSendTransaction':
-        return this.realWallet.signAndSendTransaction!(payload as Transaction | VersionedTransaction, options as { skipPreflight?: boolean }) as Promise<T>;
+        return (this.realWallet as any).signAndSendTransaction(payload as Transaction | VersionedTransaction, options as { skipPreflight?: boolean }) as Promise<T>;
       case 'signMessage':
-        return this.realWallet.signMessage!(payload as Uint8Array) as Promise<T>;
+        return (this.realWallet as any).signMessage(payload as Uint8Array) as Promise<T>;
       default:
         throw new Error(`Unknown method: ${method}`);
     }

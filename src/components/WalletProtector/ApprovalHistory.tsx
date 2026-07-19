@@ -10,10 +10,8 @@ import {
   CheckCircle,
   XCircle,
   Shield,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
 } from 'lucide-react';
 import type { TransactionRecord } from '../../lib/wallet-proxy/useWalletSimulator';
 

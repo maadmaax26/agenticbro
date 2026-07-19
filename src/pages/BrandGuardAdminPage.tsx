@@ -70,13 +70,25 @@ interface AdminSubscription {
   stripe_subscription_id: string | null;
 }
 
-type EditSection = 'brands' | 'subscription' | 'brand-details';
+interface AdminPilot {
+  id: string;
+  promo_code: string;
+  status: 'active' | 'expired' | 'canceled';
+  source: 'signup' | 'admin';
+  started_at: string;
+  ends_at: string;
+  notification_sent_at: string | null;
+}
+
+type EditSection = 'account' | 'brands' | 'subscription' | 'brand-details';
 
 interface EditAccountState {
   user: AdminUser;
   brands: AdminBrand[];
   subscription: AdminSubscription | null;
   subscriptionDraft: { plan_id: string; status: string; cancel_at_period_end: boolean } | null;
+  pilot: AdminPilot | null;
+  promoCodeDraft: string;
   loading: boolean;
   activeSection: EditSection;
   editingBrand: AdminBrand | null;
@@ -100,6 +112,23 @@ interface AdminStats {
   };
 }
 
+interface PilotRequest {
+  id: string;
+  email: string;
+  company_name: string;
+  brand_name: string;
+  website: string;
+  concern: string;
+  notes: string | null;
+  status: 'pending' | 'approved' | 'fulfilled' | 'declined';
+  approval_mode: 'direct' | 'invite' | null;
+  approval_url: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  fulfilled_at: string | null;
+  matched_user: { user_id: string; email: string; subscription_plan: string | null; subscription_status: string | null } | null;
+}
+
 export function BrandGuardAdminPage() {
   const navigate = useNavigate();
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -112,9 +141,9 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'threats' | 'sla'>('threats');
+  const [activeTab, setActiveTab] = useState<'users' | 'pilots' | 'stats' | 'activity' | 'notifications' | 'operations' | 'threats' | 'sla'>('threats');
   const [slaStatus, setSlaStatus] = useState<any>(null);
-  const [outreachTab, setOutreachTab] = useState<'review'>('review');
+  const [outreachTab, setOutreachTab] = useState<'review' | 'hunt' | 'prospects'>('review');
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -122,6 +151,9 @@ export function BrandGuardAdminPage() {
   const isMobile = useIsMobile();
   const [editAccountState, setEditAccountState] = useState<EditAccountState | null>(null);
   const [editingSaving, setEditingSaving] = useState(false);
+  const [pilotRequests, setPilotRequests] = useState<PilotRequest[]>([]);
+  const [pilotRequestStatus, setPilotRequestStatus] = useState<'pending' | 'approved' | 'fulfilled' | 'declined' | 'all'>('pending');
+  const [pilotActionSaving, setPilotActionSaving] = useState<string | null>(null);
 
   const ADMIN_EMAIL = 'agenticbro@agenticbro.app';
 
@@ -235,6 +267,44 @@ export function BrandGuardAdminPage() {
     }
   }, [activeTab, fetchSlaStatus]);
 
+  const fetchPilotRequests = useCallback(async () => {
+    if (!authToken || !isAdmin) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/pilot-requests?status=${pilotRequestStatus}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.success) setPilotRequests(data.requests || []);
+      else setError(data.error || 'Failed to fetch pilot requests');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    }
+  }, [authToken, isAdmin, pilotRequestStatus]);
+
+  useEffect(() => { if (activeTab === 'pilots') fetchPilotRequests(); }, [activeTab, fetchPilotRequests]);
+
+  const handlePilotRequestAction = async (requestId: string, action: 'approve_direct' | 'approve_invite' | 'decline') => {
+    if (!authToken) return;
+    setPilotActionSaving(`${requestId}:${action}`);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/pilot-request`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ request_id: requestId, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not update pilot request');
+      if (data.approval_url && navigator.clipboard) await navigator.clipboard.writeText(data.approval_url);
+      await fetchPilotRequests();
+      await fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update pilot request');
+    } finally {
+      setPilotActionSaving(null);
+    }
+  };
+
   // Realtime subscription for new notifications
   useEffect(() => {
     if (!supabase || !authToken || !isAdmin) return;
@@ -284,7 +354,7 @@ export function BrandGuardAdminPage() {
   // ── Edit Account modal handlers ────────────────────────────────────────
 
   const handleOpenEdit = async (user: AdminUser) => {
-    setEditAccountState({ user, brands: [], subscription: null, subscriptionDraft: null, loading: true, activeSection: 'brands', editingBrand: null });
+    setEditAccountState({ user, brands: [], subscription: null, subscriptionDraft: null, pilot: null, promoCodeDraft: user.promo_code === 'BGPILOT30' ? user.promo_code : '', loading: true, activeSection: 'account', editingBrand: null });
     try {
       const res = await fetch(`${API_BASE}/admin/user-details?user_id=${user.user_id}`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -297,6 +367,8 @@ export function BrandGuardAdminPage() {
           brands: data.brands || [],
           subscription: sub,
           subscriptionDraft: sub ? { plan_id: sub.plan_id, status: sub.status, cancel_at_period_end: sub.cancel_at_period_end } : null,
+          pilot: data.pilot || null,
+          promoCodeDraft: data.pilot?.status === 'active' ? data.pilot.promo_code : (s.user.promo_code === 'BGPILOT30' ? s.user.promo_code : ''),
           loading: false,
         } : null);
       } else {
@@ -304,6 +376,35 @@ export function BrandGuardAdminPage() {
       }
     } catch {
       setEditAccountState(s => s ? { ...s, loading: false } : null);
+    }
+  };
+
+  const handleUpdatePilot = async () => {
+    if (!authToken || !editAccountState) return;
+    setEditingSaving(true);
+    setError(null);
+    try {
+      const promoCode = editAccountState.promoCodeDraft.trim().toUpperCase();
+      const res = await fetch(`${API_BASE}/admin/pilot`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ owner_id: editAccountState.user.user_id, promo_code: promoCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update pilot promo code');
+      setEditAccountState(s => s ? {
+        ...s,
+        user: { ...s.user, promo_code: data.promo_code, subscription_plan: data.subscription?.plan_id || null, subscription_status: data.subscription?.status || null },
+        promoCodeDraft: data.promo_code || '',
+        pilot: data.pilot || null,
+        subscription: data.subscription || null,
+        subscriptionDraft: data.subscription ? { plan_id: data.subscription.plan_id, status: data.subscription.status, cancel_at_period_end: data.subscription.cancel_at_period_end } : null,
+      } : null);
+      await fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update pilot');
+    } finally {
+      setEditingSaving(false);
     }
   };
 
@@ -508,6 +609,7 @@ export function BrandGuardAdminPage() {
         {(() => {
           const tabs = [
             { id: 'threats', label: '🔍 Threat Intel' },
+            { id: 'pilots', label: '🚀 Pilots' },
             { id: 'users', label: '👥 Users' },
             { id: 'stats', label: '📊 Stats' },
             { id: 'activity', label: '🕐 Activity' },
@@ -584,6 +686,91 @@ export function BrandGuardAdminPage() {
         {error && (
           <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '14px', marginBottom: '16px' }}>
             {error} <button onClick={() => setError(null)} style={{ marginLeft: '8px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+          </div>
+        )}
+
+        {activeTab === 'pilots' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <h2 style={{ color: '#fff', fontSize: '20px', margin: 0 }}>Pilot Requests</h2>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select
+                  value={pilotRequestStatus}
+                  onChange={e => setPilotRequestStatus(e.target.value as typeof pilotRequestStatus)}
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.35)', color: '#fff' }}
+                >
+                  {['pending', 'approved', 'fulfilled', 'declined', 'all'].map(status => <option key={status} value={status}>{status}</option>)}
+                </select>
+                <button
+                  onClick={fetchPilotRequests}
+                  style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.35)', background: 'rgba(139,92,246,0.12)', color: '#fff', cursor: 'pointer' }}
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {pilotRequests.length === 0 && (
+                <div style={{ padding: '24px', borderRadius: '12px', border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(15,15,25,0.8)', color: '#9ca3af', textAlign: 'center' }}>
+                  No pilot requests in this view.
+                </div>
+              )}
+              {pilotRequests.map(request => {
+                const directKey = `${request.id}:approve_direct`;
+                const inviteKey = `${request.id}:approve_invite`;
+                const declineKey = `${request.id}:decline`;
+                return (
+                  <div key={request.id} style={{ padding: '16px', borderRadius: '12px', border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(15,15,25,0.86)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      <div>
+                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '15px' }}>{request.brand_name} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({request.company_name})</span></div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '3px' }}>{request.email} · {request.website}</div>
+                      </div>
+                      <span style={{ alignSelf: 'flex-start', color: request.status === 'pending' ? '#f59e0b' : request.status === 'fulfilled' ? '#22c55e' : request.status === 'declined' ? '#ef4444' : '#60a5fa', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>
+                        {request.status}
+                      </span>
+                    </div>
+                    <div style={{ color: '#d1d5db', fontSize: '13px', lineHeight: 1.5 }}>
+                      Concern: <strong>{request.concern.replace(/_/g, ' ')}</strong>
+                      {request.notes ? <span> · {request.notes}</span> : null}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '8px' }}>
+                      Requested: {formatDate(request.created_at)}
+                      {request.matched_user ? ` · Account found: ${request.matched_user.subscription_plan || 'free'}` : ' · No account matched yet'}
+                    </div>
+                    {request.approval_url && (
+                      <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', color: '#bfdbfe', fontSize: '12px', wordBreak: 'break-all' }}>
+                        Invite: {request.approval_url}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                      <button
+                        onClick={() => handlePilotRequestAction(request.id, 'approve_direct')}
+                        disabled={pilotActionSaving !== null || request.status === 'fulfilled'}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: request.matched_user ? '#16a34a' : 'rgba(34,197,94,0.25)', color: '#fff', cursor: pilotActionSaving || request.status === 'fulfilled' ? 'not-allowed' : 'pointer', opacity: request.matched_user ? 1 : 0.65 }}
+                      >
+                        {pilotActionSaving === directKey ? 'Applying...' : 'Apply Pilot'}
+                      </button>
+                      <button
+                        onClick={() => handlePilotRequestAction(request.id, 'approve_invite')}
+                        disabled={pilotActionSaving !== null || request.status === 'fulfilled'}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.12)', color: '#bfdbfe', cursor: pilotActionSaving || request.status === 'fulfilled' ? 'not-allowed' : 'pointer' }}
+                      >
+                        {pilotActionSaving === inviteKey ? 'Creating...' : 'Create Invite Link'}
+                      </button>
+                      <button
+                        onClick={() => handlePilotRequestAction(request.id, 'decline')}
+                        disabled={pilotActionSaving !== null || request.status === 'fulfilled'}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', cursor: pilotActionSaving || request.status === 'fulfilled' ? 'not-allowed' : 'pointer' }}
+                      >
+                        {pilotActionSaving === declineKey ? 'Declining...' : 'Decline'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -1091,6 +1278,7 @@ export function BrandGuardAdminPage() {
         };
 
         const tabs = [
+          { id: 'account' as EditSection, label: 'Account' },
           { id: 'brands' as EditSection, label: '🏢 Brands' },
           { id: 'subscription' as EditSection, label: '💎 Subscription' },
           ...(eas.editingBrand ? [{ id: 'brand-details' as EditSection, label: '✏️ Edit Brand' }] : []),
@@ -1132,6 +1320,46 @@ export function BrandGuardAdminPage() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                 {eas.loading ? (
                   <div style={{ textAlign: 'center', color: '#8b5cf6', padding: '48px 0', fontSize: '14px' }}>Loading account details...</div>
+
+                ) : eas.activeSection === 'account' ? (
+                  <div style={{ display: 'grid', gap: '18px' }}>
+                    <div>
+                      <label htmlFor="admin-pilot-promo" style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pilot promo code</label>
+                      <input
+                        id="admin-pilot-promo"
+                        type="text"
+                        value={eas.promoCodeDraft}
+                        onChange={e => setEditAccountState(s => s ? { ...s, promoCodeDraft: e.target.value.toUpperCase() } : null)}
+                        placeholder="BGPILOT30"
+                        autoComplete="off"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '14px', textTransform: 'uppercase', boxSizing: 'border-box' }}
+                      />
+                      <div style={{ color: '#9ca3af', fontSize: '12px', lineHeight: 1.5, marginTop: '7px' }}>
+                        Add BGPILOT30 to start a one-time 30-day Fortress pilot now. Clear the field to end an active pilot immediately.
+                      </div>
+                    </div>
+
+                    {eas.pilot && (
+                      <div style={{ padding: '14px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                          <strong style={{ color: '#fff', fontSize: '13px' }}>Pilot history</strong>
+                          <span style={{ color: statusColor(eas.pilot.status), fontSize: '12px', fontWeight: 700, textTransform: 'capitalize' }}>{eas.pilot.status}</span>
+                        </div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', lineHeight: 1.7 }}>Started: {formatDate(eas.pilot.started_at)}</div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', lineHeight: 1.7 }}>Ends: {formatDate(eas.pilot.ends_at)}</div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', lineHeight: 1.7 }}>Source: {eas.pilot.source}</div>
+                        {eas.pilot.status !== 'active' && <div style={{ color: '#f59e0b', fontSize: '12px', marginTop: '7px' }}>This account cannot reuse the one-time pilot code.</div>}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleUpdatePilot}
+                      disabled={editingSaving || (!!eas.promoCodeDraft.trim() && eas.promoCodeDraft.trim().toUpperCase() !== 'BGPILOT30')}
+                      style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: editingSaving || (!!eas.promoCodeDraft.trim() && eas.promoCodeDraft.trim().toUpperCase() !== 'BGPILOT30') ? 0.5 : 1 }}
+                    >
+                      {editingSaving ? 'Saving...' : eas.promoCodeDraft.trim() ? 'Apply Pilot Code' : 'Remove Pilot Code'}
+                    </button>
+                  </div>
 
                 ) : eas.activeSection === 'brands' ? (
                   /* ── Brands list ───────────────────────────────────────── */

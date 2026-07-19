@@ -115,6 +115,9 @@
     "api/brand-guard/weekly-briefing-worker.ts": {
       "maxDuration": 300
     },
+    "api/brand-guard/pilot-expiration-worker.ts": {
+      "maxDuration": 60
+    },
     "api/brand-guard/dmarc-ingest.ts": {
       "maxDuration": 30
     },
@@ -274,6 +277,10 @@
     {
       "path": "/api/brand-guard/cron-send-drafts",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/pilot-expiration-worker",
+      "schedule": "0 * * * *"
     }
   ]
 }

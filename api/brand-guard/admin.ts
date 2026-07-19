@@ -23,6 +23,8 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
+import { activateBrandGuardPilot, BRAND_GUARD_PILOT_CODE, endBrandGuardPilot } from '../_lib/brand-guard-pilot.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -304,6 +306,170 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         credits: summary,
       },
     });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GET /pilot-requests — Review requested 30-day pilots
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && path === '/pilot-requests') {
+    const status = url.searchParams.get('status') || 'pending';
+    let query = serviceClient
+      .from('brand_guard_pilot_requests')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (status !== 'all') query = query.eq('status', status);
+    const { data, error } = await query;
+    if (error) { res.status(500).json({ error: error.message }); return; }
+
+    const emails = [...new Set((data || []).map((r: Record<string, unknown>) => String(r.email || '').toLowerCase()).filter(Boolean))];
+    const userByEmail: Record<string, { user_id: string; email: string; subscription_plan: string | null; subscription_status: string | null }> = {};
+    if (emails.length) {
+      const { data: users } = await serviceClient
+        .from('brand_guard_admin_all_users')
+        .select('user_id, email')
+        .in('email', emails);
+      const ids = (users || []).map((u: Record<string, unknown>) => String(u.user_id)).filter(Boolean);
+      const subscriptions: Record<string, { plan_id: string; status: string }> = {};
+      if (ids.length) {
+        const { data: subs } = await serviceClient
+          .from('brand_guard_subscriptions')
+          .select('owner_id, plan_id, status')
+          .in('owner_id', ids)
+          .in('status', ['active', 'trialing', 'trial_ending'])
+          .order('created_at', { ascending: false });
+        for (const sub of (subs || []) as Array<Record<string, string>>) {
+          if (!subscriptions[sub.owner_id]) subscriptions[sub.owner_id] = { plan_id: sub.plan_id, status: sub.status };
+        }
+      }
+      for (const user of (users || []) as Array<Record<string, string>>) {
+        const email = String(user.email || '').toLowerCase();
+        userByEmail[email] = {
+          user_id: user.user_id,
+          email,
+          subscription_plan: subscriptions[user.user_id]?.plan_id || null,
+          subscription_status: subscriptions[user.user_id]?.status || null,
+        };
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      requests: (data || []).map((request: Record<string, unknown>) => ({
+        ...request,
+        matched_user: userByEmail[String(request.email || '').toLowerCase()] || null,
+        approval_url: request.approval_token ? `https://agenticbro.app/brand-guard?pilot_request=${request.approval_token}` : null,
+      })),
+    });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PATCH /pilot-request — Approve/decline a requested pilot
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'PATCH' && path === '/pilot-request') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const requestId = String(body.request_id || '');
+    const action = String(body.action || '');
+    if (!requestId) { res.status(400).json({ error: 'request_id is required' }); return; }
+
+    const { data: request, error: requestError } = await serviceClient
+      .from('brand_guard_pilot_requests')
+      .select('*')
+      .eq('id', requestId)
+      .maybeSingle();
+    if (requestError) { res.status(500).json({ error: requestError.message }); return; }
+    if (!request) { res.status(404).json({ error: 'Pilot request not found.' }); return; }
+
+    try {
+      if (action === 'decline') {
+        const { data, error } = await serviceClient
+          .from('brand_guard_pilot_requests')
+          .update({
+            status: 'declined',
+            reviewed_by: authResult.id,
+            reviewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', requestId)
+          .select('*')
+          .single();
+        if (error) throw error;
+        res.status(200).json({ success: true, request: data });
+        return;
+      }
+
+      if (action === 'approve_invite') {
+        const token = String((request as Record<string, unknown>).approval_token || randomUUID());
+        const { data, error } = await serviceClient
+          .from('brand_guard_pilot_requests')
+          .update({
+            status: 'approved',
+            approval_mode: 'invite',
+            approval_token: token,
+            reviewed_by: authResult.id,
+            reviewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', requestId)
+          .select('*')
+          .single();
+        if (error) throw error;
+        res.status(200).json({
+          success: true,
+          request: data,
+          approval_url: `https://agenticbro.app/brand-guard?pilot_request=${token}`,
+        });
+        return;
+      }
+
+      if (action === 'approve_direct') {
+        let ownerId = String((request as Record<string, unknown>).owner_id || body.owner_id || '');
+        if (!ownerId) {
+          const { data: matched } = await serviceClient
+            .from('brand_guard_admin_all_users')
+            .select('user_id')
+            .eq('email', String((request as Record<string, unknown>).email || '').toLowerCase())
+            .maybeSingle();
+          ownerId = String((matched as Record<string, unknown> | null)?.user_id || '');
+        }
+        if (!ownerId) {
+          res.status(409).json({ error: 'No matching account exists yet. Approve with invite instead.' });
+          return;
+        }
+
+        const pilot = await activateBrandGuardPilot(serviceClient, {
+          ownerId,
+          promoCode: BRAND_GUARD_PILOT_CODE,
+          source: 'admin',
+          startedAt: new Date().toISOString(),
+          createdBy: authResult.id,
+        });
+        const { data, error } = await serviceClient
+          .from('brand_guard_pilot_requests')
+          .update({
+            owner_id: ownerId,
+            status: 'fulfilled',
+            approval_mode: 'direct',
+            pilot_id: pilot.id,
+            reviewed_by: authResult.id,
+            reviewed_at: new Date().toISOString(),
+            fulfilled_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', requestId)
+          .select('*')
+          .single();
+        if (error) throw error;
+        res.status(200).json({ success: true, request: data, pilot });
+        return;
+      }
+
+      res.status(400).json({ error: 'Unsupported pilot request action.' });
+    } catch (error) {
+      res.status(409).json({ error: error instanceof Error ? error.message : 'Could not update pilot request.' });
+    }
     return;
   }
 
@@ -686,7 +852,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const userId = url.searchParams.get('user_id');
     if (!userId) { res.status(400).json({ error: 'user_id is required' }); return; }
 
-    const [brandsResult, subscriptionResult] = await Promise.all([
+    const [brandsResult, subscriptionResult, pilotResult] = await Promise.all([
       serviceClient
         .from('brand_monitors')
         .select('id, brand_name, brand_handle, brand_domain, platforms, scan_frequency, last_scan_at, is_active, scan_count')
@@ -700,13 +866,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      serviceClient
+        .from('brand_guard_pilots')
+        .select('*')
+        .eq('owner_id', userId)
+        .maybeSingle(),
     ]);
 
     res.status(200).json({
       success: true,
       brands: brandsResult.data || [],
       subscription: subscriptionResult.data || null,
+      pilot: pilotResult.data || null,
     });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PATCH /pilot — Add or remove the 30-day Fortress pilot promo (admin)
+  // ══════════════════════════════════════════════════════════════════════════
+  if (req.method === 'PATCH' && path === '/pilot') {
+    const body = req.body && Object.keys(req.body).length ? req.body : await parseBody(req);
+    const ownerId = String(body.owner_id || '');
+    const promoCode = String(body.promo_code || '').trim().toUpperCase();
+    if (!ownerId) { res.status(400).json({ error: 'owner_id is required' }); return; }
+    if (promoCode && promoCode !== BRAND_GUARD_PILOT_CODE) {
+      res.status(400).json({ error: `Only ${BRAND_GUARD_PILOT_CODE} is valid for this pilot.` });
+      return;
+    }
+
+    try {
+      if (promoCode) {
+        const pilot = await activateBrandGuardPilot(serviceClient, {
+          ownerId,
+          promoCode,
+          source: 'admin',
+          startedAt: new Date().toISOString(),
+          createdBy: authResult.id,
+        });
+        const { data: subscription } = await serviceClient.from('brand_guard_subscriptions')
+          .select('id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, monthly_credits_included, stripe_subscription_id')
+          .eq('id', pilot.subscription_id).single();
+        res.status(200).json({ success: true, promo_code: BRAND_GUARD_PILOT_CODE, pilot, subscription });
+        return;
+      }
+
+      const { data: pilot } = await serviceClient.from('brand_guard_pilots')
+        .select('*').eq('owner_id', ownerId).eq('status', 'active').maybeSingle();
+      if (pilot) await endBrandGuardPilot(serviceClient, pilot, 'canceled');
+      else await serviceClient.from('brand_guard_credits').update({ promo_code: null })
+        .eq('owner_id', ownerId).eq('promo_code', BRAND_GUARD_PILOT_CODE);
+      const { data: remainingSubscription } = await serviceClient.from('brand_guard_subscriptions')
+        .select('id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, monthly_credits_included, stripe_subscription_id')
+        .eq('owner_id', ownerId).in('status', ['active', 'trialing', 'trial_ending'])
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      res.status(200).json({ success: true, promo_code: null, pilot: pilot ? { ...pilot, status: 'canceled' } : null, subscription: remainingSubscription || null });
+    } catch (error) {
+      res.status(409).json({ error: error instanceof Error ? error.message : 'Could not update pilot.' });
+    }
     return;
   }
 

@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const failures: Array<{ monitor_id: string; error: string }> = [];
   for (const monitor of monitors || []) {
     const { data: subscription } = await db.from('brand_guard_subscriptions').select('plan_id')
-      .eq('owner_id', monitor.owner_id).eq('status', 'active')
+      .eq('owner_id', monitor.owner_id).in('status', ['active', 'trialing', 'trial_ending'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
     const plan = subscription?.plan_id || 'free';
     const config = PLAN_SCHEDULE[plan] || PLAN_SCHEDULE.free;

@@ -138,6 +138,7 @@ export interface ParsedInstruction {
     amount?: number;
     token?: string;
     authority?: string;
+    currentAuthority?: string;
     authorityType?: string;
     delegate?: string;
     amountRaw?: string;
@@ -453,6 +454,7 @@ function decodeSplTokenInstruction(
         details: {
           source: account,
           authority: newAuthority ?? 'DISABLED',
+          currentAuthority,
           authorityType: authName,
         },
         flags,
@@ -742,6 +744,7 @@ export function parseInstruction(
   index: number,
   signerKeys: string[]
 ): ParsedInstruction {
+  void signerKeys;
   const programId = ix.programId.toString();
   const programName = PROGRAM_BY_ID[programId] ?? 'Unknown';
 

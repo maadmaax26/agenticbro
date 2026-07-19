@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(401).json({ error: 'Unauthorized' }); return;
   }
   const { data: subscriptions, error } = await db.from('brand_guard_subscriptions').select('owner_id')
-    .eq('plan_id', 'fortress').eq('status', 'active');
+    .eq('plan_id', 'fortress').in('status', ['active', 'trialing', 'trial_ending']);
   if (error) { res.status(500).json({ error: error.message }); return; }
   const now = new Date();
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));

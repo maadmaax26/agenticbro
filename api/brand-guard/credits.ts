@@ -497,6 +497,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           monthly_credits_used: subscription.monthly_credits_used,
           brands_included: subscription.brands_included,
           price_usd: planConfig?.price_usd || 0,
+          stripe_subscription_id: subscription.stripe_subscription_id,
         } : null,
         credits: credits || { total_credits: 25, used_credits: 0, free_credits_remaining: 25 },
         is_free: !subscription,

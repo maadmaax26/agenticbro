@@ -5,14 +5,13 @@
  * Integrates with the approval tracking system.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,
   RefreshCw,
-  ExternalLink,
   Clock,
 } from 'lucide-react';
 import { useApprovalManager, type Approval } from '../../lib/wallet-proxy/useApprovalManager';
@@ -212,7 +211,7 @@ export function ApprovalManager({ onRevoke, className = '' }: ApprovalManagerPro
                       </span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      Spender: {shortenAddress(approval.spenderAddress)}
+                      Spender: {shortenAddress(approval.authority)}
                     </div>
                     <div className="text-xs text-gray-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />

@@ -88,6 +88,16 @@ const FREQUENCIES = [
   { id: 'monthly', label: 'Monthly', desc: 'Low-risk monitoring' },
 ];
 
+const PILOT_CONCERNS = [
+  { id: 'impersonation', label: 'Impersonation' },
+  { id: 'fake_store', label: 'Fake store' },
+  { id: 'spoofed_email', label: 'Spoofed email' },
+  { id: 'fake_ads', label: 'Fake ads' },
+  { id: 'lookalike_domain', label: 'Lookalike domain' },
+  { id: 'marketplace_clone', label: 'Marketplace clone' },
+  { id: 'other', label: 'Other' },
+];
+
 // Payment wallets
 const PAYMENT_WALLETS = {
   solana: '9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F',
@@ -117,6 +127,7 @@ export function BrandGuardPage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [signupPromoCode, setSignupPromoCode] = useState('');
   const [promoCode, setPromoCode] = useState('');
 
   // Brand state
@@ -135,6 +146,7 @@ export function BrandGuardPage() {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  void subscriptionError;
   const checkoutStartedRef = useRef(false);
 
   // Alert bell state
@@ -156,9 +168,22 @@ export function BrandGuardPage() {
   const selectedPlan = searchParams.get('plan');
   const checkoutRequested = searchParams.get('checkout') === 'success';
   const checkoutSessionId = searchParams.get('session_id');
+  const pilotRequestToken = searchParams.get('pilot_request') || '';
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>(
     checkoutRequested ? 'verifying' : 'idle',
   );
+
+  const [showPilotRequestForm, setShowPilotRequestForm] = useState(false);
+  const [pilotRequestForm, setPilotRequestForm] = useState({
+    email: '',
+    company_name: '',
+    brand_name: '',
+    website: '',
+    concern: 'impersonation',
+    notes: '',
+  });
+  const [pilotRequestLoading, setPilotRequestLoading] = useState(false);
+  const [pilotRequestMessage, setPilotRequestMessage] = useState<string | null>(null);
 
   // Store realtime subscriptions for cleanup
   const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
@@ -197,6 +222,14 @@ export function BrandGuardPage() {
       return () => subscription.unsubscribe();
     }
   }, []);
+
+  useEffect(() => {
+    if (pilotRequestToken) {
+      setLoginMode('register');
+      setShowPilotRequestForm(false);
+      setLoginError('Pilot invitation loaded. Create an account or sign in with the approved email to activate it.');
+    }
+  }, [pilotRequestToken]);
 
   // ── Realtime subscriptions for Brand Guard alerts and subscriptions ──────────
   useEffect(() => {
@@ -253,12 +286,27 @@ export function BrandGuardPage() {
   }, [authToken, supabase]);
 
   // ── Handle email login/register ───────────────────────────────────────────────
+  const activateSignupPilot = async (accessToken: string, code: string, requestToken = '') => {
+    if (!code && !requestToken) return;
+    const response = await fetch(`${API_BASE}/pilot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ promo_code: code, request_token: requestToken }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not activate the Brand Guard pilot.');
+  };
+
   const handleLogin = async () => {
     setLoginLoading(true);
     setLoginError(null);
     try {
       if (loginMode === 'register') {
-        const result = await signUpWithEmail(loginEmail, loginPassword);
+        const normalizedPromo = signupPromoCode.trim().toUpperCase();
+        if (normalizedPromo && normalizedPromo !== 'BGPILOT30') {
+          throw new Error('Promo code is not valid.');
+        }
+        const result = await signUpWithEmail(loginEmail, loginPassword, normalizedPromo ? { promo_code: normalizedPromo } : {});
         if (result.error) throw new Error(result.error.message || 'Sign up failed');
         
         if ((result as any).needsConfirmation) {
@@ -278,6 +326,7 @@ export function BrandGuardPage() {
               if (signInUser) {
                 const { data } = await supabase!.auth.getSession();
                 if (data?.session?.access_token) {
+                  await activateSignupPilot(data.session.access_token, normalizedPromo, pilotRequestToken);
                   setAuthToken(data.session.access_token);
                   setUserId(data.session.user.id);
                   setLoginError(null);
@@ -296,6 +345,7 @@ export function BrandGuardPage() {
           // Auto-confirmed — try to get session
           const { data } = await supabase!.auth.getSession();
           if (data?.session?.access_token) {
+            await activateSignupPilot(data.session.access_token, normalizedPromo, pilotRequestToken);
             setAuthToken(data.session.access_token);
             setUserId(data.session.user.id);
           } else {
@@ -310,6 +360,8 @@ export function BrandGuardPage() {
         if (user) {
           const { data } = await supabase!.auth.getSession();
           if (data?.session?.access_token) {
+            const storedPromo = String(data.session.user.user_metadata?.promo_code || '');
+            await activateSignupPilot(data.session.access_token, storedPromo, pilotRequestToken);
             setAuthToken(data.session.access_token);
             setUserId(data.session.user.id);
           } else {
@@ -323,10 +375,12 @@ export function BrandGuardPage() {
               const confirmData = await confirmRes.json();
               if (confirmData.success && confirmData.confirmed) {
                 // Confirmed now — retry login
-                const { user: retryUser, error: retryErr } = await signInWithEmail(loginEmail, loginPassword);
+                const { user: retryUser } = await signInWithEmail(loginEmail, loginPassword);
                 if (retryUser) {
                   const { data } = await supabase!.auth.getSession();
                   if (data?.session?.access_token) {
+                    const storedPromo = String(data.session.user.user_metadata?.promo_code || '');
+                    await activateSignupPilot(data.session.access_token, storedPromo, pilotRequestToken);
                     setAuthToken(data.session.access_token);
                     setUserId(data.session.user.id);
                     setLoginError(null);
@@ -366,8 +420,42 @@ export function BrandGuardPage() {
     }
   };
 
+  const handlePilotRequestSubmit = async () => {
+    setPilotRequestLoading(true);
+    setPilotRequestMessage(null);
+    try {
+      const payload = {
+        ...pilotRequestForm,
+        email: pilotRequestForm.email || loginEmail,
+      };
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+      const res = await fetch(`${API_BASE}/pilot-request`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not submit pilot request.');
+      setPilotRequestMessage('Request received. We will review the brand fit and follow up with next steps.');
+      setPilotRequestForm({
+        email: '',
+        company_name: '',
+        brand_name: '',
+        website: '',
+        concern: 'impersonation',
+        notes: '',
+      });
+    } catch (err) {
+      setPilotRequestMessage(err instanceof Error ? err.message : 'Could not submit pilot request.');
+    } finally {
+      setPilotRequestLoading(false);
+    }
+  };
+
   // ── Password Reset ────────────────────────────────────────────────────────
   const [resetSent, setResetSent] = useState(false);
+  void resetSent;
 
   const handleResetPassword = async () => {
     if (!loginEmail) { setLoginError('Enter your email address'); return; }
@@ -603,10 +691,6 @@ export function BrandGuardPage() {
     }
   }, [authToken]);
 
-  const handleChangePlan = useCallback(() => {
-    setShowPlansModal(true);
-  }, []);
-
   const handleCancelSubscription = useCallback(async () => {
     if (!authToken) { setSubscriptionError('Please sign in first'); return; }
     setSubscriptionLoading(true);
@@ -732,7 +816,7 @@ export function BrandGuardPage() {
       const ok = await deductCredit('health_refresh');
       if (!ok) { setRefreshingHealth(false); return; }
       // Run all scan types in parallel for the brand
-      const results = await Promise.allSettled([
+      await Promise.allSettled([
         fetch(`${API_BASE}/impersonator-scan`, {
           method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
           body: JSON.stringify({ brand_id: activeBrand.id, brand_name: activeBrand.brand_name, brand_handle: activeBrand.brand_handle, brand_domain: activeBrand.brand_domain || '', platforms: activeBrand.platforms }),
@@ -914,7 +998,7 @@ export function BrandGuardPage() {
 
         // If polling timed out, keep the preview results but mark as not-pending
         if (!done) {
-          setScanResult(prev => prev ? { ...prev, real_scan_pending: false, poll_timeout: true } : prev);
+          setScanResult((prev: any) => prev ? { ...prev, real_scan_pending: false, poll_timeout: true } : prev);
         }
       }
     } catch (err) {
@@ -1164,8 +1248,99 @@ export function BrandGuardPage() {
 
             {(loginMode === 'login' || loginMode === 'register') && (
             <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '20px' }}>
-              <span style={{ color: dark.green, fontWeight: 600, fontSize: '14px' }}>🎁 25 free scans included with sign-up</span>
+              <span style={{ color: dark.green, fontWeight: 600, fontSize: '14px' }}>
+                {pilotRequestToken
+                  ? 'Approved pilot invitation ready'
+                  : loginMode === 'register' && signupPromoCode.trim().toUpperCase() === 'BGPILOT30'
+                  ? '30-day Fortress pilot included'
+                  : '25 free scans included with sign-up'}
+              </span>
             </div>
+            )}
+
+            {(loginMode === 'login' || loginMode === 'register') && !pilotRequestToken && (
+              <div style={{ marginBottom: '20px' }}>
+                <button
+                  onClick={() => {
+                    setShowPilotRequestForm(v => !v);
+                    setPilotRequestMessage(null);
+                    setPilotRequestForm(f => ({ ...f, email: f.email || loginEmail }));
+                  }}
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(59,130,246,0.35)', background: 'rgba(59,130,246,0.1)',
+                    color: '#bfdbfe', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  Request 30-Day Pilot
+                </button>
+                {showPilotRequestForm && (
+                  <div style={{ marginTop: '12px', padding: '14px', borderRadius: '12px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.25)', display: 'grid', gap: '10px' }}>
+                    <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+                      <input
+                        type="email"
+                        value={pilotRequestForm.email || loginEmail}
+                        onChange={e => setPilotRequestForm(f => ({ ...f, email: e.target.value }))}
+                        placeholder="Work email"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }}
+                      />
+                      <input
+                        type="text"
+                        value={pilotRequestForm.company_name}
+                        onChange={e => setPilotRequestForm(f => ({ ...f, company_name: e.target.value }))}
+                        placeholder="Company"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+                      <input
+                        type="text"
+                        value={pilotRequestForm.brand_name}
+                        onChange={e => setPilotRequestForm(f => ({ ...f, brand_name: e.target.value }))}
+                        placeholder="Brand name"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }}
+                      />
+                      <input
+                        type="text"
+                        value={pilotRequestForm.website}
+                        onChange={e => setPilotRequestForm(f => ({ ...f, website: e.target.value }))}
+                        placeholder="Website"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <select
+                      value={pilotRequestForm.concern}
+                      onChange={e => setPilotRequestForm(f => ({ ...f, concern: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }}
+                    >
+                      {PILOT_CONCERNS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                    </select>
+                    <textarea
+                      value={pilotRequestForm.notes}
+                      onChange={e => setPilotRequestForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="Optional note"
+                      rows={3}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box', resize: 'vertical' }}
+                    />
+                    {pilotRequestMessage && (
+                      <div style={{ color: pilotRequestMessage.includes('received') ? dark.green : dark.red, fontSize: '12px', lineHeight: 1.4 }}>
+                        {pilotRequestMessage}
+                      </div>
+                    )}
+                    <button
+                      onClick={handlePilotRequestSubmit}
+                      disabled={pilotRequestLoading}
+                      style={{
+                        width: '100%', padding: '11px 14px', borderRadius: '10px', border: 'none',
+                        background: pilotRequestLoading ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${dark.accent}, #6d28d9)`,
+                        color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pilotRequestLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {pilotRequestLoading ? 'Submitting...' : 'Submit Pilot Request'}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {(loginMode === 'login' || loginMode === 'register') && (
@@ -1200,6 +1375,33 @@ export function BrandGuardPage() {
                   onKeyDown={e => e.key === 'Enter' && handleLogin()}
                 />
               </div>
+              {loginMode === 'register' && (
+                <div>
+                  <label htmlFor="brand-guard-promo" style={{ color: dark.text, fontSize: '13px', fontWeight: 600, marginBottom: '4px', display: 'block' }}>
+                    Promo code <span style={{ color: dark.textMuted, fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <input
+                    id="brand-guard-promo"
+                    type="text"
+                    value={signupPromoCode}
+                    onChange={e => setSignupPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code"
+                    autoComplete="off"
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '10px', textTransform: 'uppercase',
+                      background: signupPromoCode.trim().toUpperCase() === 'BGPILOT30' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.4)',
+                      border: `1px solid ${signupPromoCode.trim().toUpperCase() === 'BGPILOT30' ? 'rgba(34,197,94,0.5)' : dark.border}`,
+                      color: '#fff', fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  />
+                  {signupPromoCode.trim().toUpperCase() === 'BGPILOT30' && (
+                    <div style={{ marginTop: '7px', color: dark.green, fontSize: '12px', lineHeight: 1.4 }}>
+                      30-day Fortress pilot: full monitoring access starts when this account is created.
+                    </div>
+                  )}
+                </div>
+              )}
               {loginMode === 'login' && (
                 <div style={{ textAlign: 'right', marginTop: '4px' }}>
                   <button
@@ -2515,7 +2717,7 @@ export function BrandGuardPage() {
                                 const isNew = vAge?.is_new as boolean | undefined;
                                 const isActive = vActive?.is_active as boolean | undefined;
                                 const hasBrand = vActive?.has_brand_content as boolean | undefined;
-                                const impConf = vActive?.impersonation_confidence as number | undefined;
+                                const impConf = (vActive?.impersonation_confidence as number | undefined) ?? 0;
                                 const vTitle = vActive?.title as string | undefined;
                                 return (
                                   <div key={i} style={{ padding: '10px', borderRadius: '8px',
@@ -2525,7 +2727,7 @@ export function BrandGuardPage() {
                                     <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{String(v.domain || v.name || '?')}</div>
                                     <div style={{ color: dark.textMuted, fontSize: '11px', marginTop: '2px' }}>
                                       {String(v.type || v.risk || 'Lookalike')}
-                                      {v.risk_level && <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
+                                      {Boolean(v.risk_level) && <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
                                         background: v.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : v.risk_level === 'HIGH' ? 'rgba(245,158,11,0.2)' : 'rgba(139,92,246,0.2)',
                                         color: v.risk_level === 'CRITICAL' ? '#ef4444' : v.risk_level === 'HIGH' ? '#f59e0b' : '#8b5cf6'
                                       }}>{String(v.risk_level)}</span>}
@@ -2650,11 +2852,8 @@ export function BrandGuardPage() {
                             const bIndicators = (ba?.business_indicators as string[]) || [];
                             const sIndicators = (ba?.suspicious_indicators as string[]) || [];
                             const patterns = (sd?.patterns_detected as Record<string, unknown>[]) || (scanResult.scam_patterns as Record<string, unknown>[]) || [];
-                            const evidence = (Array.isArray(scanResult.evidence) ? scanResult.evidence : []) as string[];
-                            const phoneValid = pr?.valid !== false;
                             const phoneCarrier = (pr?.carrier as string) || 'Unknown';
                             const phoneLineType = (pr?.line_type as string) || 'unknown';
-                            const phoneRiskLevel = (pr?.level as string) || 'UNKNOWN';
                             return (
                               <>
                                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -2774,7 +2973,7 @@ export function BrandGuardPage() {
                                   {spf ? (spf.isStrict ? '✅ Strict (-all)' : spf.isSoftFail ? '⚠️ Soft (~all)' : spf.isPassAll ? '🚨 Open (+all)' : '? Neutral') : '❌ Missing'}
                                 </div>
                               </div>
-                              {spf && spf.raw && (
+                              {spf && Boolean(spf.raw) && (
                                 <div style={{ fontSize: '11px', color: dark.textMuted, wordBreak: 'break-all' }}>{String(spf.raw)}</div>
                               )}
                               {spf && Array.isArray(spf.issues) && (spf.issues as string[]).length > 0 && (
@@ -2792,7 +2991,7 @@ export function BrandGuardPage() {
                                   {dmarc ? (dmarc.policy === 'reject' ? '✅ Reject' : dmarc.policy === 'quarantine' ? '⚠️ Quarantine' : dmarc.policy === 'none' ? '🚨 None' : '? Unknown') : '❌ Missing'}
                                 </div>
                               </div>
-                              {dmarc && dmarc.raw && (
+                              {dmarc && Boolean(dmarc.raw) && (
                                 <div style={{ fontSize: '11px', color: dark.textMuted, wordBreak: 'break-all' }}>{String(dmarc.raw)}</div>
                               )}
                               {dmarc && Array.isArray(dmarc.issues) && (dmarc.issues as string[]).length > 0 && (

@@ -14,13 +14,14 @@ import { useState } from 'react';
 export interface Subscription {
   id: string;
   plan_id: string;
-  status: 'active' | 'past_due' | 'canceled' | 'expired' | 'unpaid';
+  status: 'active' | 'trialing' | 'trial_ending' | 'past_due' | 'canceled' | 'expired' | 'unpaid';
   current_period_start: string;
   current_period_end: string;
   scan_limit: number;
   scans_used: number;
   created_at: string;
   updated_at: string;
+  stripe_subscription_id?: string | null;
 }
 
 export interface SubscriptionManagerProps {
@@ -34,6 +35,8 @@ export interface SubscriptionManagerProps {
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   active: { color: 'text-green-400', bg: 'bg-green-900/20', border: 'border-green-500/30' },
+  trialing: { color: 'text-blue-400', bg: 'bg-blue-900/20', border: 'border-blue-500/30' },
+  trial_ending: { color: 'text-amber-400', bg: 'bg-amber-900/20', border: 'border-amber-500/30' },
   past_due: { color: 'text-red-400', bg: 'bg-red-900/20', border: 'border-red-500/30' },
   canceled: { color: 'text-gray-400', bg: 'bg-gray-900/20', border: 'border-gray-500/30' },
   expired: { color: 'text-red-400', bg: 'bg-red-900/20', border: 'border-red-500/30' },
@@ -94,6 +97,8 @@ export function SubscriptionManager({
 
   // Determine if we can show usage bar
   const canShowUsage = subscription && subscription.scan_limit > 0;
+  const hasAccess = subscription && ['active', 'trialing', 'trial_ending'].includes(subscription.status);
+  const isPilot = hasAccess && !subscription.stripe_subscription_id && subscription.plan_id === 'fortress';
 
   return (
     <div className="space-y-6">
@@ -105,11 +110,13 @@ export function SubscriptionManager({
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${subscription.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`w-3 h-3 rounded-full ${hasAccess ? 'bg-green-500' : 'bg-red-500'}`} />
             <div>
               <div className="text-white font-semibold">Subscription Status: {subscription.status.toUpperCase()}</div>
               <div className="text-gray-400 text-sm">
-                {subscription.status === 'active'
+                {isPilot
+                  ? `Pilot access ends: ${formatDate(subscription.current_period_end)}`
+                  : subscription.status === 'active'
                   ? `Next billing: ${formatDate(subscription.current_period_end)}`
                   : `Status updated: ${formatDate(subscription.updated_at)}`}
               </div>
@@ -136,7 +143,7 @@ export function SubscriptionManager({
               Created: {subscription ? formatDate(subscription.created_at) : 'N/A'}
             </div>
           </div>
-          {canShowUsage && subscription && subscription.status === 'active' && (
+          {canShowUsage && hasAccess && (
             <div className="text-right">
               <div className={`text-lg font-bold ${usagePercent >= 90 ? 'text-red-400' : 'text-green-400'}`}>
                 {subscription.scans_used} / {subscription.scan_limit} scans
@@ -169,7 +176,7 @@ export function SubscriptionManager({
 
       {/* Action buttons */}
       <div className="space-y-4">
-        {subscription && subscription.status === 'active' && (
+        {subscription && subscription.status === 'active' && subscription.stripe_subscription_id && (
           <button
             onClick={onManageBilling}
             disabled={loading}
@@ -189,7 +196,7 @@ export function SubscriptionManager({
           {subscription ? 'Change Plan' : 'Upgrade to Pro'}
         </button>
 
-        {subscription && subscription.status === 'active' && (
+        {subscription && subscription.status === 'active' && subscription.stripe_subscription_id && (
           <>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
