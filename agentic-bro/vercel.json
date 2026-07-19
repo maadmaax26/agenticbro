@@ -1,23 +1,11 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "dist/src/index.js",
-      "use": "@vercel/node"
-    }
+    {"src": "api/brand-guard-sla.ts", "use": "@vercel/node"}
   ],
   "routes": [
-    {
-      "src": "/admin",
-      "dest": "/dist/src/index.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/dist/src/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/src/index.js"
-    }
+    {"src": "/api/brand-guard/sla-status", "dest": "/api/brand-guard-sla.ts"},
+    {"src": "/admin", "dest": "/public/admin/index.html"},
+    {"src": "/(.*)", "dest": "/dist/src/index.js"}
   ]
 }

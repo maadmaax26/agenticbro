@@ -1,75 +1,94 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-
 /**
- * Brand Guard SLA Status API
+ * Brand Guard SLA Status — Vercel Serverless Function
  * 
  * GET /api/brand-guard/sla-status
- * Returns the latest SLA monitor status for the admin dashboard.
- * 
- * The status is written by scripts/brand-guard-sla-monitor.py every 5 min
- * to output/brand-guard-sla-status.json
+ * Returns latest SLA monitor status from Supabase sla_status table.
+ * Written by scripts/brand-guard-sla-monitor.py every 5 minutes.
  */
 
-const STATUS_FILE = '/Users/efinney/.openclaw/workspace/output/brand-guard-sla-status.json';
-
-interface SLACheck {
-  id: string;
-  name: string;
-  description: string;
-  status: 'pass' | 'fail';
-  icon: string;
-  details: string;
-  metric?: number;
-  threshold?: number;
-}
-
-interface SLAStatus {
-  timestamp: string;
-  overall_status: 'healthy' | 'degraded';
-  issues_count: number;
-  checks_total: number;
-  checks_passed: number;
-  checks_failed: number;
-  checks: SLACheck[];
-}
-
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  // Only allow GET
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: 'Method not allowed' }));
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const fs = await import('fs');
-    
-    if (!fs.existsSync(STATUS_FILE)) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({
-        timestamp: new Date().toISOString(),
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!SUPABASE_KEY) {
+    // Fallback to anon key for public read (RLS allows SELECT)
+    const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!ANON_KEY) {
+      return res.status(200).json({
         overall_status: 'unknown',
-        issues_count: 0,
         checks_total: 9,
         checks_passed: 0,
         checks_failed: 0,
         checks: [],
-        message: 'SLA monitor has not run yet. Status file not found.',
-      }));
+        message: 'Supabase key not configured',
+      });
+    }
+    return fetchSlaStatus(SUPABASE_URL, ANON_KEY, res);
+  }
+
+  return fetchSlaStatus(SUPABASE_URL, SUPABASE_KEY, res);
+}
+
+async function fetchSlaStatus(url, key, res) {
+  try {
+    const resp = await fetch(
+      `${url}/rest/v1/sla_status?order=timestamp.desc&limit=1`,
+      {
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+        },
+      }
+    );
+
+    if (!resp.ok) {
+      return res.status(200).json({
+        overall_status: 'unknown',
+        checks_total: 9,
+        checks_passed: 0,
+        checks_failed: 0,
+        checks: [],
+        message: 'SLA status not available yet',
+      });
     }
 
-    const data = fs.readFileSync(STATUS_FILE, 'utf-8');
-    const status: SLAStatus = JSON.parse(data);
+    const data = await resp.json();
 
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    if (!data || data.length === 0) {
+      return res.status(200).json({
+        overall_status: 'unknown',
+        checks_total: 9,
+        checks_passed: 0,
+        checks_failed: 0,
+        checks: [],
+        message: 'SLA monitor has not run yet',
+      });
+    }
+
+    const status = data[0];
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.status(200).json({
+      timestamp: status.timestamp,
+      overall_status: status.overall_status,
+      issues_count: status.issues_count,
+      checks_total: status.checks_total,
+      checks_passed: status.checks_passed,
+      checks_failed: status.checks_failed,
+      checks: status.checks || [],
     });
-    return res.end(JSON.stringify(status));
   } catch (error) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({
-      error: 'Failed to read SLA status',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    }));
+    return res.status(200).json({
+      overall_status: 'unknown',
+      checks_total: 9,
+      checks_passed: 0,
+      checks_failed: 0,
+      checks: [],
+      message: 'Failed to fetch SLA status',
+      error: error.message,
+    });
   }
 }
