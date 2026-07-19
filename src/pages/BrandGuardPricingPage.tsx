@@ -168,6 +168,10 @@ export function BrandGuardPricingPage() {
     navigate(`/brand-guard?plan=${planId}`);
   };
 
+  const handlePilotRequest = () => {
+    navigate('/brand-guard?request_pilot=1');
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
       {/* ── Navigation ──────────────────────────────────────────────────────── */}
@@ -227,15 +231,21 @@ export function BrandGuardPricingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <button
               onClick={() => handleGetStarted('guardian')}
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-lg transition-all hover:scale-105 shadow-lg shadow-purple-900/30"
+              className="w-full max-w-sm sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-lg transition-all hover:scale-105 shadow-lg shadow-purple-900/30"
             >
               Start Monitoring — $29/mo
             </button>
             <button
               onClick={() => handleGetStarted('free')}
-              className="px-8 py-4 rounded-xl border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-semibold text-lg transition-all"
+              className="w-full max-w-sm sm:w-auto px-8 py-4 rounded-xl border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-semibold text-lg transition-all"
             >
               Try Free (25 scans)
+            </button>
+            <button
+              onClick={handlePilotRequest}
+              className="w-full max-w-sm sm:w-auto px-8 py-4 rounded-xl border border-blue-400/50 bg-blue-500/10 hover:bg-blue-500/20 text-blue-100 font-semibold text-lg transition-all"
+            >
+              Request 30-Day Pilot
             </button>
           </div>
 

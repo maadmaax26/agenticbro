@@ -169,6 +169,7 @@ export function BrandGuardPage() {
   const checkoutRequested = searchParams.get('checkout') === 'success';
   const checkoutSessionId = searchParams.get('session_id');
   const pilotRequestToken = searchParams.get('pilot_request') || '';
+  const requestPilot = searchParams.get('request_pilot') === '1';
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>(
     checkoutRequested ? 'verifying' : 'idle',
   );
@@ -230,6 +231,13 @@ export function BrandGuardPage() {
       setLoginError('Pilot invitation loaded. Create an account or sign in with the approved email to activate it.');
     }
   }, [pilotRequestToken]);
+
+  useEffect(() => {
+    if (requestPilot && !pilotRequestToken) {
+      setLoginMode('register');
+      setShowPilotRequestForm(true);
+    }
+  }, [requestPilot, pilotRequestToken]);
 
   // ── Realtime subscriptions for Brand Guard alerts and subscriptions ──────────
   useEffect(() => {
