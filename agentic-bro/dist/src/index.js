@@ -122,27 +122,12 @@ app.use((err, req, res, next) => {
         },
     });
 });
-// Start server
-app.listen(PORT, () => {
-    console.log('');
-    console.log('╔════════════════════════════════════════════╗');
-    console.log('║                                            ║');
-    console.log('║   🛡️  Agentic Bro API Server              ║');
-    console.log('║                                            ║');
-    console.log('║   Port: ' + PORT + '                              ║');
-    console.log('║   Host: ' + HOST + '                          ║');
-    console.log('║   Environment: ' + (process.env.NODE_ENV || 'development') + '                    ║');
-    console.log('║                                            ║');
-    console.log('║   Status: Running (minimal mode)           ║');
-    console.log('║                                            ║');
-    console.log('║   Endpoints:                               ║');
-    console.log('║   • GET  /health                           ║');
-    console.log('║   • GET  /api/v1                            ║');
-    console.log('║   • POST /api/v1/verify/profile             ║');
-    console.log('║   • POST /api/v1/scan/token                 ║');
-    console.log('║                                            ║');
-    console.log('╚════════════════════════════════════════════╝');
-    console.log('');
-});
+// Vercel serverless export (app.listen for local dev)
+if (process.env.VERCEL) {
+    module.exports = app;
+} else {
+    app.listen(PORT, () => {
+        console.log('Agentic Bro API Server running on port ' + PORT);
+    });
+}
 exports.default = app;
-//# sourceMappingURL=index.js.map
