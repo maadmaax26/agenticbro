@@ -6,6 +6,8 @@
 
 import 'dotenv/config';
 import express from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -85,6 +87,17 @@ app.use('/api/v1/scan', scanRoutes);
 app.use('/api/v1/verify', verifyRoutes);
 app.use('/api/v1/sync', syncRoutes);
 app.use('/api/brand-guard', slaRoutes);
+
+// Serve admin dashboard
+app.get('/admin', (req, res) => {
+  try {
+    const adminHtml = fs.readFileSync(path.join(__dirname, '../../public/admin/index.html'), 'utf-8');
+    res.set('Content-Type', 'text/html');
+    return res.send(adminHtml);
+  } catch {
+    return res.status(404).send('Admin page not found');
+  }
+});
 
 // 404 handler
 app.use((req, res) => {

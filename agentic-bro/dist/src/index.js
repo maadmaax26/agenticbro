@@ -89,6 +89,17 @@ app.use('/api/brand-guard', sla_1.default);
 app.use('/api/brand-guard/takedown', takedown_1.default);
 app.use('/api/brand-guard/fingerprint', fingerprint_1.default);
 app.use('/api/brand-guard/marketplace', marketplace_1.default);
+// Serve admin dashboard
+app.get('/admin', (req, res) => {
+    try {
+        const adminHtml = fs.readFileSync(path.join(__dirname, '../../public/admin/index.html'), 'utf-8');
+        res.set('Content-Type', 'text/html');
+        return res.send(adminHtml);
+    } catch (_a) {
+        return res.status(404).send('Admin page not found');
+    }
+});
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
