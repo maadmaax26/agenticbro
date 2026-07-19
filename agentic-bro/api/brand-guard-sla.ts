@@ -10,13 +10,14 @@ module.exports = async (req, res) => {
   }
 
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  // Try service role key (bypasses RLS), then secret API key, then service role key alt name
+  const SUPABASE_KEY = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
   if (!SUPABASE_KEY) {
     return res.status(200).json({
       overall_status: 'unknown',
       checks_total: 9, checks_passed: 0, checks_failed: 0, checks: [],
-      message: 'No Supabase key configured',
+      message: 'No Supabase key configured. Set SUPABASE_SECRET_API_KEY in Vercel env.',
     });
   }
 
@@ -30,10 +31,11 @@ module.exports = async (req, res) => {
     });
 
     if (!response.ok) {
+      const body = await response.text();
       return res.status(200).json({
         overall_status: 'unknown',
         checks_total: 9, checks_passed: 0, checks_failed: 0, checks: [],
-        message: `Supabase returned ${response.status}`,
+        message: `Supabase returned ${response.status}: ${body.substring(0, 100)}`,
       });
     }
 
