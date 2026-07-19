@@ -7,6 +7,15 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  BriefcaseBusiness,
+  CheckCircle2,
+  Landmark,
+  MapPin,
+  ReceiptText,
+  Rocket,
+  ShoppingBag,
+} from 'lucide-react';
 import { ContactUs } from '../components/ContactUs';
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -155,6 +164,49 @@ const FAQS = [
   },
 ];
 
+const BRAND_GUARD_AUDIENCES = [
+  {
+    icon: ShoppingBag,
+    title: 'Online stores and retailers',
+    description: 'Protect customers from cloned storefronts, copied product listings, fake promotions, and fraudulent checkout pages.',
+  },
+  {
+    icon: MapPin,
+    title: 'Local businesses',
+    description: 'Find fake business listings, phone numbers, social profiles, and invoices redirecting customers or payments.',
+  },
+  {
+    icon: BriefcaseBusiness,
+    title: 'Professional service firms',
+    description: 'Detect fake employee identities, contracts, recruitment offers, support accounts, and lookalike domains.',
+  },
+  {
+    icon: ReceiptText,
+    title: 'Businesses accepting large payments',
+    description: 'Monitor for vendor impersonation, altered invoices, suspicious payment instructions, and account takeover signals.',
+  },
+  {
+    icon: Landmark,
+    title: 'Financial and investment businesses',
+    description: 'Identify fake advisers, support agents, messaging groups, applications, and investment portals using your identity.',
+  },
+  {
+    icon: Rocket,
+    title: 'Growing and rebranding companies',
+    description: 'Watch for copycats exploiting new names, launches, franchises, market expansion, and domain changes.',
+  },
+];
+
+const BRAND_GUARD_FIT_SIGNALS = [
+  'Receive customer payments online or through invoices',
+  'Depend on Google, social media, or messaging apps for leads',
+  'Have customers searching for support or contact information',
+  'Operate recognizable websites, products, or storefronts',
+  'Use distributors, vendors, recruiters, or remote employees',
+  'Have experienced fake accounts, websites, listings, or payment requests',
+  'Are launching, growing, franchising, or rebranding',
+];
+
 // ════════════════════════════════════════════════════════════════════════════════
 // Component
 // ════════════════════════════════════════════════════════════════════════════════
@@ -290,6 +342,56 @@ export function BrandGuardPricingPage() {
                 <div className="text-5xl mb-4">{step.icon}</div>
                 <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                 <p className="text-gray-400 leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Who Needs Brand Guard ───────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/[0.02] border-y border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-3xl mb-10">
+            <p className="text-sm font-semibold uppercase text-cyan-300 mb-3">Built for businesses customers trust</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Who Needs Brand Guard?</h2>
+            <p className="text-gray-400 text-lg leading-relaxed">
+              If a customer could lose money by trusting someone pretending to be your business, Brand Guard is designed for you.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
+            {BRAND_GUARD_AUDIENCES.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="bg-[#0d0d13] p-6 min-h-[190px]">
+                <Icon className="h-7 w-7 text-cyan-300 mb-5" aria-hidden="true" />
+                <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+                <p className="text-sm leading-relaxed text-gray-400">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Brand Guard Fit ─────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16 items-start">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Is Brand Guard right for your business?</h2>
+            <p className="text-gray-400 text-lg leading-relaxed mb-7">
+              Brand Guard is designed for businesses whose reputation, customer relationships, and payment flows depend on people finding the real company.
+            </p>
+            <button
+              onClick={() => handleGetStarted('free')}
+              className="px-6 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-[#071013] font-bold transition-colors"
+            >
+              Scan Your Brand Free
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+            {BRAND_GUARD_FIT_SIGNALS.map((signal) => (
+              <div key={signal} className="flex items-start gap-3 border-b border-white/10 pb-5">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400 mt-0.5" aria-hidden="true" />
+                <span className="text-gray-200 leading-relaxed">{signal}</span>
               </div>
             ))}
           </div>
