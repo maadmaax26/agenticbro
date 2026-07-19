@@ -112,7 +112,8 @@ export function BrandGuardAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [grantAmount, setGrantAmount] = useState(10);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'threats'>('threats');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'activity' | 'notifications' | 'operations' | 'threats' | 'sla'>('threats');
+  const [slaStatus, setSlaStatus] = useState<any>(null);
   const [outreachTab, setOutreachTab] = useState<'review'>('review');
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -215,6 +216,24 @@ export function BrandGuardAdminPage() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
   useEffect(() => { fetchOperations(); }, [fetchOperations]);
+
+  // Fetch SLA status when SLA tab is active
+  const fetchSlaStatus = useCallback(async () => {
+    try {
+      const resp = await fetch('/api/brand-guard/sla-status', { cache: 'no-store' });
+      const data = await resp.json();
+      setSlaStatus(data);
+    } catch (e) {
+      console.error('SLA fetch error:', e);
+    }
+  }, []);
+  useEffect(() => {
+    if (activeTab === 'sla') {
+      fetchSlaStatus();
+      const timer = setInterval(fetchSlaStatus, 30000);
+      return () => clearInterval(timer);
+    }
+  }, [activeTab, fetchSlaStatus]);
 
   // Realtime subscription for new notifications
   useEffect(() => {
@@ -494,6 +513,7 @@ export function BrandGuardAdminPage() {
             { id: 'activity', label: '🕐 Activity' },
             { id: 'notifications', label: '🔔 Notifications' },
             { id: 'operations', label: '⚙ Operations' },
+            { id: 'sla', label: '🛡️ SLA Monitor' },
           ] as const;
           if (isMobile) {
             return (
@@ -947,6 +967,103 @@ export function BrandGuardAdminPage() {
 
             {/* Sub-tab content */}
             {outreachTab === 'review' && <BrandGuardDraftsReview authToken={authToken} />}
+          </div>
+        )}
+
+        {/* ── SLA Monitor Tab ─────────────────────────────────────────── */}
+        {activeTab === 'sla' && (
+          <div>
+            {/* SLA Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+              {(() => {
+                const s = slaStatus || {};
+                const overall = s.overall_status || '—';
+                const overallColor = overall === 'healthy' ? '#4ade80' : overall === 'degraded' ? '#f87171' : '#fbbf24';
+                return (
+                  <>
+                    <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 'bold', color: overallColor }}>{overall.toUpperCase()}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Overall Status</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 'bold', color: '#4ade80' }}>{s.checks_passed ?? '—'}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>✅ Passed</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 'bold', color: '#f87171' }}>{s.checks_failed ?? '—'}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>❌ Failed</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 'bold', color: '#fff' }}>{s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '—'}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Last Updated</div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* SLA Check Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(slaStatus?.checks || []).length === 0 && (
+                <div style={{ background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 24, textAlign: 'center', color: '#9ca3af' }}>
+                  {slaStatus?.message || 'Loading SLA status...'}
+                </div>
+              )}
+              {(slaStatus?.checks || []).map((check: any) => {
+                const isPass = check.status === 'pass';
+                const borderColor = isPass ? 'rgba(74,222,128,0.4)' : 'rgba(248,113,113,0.4)';
+                const bgColor = isPass ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)';
+                return (
+                  <div key={check.id} style={{
+                    background: bgColor, border: `1px solid ${borderColor}`, borderLeft: `4px solid ${borderColor}`,
+                    borderRadius: 12, padding: isMobile ? 14 : 18,
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                  }}>
+                    <div style={{ fontSize: 20, flexShrink: 0 }}>{isPass ? '✅' : '❌'}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: isMobile ? 13 : 15, color: '#fff' }}>{check.name}</span>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 700, flexShrink: 0,
+                          background: isPass ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)',
+                          color: isPass ? '#4ade80' : '#f87171',
+                        }}>{isPass ? 'PASS' : 'FAIL'}</span>
+                      </div>
+                      <div style={{ fontSize: isMobile ? 11 : 12, color: '#6b7280', marginBottom: 6 }}>{check.description}</div>
+                      <div style={{ fontSize: isMobile ? 12 : 13, color: '#9ca3af' }}>{check.details}</div>
+                      {check.metric !== undefined && check.threshold !== undefined && (
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+                            <span>Current: {check.metric}%</span>
+                            <span>Threshold: {check.threshold}%</span>
+                          </div>
+                          <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', width: `${Math.min(100, check.metric)}%`,
+                              background: check.metric >= check.threshold ? '#4ade80' : '#f87171',
+                              borderRadius: 3, transition: 'width 0.3s',
+                            }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <button
+                onClick={() => fetchSlaStatus()}
+                style={{
+                  padding: '10px 24px', background: 'rgba(139,92,246,0.2)',
+                  border: '1px solid rgba(139,92,246,0.4)', borderRadius: 8,
+                  color: '#a78bfa', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                }}>
+                🔄 Refresh Status
+              </button>
+              <span style={{ marginLeft: 12, fontSize: 11, color: '#6b7280' }}>Auto-refresh: every 30s</span>
+            </div>
           </div>
         )}
       </div>
