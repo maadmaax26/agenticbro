@@ -44,8 +44,10 @@ type EntitlementRequest = IncomingMessage & { method?: string; body?: unknown };
 type EntitlementResponse = { status: (code: number) => { json: (body: unknown) => unknown }; setHeader: (name: string, value: string) => unknown };
 
 const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const legacyAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const serviceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const authKey = publishableKey || serviceKey || legacyAnonKey;
 
 export async function entitlementsForOwner(ownerId: string, db = createClient(url, serviceKey)): Promise<EntitlementContext> {
   const { data } = await db.from('brand_guard_subscriptions').select('id, plan_id, status, current_period_end')
@@ -78,7 +80,7 @@ export async function requireBrandGuardEntitlement(
     res.status(401).json({ error: 'authentication_required' });
     return null;
   }
-  const authClient = createClient(url, anonKey);
+  const authClient = createClient(url, authKey);
   const { data, error } = await authClient.auth.getUser(auth.slice(7));
   if (error || !data.user) {
     res.status(401).json({ error: 'invalid_access_token' });

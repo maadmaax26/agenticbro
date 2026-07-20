@@ -27,8 +27,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase Client ──────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const supabaseLegacyAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseAuthKey = supabasePublishableKey || supabaseServiceKey || supabaseLegacyAnonKey;
 const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -360,9 +362,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const authToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
   let userId: string | null = null;
 
-  if (authToken && supabase) {
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser(authToken);
+  if (authToken && supabase && supabaseUrl && supabaseAuthKey) {
+    const authClient = createClient(supabaseUrl, supabaseAuthKey);
+    const { data: { user }, error: authErr } = await authClient.auth.getUser(authToken);
     if (!authErr && user) userId = user.id;
   }
 

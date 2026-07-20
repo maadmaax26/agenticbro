@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { activateBrandGuardPilot } from '../_lib/brand-guard-pilot.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const legacyAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const serviceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const authKey = publishableKey || serviceKey || legacyAnonKey;
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (!['GET', 'POST'].includes(req.method || '')) {
@@ -14,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
   if (!token) { res.status(401).json({ error: 'Authentication required.' }); return; }
 
-  const auth = createClient(supabaseUrl, anonKey);
+  const auth = createClient(supabaseUrl, authKey);
   const { data: { user }, error: authError } = await auth.auth.getUser(token);
   if (authError || !user) { res.status(401).json({ error: 'Invalid session.' }); return; }
   const db = createClient(supabaseUrl, serviceKey);

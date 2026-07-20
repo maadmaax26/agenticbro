@@ -2,8 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const legacyAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const serviceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const authKey = publishableKey || serviceKey || legacyAnonKey;
 
 const VALID_CONCERNS = new Set([
   'impersonation',
@@ -56,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   let ownerId: string | null = null;
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
   if (token) {
-    const auth = createClient(supabaseUrl, anonKey);
+    const auth = createClient(supabaseUrl, authKey);
     const { data: { user } } = await auth.auth.getUser(token);
     ownerId = user?.id || null;
   }

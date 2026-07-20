@@ -28,7 +28,9 @@ import { activateBrandGuardPilot, BRAND_GUARD_PILOT_CODE, endBrandGuardPilot } f
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const supabaseLegacyAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseAuthKey = supabasePublishableKey || supabaseServiceKey || supabaseLegacyAnonKey;
 
 // Outreach pipeline (prospects / signals / outreach_drafts / suppression_list) lives on a
 // SEPARATE Supabase project from the product DB, to isolate its Disk IO. The /review-queue and
@@ -52,7 +54,7 @@ async function getAuthenticatedUserId(req: VercelRequest): Promise<{ id: string;
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.substring(7);
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createClient(supabaseUrl, supabaseAuthKey);
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) return null;
   return { id: user.id, email: user.email || '' };

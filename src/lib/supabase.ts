@@ -11,9 +11,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\\n/g, '').trim();
 // Support both new publishable key format (sb_publishable_...) and legacy anon key (eyJ...)
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublishableKey = String(
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+).replace(/\\n/g, '').trim();
 const AUTH_REQUEST_TIMEOUT_MS = 12_000;
 
 if (!supabaseUrl || !supabasePublishableKey) {
