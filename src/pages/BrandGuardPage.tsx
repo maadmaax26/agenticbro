@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Rocket, X } from 'lucide-react';
 import { supabase, signUpWithEmail, signInWithEmail, signOut } from '../lib/supabase';
 import { TakedownModal } from '../components/brand-guard/TakedownModal';
 import { DeliverySettings } from '../components/brand-guard/DeliverySettings';
@@ -117,6 +118,7 @@ export function BrandGuardPage() {
 
   // Auth
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState('');
 
   const [userId, setUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -185,6 +187,7 @@ export function BrandGuardPage() {
   });
   const [pilotRequestLoading, setPilotRequestLoading] = useState(false);
   const [pilotRequestMessage, setPilotRequestMessage] = useState<string | null>(null);
+  const [pilotRequestSubmitted, setPilotRequestSubmitted] = useState(false);
 
   // Store realtime subscriptions for cleanup
   const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
@@ -196,6 +199,7 @@ export function BrandGuardPage() {
         if (data?.session?.access_token) {
           setAuthToken(data.session.access_token);
           setUserId(data.session.user.id);
+          setUserEmail(data.session.user.email || '');
         }
       } catch { /* not authenticated */ }
       setAuthLoading(false);
@@ -215,9 +219,11 @@ export function BrandGuardPage() {
         if (session?.access_token) {
           setAuthToken(session.access_token);
           setUserId(session.user.id);
+          setUserEmail(session.user.email || '');
         } else {
           setAuthToken(null);
           setUserId(null);
+          setUserEmail('');
         }
       });
       return () => subscription.unsubscribe();
@@ -434,7 +440,7 @@ export function BrandGuardPage() {
     try {
       const payload = {
         ...pilotRequestForm,
-        email: pilotRequestForm.email || loginEmail,
+        email: authToken && userEmail ? userEmail : pilotRequestForm.email || loginEmail,
       };
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (authToken) headers.Authorization = `Bearer ${authToken}`;
@@ -446,6 +452,7 @@ export function BrandGuardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not submit pilot request.');
       setPilotRequestMessage('Request received. We will review the brand fit and follow up with next steps.');
+      setPilotRequestSubmitted(true);
       setPilotRequestForm({
         email: '',
         company_name: '',
@@ -1744,6 +1751,20 @@ export function BrandGuardPage() {
   const totalRemaining = credits?.total_remaining ?? 25;
   const freeRemaining = credits?.free_remaining ?? 25;
   const paidCredits = credits?.paid_credits ?? 0;
+  const isFreeAccount = subscriptionChecked && (!subscription || subscription.plan_id === 'free');
+
+  const openPilotRequest = () => {
+    setPilotRequestMessage(null);
+    setPilotRequestSubmitted(false);
+    setPilotRequestForm(form => ({
+      ...form,
+      email: form.email || userEmail,
+      company_name: form.company_name || activeBrand?.brand_name || '',
+      brand_name: form.brand_name || activeBrand?.brand_name || '',
+      website: form.website || activeBrand?.brand_domain || '',
+    }));
+    setShowPilotRequestForm(true);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: dark.bg, overflowX: 'hidden' }}>
@@ -3200,16 +3221,31 @@ export function BrandGuardPage() {
           marginTop: '24px',
           backdropFilter: 'blur(12px)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
             <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 700, margin: 0 }}>🔐 Credit Balance</h3>
-            <button
-              onClick={() => setShowPurchase(true)}
-              style={{
-                padding: '6px 14px', borderRadius: '8px',
-                background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
-                color: '#3b82f6', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >+ Buy Credits</button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
+              {isFreeAccount && (
+                <button
+                  onClick={openPilotRequest}
+                  style={{
+                    padding: '6px 12px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.4)',
+                    color: '#86efac', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  <Rocket size={14} aria-hidden="true" />
+                  Request 30-Day Pilot
+                </button>
+              )}
+              <button
+                onClick={() => setShowPurchase(true)}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px',
+                  background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
+                  color: '#60a5fa', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >+ Buy Credits</button>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: '12px' }}>
             <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
@@ -3256,6 +3292,66 @@ export function BrandGuardPage() {
           onClose={() => setShowPurchase(false)}
           onSuccess={() => { setShowPurchase(false); fetchCredits(); }}
         />
+      )}
+      {/* Pilot request dialog for signed-in free accounts */}
+      {showPilotRequestForm && authToken && isFreeAccount && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pilot-request-title"
+          style={{ position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: isMobile ? '12px' : '24px' }}
+          onClick={e => e.target === e.currentTarget && setShowPilotRequestForm(false)}
+        >
+          <div style={{ position: 'relative', width: '100%', maxWidth: '620px', maxHeight: 'calc(100vh - 24px)', overflowY: 'auto', background: '#151522', border: '1px solid rgba(34,197,94,0.35)', borderRadius: '12px', padding: isMobile ? '20px 16px' : '28px' }}>
+            <button
+              type="button"
+              aria-label="Close pilot request"
+              title="Close"
+              onClick={() => setShowPilotRequestForm(false)}
+              style={{ position: 'absolute', top: '14px', right: '14px', width: '32px', height: '32px', display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid ${dark.border}`, borderRadius: '8px', color: dark.textMuted, cursor: 'pointer' }}
+            >
+              <X size={17} aria-hidden="true" />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingRight: '40px', marginBottom: '6px' }}>
+              <Rocket size={22} color="#4ade80" aria-hidden="true" />
+              <h2 id="pilot-request-title" style={{ margin: 0, color: '#fff', fontSize: '20px' }}>Request a 30-Day Pilot</h2>
+            </div>
+            <p style={{ margin: '0 0 20px', color: dark.textMuted, fontSize: '13px', lineHeight: 1.5 }}>
+              Tell us what impersonation risk you need to monitor. Approved pilots receive 30 days of Fortress access.
+            </p>
+
+            {pilotRequestSubmitted ? (
+              <div style={{ padding: '18px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', color: '#86efac', fontSize: '14px', lineHeight: 1.5 }}>
+                {pilotRequestMessage}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <input type="email" value={userEmail} readOnly placeholder="Work email" aria-label="Work email" style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(255,255,255,0.04)', color: dark.textMuted, boxSizing: 'border-box', cursor: 'not-allowed' }} />
+                  <input type="text" value={pilotRequestForm.company_name} onChange={e => setPilotRequestForm(f => ({ ...f, company_name: e.target.value }))} placeholder="Company" aria-label="Company" style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                  <input type="text" value={pilotRequestForm.brand_name} onChange={e => setPilotRequestForm(f => ({ ...f, brand_name: e.target.value }))} placeholder="Brand name" aria-label="Brand name" style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }} />
+                  <input type="text" value={pilotRequestForm.website} onChange={e => setPilotRequestForm(f => ({ ...f, website: e.target.value }))} placeholder="Website" aria-label="Website" style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box' }} />
+                </div>
+                <select value={pilotRequestForm.concern} onChange={e => setPilotRequestForm(f => ({ ...f, concern: e.target.value }))} aria-label="Primary impersonation concern" style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: '#101019', color: '#fff', boxSizing: 'border-box' }}>
+                  {PILOT_CONCERNS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+                <textarea value={pilotRequestForm.notes} onChange={e => setPilotRequestForm(f => ({ ...f, notes: e.target.value }))} placeholder="Describe the impersonation activity or monitoring need" aria-label="Pilot request details" rows={4} style={{ width: '100%', padding: '11px 12px', borderRadius: '8px', border: `1px solid ${dark.border}`, background: 'rgba(0,0,0,0.35)', color: '#fff', boxSizing: 'border-box', resize: 'vertical' }} />
+                {pilotRequestMessage && <div style={{ color: dark.red, fontSize: '13px' }}>{pilotRequestMessage}</div>}
+                <button
+                  type="button"
+                  onClick={handlePilotRequestSubmit}
+                  disabled={pilotRequestLoading}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: 'none', background: pilotRequestLoading ? 'rgba(34,197,94,0.3)' : '#16a34a', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pilotRequestLoading ? 'wait' : 'pointer' }}
+                >
+                  {pilotRequestLoading ? 'Submitting...' : 'Submit Pilot Request'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
       {/* Subscription Plans Modal */}
       {showPlansModal && (

@@ -831,7 +831,7 @@ function MainApp() {
                   </button>
                   <a
                     href="/brand-guard"
-                    className="px-6 py-3 rounded-xl border border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/10 font-bold transition-colors text-center"
+                    className="px-6 py-3 rounded-xl border border-emerald-200 bg-emerald-400 text-gray-950 hover:bg-emerald-300 font-black shadow-lg shadow-emerald-500/20 transition-colors text-center"
                   >
                     Explore Brand Guard
                   </a>
