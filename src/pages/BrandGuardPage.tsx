@@ -207,7 +207,7 @@ export function BrandGuardPage() {
   const [pilotRequestSubmitted, setPilotRequestSubmitted] = useState(false);
 
   // Store realtime subscriptions for cleanup
-  const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
+  // realtimeSubscriptions removed — replaced with polling to avoid DB pool saturation
   
   useEffect(() => {
     if (selectedPlan) setLoginMode(mode => mode === 'login' ? 'register' : mode);
@@ -279,59 +279,25 @@ export function BrandGuardPage() {
     }
   }, [requestPilot, pilotRequestToken]);
 
-  // ── Realtime subscriptions for Brand Guard alerts and subscriptions ──────────
+  // ── Poll subscription status every 60s (Realtime removed — was saturating DB pool) ──
   useEffect(() => {
-    if (!supabase || !authToken) {
-      // Cleanup any existing subscriptions
-      realtimeSubscriptions.forEach(sub => sub.unsubscribe());
-      setRealtimeSubscriptions([]);
-      return;
-    }
+    if (!supabase || !authToken || !userId) return;
+    const client = supabase;
 
-    const newSubscriptions: any[] = [];
-
-    // Subscribe to brand_guard_alerts table (for real-time alert updates)
-    const alertsSubscription = supabase
-      .channel('brand-guard-alerts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'brand_guard_alerts' }, payload => {
-        // New alert inserted - handle real-time update
-        console.log('[Realtime] New alert:', payload.new);
-        // Trigger alert sound or notification if desired
-        if (payload.new.severity === 'critical') {
-          // Play alert sound
-          try {
-            new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play();
-          } catch { /* audio playback not supported */ }
-        }
-      })
-      .subscribe((status) => {
-        console.log('[Realtime] brand_guard_alerts subscription:', status);
-      });
-    newSubscriptions.push(alertsSubscription);
-
-    // Subscribe to brand_guard_subscriptions table (for subscription status changes)
-    const subsSubscription = supabase
-      .channel('brand-guard-subscriptions')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'brand_guard_subscriptions' }, payload => {
-        // Subscription updated - refresh subscription data
-        console.log('[Realtime] Subscription updated:', payload.new);
-        if (payload.new.status === 'canceled' || payload.new.status === 'expired') {
-          // Subscription ended - notify user
-          setShowPurchase(true);
-        }
-      })
-      .subscribe((status) => {
-        console.log('[Realtime] brand_guard_subscriptions subscription:', status);
-      });
-    newSubscriptions.push(subsSubscription);
-
-    setRealtimeSubscriptions(newSubscriptions);
-
-    // Cleanup on unmount or when dependencies change
-    return () => {
-      newSubscriptions.forEach(sub => sub.unsubscribe());
+    const checkSubStatus = async () => {
+      const { data } = await client
+        .from('brand_guard_subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data && (data.status === 'canceled' || data.status === 'expired')) {
+        setShowPurchase(true);
+      }
     };
-  }, [authToken, supabase]);
+
+    const interval = setInterval(checkSubStatus, 60_000);
+    return () => clearInterval(interval);
+  }, [authToken, userId, supabase]);
 
   // ── Handle email login/register ───────────────────────────────────────────────
   const activateSignupPilot = async (accessToken: string, code: string, requestToken = '') => {

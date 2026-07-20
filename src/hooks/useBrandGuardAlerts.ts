@@ -122,66 +122,14 @@ export function useBrandGuardAlerts(userId: string | null) {
     setToasts(prev => prev.filter(t => t.id !== toastId));
   }, []);
 
-  // ── Subscribe to realtime alerts ────────────────────────────────────────
+  // ── Poll for alerts (replaces Realtime to avoid saturating the DB connection pool) ──
   useEffect(() => {
     fetchAlerts();
+    if (!userId) return;
 
-    if (!supabase || !userId) return;
-    const client = supabase;
-
-    // Subscribe to new alerts on brand_guard_alerts table
-    const channel = client
-      .channel('brand-guard-alerts')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'brand_guard_alerts',
-        },
-        (payload: { new: BrandGuardAlert }) => {
-          const newAlert = payload.new as BrandGuardAlert;
-          console.log('[BrandGuard Alerts] New alert:', newAlert.title);
-
-          // Add to alerts list
-          setAlerts(prev => [newAlert, ...prev].slice(0, 50));
-
-          // Show toast notification
-          setToasts(prev => [...prev, {
-            id: newAlert.id,
-            alert: newAlert,
-            timestamp: Date.now(),
-          }]);
-
-          // Auto-dismiss toast after 10 seconds (for info/low) or 30 seconds (for critical/high)
-          const config = SEVERITY_CONFIG[newAlert.severity] || SEVERITY_CONFIG.info;
-          const dismissMs = config.priority <= 1 ? 30000 : 10000;
-          setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== newAlert.id));
-          }, dismissMs);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'brand_guard_alerts',
-        },
-        (payload: { new: BrandGuardAlert }) => {
-          const updated = payload.new as BrandGuardAlert;
-          setAlerts(prev => prev.map(a => a.id === updated.id ? updated : a));
-        }
-      )
-      .subscribe((status: string) => {
-        console.log('[BrandGuard Alerts] Subscription status:', status);
-      });
-
-    return () => {
-      if (channel) {
-        client.removeChannel(channel);
-      }
-    };
+    // Poll every 30s — fast enough for alert UX without Realtime overhead
+    const interval = setInterval(fetchAlerts, 30_000);
+    return () => clearInterval(interval);
   }, [userId, fetchAlerts]);
 
   // ── Derived state ───────────────────────────────────────────────────────

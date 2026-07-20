@@ -305,16 +305,11 @@ export function BrandGuardAdminPage() {
     }
   };
 
-  // Realtime subscription for new notifications
+  // Poll notifications every 30s (Realtime removed — was saturating DB pool)
   useEffect(() => {
-    if (!supabase || !authToken || !isAdmin) return;
-    const channel = supabase
-      .channel('admin-notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_notifications' }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-    return () => { supabase?.removeChannel(channel); };
+    if (!authToken || !isAdmin) return;
+    const interval = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(interval);
   }, [authToken, isAdmin]);
 
   // Grant credits

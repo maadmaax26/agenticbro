@@ -76,25 +76,8 @@ export function useScanResult(jobId: string | null) {
         setLoading(false);
       });
 
-    // ── 2. Realtime subscription — instant push when worker updates row ────
-    const channel = client
-      .channel(`scan-job-${jobId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'scan_jobs',
-          filter: `id=eq.${jobId}`,
-        },
-        (payload) => {
-          setJob(payload.new as ScanJob);
-          setLoading(false);
-        },
-      )
-      .subscribe();
-
-    // ── 3. Polling fallback — check job status every 5s if Realtime fails ────
+    // ── 2. Polling — check job status every 5s ────────────────────────────
+    // (Realtime removed: it saturated the Supabase connection pool)
     const pollInterval = setInterval(() => {
       if (!jobId) return;
 
@@ -117,8 +100,6 @@ export function useScanResult(jobId: string | null) {
     }, 5000);
 
     return () => {
-      // FIX: TypeScript knows 'client' is non-null here
-      client.removeChannel(channel);
       clearInterval(pollInterval);
     };
   }, [jobId]);
