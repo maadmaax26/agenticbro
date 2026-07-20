@@ -1,0 +1,27 @@
+
+To: [jesse@example.com]
+Subject: Brand Guard Partnership Opportunity
+
+Hi Jesse,
+
+I hope you're doing well! I'm reaching out from Agentic Bro - we've been monitoring the crypto community and noticed your work in [mention their project if known].
+
+Our mission is to protect Solana holders through AI-powered scam detection. We recently identified some high-risk impersonation attempts targeting users who follow accounts like yours, and wanted to alert you early before they could damage your reputation.
+
+What we offer:
+• Real-time monitoring of brand impersonations across 6+ platforms
+• Early warnings before scammers launch attacks on profiles/channels
+• Zero cost for Solana community protection efforts
+
+We're building this as a public good - especially since we don't get paid by any exchange, wallet provider, or DeFi protocol. The project runs entirely on volunteer time and open-source principles.
+
+If you'd like to discuss ways partners can support this mission (whether through grants, infrastructure access, or simply being aware of potential impersonation attempts), I'd welcome a brief conversation at your convenience.
+
+Either way - huge respect for what you're building!
+
+Best regards
+Agentic Bro Team 🤖🔐
+scanfirst.apelater.solana.com
+
+P.S. You can check our public scam reports here to see how we've already protected community members: scan.sandbox/verify
+

@@ -1,0 +1,44 @@
+# Suspicious TikTok Tester File
+Purpose: Test and analyze TikTok profiles/channels for scam patterns
+Created: April 12, 2026
+
+## Testing Framework
+- Target: TikTok username/channels
+- Detection Signals: Compare to scam detection framework
+- Platform: TikTok (port 18803 Chrome CDP)
+
+## Test Cases
+
+## Detection Checklist
+- [ ] Profile creation date (new accounts)
+- [ ] Content quality (low effort, repetitive)
+- [ ] Engagement (bot accounts, fake followers)
+- [ ] Payment requests (crypto, V-Bucks, gift cards)
+- [ ] URL redirects (scam links)
+- [ ] Private DMs (high-pressure sales)
+
+## Example Format
+TikTok Username: [username]
+Risk Score: [0-10]
+Red Flags:
+- [ ]
+- [ ]
+Notes: [ ]
+
+Test Account Patterns to Use:
+
+1. Empty/Denied Bio:
+  • @testcryptoscam99
+  • @crypto_checker_24h
+2. DM Solicitation:
+  • @dm_usd_promo
+  • @investment_chat_dm
+3. Crypto Keywords Only:
+  • @sats_doge_income
+  • @free_sats_crypto
+4. Edge Engagement Patterns:
+  • @follow_back_bot_viral
+  • @sats_wallet_claim
+5. Generic/Minimal Content:
+  • @content_maker
+  • @videos_only

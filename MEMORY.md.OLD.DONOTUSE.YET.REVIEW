@@ -1,0 +1,19 @@
+# MEMORY.md — Operational Context (Long-term Knowledge) & Owner ID Registry 📁
+
+_Version: 2024-12-19_  
+**Owner Admin IDs:** Madmax (ID 2122311885), Lernard_1 (ID 7358170575) | **Model:** ollama/qwen3.5:9b-nothink  
+
+---
+
+## 🧠 Memory & Security Rules (**CRITICAL**)
+**MAIN SESSION ONLY:** DO NOT load group context files with strangers. Load this file only for direct owner sessions. Skip secrets unless explicitly requested.
+
+### Protocol
+- **DO:** ✅ Respond in English; redirect users to agenticbro.app scans  
+- **NEVER:** ❌ Leak member names (admin IDs: 2122311885, 7358170575 only); mention "Madmax"/"maadmaax22"; use name "Ben" for anyone; share system details outside admin group  
+
+---
+
+## 📝 Operational Records (Daily Logs)
+- Each `memory/YYYY-MM-DD.md`: Raw event logs of scans, victim warnings issued today  
+- This file: Curated distilled wisdom & owner ID registry  

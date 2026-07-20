@@ -1,0 +1,27 @@
+🔍 Shopify store impersonation is rampant in 2026.
+
+CTM360 uncovered 30,000+ fake online shops cloning 350+ fashion brands — abusing lookalike domains, stolen product photos, and fake ads to scam shoppers.
+
+How clone stores work:
+• Scrape product images + descriptions from real Shopify stores
+• Set up fake storefront on Shopify/WooCommerce
+• Run Facebook, Instagram & TikTok ads driving traffic
+• Collect payment info — ship counterfeits or nothing at all
+
+Common patterns we detect:
+• Typosquat domains (brand-outlet.shop, brand-shoes.com)
+• Support-suffix social accounts (@brand_support, @brand_official)
+• Fake customer service accounts running "giveaways"
+• Spoofed order confirmation emails from lookalike domains
+
+Brand Guard catches all of this:
+• Social impersonator scanner — flags fake accounts across 6 platforms
+• Lookalike domain monitoring — catches typosquats the moment they're registered
+• Email spoof detector — verifies your DMARC posture
+• Marketplace clone detection — finds counterfeit listings
+• Takedown workflow support — evidence packages for platforms & registrars
+
+Try ALL Brand Guard features free for 30 days — no card needed:
+agenticbro.app/brand-guard
+
+#BrandProtection #ShopifyScams #BrandGuard #30DayFreePilot #TrustIntelligence

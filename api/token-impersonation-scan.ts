@@ -12,7 +12,7 @@ import {
   privateIntelConfigured,
   privateIntelUnavailable,
   sendJson,
-} from './_lib/private-intel-service.js';
+} from './_lib/private-intel-service';
 
 interface VercelResponse extends ServerResponse {
   status?: (code: number) => VercelResponse;

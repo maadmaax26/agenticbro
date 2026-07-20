@@ -9,7 +9,7 @@ import {
   privateIntelConfigured,
   privateIntelUnavailable,
   sendJson,
-} from '../_lib/private-intel-service.js';
+} from '../_lib/private-intel-service';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {

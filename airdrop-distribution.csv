@@ -1,0 +1,93 @@
+# AGNTCBRO Airdrop Distribution Schedule
+# Generated: 2026-04-24 (Updated with live holder data)
+# Total Pool: 30,000,000 AGNTCBRO
+# Distribution: 4 weekly installments (25% each)
+
+## Distribution Schedule
+
+| Week | Date | Allocation | Amount Per Week |
+|------|------|------------|-----------------|
+| 1 | Week of April 28 | 25% | 7,500,000 |
+| 2 | Week of May 5 | 25% | 7,500,000 |
+| 3 | Week of May 12 | 25% | 7,500,000 |
+| 4 | Week of May 19 | 25% | 7,500,000 |
+
+## Tier Allocations (Per Distribution)
+
+| Tier | Wallets | Tokens/Wallet/Week | Total/Week | Total (4 weeks) |
+|------|---------|---------------------|-------------|-----------------|
+| Diamond (50M+) | 7 | 250,000 | 1,750,000 | 7,000,000 |
+| Gold (10M-50M) | 12 | 125,000 | 1,500,000 | 6,000,000 |
+| Silver (4M-10M) | 0 | 62,500 | 0 | 0 |
+| **Total** | 19 | - | 3,250,000 | 13,000,000 |
+
+---
+
+## Week 1 Distribution (April 28)
+
+wallet_address,tier,tokens_this_week,total_tokens,status
+J5jv4d6Y7o1T5YMNmbWzhULcXQasvw7BUGaRkoZTdd26,Airdrop Distribution Wallet,DISTRIBUTION,7,500,000,30,000,000,READY
+
+### Diamond Tier (50M+ tokens held) - 7 wallets - 250,000 tokens each
+
+wallet_address,wallet_name,tier,tokens_this_week,total_tokens,status
+6aSrey36pvkAKAVvsKL84X4CkDEY4bQCp5hFh8NVcN4j,,Diamond,250000,1000000,pending
+ZzBAYTFDehbwrgzzgN8ecYUyHwokDFxfgbA945ZqGf3,,Diamond,250000,1000000,pending
+B2YbTVUsC4MTdSCcn7SAFwBcYrZFPxbTBNosNcvGjMuB,,Diamond,250000,1000000,pending
+Em65he1pkAB3eGiMhd76qUujefmJ2KVwwXqxdT2YzMmE,,Diamond,250000,1000000,pending
+3NJWD1M1uG9mwWLkGWFQ3LqqDCh1pJSDGfQXmb3fdADH,,Diamond,250000,1000000,pending
+5S5VVx5shTBEZfqxBiePif4Y5mmFo1FMxZgLiuHfphz3,,Diamond,250000,1000000,pending
+UpFr5jN23yd6D2neDSqnG3QnkSmpWN6xXpJq7cpWsxf,,Diamond,250000,1000000,pending
+
+### Gold Tier (10M-50M tokens held) - 12 wallets - 125,000 tokens each
+
+wallet_address,wallet_name,tier,tokens_this_week,total_tokens,status
+9SFtm4S5QNDdMuWwgpy8E7ZhqRfgmjNtE1JLqkzPKj9F,,Gold,125000,500000,pending
+J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC,,Gold,125000,500000,pending
+CBReL95M1gS3SaeK7m38mpLKWmeAYk5KqyF9ND4Ta84y,,Gold,125000,500000,pending
+9i94aZP57tD8Lz5RxZqXoHPZKvv1i2dX6LQzK5z8EyzH,,Gold,125000,500000,pending
+7erEFC8AoEQW1WL5pfF15ArRRQ4uycTTA6hyncjxVLJD,,Gold,125000,500000,pending
+36J6TkbFc3QLEtT5V6H9hjXFKcRU5RKxqtbvtq55GEKc,,Gold,125000,500000,pending
+EZwbHQ54PwcsL9iHsaEG1ruMEjVHed8iBmv1esA1rs8n,,Gold,125000,500000,pending
+Cmw2B5LxVCrmw4zsdJoN4oRh9d5HErfn7mddepNmdky8,,Gold,125000,500000,pending
+A4R3nauxCbbddvm54UP6GD64SoY8BVftDJLd1hMA4yNB,,Gold,125000,500000,pending
+63878UJuLZPNFTkU99xi4rPqBx4tnvQ5NMk677gwQGsi,,Gold,125000,500000,pending
+21BgRJNLCvpQximq33Q2XiXiTBkMGdshRJp5c5mz77os,,Gold,125000,500000,pending
+DJwK6keJYc8EZdSTySCjXBFN2QbWN6Xaf8iKiGWSckbh,,Gold,125000,500000,pending
+
+### Silver Tier (4M-10M tokens held) - 0 wallets - 62,500 tokens each
+
+wallet_address,wallet_name,tier,tokens_this_week,total_tokens,status
+(No wallets in this tier from top 20 holders)
+
+---
+
+## Excluded Addresses (Liquidity/Protocol)
+
+| Address | Reason | Tokens Held |
+|---------|--------|-------------|
+| 7u9ffEz6RfsnkKBiTZo8MJ6B76SFVWuhiV51zMK7pjLF | Pump.fun AMM LP | 150,512,301 |
+
+---
+
+## Distribution Summary
+
+- **Total Airdrop Pool:** 30,000,000 AGNTCBRO
+- **Qualifying Wallets (from top 20):** 19
+- **Weekly Distribution:** 7,500,000 AGNTCBRO
+- **Diamond Total:** 7,000,000 (7 wallets × 1M over 4 weeks)
+- **Gold Total:** 6,000,000 (12 wallets × 500K over 4 weeks)
+- **Allocated:** 13,000,000 AGNTCBRO
+- **Remaining Pool:** 17,000,000 AGNTCBRO (for future distributions, marketing, community rewards)
+
+---
+
+## Notes
+
+1. Data pulled from QuickNode RPC on 2026-04-24
+2. LP address (7u9ffEz6...) excluded — belongs to Pump.fun AMM
+3. Airdrop wallet: 2jpR4fhAgijVCRygijUhM54q63tNx5yMRhUnHzTqofkN
+4. Private key stored securely offline
+5. Each distribution: 7.5M tokens total
+6. Status tracking: pending → sent → confirmed
+7. Wallet age (7+ days) and social tasks should be verified before final distribution

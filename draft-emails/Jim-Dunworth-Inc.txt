@@ -1,0 +1,34 @@
+To: [NEEDS NAMED EMAIL]
+Subject: Impersonation risk review for Jim Dunworth Inc.
+
+Hi there,
+
+I'm Earl Finney, founder of Brand Guard.
+
+I saw the recent public report involving Jim Dunworth Inc.: San Antonio dealership sues 3 banks over nearly $1M impersonation scam
+
+The part that stood out is the $995,170 and the impersonation pattern:
+Fraudsters posing as bank employees persuaded dealership executives to authorize wire transfers totaling $995,170.
+
+Public source: https://www.expressnews.com/business/article/jim-dunworth-broadway-bank-capital-one-lawsuit-22314811.php
+
+The main risk signals are: reported financial loss, payment redirection.
+
+Why I thought this might be relevant:
+Prevent repeat payment-redirection and vendor/payment impersonation before another customer or employee trusts the wrong instructions.
+
+Brand Guard is built to monitor this kind of repeat risk:
+- Vendor Verify, Threat Correlation
+- Alerts for new phone/email impersonation reports tied to the brand; reused caller/vendor patterns
+- A review trail your team can use before trusting vendor, phone, domain, account, or listing claims
+
+If helpful, I can run a no-cost Brand Guard review for jimdunworth.com and send back a short findings report. No account or card needed.
+
+Best,
+Earl Finney
+Founder of Brand Guard
+efinney@brandguardhq.com
+
+--
+Brand Guard - Agentic Insights LLC
+You received this one-time note because Jim Dunworth Inc. appeared in public brand-abuse records. Prefer not to hear from us? Opt out here: https://agenticbro.app/brand-guard/optout

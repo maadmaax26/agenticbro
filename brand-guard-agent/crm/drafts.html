@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brand Guard — Approval Console</title>
+<!--
+  Brand Guard — Drafts / Triage / Replies approval console (single file, no build step).
+
+  ARCHITECTURE (matches docs/crm-approval-tabs-spec.md):
+    "All writes go through your server (service role), never the browser anon key."
+  So this page NEVER touches Supabase. It is a *review surface*:
+    1. Load a review-queue JSON  (the embedded DEMO, or a file exported by
+       `db.store.load_review_queue()` via crm/queue_cli.py export).
+    2. Review each draft (evidence, score chips, editable body, compliance strip).
+    3. Decisions accumulate in memory and download as `approvals.json`.
+    4. Your server applies them with `db.store.apply_approvals(...)` — the ONLY
+       place approval state changes. Nothing here sends or writes to the DB.
+
+  No localStorage / sessionStorage (not supported); state lives in JS memory.
+-->
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232c; --line:#2b333d;
+    --ink:#e6edf3; --mut:#9aa7b4; --mut2:#6b7785;
+    --red:#f0506e; --amber:#f5a623; --green:#37c871; --blue:#4a86e8;
+    --pillA:#7c5cff; --pillB:#1f9d8f; --pillC:#e0732f; --pillD:#4a86e8;
+    --chip:#222c38;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--blue)}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:7px;padding:7px 11px}
+  button:hover{border-color:#3a4450}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .btn-pri{background:var(--green);border-color:var(--green);color:#06210f;font-weight:600}
+  .btn-warn{background:transparent;border-color:var(--red);color:var(--red)}
+  .btn-ghost{background:transparent}
+  header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header .logo{font-weight:700;letter-spacing:.2px}
+  header .logo b{color:var(--pillA)}
+  .tabs{display:flex;gap:6px;margin-left:8px}
+  .tab{padding:6px 12px;border-radius:7px;border:1px solid transparent;color:var(--mut)}
+  .tab.active{background:var(--panel2);border-color:var(--line);color:var(--ink)}
+  .tab .badge{display:inline-block;min-width:18px;text-align:center;margin-left:6px;padding:0 6px;border-radius:10px;background:var(--chip);color:var(--ink);font-size:12px}
+  .spacer{flex:1}
+  .src{font-size:12px;color:var(--mut2)}
+  .src b{color:var(--mut)}
+  main{height:calc(100% - 53px);display:flex;flex-direction:column}
+  .toolbar{display:flex;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .toolbar select,.toolbar input[type=text]{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  .pending{margin-left:auto;color:var(--mut)}
+  .pending b{color:var(--amber)}
+  .split{flex:1;display:grid;grid-template-columns:minmax(360px,40%) 1fr;min-height:0}
+  .list{border-right:1px solid var(--line);overflow:auto}
+  .detail{overflow:auto;padding:18px 22px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+  .row:hover{background:var(--panel)}
+  .row.sel{background:var(--panel2);box-shadow:inset 3px 0 0 var(--pillA)}
+  .row.done{opacity:.45}
+  .row .co{font-weight:600}
+  .row .dom{color:var(--mut2);font-size:12px}
+  .row .meta{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;color:#0b0e12}
+  .pill.A{background:var(--pillA)} .pill.B{background:var(--pillB)}
+  .pill.C{background:var(--pillC)} .pill.D{background:var(--pillD)}
+  .scorebar{width:64px;height:8px;border-radius:5px;background:#2a3340;overflow:hidden;display:inline-block;vertical-align:middle}
+  .scorebar > i{display:block;height:100%}
+  .scoreN{font-variant-numeric:tabular-nums;font-size:12px;color:var(--mut)}
+  .tag{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+  .tag.eu{color:var(--amber);border-color:#5a4a1f}
+  .when{font-size:11px;color:var(--mut2)}
+  /* detail */
+  .d-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}
+  .d-head h2{margin:0;font-size:18px}
+  .d-head .dom{color:var(--mut2);font-size:13px}
+  .banner{border-radius:8px;padding:9px 12px;margin:10px 0;font-size:13px}
+  .banner.red{background:rgba(240,80,110,.12);border:1px solid #5a2530;color:#ffb3c0}
+  .banner.amber{background:rgba(245,166,35,.10);border:1px solid #5a4a1f;color:#ffd591}
+  .sec{margin:18px 0}
+  .sec h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut2);margin:0 0 8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:12px}
+  .chip b{color:var(--green)}
+  .ev{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
+  .ev .ev-h{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);margin-bottom:4px}
+  .ev .ev-h .t{font-size:10px;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+  .ev .snip{color:var(--ink)}
+  .reason{background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:9px 12px;color:var(--mut);font-size:13px}
+  textarea{width:100%;min-height:190px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:11px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+  .subj{width:100%;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;font-weight:600}
+  .optout{font-size:12px;color:var(--mut);margin-top:6px}
+  .findings{font-size:12px;color:var(--mut)}
+  .findings li{margin:2px 0}
+  .compliance{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot.ok{background:var(--green)} .dot.bad{background:var(--red)} .dot.warn{background:var(--amber)}
+  .actions{position:sticky;bottom:0;background:linear-gradient(180deg,transparent,var(--bg) 30%);padding:16px 0 6px;margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .actions select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px}
+  .kbd{font-size:11px;color:var(--mut2)}
+  .kbd b{color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:0 2px}
+  .empty{color:var(--mut2);padding:40px;text-align:center}
+  .toast{position:fixed;right:18px;bottom:18px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transform:translateY(8px);transition:.2s}
+  .toast.show{opacity:1;transform:none}
+  .stub{padding:26px;max-width:760px;color:var(--mut)}
+  .stub h3{color:var(--ink)}
+  .stub table{border-collapse:collapse;margin-top:10px;width:100%}
+  .stub td,.stub th{border:1px solid var(--line);padding:6px 9px;text-align:left;font-size:13px}
+  .modeflag{font-size:11px;border:1px solid var(--line);border-radius:5px;padding:2px 7px;color:var(--mut)}
+  .modeflag.demo{color:var(--amber);border-color:#5a4a1f}
+  .modeflag.live{color:var(--green);border-color:#1f5a32}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><b>Brand&nbsp;Guard</b> · Approval Console</div>
+  <div class="tabs">
+    <div class="tab active" data-tab="drafts">Drafts <span class="badge" id="b-drafts">0</span></div>
+    <div class="tab" data-tab="triage">Triage <span class="badge" id="b-triage">0</span></div>
+    <div class="tab" data-tab="replies">Replies <span class="badge" id="b-replies">0</span></div>
+  </div>
+  <span class="spacer"></span>
+  <span class="modeflag demo" id="modeflag">DEMO DATA</span>
+  <button class="btn-ghost" id="btn-load">Load queue JSON…</button>
+  <input type="file" id="file-load" accept="application/json,.json" hidden />
+  <button class="btn-ghost" id="btn-reset">Reset demo</button>
+  <div class="src">writes never go to the DB from here · export <b>approvals.json</b> → server applies</div>
+</header>
+
+<main>
+  <!-- DRAFTS -->
+  <section id="view-drafts">
+    <div class="toolbar">
+      <label class="src">Channel
+        <select id="f-channel"><option value="">all</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </label>
+      <label class="src">Region
+        <select id="f-region"><option value="">all</option><option>US</option><option>EU</option><option>UK</option><option>other</option></select>
+      </label>
+      <label class="src">Score
+        <select id="f-band"><option value="">all</option><option value="70">70+</option><option value="50">50–69</option><option value="0">&lt;50</option></select>
+      </label>
+      <input type="text" id="f-text" placeholder="filter company / domain…" />
+      <span class="pending">decisions queued: <b id="pending-n">0</b>
+        <button class="btn-pri" id="btn-export" disabled>Export approvals.json</button>
+      </span>
+    </div>
+    <div class="split">
+      <div class="list" id="list"></div>
+      <div class="detail" id="detail"><div class="empty">Select a draft to review.</div></div>
+    </div>
+  </section>
+
+  <!-- TRIAGE (read-only stub) -->
+  <section id="view-triage" hidden>
+    <div class="stub">
+      <h3>Triage — collector quality control</h3>
+      <p>Source: <code>triage_queue</code> join <code>signals</code> where <code>resolved = false</code>.
+      Catch low-confidence / model-down collector hits before they ever become a draft.</p>
+      <p id="triage-body">No triage rows in the loaded JSON. Export a queue that includes a
+      <code>triage</code> array to populate this tab. Actions (Confirm→promote, Discard,
+      Send-to-suppression) are applied server-side, same as Drafts.</p>
+    </div>
+  </section>
+
+  <!-- REPLIES (read-only stub) -->
+  <section id="view-replies" hidden>
+    <div class="stub">
+      <h3>Replies — close the loop</h3>
+      <p>Source: <code>replies</code> where <code>handled = false</code>. Opt-outs are enforced
+      immediately and irreversibly (CAN-SPAM / PECR). Replies are always answered by hand,
+      never auto-sent.</p>
+      <p id="replies-body">No reply rows in the loaded JSON. Export a queue that includes a
+      <code>replies</code> array to populate this tab.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------------
+ * Embedded DEMO queue. Shape mirrors db.store.load_review_queue() exactly, so a
+ * real exported queue.json renders with the same code. Nothing here is real PII.
+ * ------------------------------------------------------------------------- */
+const DEMO = {
+  mode: "demo",
+  drafts: [
+    {
+      draft_id: "demo-1", company_name: "Northwind Coffee", primary_domain: "northwindcoffee.com",
+      vertical: "ecommerce", company_size_band: "smb", compliance_region: "US", compliance_ok: true,
+      victim_score: 75,
+      score_breakdown: {udrp_recent:35, lookalike_live:10, dmarc_weak:10, decision_maker_found:10, smb_confirmed:10},
+      channel: "D", routing_reason: "US B2B, verified business contact — legitimacy-first cold email.",
+      subject: "A brand-impersonation finding for Northwind Coffee",
+      body: "Hi Dana — we run Brand Guard, a brand-impersonation monitor. While scanning public\ncertificate logs we saw a lookalike domain (northwind-coffee.shop) and a recent UDRP\nfiling referencing Northwind Coffee. Your published DMARC policy is currently p=none,\nwhich makes spoofing your domain easier.\n\nHappy to share the specific findings — free scan, no card required.",
+      edited_body: null,
+      opt_out_line: "Not relevant? Reply 'stop' and we won't contact you again.",
+      send_by_hand: false,
+      findings_used: {findings:[
+        "Lookalike domain registered: northwind-coffee.shop",
+        "Recent UDRP filing (WIPO D2026-0001) names Northwind Coffee",
+        "DMARC policy is p=none (spoofable)"
+      ], evidence_url:"https://www.wipo.int/decisions/D2026-0001"},
+      contact_channel: "email", contact_email: "dana@northwindcoffee.com",
+      linkedin_url: null, approval: "unreviewed", suppressed: false,
+      created_at: "2026-06-19T14:02:00+00:00",
+      signals: [
+        {source:"udrp_wipo", tier:"tier1", signal_type:"udrp_filing", impersonation_type:"domain",
+         impersonated_brand:"Northwind Coffee", signal_url:"https://www.wipo.int/decisions/D2026-0001",
+         snippet:"Complainant Northwind Coffee Roasters; respondent registered northwind-coffee.shop", incident_date:"2026-05-01"},
+        {source:"crt.sh", tier:"tier3", signal_type:"lookalike_domain", impersonation_type:"domain",
+         impersonated_brand:"Northwind Coffee", signal_url:"https://crt.sh/?q=northwind-coffee.shop",
+         snippet:"northwind-coffee.shop issued a certificate (issuer R3)", incident_date:null}
+      ]
+    },
+    {
+      draft_id: "demo-2", company_name: "Lakeside Payments", primary_domain: "lakesidepay.com",
+      vertical: "fintech", company_size_band: "smb", compliance_region: "EU", compliance_ok: true,
+      victim_score: 62,
+      score_breakdown: {public_scam_warning:35, lookalike_live:10, dmarc_weak:10, smb_confirmed:10},
+      channel: "C", routing_reason: "Security-sensitive vertical (fintech) — LinkedIn note from a person lands better than cold email.",
+      subject: null,
+      body: "CONNECTION NOTE:\nHi Mara — I help fintech teams shut down brand-impersonation. Saw your public warning\nabout a fake @lakeside_support account and thought it might be useful to connect.\n\nAFTER THEY ACCEPT:\nThanks for connecting. We pulled the lookalike + the fake social handle into a short\nfindings summary — want me to send it over? No pitch, just the evidence.",
+      edited_body: null,
+      opt_out_line: null,
+      send_by_hand: true,
+      findings_used: {findings:[
+        "Public scam warning posted by the brand about a fake support account",
+        "Lookalike domain in certificate logs",
+        "DMARC p=none"
+      ], evidence_url:"https://x.com/lakeside/status/123"},
+      contact_channel: "linkedin", contact_email: null,
+      linkedin_url: "https://www.linkedin.com/in/mara-lakeside", approval: "unreviewed", suppressed: false,
+      created_at: "2026-06-19T13:40:00+00:00",
+      signals: [
+        {source:"x_profile", tier:"tier1", signal_type:"public_scam_warning", impersonation_type:"social",
+         impersonated_brand:"Lakeside Payments", signal_url:"https://x.com/lakeside/status/123",
+         snippet:"PSA: a fake @lakeside_support account is DMing our customers. We will never DM you.", incident_date:"2026-06-10"}
+      ]
+    },
+    {
+      draft_id: "demo-3", company_name: "Maple Goods Co", primary_domain: "maplegoods.com",
+      vertical: "retail", company_size_band: "smb", compliance_region: "US", compliance_ok: true,
+      victim_score: 55,
+      score_breakdown: {customer_complaint:25, lookalike_live:20, smb_confirmed:10},
+      channel: "D", routing_reason: "US B2B cold email — but recipient is on the suppression list.",
+      subject: "A finding about maplegoods.com",
+      body: "Hi — a quick brand-impersonation finding about maplegoods.com. Free scan, no card.",
+      edited_body: null,
+      opt_out_line: "Reply 'stop' to opt out.",
+      send_by_hand: false,
+      findings_used: {findings:["Two lookalike domains live","A customer complaint about a fake storefront"], evidence_url:null},
+      contact_channel: "email", contact_email: "optout@maplegoods.com",
+      linkedin_url: null, approval: "unreviewed", suppressed: true,
+      created_at: "2026-06-19T12:55:00+00:00",
+      signals: [
+        {source:"reddit", tier:"tier1", signal_type:"customer_complaint", impersonation_type:"marketplace",
+         impersonated_brand:"Maple Goods Co", signal_url:"https://reddit.com/r/scams/comments/abc",
+         snippet:"Ordered from maple-goods.store, never arrived — turns out it's fake.", incident_date:"2026-06-05"}
+      ]
+    },
+    {
+      draft_id: "demo-4", company_name: "Quiet Studio LLC", primary_domain: "quietstudio.com",
+      vertical: "agency", company_size_band: "smb", compliance_region: "US", compliance_ok: true,
+      victim_score: 40,
+      score_breakdown: {lookalike_live:20, dmarc_weak:10, smb_confirmed:10},
+      channel: "D", routing_reason: "Below the route threshold — surfaced so you can see why it's thin.",
+      subject: "A possible finding for Quiet Studio",
+      body: "Hi — we spotted a couple of lookalike domains near quietstudio.com. Worth a quick scan?",
+      edited_body: null,
+      opt_out_line: "Reply 'stop' to opt out.",
+      send_by_hand: false,
+      findings_used: {findings:["Two lookalike domains in certificate logs","DMARC p=none"], evidence_url:null},
+      contact_channel: "email", contact_email: "hi@quietstudio.com",
+      linkedin_url: null, approval: "unreviewed", suppressed: false,
+      created_at: "2026-06-19T11:20:00+00:00",
+      signals: [
+        {source:"crt.sh", tier:"tier3", signal_type:"lookalike_domain", impersonation_type:"domain",
+         impersonated_brand:"Quiet Studio", signal_url:"https://crt.sh/?q=quiet-studio", snippet:"quiet-studio.co issued a cert", incident_date:null}
+      ]
+    }
+  ],
+  triage: [],
+  replies: []
+};
+
+/* ---------------------------------------------------------------------------
+ * State
+ * ------------------------------------------------------------------------- */
+let QUEUE = clone(DEMO);
+let decisions = {};      // draft_id -> decision object (the approvals.json batch)
+let selectedId = null;
+let activeTab = "drafts";
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function $(s){ return document.querySelector(s); }
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
+
+/* ---------------------------------------------------------------------------
+ * Filtering + list
+ * ------------------------------------------------------------------------- */
+function visibleDrafts(){
+  const ch=$("#f-channel").value, rg=$("#f-region").value, bd=$("#f-band").value, tx=$("#f-text").value.trim().toLowerCase();
+  return QUEUE.drafts
+    .filter(d => !decisions[d.draft_id])               // hide ones already decided this session
+    .filter(d => !ch || d.channel===ch)
+    .filter(d => !rg || (d.compliance_region||"")===rg)
+    .filter(d => {
+      if(bd==="") return true;
+      if(bd==="70") return d.victim_score>=70;
+      if(bd==="50") return d.victim_score>=50 && d.victim_score<70;
+      return d.victim_score<50;
+    })
+    .filter(d => !tx || (d.company_name||"").toLowerCase().includes(tx) || (d.primary_domain||"").toLowerCase().includes(tx))
+    .sort((a,b)=> b.victim_score - a.victim_score);
+}
+
+function scoreColor(n){ return n>=70?"var(--green)":n>=50?"var(--amber)":"var(--red)"; }
+
+function relTime(iso){
+  if(!iso) return "";
+  const t=new Date(iso).getTime(); if(isNaN(t)) return "";
+  const s=Math.max(1,Math.floor((Date.now()-t)/1000));
+  if(s<3600) return Math.floor(s/60)+"m ago";
+  if(s<86400) return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+
+function renderList(){
+  const list=$("#list"); list.innerHTML="";
+  const rows=visibleDrafts();
+  if(!rows.length){ list.appendChild(elEmpty()); }
+  rows.forEach(d=>{
+    const row=el("div","row"+(d.draft_id===selectedId?" sel":""));
+    row.onclick=()=>{ selectedId=d.draft_id; render(); };
+    const left=el("div"); left.appendChild(el("div","co",d.company_name||"(no name)"));
+    left.appendChild(el("div","dom",d.primary_domain||""));
+    const meta=el("div","meta");
+    const pill=el("span","pill "+d.channel, d.channel||"?"); meta.appendChild(pill);
+    const bar=el("span","scorebar"); const fill=el("i"); fill.style.width=Math.min(100,d.victim_score)+"%"; fill.style.background=scoreColor(d.victim_score); bar.appendChild(fill);
+    meta.appendChild(bar); meta.appendChild(el("span","scoreN",String(d.victim_score)));
+    const reg=el("span","tag"+(["EU","UK"].includes(d.compliance_region)?" eu":""), d.compliance_region||"US"); meta.appendChild(reg);
+    if(d.suppressed){ const s=el("span","tag eu","suppressed"); meta.appendChild(s); }
+    const right=el("div"); right.style.textAlign="right";
+    right.appendChild(meta); right.appendChild(el("div","when",relTime(d.created_at)));
+    row.appendChild(left); row.appendChild(right);
+    list.appendChild(row);
+  });
+}
+function elEmpty(){ const e=el("div","empty","No drafts match — adjust filters, or every draft has been decided. Export when ready."); return e; }
+
+/* ---------------------------------------------------------------------------
+ * Detail pane (the actual review)
+ * ------------------------------------------------------------------------- */
+function currentDraft(){ return QUEUE.drafts.find(d=>d.draft_id===selectedId) || null; }
+
+function renderDetail(){
+  const d=currentDraft(); const det=$("#detail"); det.innerHTML="";
+  if(!d){ det.appendChild(el("div","empty","Select a draft to review.")); return; }
+
+  const head=el("div","d-head");
+  const h=el("div"); const h2=el("h2",null,d.company_name||"(no name)"); h.appendChild(h2);
+  h.appendChild(el("div","dom",(d.primary_domain||"")+ (d.vertical?" · "+d.vertical:"") + (d.company_size_band?" · "+d.company_size_band:"")));
+  head.appendChild(h);
+  const pill=el("span","pill "+d.channel,"Channel "+d.channel); pill.style.alignSelf="center"; head.appendChild(pill);
+  det.appendChild(head);
+
+  // guardrail banners
+  if(d.suppressed) det.appendChild(banner("red","On the suppression list — approve is disabled. (Opt-outs/bounces are permanent.)"));
+  if(!d.compliance_ok) det.appendChild(banner("red","compliance_ok = false — approve is disabled until compliance clears."));
+  if(d.victim_score<50) det.appendChild(banner("amber","Victim Score below the route threshold (50). Why is this here? Reject unless the evidence justifies it."));
+  if(["EU","UK"].includes(d.compliance_region)) det.appendChild(banner("amber","EU/UK prospect — legitimate-interest basis + published-contact rule apply. Extra care on cold outreach."));
+  if(d.send_by_hand) det.appendChild(banner("amber","Channel "+d.channel+" is SEND BY HAND — approving clears the gate but you send it yourself (the app never automates LinkedIn)."));
+
+  // 1. why this prospect (score chips)
+  const s1=section("Why this prospect"); const chips=el("div","chips");
+  const bd=d.score_breakdown||{};
+  if(Object.keys(bd).length===0) chips.appendChild(el("span","chip","(no score breakdown — thin)"));
+  Object.entries(bd).forEach(([k,v])=>{ const c=el("span","chip"); c.innerHTML=esc(k.replace(/_/g," "))+" <b>+"+v+"</b>"; chips.appendChild(c); });
+  s1.appendChild(chips); det.appendChild(s1);
+
+  // 2. evidence
+  const s2=section("Evidence ("+ (d.signals||[]).length +")");
+  (d.signals||[]).forEach(sig=>{
+    const ev=el("div","ev"); const evh=el("div","ev-h");
+    evh.appendChild(el("span","t",(sig.tier||"").toUpperCase()||"—"));
+    evh.appendChild(el("span",null,sig.source||"")); evh.appendChild(el("span",null,"· "+(sig.signal_type||"")));
+    if(sig.incident_date) evh.appendChild(el("span",null,"· "+sig.incident_date));
+    ev.appendChild(evh);
+    ev.appendChild(el("div","snip",sig.snippet||""));
+    if(sig.signal_url){ const a=document.createElement("a"); a.href=sig.signal_url; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent="open source ↗"; a.style.fontSize="12px"; ev.appendChild(a); }
+    s2.appendChild(ev);
+  });
+  if(!(d.signals||[]).length) s2.appendChild(el("div","reason","No signals attached — this should not be sendable. Reject."));
+  det.appendChild(s2);
+
+  // 3. routing reason
+  const s3=section("Routing reason"); s3.appendChild(el("div","reason",d.routing_reason||"(none recorded)")); det.appendChild(s3);
+
+  // 4. the draft (editable)
+  const s4=section("Draft — edit before approving if needed");
+  if(d.subject!=null){ const subj=el("input","subj"); subj.type="text"; subj.value=d.subject||""; subj.id="ed-subject"; s4.appendChild(subj); }
+  const ta=el("textarea"); ta.id="ed-body"; ta.value=(d.edited_body!=null?d.edited_body:d.body)||""; s4.appendChild(ta);
+  if(d.opt_out_line) s4.appendChild(el("div","optout","Opt-out line: "+d.opt_out_line));
+  det.appendChild(s4);
+
+  // 5. findings used
+  const s5=section("Findings the model was allowed to cite");
+  const ul=el("ul","findings"); (d.findings_used&&d.findings_used.findings||[]).forEach(f=>ul.appendChild(el("li",null,f)));
+  if(!(d.findings_used&&d.findings_used.findings||[]).length) ul.appendChild(el("li",null,"(none — body must invent nothing)"));
+  s5.appendChild(ul);
+  if(d.findings_used&&d.findings_used.evidence_url){ const a=document.createElement("a"); a.href=d.findings_used.evidence_url; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent="primary evidence ↗"; a.style.fontSize="12px"; s5.appendChild(a); }
+  det.appendChild(s5);
+
+  // 6. compliance strip
+  const s6=section("Compliance");
+  const strip=el("div","compliance");
+  strip.appendChild(dotline(d.suppressed?"bad":"ok", d.suppressed?"suppressed (do not contact)":"not suppressed"));
+  strip.appendChild(dotline(d.compliance_ok?"ok":"bad", "compliance_ok = "+d.compliance_ok));
+  strip.appendChild(dotline(["EU","UK"].includes(d.compliance_region)?"warn":"ok", "region "+(d.compliance_region||"US")));
+  strip.appendChild(dotline(d.contact_email?"ok":"warn", d.contact_email?("to: "+d.contact_email):"no email (public/by-hand channel)"));
+  s6.appendChild(strip); det.appendChild(s6);
+
+  // actions
+  const blocked = d.suppressed || !d.compliance_ok;
+  const act=el("div","actions");
+  const chSel=el("select"); chSel.id="ed-channel";
+  ["A","B","C","D"].forEach(c=>{ const o=document.createElement("option"); o.value=c; o.textContent="Channel "+c; if(c===d.channel)o.selected=true; chSel.appendChild(o); });
+  const approve=el("button","btn-pri","Approve (A)"); approve.disabled=blocked; approve.onclick=()=>decide("approve");
+  const reject=el("button","btn-warn","Reject (R)"); reject.onclick=()=>decide("reject");
+  const rejSup=el("button","btn-warn","Reject + suppress"); rejSup.onclick=()=>decide("reject",true);
+  act.appendChild(approve); act.appendChild(el("span","src","channel:")); act.appendChild(chSel);
+  act.appendChild(reject); act.appendChild(rejSup);
+  const kbd=el("span","kbd"); kbd.innerHTML="<b>A</b> approve <b>R</b> reject <b>E</b> edit <b>J/K</b> next/prev"; act.appendChild(kbd);
+  det.appendChild(act);
+}
+
+function section(title){ const s=el("div","sec"); s.appendChild(el("h3",null,title)); return s; }
+function banner(kind,txt){ return el("div","banner "+kind,txt); }
+function dotline(state,txt){ const w=el("span"); const d=el("span","dot "+state); w.appendChild(d); w.appendChild(document.createTextNode(txt)); return w; }
+function esc(s){ const e=el("span"); e.textContent=s; return e.innerHTML; }
+
+/* ---------------------------------------------------------------------------
+ * Decisions → the approvals.json batch
+ * ------------------------------------------------------------------------- */
+function decide(kind, suppress){
+  const d=currentDraft(); if(!d) return;
+  if(kind==="approve" && (d.suppressed || !d.compliance_ok)){ toast("Blocked: suppressed or not compliant."); return; }
+
+  const dec={ draft_id:d.draft_id, decision:kind, approved_by:null };
+  if(kind==="approve"){
+    const bodyNow=($("#ed-body")||{}).value ?? d.body;
+    const subjNow=($("#ed-subject")||{}).value;
+    const chNow=($("#ed-channel")||{}).value || d.channel;
+    const origBody=(d.edited_body!=null?d.edited_body:d.body)||"";
+    if(bodyNow!==origBody) dec.edited_body=bodyNow;
+    if(subjNow!=null && d.subject!=null && subjNow!==(d.subject||"")) dec.subject=subjNow;
+    if(chNow && chNow!==d.channel) dec.channel=chNow;
+  } else {
+    const reason=prompt("Reject reason (required for the audit trail):","not a real victim / evidence too thin");
+    if(reason===null) return;          // cancelled
+    dec.reason=reason||"(no reason given)";
+    if(suppress){
+      const val = d.contact_email || d.primary_domain;
+      dec.suppress = { match_type: d.contact_email?"email":"domain", value: val };
+    }
+  }
+  decisions[d.draft_id]=dec;
+  // advance to next visible
+  const remaining=visibleDrafts();
+  selectedId = remaining.length ? remaining[0].draft_id : null;
+  toast((kind==="approve"?"Approved":"Rejected")+" "+d.company_name+(dec.edited_body?" (with edits)":"")+(dec.suppress?" + suppressed":""));
+  render();
+}
+
+function exportApprovals(){
+  const batch=Object.values(decisions);
+  if(!batch.length){ toast("Nothing to export yet."); return; }
+  const payload={ generated_at:new Date().toISOString(), source:"brand-guard approval console", count:batch.length, decisions:batch };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="approvals.json"; document.body.appendChild(a); a.click(); a.remove();
+  toast("Exported "+batch.length+" decision(s) → approvals.json. Apply server-side with apply_approvals().");
+}
+
+/* ---------------------------------------------------------------------------
+ * Tabs / badges / boot
+ * ------------------------------------------------------------------------- */
+function render(){
+  renderList(); renderDetail(); renderBadges();
+  $("#pending-n").textContent=Object.keys(decisions).length;
+  $("#btn-export").disabled = Object.keys(decisions).length===0;
+}
+function renderBadges(){
+  const undecided=QUEUE.drafts.filter(d=>!decisions[d.draft_id]).length;
+  $("#b-drafts").textContent=undecided;
+  $("#b-triage").textContent=(QUEUE.triage||[]).length;
+  $("#b-replies").textContent=(QUEUE.replies||[]).filter(r=>!r.handled).length;
+}
+function setTab(name){
+  activeTab=name;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));
+  $("#view-drafts").hidden=name!=="drafts";
+  $("#view-triage").hidden=name!=="triage";
+  $("#view-replies").hidden=name!=="replies";
+}
+
+function loadQueue(obj){
+  // accept either {drafts:[...]} (a full export) or a bare array of review rows
+  if(Array.isArray(obj)) obj={drafts:obj};
+  QUEUE={ drafts:obj.drafts||[], triage:obj.triage||[], replies:obj.replies||[], mode:obj.mode||"live" };
+  decisions={}; selectedId=QUEUE.drafts[0]?QUEUE.drafts[0].draft_id:null;
+  const mf=$("#modeflag");
+  const isDemo=QUEUE.mode==="demo";
+  mf.textContent=isDemo?"DEMO DATA":"LIVE EXPORT"; mf.className="modeflag "+(isDemo?"demo":"live");
+  // populate stub tabs if data present
+  if((QUEUE.triage||[]).length) $("#triage-body").textContent=QUEUE.triage.length+" triage row(s) loaded. (Read-only here; promote/discard/suppress are server-side actions.)";
+  if((QUEUE.replies||[]).length) $("#replies-body").textContent=QUEUE.replies.length+" reply row(s) loaded. (Read-only here; opt-out/mark-handled are server-side actions.)";
+  render();
+}
+
+let toastT=null;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* events */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setTab(t.dataset.tab));
+["#f-channel","#f-region","#f-band","#f-text"].forEach(s=>$(s).addEventListener("input",render));
+$("#btn-export").onclick=exportApprovals;
+$("#btn-reset").onclick=()=>{ QUEUE=clone(DEMO); decisions={}; selectedId=QUEUE.drafts[0].draft_id; const mf=$("#modeflag"); mf.textContent="DEMO DATA"; mf.className="modeflag demo"; render(); toast("Reset to demo data."); };
+$("#btn-load").onclick=()=>$("#file-load").click();
+$("#file-load").onchange=(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ loadQueue(JSON.parse(r.result)); toast("Loaded "+QUEUE.drafts.length+" draft(s) from "+f.name); }catch(err){ toast("Could not parse JSON: "+err.message); } };
+  r.readAsText(f); e.target.value="";
+};
+
+/* keyboard: A/R/E/J/K */
+document.addEventListener("keydown",(e)=>{
+  if(activeTab!=="drafts") return;
+  const tag=(e.target.tagName||"").toLowerCase();
+  if(tag==="textarea"||tag==="input"||tag==="select"){ if(e.key==="Escape") e.target.blur(); return; }
+  const rows=visibleDrafts(); const idx=rows.findIndex(d=>d.draft_id===selectedId);
+  if(e.key==="j"||e.key==="J"){ if(rows.length){ selectedId=rows[Math.min(rows.length-1,idx+1)].draft_id; render(); } }
+  else if(e.key==="k"||e.key==="K"){ if(rows.length){ selectedId=rows[Math.max(0,idx-1)].draft_id; render(); } }
+  else if(e.key==="a"||e.key==="A"){ const d=currentDraft(); if(d && !d.suppressed && d.compliance_ok) decide("approve"); }
+  else if(e.key==="r"||e.key==="R"){ if(currentDraft()) decide("reject"); }
+  else if(e.key==="e"||e.key==="E"){ const ta=$("#ed-body"); if(ta){ e.preventDefault(); ta.focus(); } }
+});
+
+/* boot */
+setTab("drafts"); loadQueue(DEMO);
+</script>
+</body>
+</html>

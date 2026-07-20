@@ -1,0 +1,5 @@
+  ⚠️  GDELT query failed for '("lookalike domain" OR "phishing domain" OR "fake website" OR "clone website") (lost OR lawsuit OR "wire transfer" OR customers)': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT query failed for '("vendor impersonation" OR "fake vendor" OR "bank impersonation" OR "email spoofing" OR "spoofed email") ("wire transfer" OR lost OR lawsuit OR DMARC)': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT query failed for '("business" OR "dealership" OR "clinic" OR "restaurant" OR "contractor" OR "bail bond") ("impersonating" OR "fake website" OR "fake account") scam': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT query failed for '("fake invoice" OR "invoice scam" OR "payment redirection") ("business" OR "company") ("lost" OR "wire transfer" OR "lawsuit")': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT query failed for '("spoofed email" OR "business email compromise" OR "BEC scam") ("small business" OR "family-owned" OR dealership OR contractor)': HTTP Error 429: Too Many Requests

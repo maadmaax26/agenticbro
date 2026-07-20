@@ -1,0 +1,9 @@
+The Email Spoof Check is live. It uses two free APIs with no API keys needed. Google DNS for SPF, DMARC, DKIM, and MX record lookups. And crt.sh for finding lookalike domains with active SSL certificates.
+
+Scoring is out of 100. SPF strict minus all gets 35 points. DMARC reject gets 40 points. DKIM found gets 15 points. MX records get 10 points.
+
+Agenticbro.app scored 30 out of 100. It's currently spoofable. Three issues found. SPF uses soft fail instead of hard fail. No DMARC record at all. And no DKIM record found.
+
+One manual step is needed. Run the email spoof checks SQL migration in the Supabase Dashboard SQL Editor. The file is in supabase slash migrations slash 20260529000001_email underscore spoof underscore checks dot sql.
+
+Scan first, trust later!

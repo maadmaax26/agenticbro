@@ -1,0 +1,909 @@
+<!--
+  Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
+  See LICENSE file in this directory. Change Date: 2029-05-24. Change License: Apache-2.0.
+  Commercial use restrictions apply — contact agenticbro@agenticbro.app for licensing.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Guard — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0; --border-light: #f1f5f9;
+    --text: #0f172a; --text-secondary: #64748b; --text-muted: #94a3b8;
+    --blue: #3b82f6; --blue-light: #dbeafe; --blue-dark: #1e40af;
+    --green: #16a34a; --green-light: #dcfce7; --green-dark: #166534;
+    --yellow: #ca8a04; --yellow-light: #fef9c3; --yellow-dark: #854d0e;
+    --orange: #ea580c; --orange-light: #ffedd5; --orange-dark: #9a3412;
+    --red: #dc2626; --red-light: #fee2e2; --red-dark: #991b1b;
+    --radius: 12px; --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,.1);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  
+  .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .header h1 { font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .header h1 span { font-size: 30px; }
+  .header-sub { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+  .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-outline { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--text-muted); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: white; border-radius: 10px; padding: 4px; border: 1px solid var(--border); width: fit-content; }
+  .tab { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all .15s; border: none; background: none; }
+  .tab:hover { background: var(--border-light); }
+  .tab.active { background: var(--text); color: white; }
+
+  /* Summary Cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 28px; }
+  .summary-card { padding: 20px; border-radius: var(--radius); text-align: center; border: 1px solid transparent; }
+  .summary-card .value { font-size: 32px; font-weight: 700; }
+  .summary-card .label { font-size: 12px; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  .summary-total { background: #f1f5f9; }
+  .summary-total .value { color: #475569; }
+  .summary-total .label { color: #94a3b8; }
+  .summary-critical { background: var(--red-light); }
+  .summary-critical .value { color: var(--red); }
+  .summary-critical .label { color: var(--red-dark); }
+  .summary-high { background: var(--orange-light); }
+  .summary-high .value { color: var(--orange); }
+  .summary-high .label { color: var(--orange-dark); }
+  .summary-medium { background: var(--yellow-light); }
+  .summary-medium .value { color: var(--yellow); }
+  .summary-medium .label { color: var(--yellow-dark); }
+  .summary-low { background: var(--green-light); }
+  .summary-low .value { color: var(--green); }
+  .summary-low .label { color: var(--green-dark); }
+
+  /* Card */
+  .card { background: white; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .card-header { padding: 20px 24px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); }
+  .card-header h3 { font-size: 16px; font-weight: 600; }
+  .card-body { padding: 20px 24px; }
+  .card-body-flush { padding: 0; }
+
+  /* Health Score */
+  .health-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+  .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .score-circle .number { font-size: 36px; font-weight: 700; line-height: 1; }
+  .score-circle .of { font-size: 13px; }
+  .score-level { font-size: 18px; font-weight: 700; text-align: center; }
+  .score-trend { font-size: 13px; color: var(--text-secondary); text-align: center; margin-top: 2px; }
+  .bar-group { display: grid; gap: 14px; margin-top: 20px; }
+  .bar-row { display: grid; grid-template-columns: 100px 1fr 40px; align-items: center; gap: 10px; }
+  .bar-label { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  .bar-track { height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+  .bar-value { font-size: 13px; font-weight: 600; text-align: right; }
+  .rec-box { margin-top: 20px; padding: 14px; background: #f8fafc; border-radius: 8px; }
+  .rec-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+  .rec-item { font-size: 13px; color: var(--text); padding: 3px 0; }
+  .rec-item::before { content: "→ "; color: var(--blue); }
+
+  /* Threat Feed */
+  .filter-bar { display: flex; gap: 6px; }
+  .filter-btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: white; color: var(--text-secondary); cursor: pointer; transition: all .15s; }
+  .filter-btn:hover { border-color: var(--text-muted); }
+  .filter-btn.active { font-weight: 600; }
+  .filter-btn.active[data-sev="all"] { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+  .filter-btn.active[data-sev="critical"] { background: var(--red-light); color: var(--red); border-color: #fca5a5; }
+  .filter-btn.active[data-sev="high"] { background: var(--orange-light); color: var(--orange); border-color: #fdba74; }
+  .filter-btn.active[data-sev="medium"] { background: var(--yellow-light); color: var(--yellow); border-color: #fde047; }
+  .filter-btn.active[data-sev="low"] { background: var(--green-light); color: var(--green); border-color: #86efac; }
+
+  .threat-list { display: grid; gap: 8px; }
+  .threat-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 8px; border: 1px solid var(--border-light); transition: all .15s; cursor: pointer; }
+  .threat-row:hover { box-shadow: var(--shadow); border-color: var(--border); }
+  .threat-row.critical { background: #fef2f250; border-color: #fca5a580; }
+  .threat-row.high { background: #fff7ed50; border-color: #fdba7480; }
+  .threat-row.medium { background: #fefce850; border-color: #fde04780; }
+  .threat-row.low { background: #f0fdf450; border-color: #86efac80; }
+  .threat-icon { font-size: 20px; }
+  .threat-info { flex: 1; min-width: 0; }
+  .threat-target { font-size: 14px; font-weight: 600; }
+  .threat-meta { font-size: 12px; color: var(--text-secondary); }
+  .threat-score { padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: white; }
+  .threat-status { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .status-new { background: #fef3c7; color: #92400e; }
+  .status-monitoring { background: #dbeafe; color: #1e40af; }
+  .status-reported { background: #fce7f3; color: #9d174d; }
+  .status-resolved { background: #d1fae5; color: #065f46; }
+  .status-dismissed { background: #f1f5f9; color: #64748b; }
+
+  .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 8px; }
+
+  /* Takedown Center */
+  .takedown-stats { display: flex; gap: 14px; margin-bottom: 20px; }
+  .tk-stat { padding: 12px 20px; border-radius: 8px; text-align: center; }
+  .tk-stat .num { font-size: 22px; font-weight: 700; }
+  .tk-stat .lbl { font-size: 11px; text-transform: uppercase; font-weight: 600; }
+  .tk-pending { background: #fef3c7; }
+  .tk-pending .num { color: #92400e; }
+  .tk-pending .lbl { color: #b45309; }
+  .tk-progress { background: #dbeafe; }
+  .tk-progress .num { color: #1e40af; }
+  .tk-progress .lbl { color: #2563eb; }
+  .tk-done { background: #d1fae5; }
+  .tk-done .num { color: #065f46; }
+  .tk-done .lbl { color: #059669; }
+
+  .tk-list { display: grid; gap: 8px; }
+  .tk-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-light); }
+  .tk-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .tk-dot.urgent { background: var(--red); }
+  .tk-dot.high { background: var(--orange); }
+  .tk-dot.medium { background: var(--yellow); }
+  .tk-dot.low { background: var(--green); }
+  .tk-info { flex: 1; min-width: 0; }
+  .tk-title { font-size: 13px; font-weight: 600; }
+  .tk-desc { font-size: 12px; color: var(--text-secondary); }
+  .tk-btn { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--blue); color: white; border: none; cursor: pointer; text-decoration: none; }
+
+  /* Alerts */
+  .alert-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 8px; border: 1px solid var(--border-light); }
+  .alert-row.unread { background: #f0f9ff; border-color: #bfdbfe; }
+  .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .alert-info { flex: 1; }
+  .alert-title { font-size: 14px; font-weight: 600; }
+  .alert-msg { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .alert-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .alert-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+
+  /* Footer */
+  .footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text-muted); padding: 20px 0; border-top: 1px solid var(--border-light); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    .health-layout { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 16px; }
+  }
+
+  /* Scan animation */
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+  .scan-btn { position: relative; overflow: hidden; }
+  .scan-btn::after { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: rgba(255,255,255,.3); border-radius: 50%; transform: translate(-50%,-50%); transition: width .4s, height .4s; }
+  .scan-btn:active::after { width: 200px; height: 200px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: white; border-radius: 16px; padding: 32px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+  .modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .modal p { font-size: 13px; color: var(--text-secondary); }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+  .modal-steps { margin: 16px 0; }
+  .modal-steps li { font-size: 13px; padding: 6px 0; color: var(--text); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+</style>
+</head>
+<!-- Onboarding Modal (shown first) -->
+<div id="onboarding-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);display:flex;align-items:center;justify-content:center;z-index:200;padding:24px;">
+  <div style="max-width:520px;width:100%;background:white;border-radius:16px;padding:48px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
+      <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0;">Set Up Brand Guard</h1>
+      <p style="font-size:14px;color:#64748b;margin-top:8px;">Tell us about your brand so we can start monitoring for impersonators, lookalikes, and scams.</p>
+    </div>
+    <!-- Progress -->
+    <div id="onboarding-progress" style="display:flex;gap:8px;margin-bottom:32px;">
+      <div class="ob-step" data-step="1" style="flex:1;height:4px;border-radius:2px;background:#3b82f6;"></div>
+      <div class="ob-step" data-step="2" style="flex:1;height:4px;border-radius:2px;background:#e2e8f0;"></div>
+      <div class="ob-step" data-step="3" style="flex:1;height:4px;border-radius:2px;background:#e2e8f0;"></div>
+    </div>
+    <!-- Step 1 -->
+    <div id="ob-step-1">
+      <label style="display:block;font-size:14px;font-weight:600;color:#374151;margin-bottom:8px;">What's your brand name? *</label>
+      <input id="ob-brand-name" type="text" placeholder="e.g. Agentic Bro" style="width:100%;padding:12px 16px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;outline:none;margin-bottom:8px;" oninput="updateObStep1()" />
+      <p style="font-size:13px;color:#64748b;margin:0 0 24px;">This is the name your customers know you by. We'll scan for accounts pretending to be you.</p>
+      <button id="ob-btn-1" class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;opacity:0.5;cursor:not-allowed;" onclick="obNext(2)" disabled>Continue</button>
+    </div>
+    <!-- Step 2 -->
+    <div id="ob-step-2" style="display:none;">
+      <label style="display:block;font-size:14px;font-weight:600;color:#374151;margin-bottom:8px;">Your primary social media handle *</label>
+      <div style="position:relative;margin-bottom:16px;">
+        <span style="position:absolute;left:16px;top:13px;color:#94a3b8;font-size:16px;">@</span>
+        <input id="ob-brand-handle" type="text" placeholder="e.g. agenticbro" style="width:100%;padding:12px 16px 12px 36px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;outline:none;" oninput="updateObStep2()" />
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px;">We'll look for accounts with similar handles that might be impersonating you.</p>
+      <label style="display:block;font-size:14px;font-weight:600;color:#374151;margin-bottom:8px;">Your website (optional)</label>
+      <input id="ob-brand-domain" type="text" placeholder="e.g. agenticbro.app" style="width:100%;padding:12px 16px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;outline:none;margin-bottom:24px;" />
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-outline" style="flex:1;padding:14px;font-size:16px;" onclick="obNext(1)">Back</button>
+        <button id="ob-btn-2" class="btn btn-primary" style="flex:2;padding:14px;font-size:16px;opacity:0.5;cursor:not-allowed;" onclick="obNext(3)" disabled>Continue</button>
+      </div>
+    </div>
+    <!-- Step 3 -->
+    <div id="ob-step-3" style="display:none;">
+      <label style="display:block;font-size:14px;font-weight:600;color:#374151;margin-bottom:12px;">Which platforms should we monitor?</label>
+      <div id="ob-platforms" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;">
+        <button class="ob-plat" data-plat="x" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-size:14px;font-weight:600;"><span>𝕏</span> X (Twitter)</button>
+        <button class="ob-plat" data-plat="instagram" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-size:14px;font-weight:600;"><span>📷</span> Instagram</button>
+        <button class="ob-plat" data-plat="tiktok" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-size:14px;font-weight:600;"><span>🎵</span> TikTok</button>
+        <button class="ob-plat" data-plat="facebook" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-size:14px;font-weight:600;"><span>👥</span> Facebook</button>
+        <button class="ob-plat" data-plat="telegram" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-size:14px;font-weight:600;"><span>✈️</span> Telegram</button>
+        <button class="ob-plat" data-plat="linkedin" onclick="togglePlat(this)" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;background:white;color:#64748b;cursor:pointer;font-size:14px;font-weight:400;"><span>💼</span> LinkedIn</button>
+      </div>
+      <label style="display:block;font-size:14px;font-weight:600;color:#374151;margin-bottom:12px;">How often should we scan?</label>
+      <div style="display:grid;gap:8px;margin-bottom:24px;">
+        <button class="ob-freq" data-freq="daily" onclick="toggleFreq(this)" style="padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:white;cursor:pointer;text-align:left;">
+          <div style="font-size:14px;font-weight:400;color:#374151;">Daily</div>
+          <div style="font-size:12px;color:#64748b;">Best for high-risk brands</div>
+        </button>
+        <button class="ob-freq" data-freq="weekly" onclick="toggleFreq(this)" style="padding:12px 16px;border-radius:8px;border:1px solid #3b82f6;background:#eff6ff;cursor:pointer;text-align:left;">
+          <div style="font-size:14px;font-weight:600;color:#1d4ed8;">Weekly</div>
+          <div style="font-size:12px;color:#64748b;">Recommended for most brands</div>
+        </button>
+        <button class="ob-freq" data-freq="monthly" onclick="toggleFreq(this)" style="padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;background:white;cursor:pointer;text-align:left;">
+          <div style="font-size:14px;font-weight:400;color:#374151;">Monthly</div>
+          <div style="font-size:12px;color:#64748b;">For low-risk monitoring</div>
+        </button>
+      </div>
+      <!-- Summary -->
+      <div id="ob-summary" style="padding:16px;background:#f8fafc;border-radius:8px;margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Setup Summary</div>
+        <div id="ob-summary-name" style="font-size:16px;font-weight:700;color:#0f172a;">Agentic Bro</div>
+        <div id="ob-summary-handle" style="font-size:14px;color:#64748b;">@agenticbro • agenticbro.app</div>
+        <div id="ob-summary-platforms" style="font-size:13px;color:#64748b;margin-top:4px;">Monitoring 5 platforms • Weekly scans</div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-outline" style="flex:1;padding:14px;font-size:16px;" onclick="obNext(2)">Back</button>
+        <button class="btn btn-primary" style="flex:2;padding:14px;font-size:16px;" onclick="finishOnboarding()">🚀 Start Protecting My Brand</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="dashboard-container" style="display:none;">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1><span>🔐</span> Brand Guard</h1>
+      <div id="dash-brand-sub" style="font-size: 14px; color: var(--text-secondary); margin-top: 2px;">
+            <span id="dash-brand-name">Agentic Bro</span> — <span id="dash-brand-handle">@agenticbro • agenticbro.app</span>
+          </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="position:relative;display:inline-block;" id="brand-switcher">
+        <button onclick="toggleBrandSwitcher()" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-size:13px;font-weight:500;">
+          <span>🔐</span>
+          <span id="switcher-brand">Agentic Bro</span>
+          <span style="font-size:10px;color:var(--text-muted);">▼</span>
+        </button>
+        <div id="brand-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;min-width:240px;background:white;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-lg);padding:4px;z-index:50;">
+          <button style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:6px;border:none;background:#eff6ff;cursor:pointer;text-align:left;">
+            <span style="font-size:18px;">🔐</span>
+            <div><div style="font-size:14px;font-weight:600;color:#0f172a;">Agentic Bro</div><div style="font-size:12px;color:#64748b;">@agenticbro</div></div>
+            <span style="margin-left:auto;color:#3b82f6;font-size:14px;">✓</span>
+          </button>
+          <div style="border-top:1px solid #f1f5f9;margin:4px 0;"></div>
+          <button onclick="document.getElementById('onboarding-overlay').style.display='flex';document.getElementById('dashboard-container').style.display='none';obStep=1;obNext(1);" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:6px;border:none;background:white;cursor:pointer;color:#3b82f6;font-size:14px;font-weight:500;">
+            <span style="font-size:18px;">＋</span> Add Another Brand
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="showAlerts()">🔔 3 Alerts</button>
+      <button class="btn btn-primary scan-btn" onclick="runScan()">🔍 Run Scan</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard',this)">Dashboard</button>
+    <button class="tab" data-tab="threats" onclick="switchTab('threats',this)">Threats</button>
+    <button class="tab" data-tab="takedowns" onclick="switchTab('takedowns',this)">Takedowns</button>
+    <button class="tab" data-tab="alerts" onclick="switchTab('alerts',this)">Alerts</button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="summary-card summary-total">
+      <div class="value">8</div>
+      <div class="label">Total Threats</div>
+    </div>
+    <div class="summary-card summary-critical">
+      <div class="value">2</div>
+      <div class="label">Critical</div>
+    </div>
+    <div class="summary-card summary-high">
+      <div class="value">3</div>
+      <div class="label">High</div>
+    </div>
+    <div class="summary-card summary-medium">
+      <div class="value">2</div>
+      <div class="label">Medium</div>
+    </div>
+    <div class="summary-card summary-low">
+      <div class="value">1</div>
+      <div class="label">Low</div>
+    </div>
+  </div>
+
+  <!-- Dashboard Tab -->
+  <div id="tab-dashboard" class="tab-content">
+    <div class="health-layout">
+      <!-- Health Score -->
+      <div class="card">
+        <div class="card-header"><h3>🎯 Brand Health Score</h3></div>
+        <div class="card-body">
+          <div class="score-circle" style="border: 6px solid var(--orange);">
+            <span class="number" style="color:var(--orange);">42</span>
+            <span class="of" style="color:var(--text-secondary);">/100</span>
+          </div>
+          <div class="score-level" style="color:var(--orange);">FAIR</div>
+          <div class="score-trend">📉 Declining</div>
+          <div class="bar-group">
+            <div class="bar-row">
+              <span class="bar-label">👤 Social</span>
+              <div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--orange);"></div></div>
+              <span class="bar-value" style="color:var(--orange);">45%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">🌐 Domain</span>
+              <div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--yellow);"></div></div>
+              <span class="bar-value" style="color:var(--yellow);">60%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">📞 Phone</span>
+              <div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--green);"></div></div>
+              <span class="bar-value" style="color:var(--green);">80%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">🕵️ DB</span>
+              <div class="bar-track"><div class="bar-fill" style="width:70%;background:var(--yellow);"></div></div>
+              <span class="bar-value" style="color:var(--yellow);">70%</span>
+            </div>
+          </div>
+          <div class="rec-box">
+            <div class="rec-title">Recommendations</div>
+            <div class="rec-item">File urgent abuse reports for all critical threats</div>
+            <div class="rec-item">Monitor high-threat profiles within 48 hours</div>
+            <div class="rec-item">Register key domain variants to prevent typosquatting</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Feed + Takedowns -->
+      <div style="display:grid;gap:24px;">
+        <!-- Mini Threat Feed -->
+        <div class="card">
+          <div class="card-header">
+            <h3>⚡ Recent Threats</h3>
+            <button class="btn btn-outline" style="font-size:12px;" onclick="switchTab('threats',document.querySelector('[data-tab=threats]'))">View All</button>
+          </div>
+          <div class="card-body card-body-flush" style="padding:8px 16px 16px;">
+            <div class="threat-list">
+              <div class="threat-row critical" onclick="showTakedown('agenticbro_support','X')">
+                <span class="threat-icon">🚨</span><span class="threat-icon">👤</span>
+                <div class="threat-info">
+                  <div class="threat-target">@agenticbro_support</div>
+                  <div class="threat-meta">X • Impersonator • 2h ago</div>
+                </div>
+                <span class="threat-score" style="background:var(--red);">7.3</span>
+                <span class="threat-status status-new">NEW</span>
+              </div>
+              <div class="threat-row critical" onclick="showTakedown('loginagenticbro.app','Domain')">
+                <span class="threat-icon">🚨</span><span class="threat-icon">🌐</span>
+                <div class="threat-info">
+                  <div class="threat-target">loginagenticbro.app</div>
+                  <div class="threat-meta">Domain • Phishing • 5h ago</div>
+                </div>
+                <span class="threat-score" style="background:var(--red);">9.2</span>
+                <span class="threat-status status-new">NEW</span>
+              </div>
+              <div class="threat-row high" onclick="showTakedown('agntcbro_real','X')">
+                <span class="threat-icon">⚠️</span><span class="threat-icon">👤</span>
+                <div class="threat-info">
+                  <div class="threat-target">@agntcbro_real</div>
+                  <div class="threat-meta">X • Impersonator • 1d ago</div>
+                </div>
+                <span class="threat-score" style="background:var(--orange);">5.3</span>
+                <span class="threat-status status-reported">REPORTED</span>
+              </div>
+              <div class="threat-row high">
+                <span class="threat-icon">⚠️</span><span class="threat-icon">📞</span>
+                <div class="threat-info">
+                  <div class="threat-target">+1 (555) 234-5678</div>
+                  <div class="threat-meta">Phone • Invoice Redirect • 2d ago</div>
+                </div>
+                <span class="threat-score" style="background:var(--orange);">4.5</span>
+                <span class="threat-status status-monitoring">MONITORING</span>
+              </div>
+              <div class="threat-row medium">
+                <span class="threat-icon">ℹ️</span><span class="threat-icon">🔗</span>
+                <div class="threat-info">
+                  <div class="threat-target">3 accounts across X + Telegram</div>
+                  <div class="threat-meta">Cross-Channel • Correlated • 3d ago</div>
+                </div>
+                <span class="threat-score" style="background:var(--yellow);">3.0</span>
+                <span class="threat-status status-new">NEW</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Takedown -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Takedown Actions</h3>
+            <button class="btn btn-outline" style="font-size:12px;" onclick="switchTab('takedowns',document.querySelector('[data-tab=takedowns]'))">View All</button>
+          </div>
+          <div class="card-body">
+            <div class="takedown-stats">
+              <div class="tk-stat tk-pending"><div class="num">3</div><div class="lbl">Pending</div></div>
+              <div class="tk-stat tk-progress"><div class="num">1</div><div class="lbl">In Progress</div></div>
+              <div class="tk-stat tk-done"><div class="num">2</div><div class="lbl">Completed</div></div>
+            </div>
+            <div class="tk-list">
+              <div class="tk-row">
+                <div class="tk-dot urgent"></div>
+                <div class="tk-info"><div class="tk-title">[URGENT] X — @agenticbro_support</div><div class="tk-desc">File impersonation report → 2h ago</div></div>
+                <a class="tk-btn" href="#" onclick="showTakedown('agenticbro_support','X');return false;">File Report</a>
+              </div>
+              <div class="tk-row">
+                <div class="tk-dot urgent"></div>
+                <div class="tk-info"><div class="tk-title">[URGENT] Domain — loginagenticbro.app</div><div class="tk-desc">Domain abuse report → 5h ago</div></div>
+                <a class="tk-btn" href="#" onclick="showTakedown('loginagenticbro.app','Domain');return false;">File Report</a>
+              </div>
+              <div class="tk-row">
+                <div class="tk-dot high"></div>
+                <div class="tk-info"><div class="tk-title">[HIGH] Phone — +1 (555) 234-5678</div><div class="tk-desc">FTC fraud report → 2d ago</div></div>
+                <a class="tk-btn" href="#" onclick="showTakedown('+1-555-234-5678','Phone');return false;">File Report</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Threats Tab -->
+  <div id="tab-threats" class="tab-content" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <h3>⚡ Threat Feed</h3>
+        <div class="filter-bar">
+          <button class="filter-btn active" data-sev="all" onclick="filterThreats('all',this)">All (8)</button>
+          <button class="filter-btn" data-sev="critical" onclick="filterThreats('critical',this)">🚨 Critical (2)</button>
+          <button class="filter-btn" data-sev="high" onclick="filterThreats('high',this)">⚠️ High (3)</button>
+          <button class="filter-btn" data-sev="medium" onclick="filterThreats('medium',this)">ℹ️ Medium (2)</button>
+          <button class="filter-btn" data-sev="low" onclick="filterThreats('low',this)">✅ Low (1)</button>
+        </div>
+      </div>
+      <div class="card-body card-body-flush" style="padding:12px 16px 16px;" id="threat-feed">
+        <div class="threat-list" id="threat-list">
+          <div class="threat-row critical" onclick="showTakedown('agenticbro_support','X')">
+            <span class="threat-icon">🚨👤</span>
+            <div class="threat-info"><div class="threat-target">@agenticbro_support</div><div class="threat-meta">X (Twitter) • Brand Impersonator • Detected 2h ago</div></div>
+            <span class="threat-score" style="background:var(--red);">7.3</span>
+            <span class="threat-status status-new">NEW</span>
+          </div>
+          <div class="threat-row critical" onclick="showTakedown('loginagenticbro.app','Domain')">
+            <span class="threat-icon">🚨🌐</span>
+            <div class="threat-info"><div class="threat-target">loginagenticbro.app</div><div class="threat-meta">Domain • Phishing Lookalike • Detected 5h ago</div></div>
+            <span class="threat-score" style="background:var(--red);">9.2</span>
+            <span class="threat-status status-new">NEW</span>
+          </div>
+          <div class="threat-row high" onclick="showTakedown('agntcbro_real','X')">
+            <span class="threat-icon">⚠️👤</span>
+            <div class="threat-info"><div class="threat-target">@agntcbro_real</div><div class="threat-meta">X (Twitter) • Brand Impersonator • Detected 1d ago</div></div>
+            <span class="threat-score" style="background:var(--orange);">5.3</span>
+            <span class="threat-status status-reported">REPORTED</span>
+          </div>
+          <div class="threat-row high">
+            <span class="threat-icon">⚠️📞</span>
+            <div class="threat-info"><div class="threat-target">+1 (555) 234-5678</div><div class="threat-meta">Phone • Vendor Impersonation Scam • Detected 2d ago</div></div>
+            <span class="threat-score" style="background:var(--orange);">4.5</span>
+            <span class="threat-status status-monitoring">MONITORING</span>
+          </div>
+          <div class="threat-row high">
+            <span class="threat-icon">⚠️🕵️</span>
+            <div class="threat-info"><div class="threat-target">solana_investor_2024</div><div class="threat-meta">Scammer DB • Known Scammer Match • Detected 2d ago</div></div>
+            <span class="threat-score" style="background:var(--orange);">5.8</span>
+            <span class="threat-status status-new">NEW</span>
+          </div>
+          <div class="threat-row medium">
+            <span class="threat-icon">ℹ️🔗</span>
+            <div class="threat-info"><div class="threat-target">3 accounts across X + Telegram</div><div class="threat-meta">Cross-Channel • Correlated Operation • Detected 3d ago</div></div>
+            <span class="threat-score" style="background:var(--yellow);">3.0</span>
+            <span class="threat-status status-new">NEW</span>
+          </div>
+          <div class="threat-row medium">
+            <span class="threat-icon">ℹ️🌐</span>
+            <div class="threat-info"><div class="threat-target">agenticbro-support.com</div><div class="threat-meta">Domain • TLD Swapped Lookalike • Detected 4d ago</div></div>
+            <span class="threat-score" style="background:var(--yellow);">3.5</span>
+            <span class="threat-status status-monitoring">MONITORING</span>
+          </div>
+          <div class="threat-row low">
+            <span class="threat-icon">✅👤</span>
+            <div class="threat-info"><div class="threat-target">@agenticbro_fan</div><div class="threat-meta">X (Twitter) • Low Similarity Fan Account • Detected 5d ago</div></div>
+            <span class="threat-score" style="background:var(--green);">1.2</span>
+            <span class="threat-status status-dismissed">DISMISSED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Takedowns Tab -->
+  <div id="tab-takedowns" class="tab-content" style="display:none;">
+    <div class="card">
+      <div class="card-header"><h3>📋 Takedown Center</h3></div>
+      <div class="card-body">
+        <div class="takedown-stats">
+          <div class="tk-stat tk-pending"><div class="num">3</div><div class="lbl">Pending</div></div>
+          <div class="tk-stat tk-progress"><div class="num">1</div><div class="lbl">In Progress</div></div>
+          <div class="tk-stat tk-done"><div class="num">2</div><div class="lbl">Completed</div></div>
+        </div>
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:12px;">Pending Actions</h4>
+        <div class="tk-list">
+          <div class="tk-row">
+            <div class="tk-dot urgent"></div>
+            <div class="tk-info"><div class="tk-title">[URGENT] X — File impersonation report for @agenticbro_support</div><div class="tk-desc">Risk 7.3/10 HIGH • Brand impersonator with 65% handle similarity • Created 2h ago</div></div>
+            <a class="tk-btn" href="#" onclick="showTakedown('agenticbro_support','X');return false;">File Report</a>
+          </div>
+          <div class="tk-row">
+            <div class="tk-dot urgent"></div>
+            <div class="tk-info"><div class="tk-title">[URGENT] Domain — File abuse report for loginagenticbro.app</div><div class="tk-desc">Risk 9.2/10 CRITICAL • Active phishing domain with self-signed SSL • Created 5h ago</div></div>
+            <a class="tk-btn" href="#" onclick="showTakedown('loginagenticbro.app','Domain');return false;">File Report</a>
+          </div>
+          <div class="tk-row">
+            <div class="tk-dot high"></div>
+            <div class="tk-info"><div class="tk-title">[HIGH] Phone — Report +1 (555) 234-5678 to FTC</div><div class="tk-desc">Risk 4.5/10 MEDIUM • Invoice redirect scam • VoIP number • Created 2d ago</div></div>
+            <a class="tk-btn" href="#" onclick="showTakedown('+1-555-234-5678','Phone');return false;">File Report</a>
+          </div>
+        </div>
+        <h4 style="font-size:14px;font-weight:600;margin:20px 0 12px;">In Progress</h4>
+        <div class="tk-list">
+          <div class="tk-row">
+            <div class="tk-dot medium"></div>
+            <div class="tk-info"><div class="tk-title">[HIGH] X — Impersonation report for @agntcbro_real</div><div class="tk-desc">Report submitted to X • Awaiting review • Submitted 1d ago</div></div>
+            <span class="threat-status status-reported" style="font-size:11px;">SUBMITTED</span>
+          </div>
+        </div>
+        <h4 style="font-size:14px;font-weight:600;margin:20px 0 12px;">Completed</h4>
+        <div class="tk-list">
+          <div class="tk-row">
+            <div class="tk-dot low"></div>
+            <div class="tk-info"><div class="tk-title">[MEDIUM] Domain — agenticbro.co lookalike removed</div><div class="tk-desc">Domain suspended by registrar • Completed 3d ago</div></div>
+            <span class="threat-status status-resolved" style="font-size:11px;">REMOVED</span>
+          </div>
+          <div class="tk-row">
+            <div class="tk-dot low"></div>
+            <div class="tk-info"><div class="tk-title">[LOW] X — @agenticbro_fan resolved</div><div class="tk-desc">Account rebranded after outreach • Completed 5d ago</div></div>
+            <span class="threat-status status-resolved" style="font-size:11px;">RESOLVED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Tab -->
+  <div id="tab-alerts" class="tab-content" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <h3>🔔 Alerts</h3>
+        <button class="btn btn-outline" style="font-size:12px;" onclick="markAllRead()">Mark All Read</button>
+      </div>
+      <div class="card-body card-body-flush" style="padding:8px 16px 16px;">
+        <div style="display:grid;gap:8px;" id="alert-list">
+          <div class="alert-row unread">
+            <span class="alert-icon">🚨</span>
+            <div class="alert-info">
+              <div class="alert-title">Critical Impersonator Detected: @agenticbro_support</div>
+              <div class="alert-msg">Brand impersonator on X with 65% handle similarity. Risk score 7.3/10 HIGH.</div>
+              <div class="alert-time">2 hours ago • X (Twitter)</div>
+            </div>
+            <span class="alert-badge" style="background:var(--red-light);color:var(--red);">URGENT</span>
+          </div>
+          <div class="alert-row unread">
+            <span class="alert-icon">🚨</span>
+            <div class="alert-info">
+              <div class="alert-title">Critical Domain Lookalike: loginagenticbro.app</div>
+              <div class="alert-msg">Active phishing domain with self-signed SSL certificate detected. Risk score 9.2/10 CRITICAL.</div>
+              <div class="alert-time">5 hours ago • Domain</div>
+            </div>
+            <span class="alert-badge" style="background:var(--red-light);color:var(--red);">URGENT</span>
+          </div>
+          <div class="alert-row unread">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-info">
+              <div class="alert-title">High-Risk Scammer Match: solana_investor_2024</div>
+              <div class="alert-msg">Known scammer from database with confirmed fraud reports. Risk score 5.8/10 HIGH.</div>
+              <div class="alert-time">2 days ago • Scammer DB</div>
+            </div>
+            <span class="alert-badge" style="background:var(--orange-light);color:var(--orange);">ACTION NEEDED</span>
+          </div>
+          <div class="alert-row">
+            <span class="alert-icon">✅</span>
+            <div class="alert-info">
+              <div class="alert-title">Threat Resolved: agenticbro.co lookalike removed</div>
+              <div class="alert-msg">Domain suspended by registrar after abuse report filing.</div>
+              <div class="alert-time">3 days ago • Domain</div>
+            </div>
+            <span class="alert-badge" style="background:var(--green-light);color:var(--green);">RESOLVED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="container">
+  <div class="footer">
+    Brand Guard by Jeeevs / AgenticBro — Scan first, trust later! 🔐<br>
+    Educational purposes only. Not financial advice. Not a guarantee of safety.
+  </div>
+</div>
+
+<!-- Takedown Modal -->
+<div id="takedown-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeTakedown()">
+  <div class="modal" id="takedown-content"></div>
+</div>
+
+<!-- Scan Modal -->
+<div id="scan-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeScan()">
+  <div class="modal">
+    <h2>🔍 Run Brand Scan</h2>
+    <p style="margin:8px 0 16px;">Select the type of scan to run for Agentic Bro</p>
+    <div style="display:grid;gap:10px;">
+      <button class="btn btn-primary" style="text-align:left;padding:14px 18px;" onclick="closeScan();alert('Impersonator scan would start here — connects to /api/brand-guard/impersonator-scan')">
+        <div style="font-size:14px;">👤 Brand Impersonator Scan</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px;">Detect accounts impersonating your brand across social platforms</div>
+      </button>
+      <button class="btn btn-primary" style="text-align:left;padding:14px 18px;background:var(--green);" onclick="closeScan();alert('Domain lookalike scan would start here — connects to /api/brand-guard/domain-monitor')">
+        <div style="font-size:14px;">🌐 Domain Lookalike Scan</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px;">Find typosquatted and phishing domains similar to yours</div>
+      </button>
+      <button class="btn btn-primary" style="text-align:left;padding:14px 18px;background:var(--orange);" onclick="closeScan();alert('Vendor verification would start here — connects to /api/brand-guard/vendor-verify')">
+        <div style="font-size:14px;">📞 Vendor Phone Verification</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px;">Verify if a phone number belongs to a legitimate vendor</div>
+      </button>
+      <button class="btn btn-primary" style="text-align:left;padding:14px 18px;background:#7c3aed;" onclick="closeScan();alert('Threat correlation would start here — connects to /api/brand-guard/threat-correlate')">
+        <div style="font-size:14px;">🔗 Cross-Channel Threat Correlation</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px;">Link threats across social, phone, and domain channels</div>
+      </button>
+    </div>
+    <div style="margin-top:16px;text-align:right;">
+      <button class="btn btn-outline" onclick="closeScan()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Onboarding Logic ──────────────────────────────────────────────
+let obStep = 1;
+let obBrandName = '';
+let obBrandHandle = '';
+let obBrandDomain = '';
+let obPlatforms = ['x','instagram','tiktok','facebook','telegram'];
+let obFrequency = 'weekly';
+
+function updateObStep1() {
+  obBrandName = document.getElementById('ob-brand-name').value;
+  const btn = document.getElementById('ob-btn-1');
+  btn.disabled = obBrandName.trim().length < 2;
+  btn.style.opacity = obBrandName.trim().length < 2 ? '0.5' : '1';
+  btn.style.cursor = obBrandName.trim().length < 2 ? 'not-allowed' : 'pointer';
+}
+
+function updateObStep2() {
+  obBrandHandle = document.getElementById('ob-brand-handle').value.replace(/^@/,'');
+  const btn = document.getElementById('ob-btn-2');
+  btn.disabled = obBrandHandle.trim().length < 2;
+  btn.style.opacity = obBrandHandle.trim().length < 2 ? '0.5' : '1';
+  btn.style.cursor = obBrandHandle.trim().length < 2 ? 'not-allowed' : 'pointer';
+}
+
+function togglePlat(el) {
+  const plat = el.dataset.plat;
+  if (obPlatforms.includes(plat)) {
+    obPlatforms = obPlatforms.filter(p => p !== plat);
+    el.style.borderColor = '#e2e8f0';
+    el.style.background = 'white';
+    el.style.color = '#64748b';
+    el.style.fontWeight = '400';
+  } else {
+    obPlatforms.push(plat);
+    el.style.borderColor = '#3b82f6';
+    el.style.background = '#eff6ff';
+    el.style.color = '#1d4ed8';
+    el.style.fontWeight = '600';
+  }
+  updateSummary();
+}
+
+function toggleFreq(el) {
+  obFrequency = el.dataset.freq;
+  document.querySelectorAll('.ob-freq').forEach(b => {
+    b.style.borderColor = '#e2e8f0';
+    b.style.background = 'white';
+    b.querySelector('div:first-child').style.fontWeight = '400';
+    b.querySelector('div:first-child').style.color = '#374151';
+  });
+  el.style.borderColor = '#3b82f6';
+  el.style.background = '#eff6ff';
+  el.querySelector('div:first-child').style.fontWeight = '600';
+  el.querySelector('div:first-child').style.color = '#1d4ed8';
+  updateSummary();
+}
+
+function updateSummary() {
+  document.getElementById('ob-summary-name').textContent = obBrandName || 'Brand Name';
+  document.getElementById('ob-summary-handle').textContent = '@' + (obBrandHandle || 'handle') + (obBrandDomain ? ' • ' + obBrandDomain : '');
+  document.getElementById('ob-summary-platforms').textContent = 'Monitoring ' + obPlatforms.length + ' platforms • ' + obFrequency.charAt(0).toUpperCase() + obFrequency.slice(1) + ' scans';
+}
+
+function obNext(step) {
+  obBrandDomain = document.getElementById('ob-brand-domain')?.value || obBrandDomain;
+  obStep = step;
+  document.getElementById('ob-step-1').style.display = step === 1 ? 'block' : 'none';
+  document.getElementById('ob-step-2').style.display = step === 2 ? 'block' : 'none';
+  document.getElementById('ob-step-3').style.display = step === 3 ? 'block' : 'none';
+  // Update progress bar
+  document.querySelectorAll('.ob-step').forEach(s => {
+    const sn = parseInt(s.dataset.step);
+    s.style.background = sn <= step ? '#3b82f6' : '#e2e8f0';
+  });
+  if (step === 2) {
+    document.getElementById('ob-brand-handle').value = obBrandHandle;
+  }
+  updateSummary();
+}
+
+function finishOnboarding() {
+  obBrandName = document.getElementById('ob-brand-name').value || 'Agentic Bro';
+  obBrandHandle = (document.getElementById('ob-brand-handle').value || 'agenticbro').replace(/^@/,'');
+  obBrandDomain = document.getElementById('ob-brand-domain')?.value || 'agenticbro.app';
+  // Update dashboard header
+  document.getElementById('dash-brand-name').textContent = obBrandName;
+  document.getElementById('dash-brand-handle').textContent = '@' + obBrandHandle + (obBrandDomain ? ' • ' + obBrandDomain : '');
+  // Hide onboarding, show dashboard
+  document.getElementById('onboarding-overlay').style.display = 'none';
+  document.getElementById('dashboard-container').style.display = 'block';
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).style.display = 'block';
+  el.classList.add('active');
+}
+
+function toggleBrandSwitcher() {
+  const dd = document.getElementById('brand-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const sw = document.getElementById('brand-switcher');
+  const dd = document.getElementById('brand-dropdown');
+  if (sw && dd && !sw.contains(e.target)) { dd.style.display = 'none'; }
+});
+
+function filterThreats(sev, el) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const rows = document.querySelectorAll('#threat-list .threat-row');
+  rows.forEach(r => {
+    if (sev === 'all') { r.style.display = 'flex'; }
+    else { r.style.display = r.classList.contains(sev) ? 'flex' : 'none'; }
+  });
+}
+
+const takedownTemplates = {
+  'agenticbro_support': {
+    platform: 'X (Twitter)',
+    target: '@agenticbro_support',
+    url: 'https://help.x.com/en/forms/general/safety',
+    type: 'Impersonation',
+    steps: ['Go to https://help.x.com/en/forms/general/safety','Select "Impersonation" as the issue type','Enter the impersonating account @agenticbro_support','Provide your legitimate account @agenticbro','Upload screenshot evidence of the impersonation','Submit and note the reference number'],
+    subject: 'Impersonation Report: @agenticbro_support impersonating Agentic Bro',
+    body: 'I am writing to report an account that is impersonating Agentic Bro (@agenticbro).\n\nThe account @agenticbro_support on X (Twitter) is using our brand name, branding, and/or trademarks without authorization.\n\nOur legitimate account is @agenticbro (agenticbro.app).\n\nThis impersonation constitutes trademark infringement and may be used to deceive customers and business partners.\n\nPlease remove this impersonating account as soon as possible.',
+  },
+  'loginagenticbro.app': {
+    platform: 'Domain Registrar',
+    target: 'loginagenticbro.app',
+    url: 'https://www.icann.org/resources/pages/complaints',
+    type: 'Phishing',
+    steps: ['Look up the domain registrar via WHOIS (https://www.whois.com/whois/loginagenticbro.app)','File an abuse report with the registrar directly','If registrar is unresponsive, file with ICANN','Include trademark registration documentation','Domain suspensions typically take 24-72 hours after abuse report'],
+    subject: 'Phishing Report: loginagenticbro.app targeting Agentic Bro',
+    body: 'I am writing to report a phishing domain that is targeting Agentic Bro customers.\n\nThe domain loginagenticbro.app is designed to deceive users into believing they are interacting with the legitimate Agentic Bro brand.\n\nOur legitimate website is agenticbro.app.\n\nThis phishing operation poses a significant risk to our customers and brand reputation.',
+  },
+  '+1-555-234-5678': {
+    platform: 'Phone / FTC',
+    target: '+1 (555) 234-5678',
+    url: 'https://reportfraud.ftc.gov/',
+    type: 'Phone Fraud',
+    steps: ['File a report with the FTC at https://reportfraud.ftc.gov/','Report the phone number and describe the scam','If VoIP, report to the VoIP provider (TextNow, Google Voice, etc.)','For business impersonation, also file with the carrier','Consider adding the number to the National Do Not Call Registry'],
+    subject: 'Phone Scam Report: +1 (555) 234-5678 impersonating Agentic Bro',
+    body: 'I am writing to report a phone number being used to impersonate Agentic Bro.\n\nThe number +1 (555) 234-5678 is being used in a business impersonation scam, claiming to represent Agentic Bro.\n\nOur legitimate contact information is available at agenticbro.app.',
+  },
+};
+
+function showTakedown(target, platform) {
+  const tmpl = takedownTemplates[target] || {
+    platform: platform || 'Unknown',
+    target: target,
+    url: '#',
+    type: 'Impersonation',
+    steps: ['File a report with the platform directly'],
+    subject: 'Brand Protection Report: ' + target,
+    body: 'I am writing to report unauthorized use of the Agentic Bro brand.',
+  };
+
+  const html = `
+    <div style="position:relative;">
+      <button onclick="closeTakedown()" style="position:absolute;top:-8px;right:-8px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+      <h2 style="margin-bottom:4px;">📋 Takedown Request</h2>
+      <p style="color:var(--text-secondary);margin-bottom:16px;">${tmpl.platform} • ${tmpl.type}</p>
+      
+      <div style="background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Target</div>
+        <div style="font-size:16px;font-weight:700;">${tmpl.target}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Platform: ${tmpl.platform}</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Filing Steps</div>
+        <ol style="margin:0;padding-left:20px;">
+          ${tmpl.steps.map(s => `<li style="font-size:13px;padding:3px 0;color:var(--text);">${s}</li>`).join('')}
+        </ol>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Report URL</div>
+        <a href="${tmpl.url}" target="_blank" rel="noopener" style="color:var(--blue);font-size:13px;word-break:break-all;">${tmpl.url}</a>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Subject Line</div>
+        <div style="font-size:13px;background:white;border:1px solid var(--border);border-radius:6px;padding:10px;">${tmpl.subject}</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Report Body</div>
+        <div style="font-size:13px;background:white;border:1px solid var(--border);border-radius:6px;padding:10px;white-space:pre-wrap;">${tmpl.body}</div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="alert('Would generate full cease & desist letter via takedown-templates.py')">📄 Generate C&D Letter</button>
+        <button class="btn btn-outline" onclick="alert('Would generate evidence package via takedown-templates.py')">📦 Evidence Package</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('takedown-content').innerHTML = html;
+  document.getElementById('takedown-modal').style.display = 'flex';
+}
+
+function closeTakedown() { document.getElementById('takedown-modal').style.display = 'none'; }
+function runScan() { document.getElementById('scan-modal').style.display = 'flex'; }
+function closeScan() { document.getElementById('scan-modal').style.display = 'none'; }
+function showAlerts() { switchTab('alerts', document.querySelector('[data-tab=alerts]')); }
+function markAllRead() {
+  document.querySelectorAll('.alert-row.unread').forEach(r => r.classList.remove('unread'));
+  alert('All alerts marked as read');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeTakedown(); closeScan(); }
+});
+</script>
+</body>
+</html>

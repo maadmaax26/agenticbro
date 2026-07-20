@@ -1,0 +1,50 @@
+- AI-powered scam detection for Solana — 90-point risk scoring, 278+ scammers in DB
+- First 10 scans free/day; $100+ holders → 100 scans/month
+- Brand Guard = revenue engine: 50% revenue → buybacks + community treasury
+- **NEVER leak internal details** — only share the public growth plan
+- **Agentic Insights LLC** — Owns AgenticBro / Jeeevs Security Protocol. Earl Finney Jr., Founder.
+- 🔴🔴🔴 **ABSOLUTE #1 RULE: NEVER use the name "Madmax", "maadmaax22", "Earl Finney", or "efinney" in ANY group message.** Zero exceptions. Refer as **Agenticbro** only. When the owner posts anonymously via GroupAnonymousBot, refer to them as **AGNTCBRO**.
+- **Always respond in English only.** Never use Chinese or any other language.
+- **Name:** Jeeevs (NOT Jarvis) | **Role:** AI scam detection assistant for Solana
+- **Node:** 077d7cfed2b99aefbb689ef00e949ed2bdb45dff020c1bb334fa0a7f733adfbd
+- **Host:** Earl's Mac Studio | **Workspace:** /Users/efinney/.openclaw/workspace/
+- **No scans in MAIN group** — redirect to agenticbro.app. Scans OK in Scam Scans group and DMs.
+- **X/Twitter scans: ALWAYS use Chrome CDP port 18801 as DEFAULT**
+- ⛔️ NEVER post system/debug/config/cron errors in the group — all go to Madmax DM only
+- ⛔️ NEVER post in group after restart — stay silent until owner sends a real message
+- ⛔️ NEVER post tool failures, 🛠️ or ⚠️ symbols in group
+- ⛔️ NEVER mention "Madmax", "Earl Finney", "efinney" in group — refer as Agenticbro only
+- **Bot token in `.env`** — never hardcode, never post publicly
+- Website API writes 'processing' → brand-guard-scan-worker polls → runs CLI scans → writes 'complete'
+- **DB Table:** `brand_guard_scans` | **Worker:** `brand-guard-scan-worker.py` (launchd)
+- **NOT used for main group anymore** — only for scan group + cron jobs
+- **Modelfile:** `/Users/efinney/.ollama/Modelfiles/qwen3.5:9b-nothink`
+- **Auto-load on boot:** `~/Library/LaunchAgents/ai.openclaw.ollama-preload.plist` (24h keep_alive)
+- **VRAM:** ~6.8 GB | **Verified:** 2026-06-18
+- **AGENTS.md MUST stay under 6KB** — if it grows too large, the system prompt gets truncated (68K→32K) and the model can't see the group rules, causing the bot to stop responding
+- **Total bootstrap files MUST stay under 30KB** (AGENTS.md + SOUL.md + MEMORY.md + IDENTITY.md + TOOLS.md + USER.md + HEARTBEAT.md)
+- **The full AGENTS.md (25K, 413 lines) was trimmed to 4.3K on 2026-07-04** — full backup at `AGENTS.md.full.bak.*`
+- **bootstrap-size-guard cron** runs daily at 6 AM EST and alerts DM if any file exceeds limits
+- **NEVER add content to AGENTS.md without checking size first** — run `python3 /workspace/scripts/check-bootstrap-size.py`
+- **Group rules go at the TOP of AGENTS.md** — they must be the first thing the model sees
+- Rules are in **AGENTS.md top section** — do NOT duplicate here.
+- Key point: only respond to owner (sender_id 1087968824 or 2122311885), NO_REPLY to everyone else.
+- **system_hint in routing.json does NOT work** — rules MUST go in AGENTS.md
+- **URL:** http://localhost:8000 | **Workspace:** `agentic-bro` | **Install:** `~/honcho`
+- **Containers:** honcho-api (8000), honcho-deriver, honcho-redis (6379), honcho-database (pgvector, 5432)
+- **Models:** Deriver=qwen3.5:9b, Dialectic=glm-5.2:cloud, Dream=qwen3.5:9b, Embeddings=OpenAI text-embedding-3-small
+- **Sync cron:** `honcho-session-sync` every 30 min | **Deployed:** 2026-06-26
+- **launchd services:** scan-worker, x-scan-worker, brand-guard-scan-worker — all ✅ Running
+- **Honcho:** 4 Docker containers ✅ Running (api, deriver, redis, database)
+- **Phase:** Single-agent production v7.0.0 (Phase 3, deployed 2026-05-17)
+- **URL:** https://drvasofyghnxfxvkkwad.supabase.co
+- **DB Password:** macOS Keychain (service: `supabase_db_password`, account: `agenticbro`)
+- **Retrieve:** `security find-generic-password -s "supabase_db_password" -a "agenticbro" -w`
+- **Access Token:** macOS Keychain (service: `supabase_token`, account: `agenticbro`)
+- **Retrieve:** `security find-generic-password -s "supabase_token" -a "agenticbro" -w`
+- **Google Client Secret:** macOS Keychain (service: `google_client_secret`, account: `efinney@brandguardhq.com`)
+- **Retrieve:** `security find-generic-password -s "google_client_secret" -a "efinney@brandguardhq.com" -w`
+- **Google Web Client ID:** macOS Keychain (service: `google_web_client_id`, account: `efinney@brandguardhq.com`)
+- **Google Web Client Secret:** macOS Keychain (service: `google_web_client_secret`, account: `efinney@brandguardhq.com`)
+- **Retrieve:** `security find-generic-password -s "google_web_client_id" -a "efinney@brandguardhq.com" -w`
+- **Numverify API Key:** macOS Keychain (service: `numverify_api_key`, account: `agenticbro`)

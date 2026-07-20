@@ -1,0 +1,49 @@
+# Local infrastructure and unrelated projects
+.git
+.vercel
+.openclaw
+.private
+.venv*
+node_modules
+dist
+supabase
+brand-guard-agent
+agentic-bro
+aibro
+agenticbro-repo
+agenticbro-welcome-bot
+jaas
+jaas-bot
+mes-options-bot
+mes_futures_options_bot
+kraken_bot
+trading-ai-enhancement
+telegram-venv
+
+# Local operational data and generated artifacts
+backups
+credentials
+data
+draft-emails
+logs
+memory
+output
+outputs
+scan_screenshots
+screenshots
+scripts
+state
+stickers
+~
+
+# Non-runtime documents and media
+*.aiff
+*.csv
+*.docx
+*.mp3
+*.pdf
+*.png
+*.txt
+
+# Public website assets are runtime files.
+!public/**

@@ -1,0 +1,5 @@
+I was personally scammed on Solana — seeing unauthorized transactions, realizing nobody's looking out for you. That drove me to build Agentic Bro. The biggest gap in crypto security isn't protocol tooling, it's the human layer. Social engineering, fake profiles, phishing, drainers take billions from everyday users yearly.
+
+I couldn't have built this three years ago. AI changed everything. Scams evolve daily — new drainers, rotating domains, platform shifts. Static blacklists are always one step behind. Agentic Bro is an evolving security ecosystem powered by an AI agent that adapts through behavioral analysis, not keyword matching. It monitors 7+ platforms, learns from every scan, provides 24/7 protection, and catches malicious transactions before signing.
+
+Before AI, this needed a 24/7 SOC. Now a purpose-built agent scales protection faster without gaps. $8.8B lost in 2024 proves the need. Static tools obsolete before they ship, or adaptive systems growing stronger with each attack? Building the latter.

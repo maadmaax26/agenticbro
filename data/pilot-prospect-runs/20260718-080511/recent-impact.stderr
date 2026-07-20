@@ -1,0 +1,3 @@
+  ⚠️  GDELT query failed for '("lookalike domain" OR "phishing domain" OR "fake website" OR "clone website") (lost OR lawsuit OR "wire transfer" OR customers)': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT query failed for '("vendor impersonation" OR "fake vendor" OR "bank impersonation" OR "email spoofing" OR "spoofed email") ("wire transfer" OR lost OR lawsuit OR DMARC)': HTTP Error 429: Too Many Requests
+  ⚠️  GDELT rate limit threshold reached; switching to fallback search

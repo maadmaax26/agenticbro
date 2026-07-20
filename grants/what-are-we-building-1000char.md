@@ -1,0 +1,5 @@
+Agentic Bro is an AI-powered scam detection and wallet protection platform for Solana. It serves everyday crypto users — people most vulnerable because they lack security expertise, not funds. New users buying their first token. DeFi traders connecting to unfamiliar dApps. Anyone who's looked at a wallet signature and thought "I have no idea what this means."
+
+What we're building: a security layer between users and scams. Seven scanners — social profiles (X, Instagram, TikTok, Facebook, Telegram), phone numbers, websites, and Solana transactions — scored through a 90-point risk system. A Wallet Simulator intercepting transactions before signing, decoding them into plain English with a risk score. Token-2022 detection. A 278+ entry scammer database growing daily.
+
+Our users don't read audits. They see a trending token, a promising profile, a referral they trust. They lose $8.8B yearly. Agentic Bro gives them tools to verify before they trust — and an AI agent evolving as fast as threats.

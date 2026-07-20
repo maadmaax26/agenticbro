@@ -1,0 +1,34 @@
+To: [NEEDS NAMED EMAIL]
+Subject: Impersonation risk review for Decodo
+
+Hi there,
+
+I'm Earl Finney, founder of Brand Guard.
+
+I saw the recent public report involving Decodo: Someone is impersonating our business: 5 ways to fight digital squatting
+
+The part that stood out is the reported customer/reputation impact and the impersonation pattern:
+Public report says impersonators used smartproxy.org and smartproxy.cn after the Smartproxy-to-Decodo rebrand, with customer complaints from people who paid lookalike sites.
+
+Public source: https://www.techradar.com/pro/someone-is-impersonating-our-business-5-ways-to-fight-digital-squatting
+
+The main risk signals are: customer victim reports, reputation damage, fake site or domain.
+
+Why I thought this might be relevant:
+Monitor for copycat domains and fake websites using the company name before more customers are routed to imposters.
+
+Brand Guard is built to monitor this kind of repeat risk:
+- Domain Lookalike Monitor, Threat Correlation
+- Alerts for new lookalike domain registrations; active phishing-domain status changes
+- A review trail your team can use before trusting vendor, phone, domain, account, or listing claims
+
+If helpful, I can run a no-cost Brand Guard review for decodo.com and send back a short findings report. No account or card needed.
+
+Best,
+Earl Finney
+Founder of Brand Guard
+efinney@brandguardhq.com
+
+--
+Brand Guard - Agentic Insights LLC
+You received this one-time note because Decodo appeared in public brand-abuse records. Prefer not to hear from us? Opt out here: https://agenticbro.app/brand-guard/optout
