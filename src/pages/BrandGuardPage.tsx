@@ -73,6 +73,23 @@ interface CreditPackage {
 type PaymentMethod = 'stripe' | 'usdc-solana' | 'usdc-base' | 'agntcbro';
 
 const API_BASE = '/api/brand-guard';
+const AUTH_SESSION_TIMEOUT_MS = 6000;
+
+async function getBrandGuardSession() {
+  if (!supabase) return null;
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      supabase.auth.getSession().then(({ data }) => data?.session ?? null).catch(() => null),
+      new Promise<null>(resolve => {
+        timeoutId = setTimeout(() => resolve(null), AUTH_SESSION_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 const PLATFORMS = [
   { id: 'x', label: 'X (Twitter)', icon: '𝕏' },
@@ -193,41 +210,58 @@ export function BrandGuardPage() {
   const [realtimeSubscriptions, setRealtimeSubscriptions] = useState<any[]>([]);
   
   useEffect(() => {
+    if (selectedPlan) setLoginMode(mode => mode === 'login' ? 'register' : mode);
+  }, [selectedPlan]);
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
     async function checkAuth() {
       try {
-        const { data } = await supabase!.auth.getSession();
-        if (data?.session?.access_token) {
-          setAuthToken(data.session.access_token);
-          setUserId(data.session.user.id);
-          setUserEmail(data.session.user.email || '');
-        }
-      } catch { /* not authenticated */ }
-      setAuthLoading(false);
-    }
-    checkAuth();
-
-    // Listen for auth state changes (email confirmation, sign in, sign out, password reset)
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          // User clicked the password reset link — show the update form, don't go to dashboard
-          setShowPasswordUpdate(true);
-          setAuthToken(session?.access_token || null);
-          setUserId(session?.user?.id || null);
-          return; // Don't redirect to dashboard
-        }
+        const session = await getBrandGuardSession();
+        if (cancelled) return;
         if (session?.access_token) {
           setAuthToken(session.access_token);
           setUserId(session.user.id);
           setUserEmail(session.user.email || '');
-        } else {
-          setAuthToken(null);
-          setUserId(null);
-          setUserEmail('');
         }
-      });
-      return () => subscription.unsubscribe();
+      } catch { /* not authenticated */ }
+      finally {
+        if (!cancelled) setAuthLoading(false);
+      }
     }
+    checkAuth();
+
+    // Listen for auth state changes (email confirmation, sign in, sign out, password reset)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      setAuthLoading(false);
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the password reset link — show the update form, don't go to dashboard
+        setShowPasswordUpdate(true);
+        setAuthToken(session?.access_token || null);
+        setUserId(session?.user?.id || null);
+        return; // Don't redirect to dashboard
+      }
+      if (session?.access_token) {
+        setAuthToken(session.access_token);
+        setUserId(session.user.id);
+        setUserEmail(session.user.email || '');
+      } else {
+        setAuthToken(null);
+        setUserId(null);
+        setUserEmail('');
+      }
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -338,11 +372,11 @@ export function BrandGuardPage() {
               const { user: signInUser, error: signInError } = await signInWithEmail(loginEmail, loginPassword);
               if (signInError) throw new Error(signInError.message || 'Auto sign-in failed');
               if (signInUser) {
-                const { data } = await supabase!.auth.getSession();
-                if (data?.session?.access_token) {
-                  await activateSignupPilot(data.session.access_token, normalizedPromo, pilotRequestToken);
-                  setAuthToken(data.session.access_token);
-                  setUserId(data.session.user.id);
+                const session = await getBrandGuardSession();
+                if (session?.access_token) {
+                  await activateSignupPilot(session.access_token, normalizedPromo, pilotRequestToken);
+                  setAuthToken(session.access_token);
+                  setUserId(session.user.id);
                   setLoginError(null);
                 }
               }
@@ -357,11 +391,11 @@ export function BrandGuardPage() {
           }
         } else {
           // Auto-confirmed — try to get session
-          const { data } = await supabase!.auth.getSession();
-          if (data?.session?.access_token) {
-            await activateSignupPilot(data.session.access_token, normalizedPromo, pilotRequestToken);
-            setAuthToken(data.session.access_token);
-            setUserId(data.session.user.id);
+          const session = await getBrandGuardSession();
+          if (session?.access_token) {
+            await activateSignupPilot(session.access_token, normalizedPromo, pilotRequestToken);
+            setAuthToken(session.access_token);
+            setUserId(session.user.id);
           } else {
             // No session yet — switch to login mode
             setLoginError('Account created! Please sign in with your credentials.');
@@ -372,12 +406,12 @@ export function BrandGuardPage() {
         const { user, error } = await signInWithEmail(loginEmail, loginPassword);
         if (error) throw new Error(error.message || 'Login failed');
         if (user) {
-          const { data } = await supabase!.auth.getSession();
-          if (data?.session?.access_token) {
-            const storedPromo = String(data.session.user.user_metadata?.promo_code || '');
-            await activateSignupPilot(data.session.access_token, storedPromo, pilotRequestToken);
-            setAuthToken(data.session.access_token);
-            setUserId(data.session.user.id);
+          const session = await getBrandGuardSession();
+          if (session?.access_token) {
+            const storedPromo = String(session.user.user_metadata?.promo_code || '');
+            await activateSignupPilot(session.access_token, storedPromo, pilotRequestToken);
+            setAuthToken(session.access_token);
+            setUserId(session.user.id);
           } else {
             // No session — email might not be confirmed. Try auto-confirm.
             try {
@@ -391,12 +425,12 @@ export function BrandGuardPage() {
                 // Confirmed now — retry login
                 const { user: retryUser } = await signInWithEmail(loginEmail, loginPassword);
                 if (retryUser) {
-                  const { data } = await supabase!.auth.getSession();
-                  if (data?.session?.access_token) {
-                    const storedPromo = String(data.session.user.user_metadata?.promo_code || '');
-                    await activateSignupPilot(data.session.access_token, storedPromo, pilotRequestToken);
-                    setAuthToken(data.session.access_token);
-                    setUserId(data.session.user.id);
+                  const session = await getBrandGuardSession();
+                  if (session?.access_token) {
+                    const storedPromo = String(session.user.user_metadata?.promo_code || '');
+                    await activateSignupPilot(session.access_token, storedPromo, pilotRequestToken);
+                    setAuthToken(session.access_token);
+                    setUserId(session.user.id);
                     setLoginError(null);
                   }
                 } else {
@@ -424,6 +458,7 @@ export function BrandGuardPage() {
     setLoginLoading(true);
     setLoginError(null);
     try {
+      if (!supabase) throw new Error('Email confirmation is not available right now.');
       const { error } = await supabase!.auth.resend({ type: 'signup', email: loginEmail });
       if (error) throw error;
       setLoginError('Confirmation email sent! Check your inbox and spam folder.');
@@ -478,6 +513,7 @@ export function BrandGuardPage() {
     setLoginError(null);
     setResetSent(false);
     try {
+      if (!supabase) throw new Error('Password reset is not available right now.');
       const { error } = await supabase!.auth.resetPasswordForEmail(loginEmail, {
         redirectTo: `${window.location.origin}/brand-guard`,
       });
@@ -515,8 +551,8 @@ export function BrandGuardPage() {
     setLoginError(null);
     try {
       // Ensure we have an active session (the recovery link should have established one)
-      const { data: sessionData } = await supabase!.auth.getSession();
-      if (!sessionData?.session) {
+      const session = await getBrandGuardSession();
+      if (!session) {
         // Session not established yet — try to exchange the hash fragment
         // This happens if onAuthStateChange hasn't fired yet
         setLoginError('Session expired. Please request a new password reset link.');
