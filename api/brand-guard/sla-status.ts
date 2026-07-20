@@ -12,24 +12,39 @@ import type { IncomingMessage, ServerResponse } from 'http';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_TIMEOUT_MS = 4500;
+
+function sendJson(res: ServerResponse, statusCode: number, data: unknown) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  });
+  return res.end(JSON.stringify(data));
+}
+
+function unknownStatus(message: string, extra: Record<string, unknown> = {}) {
+  return {
+    overall_status: 'unknown',
+    checks_total: 9,
+    checks_passed: 0,
+    checks_failed: 0,
+    checks: [],
+    message,
+    ...extra,
+  };
+}
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== 'GET') {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: 'Method not allowed' }));
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   if (!supabaseServiceKey) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({
-      overall_status: 'unknown',
-      checks_total: 9,
-      checks_passed: 0,
-      checks_failed: 0,
-      checks: [],
-      message: 'Supabase key not configured',
-    }));
+    return sendJson(res, 200, unknownStatus('Supabase key not configured'));
   }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
 
   try {
     const url = `${supabaseUrl}/rest/v1/sla_status?order=timestamp.desc&limit=1`;
@@ -38,40 +53,22 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         'apikey': supabaseServiceKey,
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({
-        overall_status: 'unknown',
-        checks_total: 9,
-        checks_passed: 0,
-        checks_failed: 0,
-        checks: [],
-        message: `Supabase returned ${response.status}`,
-      }));
+      return sendJson(res, 200, unknownStatus(`Supabase returned ${response.status}`));
     }
 
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({
-        overall_status: 'unknown',
-        checks_total: 9,
-        checks_passed: 0,
-        checks_failed: 0,
-        checks: [],
-        message: 'SLA monitor has not run yet',
-      }));
+      return sendJson(res, 200, unknownStatus('SLA monitor has not run yet'));
     }
 
     const s = data[0];
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-    });
-    return res.end(JSON.stringify({
+    return sendJson(res, 200, {
       timestamp: s.timestamp,
       overall_status: s.overall_status,
       issues_count: s.issues_count,
@@ -79,16 +76,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       checks_passed: s.checks_passed,
       checks_failed: s.checks_failed,
       checks: s.checks || [],
-    }));
+    });
   } catch (error) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({
-      overall_status: 'unknown',
-      checks_total: 9,
-      checks_passed: 0,
-      checks_failed: 0,
-      checks: [],
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }));
+    clearTimeout(timeout);
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    return sendJson(res, 200, unknownStatus(
+      aborted ? 'SLA status lookup timed out' : 'SLA status lookup failed',
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+    ));
   }
 }

@@ -457,7 +457,15 @@ Our AI detected suspicious patterns. Protect yourself:
         async function loadSLAStatus() {
             try {
                 const resp = await fetch('/api/brand-guard/sla-status', { cache: 'no-store' });
+                const contentType = resp.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    const text = await resp.text();
+                    throw new Error(text.slice(0, 120) || 'SLA endpoint returned non-JSON response');
+                }
                 const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || data.message || 'SLA endpoint failed');
+                }
                 renderSLAStatus(data);
             } catch (e) {
                 document.getElementById('sla-checks').innerHTML = '<div style="background:#1a1a2e;border:1px solid #ff4444;border-radius:12px;padding:24px;text-align:center;"><i class="fas fa-exclamation-triangle" style="color:#ff4444;font-size:32px;"></i><p style="margin-top:12px;">Failed to load SLA status: ' + e.message + '</p></div>';
