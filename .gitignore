@@ -6,6 +6,9 @@
 # These contain proprietary scoring weights, operational intel,
 # scammer data, and agent configurations that are trade secrets.
 
+# Local private service/repo boundary
+.private/
+
 # Agent configuration & personality (trade secret)
 AGENTS.md
 SOUL.md
