@@ -8,9 +8,6 @@
 
 # Local private service/repo boundary
 .private/
-server/data/
-server/routes/profile-verify.ts
-server/telegram/scam-service.ts
 
 # Agent configuration & personality (trade secret)
 AGENTS.md
@@ -206,4 +203,3 @@ agentic-bro/output/
 
 # Supabase temp (auto-generated)
 supabase/.temp/
-.vercel
