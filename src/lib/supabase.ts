@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 // Support both new publishable key format (sb_publishable_...) and legacy anon key (eyJ...)
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+const AUTH_REQUEST_TIMEOUT_MS = 12_000;
 
 if (!supabaseUrl || !supabasePublishableKey) {
   console.warn('Supabase credentials not configured. Using local storage fallback.');
@@ -28,6 +29,59 @@ export const supabase = supabaseUrl && supabasePublishableKey
       },
     })
   : null;
+
+type SupabaseAuthSession = {
+  access_token: string;
+  refresh_token?: string;
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: Record<string, unknown>;
+  };
+};
+
+async function authRestRequest(path: string, body: Record<string, unknown>) {
+  if (!supabaseUrl || !supabasePublishableKey) throw new Error('Supabase credentials not configured.');
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
+      method: 'POST',
+      headers: {
+        apikey: supabasePublishableKey,
+        Authorization: `Bearer ${supabasePublishableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error_description || data.msg || data.message || data.error || 'Authentication failed');
+    }
+    return data;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Authentication timed out. Please try again.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function syncSupabaseSession(session: SupabaseAuthSession | null) {
+  if (!supabase || !session?.access_token || !session.refresh_token) return;
+  const sync = supabase.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  });
+  Promise.race([
+    sync,
+    new Promise(resolve => window.setTimeout(resolve, 1500)),
+  ]).catch(() => undefined);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,20 +167,62 @@ export async function signUpWithEmail(email: string, password: string, metadata:
     return { user: newUser, error: null };
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
+  let data: { user: any; session: SupabaseAuthSession | null };
+  try {
+    const restData = await authRestRequest('signup', {
+      email,
+      password,
       data: {
         source: 'brand-guard',
         app: 'brand-guard',
         ...metadata,
       },
-      emailRedirectTo: `${window.location.origin}/brand-guard`,
-    },
-  });
-  
-  if (error) return { user: null, error };
+      gotrue_meta_security: {},
+    });
+    data = {
+      user: restData.user,
+      session: restData.access_token ? {
+        access_token: restData.access_token,
+        refresh_token: restData.refresh_token,
+        user: restData.user,
+      } : restData.session || null,
+    };
+    syncSupabaseSession(data.session);
+  } catch (error) {
+    return { user: null, error };
+  }
+
+  // If REST signup did not create a session, try the SDK once for providers that
+  // require redirect metadata. Do not let SDK lock contention block the UI.
+  if (!data.user) {
+    const sdkResult = await Promise.race([
+      supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            source: 'brand-guard',
+            app: 'brand-guard',
+            ...metadata,
+          },
+          emailRedirectTo: `${window.location.origin}/brand-guard`,
+        },
+      }),
+      new Promise<{ data: any; error: Error }>(resolve => {
+        window.setTimeout(() => resolve({ data: null, error: new Error('Registration timed out. Please try again.') }), AUTH_REQUEST_TIMEOUT_MS);
+      }),
+    ]);
+    if (sdkResult.error) return { user: null, error: sdkResult.error };
+    data = sdkResult.data;
+  }
+
+  if (data.session) {
+    syncSupabaseSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      user: data.session.user,
+    });
+  }
   
   // Create profile with 5 free scans
   if (data.user) {
@@ -135,6 +231,7 @@ export async function signUpWithEmail(email: string, password: string, metadata:
       // Email confirmation required — user needs to confirm before they can sign in
       return {
         user: data.user,
+        session: null,
         error: null,
         needsConfirmation: true as any,
       };
@@ -153,7 +250,7 @@ export async function signUpWithEmail(email: string, password: string, metadata:
     }
   }
   
-  return { user: data.user, error: null };
+  return { user: data.user, session: data.session, error: null };
 }
 
 export async function signInWithEmail(email: string, password: string) {
@@ -168,12 +265,18 @@ export async function signInWithEmail(email: string, password: string) {
     return { user, error: null };
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  return { user: data?.user || null, error };
+  try {
+    const data = await authRestRequest('token?grant_type=password', { email, password });
+    const session: SupabaseAuthSession | null = data.access_token ? {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      user: data.user,
+    } : data.session || null;
+    syncSupabaseSession(session);
+    return { user: data?.user || session?.user || null, session, error: null };
+  } catch (error) {
+    return { user: null, session: null, error };
+  }
 }
 
 export async function signOut() {

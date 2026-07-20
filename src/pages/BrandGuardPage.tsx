@@ -345,6 +345,16 @@ export function BrandGuardPage() {
     if (!response.ok) throw new Error(data.error || 'Could not activate the Brand Guard pilot.');
   };
 
+  const applyAuthSession = async (session: any, promo = '') => {
+    if (!session?.access_token) return false;
+    await activateSignupPilot(session.access_token, promo, pilotRequestToken);
+    setAuthToken(session.access_token);
+    setUserId(session.user.id);
+    setUserEmail(session.user.email || '');
+    setLoginError(null);
+    return true;
+  };
+
   const handleLogin = async () => {
     setLoginLoading(true);
     setLoginError(null);
@@ -369,16 +379,11 @@ export function BrandGuardPage() {
             const confirmData = await confirmRes.json();
             if (confirmData.success && confirmData.confirmed) {
               // Auto-confirmed — now sign in
-              const { user: signInUser, error: signInError } = await signInWithEmail(loginEmail, loginPassword);
+              const { user: signInUser, session: signInSession, error: signInError } = await signInWithEmail(loginEmail, loginPassword) as any;
               if (signInError) throw new Error(signInError.message || 'Auto sign-in failed');
               if (signInUser) {
-                const session = await getBrandGuardSession();
-                if (session?.access_token) {
-                  await activateSignupPilot(session.access_token, normalizedPromo, pilotRequestToken);
-                  setAuthToken(session.access_token);
-                  setUserId(session.user.id);
-                  setLoginError(null);
-                }
+                const applied = await applyAuthSession(signInSession || await getBrandGuardSession(), normalizedPromo);
+                if (!applied) throw new Error('Account confirmed, but sign-in did not return a session. Please try signing in again.');
               }
             } else {
               setLoginError('Account created! Please sign in with your credentials.');
@@ -391,11 +396,9 @@ export function BrandGuardPage() {
           }
         } else {
           // Auto-confirmed — try to get session
-          const session = await getBrandGuardSession();
-          if (session?.access_token) {
-            await activateSignupPilot(session.access_token, normalizedPromo, pilotRequestToken);
-            setAuthToken(session.access_token);
-            setUserId(session.user.id);
+          const session = (result as any).session || await getBrandGuardSession();
+          if (await applyAuthSession(session, normalizedPromo)) {
+            // signed in
           } else {
             // No session yet — switch to login mode
             setLoginError('Account created! Please sign in with your credentials.');
@@ -403,15 +406,13 @@ export function BrandGuardPage() {
           }
         }
       } else {
-        const { user, error } = await signInWithEmail(loginEmail, loginPassword);
+        const { user, session: signInSession, error } = await signInWithEmail(loginEmail, loginPassword) as any;
         if (error) throw new Error(error.message || 'Login failed');
         if (user) {
-          const session = await getBrandGuardSession();
+          const session = signInSession || await getBrandGuardSession();
           if (session?.access_token) {
             const storedPromo = String(session.user.user_metadata?.promo_code || '');
-            await activateSignupPilot(session.access_token, storedPromo, pilotRequestToken);
-            setAuthToken(session.access_token);
-            setUserId(session.user.id);
+            await applyAuthSession(session, storedPromo);
           } else {
             // No session — email might not be confirmed. Try auto-confirm.
             try {
@@ -423,15 +424,12 @@ export function BrandGuardPage() {
               const confirmData = await confirmRes.json();
               if (confirmData.success && confirmData.confirmed) {
                 // Confirmed now — retry login
-                const { user: retryUser } = await signInWithEmail(loginEmail, loginPassword);
+                const { user: retryUser, session: retrySession } = await signInWithEmail(loginEmail, loginPassword) as any;
                 if (retryUser) {
-                  const session = await getBrandGuardSession();
+                  const session = retrySession || await getBrandGuardSession();
                   if (session?.access_token) {
                     const storedPromo = String(session.user.user_metadata?.promo_code || '');
-                    await activateSignupPilot(session.access_token, storedPromo, pilotRequestToken);
-                    setAuthToken(session.access_token);
-                    setUserId(session.user.id);
-                    setLoginError(null);
+                    await applyAuthSession(session, storedPromo);
                   }
                 } else {
                   setLoginError('Please try signing in again.');
