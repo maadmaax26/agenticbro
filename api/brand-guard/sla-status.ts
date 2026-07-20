@@ -12,7 +12,16 @@ import type { IncomingMessage, ServerResponse } from 'http';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SUPABASE_TIMEOUT_MS = 8000;
+const SUPABASE_TIMEOUT_MS = 3000;
+const SLA_STATUS_COLUMNS = [
+  'timestamp',
+  'overall_status',
+  'issues_count',
+  'checks_total',
+  'checks_passed',
+  'checks_failed',
+  'checks',
+].join(',');
 
 function sendJson(res: ServerResponse, statusCode: number, data: unknown) {
   res.writeHead(statusCode, {
@@ -47,7 +56,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
 
   try {
-    const url = `${supabaseUrl}/rest/v1/sla_status?order=timestamp.desc&limit=1`;
+    const url = `${supabaseUrl}/rest/v1/sla_status?select=${SLA_STATUS_COLUMNS}&order=timestamp.desc&limit=1`;
     const response = await fetch(url, {
       headers: {
         'apikey': supabaseServiceKey,
@@ -58,7 +67,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     clearTimeout(timeout);
 
     if (!response.ok) {
-      return sendJson(res, 200, unknownStatus(`Supabase returned ${response.status}`));
+      return sendJson(res, 200, unknownStatus(`SLA status table unavailable`, {
+        upstream_status: response.status,
+      }));
     }
 
     const data = await response.json();

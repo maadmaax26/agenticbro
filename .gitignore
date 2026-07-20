@@ -206,3 +206,4 @@ agentic-bro/output/
 
 # Supabase temp (auto-generated)
 supabase/.temp/
+.vercel
