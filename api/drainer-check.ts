@@ -9,7 +9,7 @@ import {
   privateIntelConfigured,
   privateIntelUnavailable,
   sendJson,
-} from './_lib/private-intel-service';
+} from './_lib/private-intel-service.js';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
