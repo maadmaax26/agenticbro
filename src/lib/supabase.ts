@@ -16,7 +16,7 @@ const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\\n
 const supabasePublishableKey = String(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 ).replace(/\\n/g, '').trim();
-const AUTH_REQUEST_TIMEOUT_MS = 12_000;
+const AUTH_REQUEST_TIMEOUT_MS = 4_500;
 
 if (!supabaseUrl || !supabasePublishableKey) {
   console.warn('Supabase credentials not configured. Using local storage fallback.');
@@ -45,19 +45,30 @@ type SupabaseAuthSession = {
 async function authRestRequest(path: string, body: Record<string, unknown>) {
   if (!supabaseUrl || !supabasePublishableKey) throw new Error('Supabase credentials not configured.');
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  const isModernApiKey = supabasePublishableKey.startsWith('sb_');
+  const headers: Record<string, string> = {
+    apikey: supabasePublishableKey,
+    'Content-Type': 'application/json',
+  };
+  if (!isModernApiKey) headers.Authorization = `Bearer ${supabasePublishableKey}`;
+
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timeout = controller
+    ? window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+    : undefined;
+  const request = fetch(`${supabaseUrl}/auth/v1/${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal: controller?.signal,
+  });
   try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
-      method: 'POST',
-      headers: {
-        apikey: supabasePublishableKey,
-        Authorization: `Bearer ${supabasePublishableKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    const response = await Promise.race([
+      request,
+      new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('Authentication timed out. Please try again.')), AUTH_REQUEST_TIMEOUT_MS);
+      }),
+    ]);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(data.error_description || data.msg || data.message || data.error || 'Authentication failed');
@@ -69,7 +80,7 @@ async function authRestRequest(path: string, body: Record<string, unknown>) {
     }
     throw error;
   } finally {
-    window.clearTimeout(timeout);
+    if (timeout) window.clearTimeout(timeout);
   }
 }
 
