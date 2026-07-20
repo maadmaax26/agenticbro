@@ -12,7 +12,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://drvasofyghnxfxvkkwad.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SECRET_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SUPABASE_TIMEOUT_MS = 4500;
+const SUPABASE_TIMEOUT_MS = 8000;
 
 function sendJson(res: ServerResponse, statusCode: number, data: unknown) {
   res.writeHead(statusCode, {
