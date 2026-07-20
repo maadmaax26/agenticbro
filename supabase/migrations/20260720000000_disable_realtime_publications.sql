@@ -13,7 +13,7 @@
 -- project from the pause/restart.
 -- ============================================================
 
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS brand_guard_alerts;
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS brand_guard_subscriptions;
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS scan_jobs;
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS admin_notifications;
+ALTER PUBLICATION supabase_realtime DROP TABLE brand_guard_alerts;
+ALTER PUBLICATION supabase_realtime DROP TABLE brand_guard_subscriptions;
+ALTER PUBLICATION supabase_realtime DROP TABLE scan_jobs;
+ALTER PUBLICATION supabase_realtime DROP TABLE admin_notifications;

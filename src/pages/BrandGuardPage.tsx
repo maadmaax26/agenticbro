@@ -295,7 +295,7 @@ export function BrandGuardPage() {
       }
     };
 
-    const interval = setInterval(checkSubStatus, 60_000);
+    const interval = setInterval(checkSubStatus, 5 * 60_000); // 5 min — subscriptions only change on Stripe events
     return () => clearInterval(interval);
   }, [authToken, userId, supabase]);
 
@@ -861,7 +861,7 @@ export function BrandGuardPage() {
   useEffect(() => {
     if (authToken && activeBrand && dashboardTab === 'monitoring') {
       fetchMonitoring();
-      const interval = window.setInterval(() => void fetchMonitoring(true), 30_000);
+      const interval = window.setInterval(() => void fetchMonitoring(true), 2 * 60_000); // 2 min — data only changes when crons run
       return () => window.clearInterval(interval);
     }
   }, [authToken, activeBrand, dashboardTab, fetchMonitoring]);

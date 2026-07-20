@@ -80,10 +80,10 @@ export default function AlphaFeed() {
     }
   }, [typeFilter, channelFilter]);
 
-  // Initial fetch + poll every 60s
+  // Initial fetch + poll every 2 min
   useEffect(() => {
     fetchFeed();
-    const interval = setInterval(fetchFeed, 60_000);
+    const interval = setInterval(fetchFeed, 120_000);
     return () => clearInterval(interval);
   }, [fetchFeed]);
 

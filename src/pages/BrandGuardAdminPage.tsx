@@ -262,7 +262,7 @@ export function BrandGuardAdminPage() {
   useEffect(() => {
     if (activeTab === 'sla') {
       fetchSlaStatus();
-      const timer = setInterval(fetchSlaStatus, 30000);
+      const timer = setInterval(fetchSlaStatus, 2 * 60_000); // 2 min — SLA metrics don't change sub-minute
       return () => clearInterval(timer);
     }
   }, [activeTab, fetchSlaStatus]);
@@ -305,10 +305,11 @@ export function BrandGuardAdminPage() {
     }
   };
 
-  // Poll notifications every 30s (Realtime removed — was saturating DB pool)
+  // Poll notifications every 2 min (Realtime removed — was saturating DB pool)
+  // Admin notifications are rare events; 2-min cadence is more than sufficient.
   useEffect(() => {
     if (!authToken || !isAdmin) return;
-    const interval = setInterval(fetchNotifications, 30_000);
+    const interval = setInterval(fetchNotifications, 2 * 60_000);
     return () => clearInterval(interval);
   }, [authToken, isAdmin]);
 

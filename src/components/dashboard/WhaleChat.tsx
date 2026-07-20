@@ -264,7 +264,7 @@ export default function WhaleChat() {
     };
 
     checkBackend();
-    const interval = setInterval(checkBackend, 30000); // Check every 30 seconds
+    const interval = setInterval(checkBackend, 2 * 60_000); // Check every 2 min — backend health doesn't need sub-minute checks
     return () => clearInterval(interval);
   }, []);
 

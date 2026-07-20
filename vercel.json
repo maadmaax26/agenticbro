@@ -260,7 +260,7 @@
     },
     {
       "path": "/api/brand-guard/queue-scheduler",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/brand-guard/marketplace/run-scheduled",
@@ -272,10 +272,6 @@
     },
     {
       "path": "/api/brand-guard/domain-watch-worker",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/brand-guard/cron-send-drafts",
       "schedule": "*/15 * * * *"
     },
     {
