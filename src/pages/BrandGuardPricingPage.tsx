@@ -238,6 +238,12 @@ export function BrandGuardPricingPage() {
           </div>
           <div className="flex items-center gap-4">
             <button
+              onClick={() => navigate('/about')}
+              className="hidden sm:inline-flex text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              About
+            </button>
+            <button
               onClick={() => navigate('/')}
               className="text-sm text-gray-400 hover:text-white transition-colors"
             >

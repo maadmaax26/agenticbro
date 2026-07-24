@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, X, Shield, Map, Users, LogIn, ShieldAlert, Wallet, Scan, Briefcase, Coins, Search } from 'lucide-react'
+import { Menu, X, Shield, Map, Users, LogIn, ShieldAlert, Wallet, Scan, Briefcase, Coins, Search, Building2 } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 
 interface MobileMenuProps {
@@ -219,6 +219,17 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
                 <div>
                   <span className="text-white font-semibold text-xl">Brand Guard</span>
                   <p className="text-xs text-purple-300/80 mt-0.5">Impersonator • Domain • Threat scans</p>
+                </div>
+              </a>
+
+              <a
+                href="/about"
+                className="flex items-center gap-4 px-5 py-4 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/40 text-left w-full border border-cyan-500/30 transition-colors"
+              >
+                <Building2 className="h-7 w-7 text-cyan-400 flex-shrink-0" />
+                <div>
+                  <span className="text-white font-semibold text-xl">About</span>
+                  <p className="text-xs text-cyan-300/80 mt-0.5">Agentic Insights LLC</p>
                 </div>
               </a>
 

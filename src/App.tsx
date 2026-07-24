@@ -32,6 +32,7 @@ import { BrandGuardPage } from './pages/BrandGuardPage'
 import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
 import PaymentSuccess from './pages/PaymentSuccess'
+import { AboutPage } from './pages/AboutPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -40,13 +41,19 @@ const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_U
 const DEFAULT_META = {
   title: 'AgenticBro - AI Trust Intelligence Platform',
   description:
-    'AgenticBro is a hybrid AI trust intelligence platform for scam detection, wallet protection, brand impersonation monitoring, phishing analysis, and online fraud prevention.',
+    'AgenticBro is a hybrid AI trust ecosystem for consumers and businesses, covering social media, phone, website, email, domain, wallet, and payment fraud risk.',
 }
 
 const BRAND_GUARD_META = {
   title: 'Brand Guard by AgenticBro - AI Brand Protection',
   description:
     'Brand Guard monitors impersonator accounts, email spoofing, lookalike domains, vendor fraud, and cross-channel threats with AgenticBro hybrid AI trust intelligence.',
+}
+
+const ABOUT_META = {
+  title: 'About Agentic Insights LLC - AgenticBro',
+  description:
+    'Agentic Insights LLC, established April 2026, builds AgenticBro, an AI trust ecosystem for consumers and businesses across social media, phones, websites, email, domains, and Web3.',
 }
 
 function updateMetaDescription(content: string) {
@@ -642,7 +649,7 @@ function MainApp() {
                   Agentic Bro
                 </h1>
                 <p className="text-[10px] md:text-xs font-mono hidden sm:block" style={{color: '#67e8f9', textShadow: '0 0 8px rgba(103,232,249,0.45)'}}>
-                  Hybrid AI trust ecosystem for Web3, brands, wallets, and identity
+                  Hybrid AI trust ecosystem for consumers, businesses, brands, and identity
                 </p>
               </div>
             </div>
@@ -706,6 +713,12 @@ function MainApp() {
               >
                 Wallet Guard
               </button>
+              <a
+                href="/about"
+                className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                About
+              </a>
               <div className="relative group">
                 <button
                   onClick={() => setShowValueProp(true)}
@@ -813,14 +826,15 @@ function MainApp() {
             <div className="relative grid lg:grid-cols-[1.1fr_0.9fr] gap-8 p-6 md:p-10 items-center">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/25 text-cyan-200 text-xs font-bold mb-5">
-                  <span>Hybrid AI trust ecosystem</span>
+                  <span>AI trust ecosystem for consumers and businesses</span>
                 </div>
                 <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-5">
-                  Verify trust before users, wallets, or brands are exposed.
+                  Verify trust before consumers or businesses are exposed.
                 </h2>
                 <p className="text-gray-300 text-lg leading-relaxed max-w-3xl mb-6">
                   AgenticBro combines local AI agents, cloud reasoning, durable queues, and multi-source threat intelligence
-                  to detect risk across Web3 transactions, social identities, websites, phone numbers, domains, and brand impersonation.
+                  to detect risk across social media, phone calls and texts, websites, domains, email, brand impersonation,
+                  marketplaces, wallets, tokens, and payment flows.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <button
@@ -837,7 +851,7 @@ function MainApp() {
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['Web3 wallets', 'Token risk', 'Brand impersonation', 'Phone fraud', 'Website phishing', 'Domain spoofing'].map((item) => (
+                  {['Social media impersonation', 'Phone and text scams', 'Website phishing', 'Domain spoofing', 'Email spoofing', 'Wallet and token risk'].map((item) => (
                     <span key={item} className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-xs text-gray-300">
                       {item}
                     </span>
@@ -1265,8 +1279,8 @@ function MainApp() {
                 </span>
               </h2>
               <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
-                Web3 users, creators, and businesses face risk across wallets, social identities, websites, phone numbers,
-                domains, and impersonator brands. AgenticBro turns those fragmented signals into clear trust intelligence.
+                Consumers, creators, and businesses face risk across social identities, websites, phone numbers,
+                domains, payments, wallets, and impersonator brands. AgenticBro turns those fragmented signals into clear trust intelligence.
               </p>
             </div>
 
@@ -1328,7 +1342,7 @@ function MainApp() {
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed mb-4">
                   Run a deeper investigation on a wallet, Telegram channel, token, social account, phone number, or website.
-                  Get risk scores and actionable context for safer Web3 decisions.
+                  Get risk scores and actionable context for safer digital trust decisions.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   {[
@@ -1383,7 +1397,7 @@ function MainApp() {
       {!showValueProp && !showRoadmap && !showTierPage && !showScamDatabase && !showWalletProtection && (
         <footer className="relative z-10 text-center p-4 text-sm border-t border-purple-500/20 bg-black/30 backdrop-blur-sm">
           <p className="text-gray-500">
-            Hybrid AI trust intelligence for Web3 users and businesses •{' '}
+            Hybrid AI trust intelligence for consumers and businesses •{' '}
             <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300">@AgenticBro11</a>
             {' '}•{' '}
             <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300">Telegram</a>
@@ -1416,7 +1430,11 @@ function App() {
   const location = useLocation()
 
   useEffect(() => {
-    const meta = location.pathname.startsWith('/brand-guard') ? BRAND_GUARD_META : DEFAULT_META
+    const meta = location.pathname.startsWith('/brand-guard')
+      ? BRAND_GUARD_META
+      : location.pathname === '/about' || location.pathname === '/about/'
+      ? ABOUT_META
+      : DEFAULT_META
     document.title = meta.title
     updateMetaDescription(meta.description)
   }, [location.pathname])
@@ -1435,6 +1453,10 @@ function App() {
 
   if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
     return <BrandGuardAdminPage />
+  }
+
+  if (location.pathname === '/about' || location.pathname === '/about/') {
+    return <AboutPage />
   }
 
   if (location.pathname === '/employer' || location.pathname === '/employer/') {
