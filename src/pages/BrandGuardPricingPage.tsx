@@ -748,8 +748,6 @@ export function BrandGuardPricingPage() {
           </a>
           {' '}•{' '}
           <ContactUs />
-          {' '}•{' '}
-          <span className="text-gray-500">$AGNTCBRO on Solana</span>
         </p>
       </footer>
     </div>
