@@ -51,6 +51,7 @@ const PLANS: PlanTier[] = [
       'Email spoof detection (SPF / DKIM / DMARC)',
       'Social media impersonator scan',
       'Lookalike domain discovery',
+      'Shopify & Etsy marketplace clone check',
       'Brand health score (0–100)',
       'Email alerts for new threats',
     ],
@@ -97,6 +98,7 @@ const PLANS: PlanTier[] = [
       'Multi-brand support (up to 5 brands)',
       'API access (programmatic scans & alerts)',
       'DMCA takedown report generation',
+      'Shopify & Etsy takedown evidence',
       'Threat correlation across platforms',
       'Slack / webhook alert delivery',
     ],
@@ -121,6 +123,7 @@ const PLANS: PlanTier[] = [
       'Dedicated account manager',
       'Custom reporting & SLA',
       'Bulk takedown coordination',
+      'Shopify & Etsy clone-store monitoring',
       'Phone / vendor verification scans',
       'Executive threat briefings (weekly)',
     ],
@@ -140,7 +143,7 @@ const PLANS: PlanTier[] = [
 const FAQS = [
   {
     q: 'What counts as a "scan"?',
-    a: 'Each individual check consumes one scan credit: email spoof scan (SPF/DKIM/DMARC), impersonator scan (per platform), lookalike domain scan, threat correlation, or vendor/phone verification. A full brand health check across 4 platforms uses ~5 credits.',
+    a: 'Each individual check consumes one scan credit: email spoof scan (SPF/DKIM/DMARC), impersonator scan (per platform), Shopify/Etsy marketplace scan, lookalike domain scan, threat correlation, or vendor/phone verification. A full brand health check across 4 platforms uses ~5 credits.',
   },
   {
     q: 'Do unused scans roll over?',
@@ -148,7 +151,7 @@ const FAQS = [
   },
   {
     q: 'What is "continuous monitoring"?',
-    a: 'Instead of running a one-time scan, Brand Guard automatically re-scans your brands on a schedule (every 6 hours for Guardian, every 15 minutes for Sentinel, real-time for Fortress). You get alerts when new threats appear — new impersonator accounts, DMARC policy changes, newly registered lookalike domains.',
+    a: 'Instead of running a one-time scan, Brand Guard automatically re-scans your brands on a schedule (every 6 hours for Guardian, every 15 minutes for Sentinel, real-time for Fortress). You get alerts when new threats appear — new impersonator accounts, Shopify or Etsy clone stores, DMARC policy changes, newly registered lookalike domains.',
   },
   {
     q: 'How do takedown reports work?',
@@ -160,7 +163,7 @@ const FAQS = [
   },
   {
     q: 'Which platforms do you monitor?',
-    a: 'X (Twitter), Instagram, TikTok, Facebook, Telegram, and LinkedIn. Email spoof and lookalike domain monitoring works on any domain.',
+    a: 'X (Twitter), Instagram, TikTok, Facebook, Telegram, LinkedIn, Shopify, and Etsy. Email spoof and lookalike domain monitoring works on any domain.',
   },
 ];
 
@@ -283,7 +286,7 @@ export function BrandGuardPricingPage() {
 
           <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10">
             Brand Guard monitors X, Instagram, TikTok, Facebook, Telegram & LinkedIn for impersonator accounts — 
-            plus email spoofing, lookalike domains, and vendor fraud. Get alerts before your users get scammed.
+            plus live Shopify & Etsy marketplace clones, email spoofing, lookalike domains, and vendor fraud. Get alerts before your users get scammed.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -331,7 +334,7 @@ export function BrandGuardPricingPage() {
               {
                 icon: '🔍',
                 title: 'Detect',
-                desc: 'Scan for impersonator accounts across 6 platforms, email spoofing vulnerabilities (SPF/DKIM/DMARC), and lookalike domains registered by attackers.',
+                desc: 'Scan for impersonator accounts across social platforms, Shopify and Etsy clone stores, email spoofing vulnerabilities (SPF/DKIM/DMARC), and lookalike domains registered by attackers.',
               },
               {
                 icon: '🔔',
@@ -407,7 +410,7 @@ export function BrandGuardPricingPage() {
       {/* ── Scan Types ───────────────────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">6 scan types. One brand shield.</h2>
+          <h2 className="text-3xl font-bold text-center mb-4">7 scan types. One brand shield.</h2>
           <p className="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
             Each scan type checks a different attack surface. Continuous monitoring runs them all on schedule so you don't have to remember.
           </p>
@@ -424,6 +427,12 @@ export function BrandGuardPricingPage() {
                 name: 'Impersonator Scan',
                 desc: 'Find fake accounts using your brand name on X, IG, TikTok, FB, Telegram, LinkedIn.',
                 tags: ['6 platforms', 'real-time'],
+              },
+              {
+                icon: '🛍️',
+                name: 'Marketplace Monitoring',
+                desc: 'Scan Shopify and Etsy for cloned storefronts, copied listings, fake discount pages, and checkout impersonation.',
+                tags: ['Shopify', 'Etsy', 'live monitoring'],
               },
               {
                 icon: '🌐',
@@ -635,9 +644,10 @@ export function BrandGuardPricingPage() {
               <tbody className="divide-y divide-white/5">
                 {[
                   { feature: 'Scans', free: '25 total', guardian: '50/mo', sentinel: '200/mo', fortress: 'Unlimited' },
-                  { feature: 'Scan types', free: 'All 6', guardian: 'All 6', sentinel: 'All 6', fortress: 'All 6' },
+                  { feature: 'Scan types', free: 'All 7', guardian: 'All 7', sentinel: 'All 7', fortress: 'All 7' },
                   { feature: 'Email spoof detection', free: '✓', guardian: '✓', sentinel: '✓', fortress: '✓' },
                   { feature: 'Impersonator scan', free: '✓', guardian: '✓', sentinel: '✓', fortress: '✓' },
+                  { feature: 'Shopify & Etsy marketplace monitoring', free: 'Manual', guardian: 'Every 6h', sentinel: 'Every 15min', fortress: '24/7 real-time' },
                   { feature: 'Lookalike domain scan', free: '✓', guardian: '✓', sentinel: '✓', fortress: '✓' },
                   { feature: 'Threat correlation', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
                   { feature: 'Phone / vendor verify', free: '—', guardian: '—', sentinel: '—', fortress: '✓' },
@@ -702,7 +712,7 @@ export function BrandGuardPricingPage() {
           </h2>
           <p className="text-gray-400 text-lg mb-8">
             Every day without monitoring is a day attackers can register your lookalike domain, 
-            create fake accounts, and send spoofed emails. Brand Guard catches them first.
+            create fake accounts, clone your Shopify or Etsy listings, and send spoofed emails. Brand Guard catches them first.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
