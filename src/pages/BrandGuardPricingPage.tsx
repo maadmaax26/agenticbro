@@ -47,7 +47,7 @@ const PLANS: PlanTier[] = [
     scans: 25,
     description: 'Try Brand Guard risk-free',
     features: [
-      '25 brand scans total',
+      '25 brand scans included',
       'Email spoof detection (SPF / DKIM / DMARC)',
       'Social media impersonator scan',
       'Lookalike domain discovery',
@@ -66,13 +66,13 @@ const PLANS: PlanTier[] = [
     id: 'guardian',
     name: 'Guardian',
     price: 29,
-    scans: 50,
+    scans: 100,
     description: 'For startups & small brands',
     highlight: true,
     badge: 'MOST POPULAR',
     features: [
       'Everything in Free, plus:',
-      '50 scans / month (resets monthly)',
+      '100 scans / month (resets monthly)',
       'Continuous monitoring — 6-hour scan cycle',
       'Regression alerts (DMARC changes, new lookalikes)',
       'Impersonator takedown report templates',
@@ -89,11 +89,11 @@ const PLANS: PlanTier[] = [
     id: 'sentinel',
     name: 'Sentinel',
     price: 99,
-    scans: 200,
+    scans: 300,
     description: 'For growing protocols & brands',
     features: [
       'Everything in Guardian, plus:',
-      '200 scans / month (resets monthly)',
+      '300 scans / month (resets monthly)',
       'Real-time monitoring — 15-minute scan cycle',
       'Multi-brand support (up to 5 brands)',
       'API access (programmatic scans & alerts)',
@@ -592,7 +592,7 @@ export function BrandGuardPricingPage() {
                       {plan.scans === -1
                         ? 'Unlimited scans'
                         : plan.scans === 25
-                        ? `${plan.scans} scans total`
+                        ? `${plan.scans} scans included`
                         : `${plan.scans} scans / month`}
                     </div>
                   </div>
@@ -643,7 +643,7 @@ export function BrandGuardPricingPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {[
-                  { feature: 'Scans', free: '25 total', guardian: '50/mo', sentinel: '200/mo', fortress: 'Unlimited' },
+                  { feature: 'Scans', free: '25 included', guardian: '100/mo', sentinel: '300/mo', fortress: 'Unlimited' },
                   { feature: 'Scan types', free: 'All 7', guardian: 'All 7', sentinel: 'All 7', fortress: 'All 7' },
                   { feature: 'Email spoof detection', free: '✓', guardian: '✓', sentinel: '✓', fortress: '✓' },
                   { feature: 'Impersonator scan', free: '✓', guardian: '✓', sentinel: '✓', fortress: '✓' },

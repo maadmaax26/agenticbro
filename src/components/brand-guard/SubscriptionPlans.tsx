@@ -3,8 +3,8 @@
  * 
  * Displays 4 plan cards with upgrade/downgrade buttons
  * - Free: 25 scans
- * - Guardian: $29/mo, 50 scans
- * - Sentinel: $99/mo, 200 scans
+ * - Guardian: $29/mo, 100 scans
+ * - Sentinel: $99/mo, 300 scans
  * - Fortress: $299/mo, unlimited
  */
 
@@ -35,7 +35,7 @@ const PLANS: Plan[] = [
     price: 0,
     scans: 25,
     features: [
-      '25 brand scans',
+      '25 brand scans included',
       'Real-time monitoring',
       'Email alerts',
       'Brand health score',
@@ -46,9 +46,9 @@ const PLANS: Plan[] = [
     id: 'guardian',
     name: 'Guardian',
     price: 29,
-    scans: 50,
+    scans: 100,
     features: [
-      '50 brand scans/month',
+      '100 brand scans/month',
       'Priority monitoring',
       'Advanced threat detection',
       'Email alerts',
@@ -61,9 +61,9 @@ const PLANS: Plan[] = [
     id: 'sentinel',
     name: 'Sentinel',
     price: 99,
-    scans: 200,
+    scans: 300,
     features: [
-      '200 brand scans/month',
+      '300 brand scans/month',
       'Real-time monitoring',
       'Advanced threat detection',
       'Priority support',
