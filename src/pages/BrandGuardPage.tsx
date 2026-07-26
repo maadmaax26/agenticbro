@@ -870,6 +870,9 @@ export function BrandGuardPage() {
   const [scanning, setScanning] = useState<string | null>(null); // scan type being run
   const [scanResult, setScanResult] = useState<any>(null);
   const [scanType, setScanType] = useState<string>('impersonator');
+  const [contentReuseConsent, setContentReuseConsent] = useState(false);
+  const [consentedScanId, setConsentedScanId] = useState<string | null>(null);
+  const [contentConsentError, setContentConsentError] = useState('');
   const [showTakedown, setShowTakedown] = useState(false);
 
   const deductCredit = async (scanTypeStr: string) => {
@@ -908,6 +911,8 @@ export function BrandGuardPage() {
           brand_handle: activeBrand.brand_handle,
           brand_domain: activeBrand.brand_domain || '',
           platforms: activeBrand.platforms,
+          content_reuse_consent: contentReuseConsent,
+          content_reuse_scope: contentReuseConsent ? 'anonymized' : 'none',
         };
       } else if (type === 'domain') {
         endpoint = `${API_BASE}/domain-monitor`;
@@ -952,6 +957,10 @@ export function BrandGuardPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      if (res.ok && type === 'impersonator' && contentReuseConsent && data.scan_id) {
+        setConsentedScanId(String(data.scan_id));
+        setContentConsentError('');
+      }
       // Domain monitor & vendor verify wrap results under .result; flatten for display
       const result = data.success && data.result ? data.result : data;
 
@@ -1027,6 +1036,26 @@ export function BrandGuardPage() {
       } catch { /* best-effort refund */ }
       setScanResult({ error: err instanceof Error ? err.message : 'Scan failed' });
     } finally { setScanning(null); }
+  };
+
+  const revokeContentReuseConsent = async () => {
+    if (!authToken || !consentedScanId) return;
+    setContentConsentError('');
+    try {
+      const res = await fetch(`${API_BASE}/content-consent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ scan_id: consentedScanId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Could not withdraw permission');
+      }
+      setContentReuseConsent(false);
+      setConsentedScanId(null);
+    } catch (error) {
+      setContentConsentError(error instanceof Error ? error.message : 'Could not withdraw permission');
+    }
   };
 
   // Vendor verify needs a phone number input
@@ -2527,6 +2556,73 @@ export function BrandGuardPage() {
               ) : (
               <div>
               {/* Scan buttons */}
+              <label
+                htmlFor="brand-guard-content-reuse"
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  marginBottom: '12px',
+                  color: dark.textMuted,
+                  fontSize: '12px',
+                  lineHeight: 1.45,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  id="brand-guard-content-reuse"
+                  type="checkbox"
+                  checked={contentReuseConsent}
+                  onChange={event => {
+                    setContentReuseConsent(event.target.checked);
+                    setContentConsentError('');
+                  }}
+                  style={{ width: '16px', height: '16px', marginTop: '1px', accentColor: dark.accent }}
+                />
+                <span>
+                  Allow anonymized findings from Impersonator Scans to be used in Brand Guard educational
+                  content. Account details and detected handles are excluded, and publication requires manual
+                  review.
+                </span>
+              </label>
+              {consentedScanId && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    paddingTop: '10px',
+                    borderTop: `1px solid ${dark.border}`,
+                    fontSize: '12px',
+                    color: dark.textMuted,
+                  }}
+                >
+                  <span>Content permission is active for your latest consented scan.</span>
+                  <button
+                    type="button"
+                    onClick={() => void revokeContentReuseConsent()}
+                    disabled={Boolean(scanning)}
+                    style={{
+                      border: 0,
+                      padding: 0,
+                      background: 'transparent',
+                      color: '#fbbf24',
+                      fontWeight: 700,
+                      cursor: scanning ? 'not-allowed' : 'pointer',
+                      opacity: scanning ? 0.5 : 1,
+                    }}
+                  >
+                    Withdraw permission
+                  </button>
+                </div>
+              )}
+              {contentConsentError && (
+                <div role="alert" style={{ marginTop: '8px', color: '#fca5a5', fontSize: '12px' }}>
+                  {contentConsentError}
+                </div>
+              )}
               <div style={{ display: 'grid', gap: '8px' }}>
                 {[
                   { type: 'impersonator', icon: '🔍', label: 'Impersonator Scan', desc: 'Find fake accounts mimicking your brand' },

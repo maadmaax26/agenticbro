@@ -35,11 +35,15 @@ const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, s
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface BrandScanRequest {
+  brand_id?: string;
+  brand_monitor_id?: string;
   brand_name: string;
   brand_handle: string;
   brand_domain?: string;
   platforms?: string[];
   variant_limit?: number;
+  content_reuse_consent?: boolean;
+  content_reuse_scope?: 'none' | 'anonymized' | 'named';
 }
 
 interface BrandVariant {
@@ -318,6 +322,16 @@ type VercelResponse = ServerResponse & {
   end: () => void;
 };
 
+async function authenticatedUserId(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  const authToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+  if (!authToken || !supabaseUrl || !supabaseAuthKey) return null;
+
+  const authClient = createClient(supabaseUrl, supabaseAuthKey);
+  const { data: { user }, error } = await authClient.auth.getUser(authToken);
+  return error || !user ? null : user.id;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -333,7 +347,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    // Check Supabase for stored results
+    // Check Supabase for stored results. Owned scans require the same authenticated owner.
     if (supabase) {
       const { data, error } = await supabase
         .from('brand_guard_scans')
@@ -342,6 +356,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .single();
 
       if (data && !error) {
+        if (data.owner_id) {
+          const requesterId = await authenticatedUserId(req);
+          if (!requesterId) {
+            res.status(401).json({ error: 'Authentication required' });
+            return;
+          }
+          if (requesterId !== data.owner_id) {
+            res.status(403).json({ error: 'Scan does not belong to this account' });
+            return;
+          }
+        }
         res.status(200).json(data);
         return;
       }
@@ -358,15 +383,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // ── Auth + Credit Check ────────────────────────────────────────────────────
-  const authHeader = req.headers.authorization;
-  const authToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  let userId: string | null = null;
-
-  if (authToken && supabase && supabaseUrl && supabaseAuthKey) {
-    const authClient = createClient(supabaseUrl, supabaseAuthKey);
-    const { data: { user }, error: authErr } = await authClient.auth.getUser(authToken);
-    if (!authErr && user) userId = user.id;
-  }
+  const userId = await authenticatedUserId(req);
 
   // If authenticated, verify credits exist before allowing scan
   // (Frontend handles the actual deduction via /credits/deduct before calling this API)
@@ -398,16 +415,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // Unauthenticated users: allow scan but do not deduct (for now, could gate later)
 
   const body = req.body || (typeof req === 'object' ? {} : {});
-  const brandName = (body.brand_name as string) || '';
-  const brandHandle = (body.brand_handle as string) || '';
-  const brandDomain = (body.brand_domain as string) || '';
-  const platforms = (body.platforms as string[]) || ['x', 'instagram', 'tiktok', 'facebook', 'telegram', 'linkedin'];
+  const requestedMonitorId = String(body.brand_monitor_id || body.brand_id || '').trim();
+  let brandName = String(body.brand_name || '').trim();
+  let brandHandle = String(body.brand_handle || '').trim();
+  let brandDomain = String(body.brand_domain || '').trim();
+  let platforms = Array.isArray(body.platforms)
+    ? body.platforms.map(String)
+    : ['x', 'instagram', 'tiktok', 'facebook', 'telegram', 'linkedin'];
   const variantLimit = (body.variant_limit as number) || 30;
+
+  let validatedMonitorId: string | null = null;
+  if (requestedMonitorId) {
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required for a monitored brand scan' });
+      return;
+    }
+    if (!supabase) {
+      res.status(503).json({ error: 'Scan storage unavailable' });
+      return;
+    }
+
+    const { data: monitor, error: monitorError } = await supabase
+      .from('brand_monitors')
+      .select('id, brand_name, brand_handle, brand_domain, platforms')
+      .eq('id', requestedMonitorId)
+      .eq('owner_id', userId)
+      .maybeSingle();
+
+    if (monitorError || !monitor) {
+      res.status(403).json({ error: 'Brand monitor does not belong to this account' });
+      return;
+    }
+
+    validatedMonitorId = monitor.id;
+    brandName = monitor.brand_name;
+    brandHandle = monitor.brand_handle;
+    brandDomain = monitor.brand_domain || '';
+    platforms = Array.isArray(monitor.platforms) && monitor.platforms.length
+      ? monitor.platforms.map(String)
+      : platforms;
+  }
 
   if (!brandName || !brandHandle) {
     res.status(400).json({ error: 'brand_name and brand_handle are required' });
     return;
   }
+
+  const requestedContentConsent = body.content_reuse_consent === true;
+  const requestedContentScope = body.content_reuse_scope === 'named' ? 'named' : 'anonymized';
+  const contentReuseConsent = Boolean(
+    requestedContentConsent && userId && validatedMonitorId,
+  );
+  const contentReuseScope = contentReuseConsent ? requestedContentScope : 'none';
+  const contentReuseConsentedAt = contentReuseConsent ? new Date().toISOString() : null;
 
   // ── Queue-based scan: create pending job, local worker processes it ─────────
   // Generate scan ID
@@ -466,9 +526,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // Store as pending job in Supabase — local worker will pick it up
   if (supabase) {
     try {
-      await supabase.from('brand_guard_scans').insert({
+      const { error: insertError } = await supabase.from('brand_guard_scans').insert({
         scan_id: scanId,
-        brand_monitor_id: (body.brand_monitor_id as string) || null,
+        brand_monitor_id: validatedMonitorId,
+        owner_id: userId,
         brand_name: brandName,
         brand_handle: brandHandle,
         brand_domain: brandDomain || null,
@@ -478,6 +539,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         profiles_scanned: 0,
         impersonators_found: 0,
         scammer_db_matches: 0,
+        initiated_from: 'website',
+        content_reuse_consent: contentReuseConsent,
+        content_reuse_scope: contentReuseScope,
+        content_reuse_consented_at: contentReuseConsentedAt,
+        content_reuse_revoked_at: null,
         created_at: new Date().toISOString(),
         result: {
           ...previewResult,
@@ -485,8 +551,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           real_scan_pending: true, // Tell frontend to poll for real results
         },
       });
+      if (insertError) {
+        console.error('[Brand Guard] Supabase insert error:', insertError.message);
+        res.status(500).json({ error: 'Failed to store scan', details: insertError.message });
+        return;
+      }
     } catch (err) {
       console.error('[Brand Guard] Supabase insert error:', err);
+      res.status(500).json({ error: 'Failed to store scan' });
+      return;
     }
   }
 

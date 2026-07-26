@@ -118,6 +118,12 @@
     "api/brand-guard/pilot-expiration-worker.ts": {
       "maxDuration": 60
     },
+    "api/brand-guard/content-candidates-worker.ts": {
+      "maxDuration": 60
+    },
+    "api/brand-guard/content-consent.ts": {
+      "maxDuration": 15
+    },
     "api/brand-guard/dmarc-ingest.ts": {
       "maxDuration": 30
     },
@@ -277,6 +283,10 @@
     {
       "path": "/api/brand-guard/pilot-expiration-worker",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/brand-guard/content-candidates-worker",
+      "schedule": "15 * * * *"
     }
   ]
 }
