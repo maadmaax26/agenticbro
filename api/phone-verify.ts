@@ -1,40 +1,106 @@
 /**
- * Public phone verification shell.
- *
- * Phone-risk patterns, scoring, and community intelligence run in the private
- * intelligence service.
+ * api/phone-verify.ts — Thin wrapper for Supabase Edge Function
+ * 
+ * This file acts as a public API route that calls the private
+ * phone-verify Edge Function deployed on Supabase.
+ * 
+ * All proprietary scoring logic is in the Edge Function, not here.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {
-  callPrivateIntel,
-  parseJsonBody,
-  privateIntelConfigured,
-  privateIntelUnavailable,
-  sendJson,
-} from './_lib/private-intel-service.js';
+import { createClient } from '@supabase/supabase-js';
+
+interface VercelRequest extends Request {
+  body?: Record<string, unknown>;
+}
+
+interface VercelResponse {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => void;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
   if (req.method !== 'POST') {
-    return sendJson(res, 405, { success: false, error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    return;
   }
-  if (!privateIntelConfigured()) return privateIntelUnavailable(res);
-
-  try {
-    const body = await parseJsonBody(req);
-    const result = await callPrivateIntel('/v1/phone/verify', {
-      method: 'POST',
-      body,
-      authorization: req.headers.authorization,
-    });
-    return sendJson(res, 200, result);
-  } catch (error) {
-    const statusCode = typeof (error as { statusCode?: unknown }).statusCode === 'number'
-      ? (error as { statusCode: number }).statusCode
-      : 500;
-    return sendJson(res, statusCode, {
-      success: false,
-      error: error instanceof Error ? error.message : 'Private phone verification failed',
-    });
+  
+  const body = typeof req.body === 'object' ? req.body : await req.json?.();
+  const phone = body?.phone as string;
+  const textScam = body?.textScam as boolean;
+  const useQueue = body?.useQueue === true;
+  
+  if (!phone || typeof phone !== 'string') {
+    res.status(400).json({ error: 'Missing required field: phone' });
+    return;
   }
+  
+  // Basic validation
+  const stripped = phone.replace(/[^0-9+]/g, '');
+  if (stripped.length < 7 || stripped.length > 16) {
+    res.status(400).json({ error: 'Invalid phone number format. Include country code, e.g. +1234567890' });
+    return;
+  }
+  
+  // Initialize Supabase client
+  const supabaseUrl = process.env.SUPABASE_URL!;
+  const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  // If useQueue is true, create a job and return job ID
+  if (useQueue) {
+    const { data: job, error } = await supabase
+      .from('scan_jobs')
+      .insert({
+        scan_type: 'phone_community',
+        payload: { phone: stripped, sources: ['800notes', 'whocalledme'] },
+        status: 'pending',
+        priority: 5,
+      })
+      .select('id, status, created_at')
+      .single();
+    
+    if (error) {
+      res.status(500).json({ error: 'Failed to queue scan job' });
+      return;
+    }
+    
+    res.status(202).json({
+      success: true,
+      job_id: job.id,
+      status: 'queued',
+      poll_url: `/api/phone-scan/${job.id}`,
+      message: 'CDP scan queued. Poll poll_url for results.',
+    });
+    return;
+  }
+  
+  // Call the Supabase Edge Function — pass textScam so the edge function
+  // can apply SMS scam evidence as a risk signal in scoring
+  const { data, error } = await supabase.functions.invoke('phone-verify', {
+    body: { phone: stripped, textScam: !!textScam },
+  });
+  
+  if (error) {
+    console.error('[phone-verify] Edge function error:', error);
+    res.status(500).json({ error: 'Phone verification failed', details: error.message });
+    return;
+  }
+  
+  res.status(200).json(data);
 }
+
+export const config = {
+  maxDuration: 15,
+};
