@@ -1,0 +1,722 @@
+#!/usr/bin/env python3
+"""
+CDP URL Scanner — JavaScript Detonation Analysis via Chrome CDP
+================================================================
+Loads a URL in headless Chrome (port 18801), monitors all network requests,
+JavaScript execution, and detects in-memory malware patterns with
+context-aware scoring to minimize false positives from legitimate libraries.
+
+Detection categories:
+- WASM (WebAssembly) payload compilation
+- Dynamic code execution (eval, Function constructor)
+- Obfuscated payloads (base64, charcode, hex)
+- Crypto wallet targeting / drain attempts
+- Credential / form theft
+- Clipboard hijacking
+- Data exfiltration (beacons, suspicious domains)
+- DOM injection (hidden iframes, script injection)
+- Persistence mechanisms (service workers)
+- C2 channels (WebSockets to suspicious endpoints)
+
+Scoring uses context-aware weighting:
+- Known library domains (solana-web3, supabase, etc.) get reduced weights
+- Pattern density + context determines severity
+- Only flags as HIGH/CRITICAL when patterns appear in suspicious context
+
+Usage:
+  python3 cdp-url-scan.py <url> [--json] [--timeout 30]
+"""
+
+import asyncio
+import json
+import os
+import sys
+import time
+import hashlib
+import re
+import argparse
+from datetime import datetime, timezone
+from urllib.parse import urlparse
+
+try:
+    import websockets
+except ImportError:
+    print("ERROR: websockets not installed. Run: pip3 install websockets", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: requests not installed. Run: pip3 install requests", file=sys.stderr)
+    sys.exit(1)
+
+# ── Config ────────────────────────────────────────────────────────────────────
+
+CDP_HOST = os.environ.get("CDP_HOST", "localhost")
+CDP_PORT = int(os.environ.get("CDP_PORT", "18801"))
+DEFAULT_TIMEOUT = 30
+
+# ── Known Library Domains (reduced scoring) ───────────────────────────────────
+
+KNOWN_LIBRARY_DOMAINS = {
+    # Solana / Web3
+    "solana-web3", "solana-wallet", "solana-", "@solana",
+    # Supabase
+    "supabase",
+    # React / Vue / Angular
+    "react", "react-dom", "vue", "angular",
+    # Google
+    "googletagmanager", "google-analytics", "googlesyndication",
+    "doubleclick", "googleadservices",
+    # Cloudflare
+    "cloudflare",
+    # Vercel / Netlify
+    "vercel", "netlify",
+}
+
+# Known safe domains for network requests
+SAFE_DOMAINS = [
+    "google.com", "googleapis.com", "gstatic.com", "googletagmanager.com",
+    "cloudflare.com", "cloudflareinsights.com", "cdn.cloudflare.net",
+    "jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com",
+    "fonts.googleapis.com", "fonts.gstatic.com",
+    "amazonaws.com", "supabase.co", "agenticbro.app",
+    "doubleclick.net", "googleadservices.com",
+    # Common CDNs
+    "cdn.jsdelivr.net", "fonts.bunny.net", "fontawesome.com",
+]
+
+# Suspicious outbound domains
+SUSPICIOUS_DOMAINS = [
+    "pastebin.com", "paste.ee", "hastebin.com",
+    "ngrok.io", "ngrok.app", "serveo.net", "loca.lt",
+    "ipfs.io", "gateway.pinata.cloud",
+    "raw.githubusercontent.com", "gist.githubusercontent.com",
+    "transfer.sh", "0x0.st", "file.io",
+    "webhook.site", "pipedream.net", "requestbin",
+]
+
+# ── Threat Patterns ──────────────────────────────────────────────────────────
+# Each: {pattern, flag, base_weight, desc, context_type}
+# context_type determines how the weight is adjusted:
+#   "always_suspicious" — always full weight
+#   "library_common" — reduced if from known library domain
+#   "context_dependent" — full weight only if multiple indicators present
+
+THREAT_PATTERNS = [
+    # WASM — always suspicious unless from known library
+    {"pattern": r"WebAssembly\s*\.\s*(instantiate|compile|Streaming)", "flag": "wasm_compilation", "weight": 25, "context": "context_dependent", "desc": "WebAssembly payload compilation"},
+    {"pattern": r"new\s+WebAssembly\s*\.\s*Module", "flag": "wasm_module_creation", "weight": 25, "context": "always_suspicious", "desc": "Direct WASM module creation — code assembled in browser memory"},
+    {"pattern": r"wasm\s*\[\s*0x[0-9a-fA-F]+\s*\]", "flag": "wasm_bytecode_manipulation", "weight": 20, "context": "always_suspicious", "desc": "Raw WASM bytecode manipulation"},
+
+    # Dynamic code execution
+    {"pattern": r"\beval\s*\(", "flag": "eval_execution", "weight": 15, "context": "context_dependent", "desc": "eval() dynamic code execution"},
+    {"pattern": r"new\s+Function\s*\(", "flag": "function_constructor", "weight": 12, "context": "library_common", "desc": "new Function() — dynamic code generation"},
+    {"pattern": r"setTimeout\s*\(\s*['\"]", "flag": "settimeout_string", "weight": 10, "context": "always_suspicious", "desc": "setTimeout with string — indirect eval"},
+    {"pattern": r"setInterval\s*\(\s*['\"]", "flag": "setinterval_string", "weight": 10, "context": "always_suspicious", "desc": "setInterval with string — indirect eval"},
+
+    # Obfuscation — context dependent (common in minified code)
+    {"pattern": r"atob\s*\(", "flag": "base64_decode", "weight": 5, "context": "library_common", "desc": "Base64 decoding"},
+    {"pattern": r"String\.fromCharCode\s*\(", "flag": "charcode_obfuscation", "weight": 5, "context": "library_common", "desc": "String.fromCharCode usage (common in minified code)"},
+    {"pattern": r"\\x[0-9a-fA-F]{2}", "flag": "hex_obfuscation", "weight": 5, "context": "library_common", "desc": "Hex-encoded strings (common in minified code)"},
+    {"pattern": r"unescape\s*\(", "flag": "unescape_obfuscation", "weight": 5, "context": "library_common", "desc": "unescape() usage"},
+
+    # Crypto wallet targeting — context dependent
+    {"pattern": r"window\.ethereum\s*=", "flag": "wallet_injection_eth", "weight": 20, "context": "context_dependent", "desc": "Ethereum wallet object injection"},
+    {"pattern": r"window\.solana\s*=", "flag": "wallet_injection_sol", "weight": 15, "context": "context_dependent", "desc": "Solana wallet object injection"},
+    {"pattern": r"window\.phantom\s*=", "flag": "wallet_injection_phantom", "weight": 20, "context": "context_dependent", "desc": "Phantom wallet object injection"},
+    {"pattern": r"ethereum\.request\s*\(\s*{\s*method:\s*['\"]eth_sendTransaction", "flag": "wallet_drain_attempt", "weight": 25, "context": "always_suspicious", "desc": "Direct ETH sendTransaction — potential wallet drain"},
+    {"pattern": r"personal_sign|eth_signTypedData", "flag": "eth_signing", "weight": 10, "context": "library_common", "desc": "Ethereum signing (common in dApps)"},
+
+    # Credential theft — always suspicious
+    {"pattern": r"document\.forms\s*\[", "flag": "form_harvesting", "weight": 15, "context": "always_suspicious", "desc": "Form harvesting — credential theft"},
+    {"pattern": r"querySelector.*password|querySelector.*passwd", "flag": "password_field_access", "weight": 15, "context": "context_dependent", "desc": "Password field access"},
+    {"pattern": r"navigator\.credentials", "flag": "credential_api_access", "weight": 10, "context": "library_common", "desc": "Credential Manager API access (used by auth libraries)"},
+
+    # Clipboard — context dependent
+    {"pattern": r"navigator\.clipboard\s*\.\s*writeText", "flag": "clipboard_write", "weight": 8, "context": "library_common", "desc": "Clipboard write (used by copy-to-clipboard features)"},
+    {"pattern": r"navigator\.clipboard\s*\.\s*readText", "flag": "clipboard_read", "weight": 10, "context": "context_dependent", "desc": "Clipboard read — sensitive data access"},
+
+    # Data exfiltration
+    {"pattern": r"navigator\.sendBeacon\s*\(", "flag": "data_beacon", "weight": 10, "context": "context_dependent", "desc": "Background data beacon"},
+
+    # DOM injection — always suspicious
+    {"pattern": r"document\.write\s*\(", "flag": "document_write", "weight": 8, "context": "library_common", "desc": "document.write — inline DOM injection"},
+    {"pattern": r"\.innerHTML\s*=\s*['\"]<script", "flag": "script_injection", "weight": 15, "context": "context_dependent", "desc": "Script injection via innerHTML"},
+
+    # Persistence
+    {"pattern": r"serviceWorker\s*\.\s*register", "flag": "service_worker_registration", "weight": 12, "context": "context_dependent", "desc": "Service worker registration — persistence mechanism"},
+
+    # Network
+    {"pattern": r"new\s+WebSocket\s*\(", "flag": "websocket_connection", "weight": 5, "context": "library_common", "desc": "WebSocket connection"},
+    {"pattern": r"fetch\s*\(\s*['\"]https?://", "flag": "fetch_request", "weight": 2, "context": "library_common", "desc": "Outbound fetch request"},
+    {"pattern": r"XMLHttpRequest", "flag": "xhr_request", "weight": 2, "context": "library_common", "desc": "XHR request"},
+]
+
+
+# ── CDP Connection (async with background listener) ──────────────────────────
+
+class CDPSession:
+    """Manages a Chrome DevTools Protocol session with concurrent event listening."""
+
+    def __init__(self, ws_url: str):
+        self.ws_url = ws_url
+        self.ws = None
+        self.msg_id = 0
+        self._response_futures = {}
+        self._listener_task = None
+
+        self.network_requests = []
+        self.console_messages = []
+        self.script_sources_meta = []
+        self.script_sources_cache = {}  # scriptId -> source code
+        self.errors = []
+
+    async def connect(self):
+        self.ws = await websockets.connect(self.ws_url, max_size=50 * 1024 * 1024)
+        self._listener_task = asyncio.create_task(self._listen_loop())
+
+        await self._send("Network.enable")
+        await self._send("Runtime.enable")
+        await self._send("Page.enable")
+        await self._send("Debugger.enable")
+        await self._send("Log.enable")
+
+    async def _listen_loop(self):
+        try:
+            async for raw in self.ws:
+                msg = json.loads(raw)
+                msg_id = msg.get("id")
+
+                if msg_id and msg_id in self._response_futures:
+                    fut = self._response_futures.pop(msg_id)
+                    if "error" in msg:
+                        fut.set_exception(RuntimeError(f"CDP error: {msg['error']}"))
+                    else:
+                        fut.set_result(msg.get("result", {}))
+                else:
+                    self._handle_event(msg)
+        except websockets.exceptions.ConnectionClosed:
+            pass
+        except Exception:
+            pass
+
+    async def _send(self, method: str, params: dict = None) -> dict:
+        self.msg_id += 1
+        msg = {"id": self.msg_id, "method": method}
+        if params:
+            msg["params"] = params
+
+        fut = asyncio.get_event_loop().create_future()
+        self._response_futures[self.msg_id] = fut
+
+        await self.ws.send(json.dumps(msg))
+        return await asyncio.wait_for(fut, timeout=15)
+
+    def _handle_event(self, event: dict):
+        method = event.get("method", "")
+        params = event.get("params", {})
+
+        if method == "Network.requestWillBeSent":
+            req = params.get("request", {})
+            self.network_requests.append({
+                "url": req.get("url", ""),
+                "method": req.get("method", ""),
+                "type": params.get("type", ""),
+                "headers": req.get("headers", {}),
+                "initiator": params.get("initiator", {}).get("type", ""),
+                "timestamp": params.get("timestamp", 0),
+            })
+
+        elif method == "Runtime.consoleAPICalled":
+            args = params.get("args", [])
+            msg_text = " ".join(str(a.get("value", a.get("description", ""))) for a in args)
+            self.console_messages.append({
+                "type": params.get("type", ""),
+                "message": msg_text[:500],
+            })
+
+        elif method == "Runtime.exceptionThrown":
+            exc = params.get("exceptionDetails", {})
+            self.errors.append({
+                "text": exc.get("text", "")[:200],
+                "exception": exc.get("exception", {}).get("description", "")[:300],
+            })
+
+        elif method == "Debugger.scriptParsed":
+            self.script_sources_meta.append({
+                "scriptId": params.get("scriptId", ""),
+                "url": params.get("url", ""),
+                "length": params.get("length", 0),
+            })
+
+    async def get_script_source(self, script_id: str) -> str:
+        if script_id in self.script_sources_cache:
+            return self.script_sources_cache[script_id]
+        try:
+            result = await self._send("Debugger.getScriptSource", {"scriptId": script_id})
+            source = result.get("scriptSource", "")
+            self.script_sources_cache[script_id] = source
+            return source
+        except Exception:
+            return ""
+
+    async def navigate(self, url: str):
+        await self._send("Page.navigate", {"url": url})
+
+    async def evaluate(self, expression: str) -> dict:
+        return await self._send("Runtime.evaluate", {
+            "expression": expression,
+            "returnByValue": True,
+        })
+
+    async def wait_for_load(self, duration: int):
+        await asyncio.sleep(duration)
+
+    async def close(self):
+        if self._listener_task:
+            self._listener_task.cancel()
+            try:
+                await self._listener_task
+            except asyncio.CancelledError:
+                pass
+        if self.ws:
+            await self.ws.close()
+
+
+# ── Analysis Functions ────────────────────────────────────────────────────────
+
+def is_library_script(script_url: str) -> bool:
+    """Check if a script URL is from a known library/domain."""
+    if not script_url:
+        return False
+    script_lower = script_url.lower()
+    for lib in KNOWN_LIBRARY_DOMAINS:
+        if lib in script_lower:
+            return True
+    # Check if from same origin as the scanned site
+    # (first-party scripts are more likely legitimate)
+    return False
+
+
+def is_first_party(script_url: str, base_domain: str) -> bool:
+    """Check if script is first-party (same domain as the scanned URL)."""
+    if not script_url or not base_domain:
+        return False
+    try:
+        parsed = urlparse(script_url)
+        script_host = parsed.hostname or ""
+        return script_host == base_domain or script_host.endswith(f".{base_domain}")
+    except Exception:
+        return False
+
+
+def analyze_script_source(source: str, script_url: str, base_domain: str) -> list:
+    """Analyze script source with context-aware scoring."""
+    findings = []
+    is_lib = is_library_script(script_url)
+    is_first = is_first_party(script_url, base_domain)
+
+    for check in THREAT_PATTERNS:
+        matches = re.findall(check["pattern"], source, re.IGNORECASE)
+        if not matches:
+            continue
+
+        weight = check["weight"]
+        context = check.get("context", "always_suspicious")
+
+        # Adjust weight based on context
+        if context == "library_common":
+            if is_lib or is_first:
+                weight = max(weight // 3, 1)  # Reduce to 1/3 for known libraries
+        elif context == "context_dependent":
+            if is_lib or is_first:
+                weight = max(weight // 2, 2)  # Reduce to 1/2 for known libraries
+        # always_suspicious: no reduction
+
+        findings.append({
+            "flag": check["flag"],
+            "weight": weight,
+            "description": check["desc"],
+            "occurrences": len(matches),
+            "script_url": script_url,
+            "is_library": is_lib,
+            "is_first_party": is_first,
+            "original_weight": check["weight"],
+        })
+
+    return findings
+
+
+def analyze_network_requests(requests: list, base_domain: str) -> list:
+    """Analyze outbound network requests for suspicious activity."""
+    findings = []
+    external_domains = set()
+
+    for req in requests:
+        url = req.get("url", "")
+        if not url:
+            continue
+
+        try:
+            parsed = urlparse(url)
+            domain = parsed.hostname or ""
+        except Exception:
+            continue
+
+        if not domain or domain == base_domain or domain.endswith(f".{base_domain}"):
+            continue
+
+        is_suspicious = any(s in domain for s in SUSPICIOUS_DOMAINS)
+        is_safe = any(domain.endswith(s) for s in SAFE_DOMAINS)
+
+        if is_suspicious:
+            findings.append({
+                "flag": "suspicious_domain",
+                "weight": 15,
+                "description": f"Connection to suspicious domain: {domain}",
+                "url": url,
+            })
+        elif not is_safe and domain not in external_domains:
+            external_domains.add(domain)
+
+    if len(external_domains) > 20:
+        findings.append({
+            "flag": "excessive_external_connections",
+            "weight": 10,
+            "description": f"{len(external_domains)} unique external domains contacted",
+        })
+
+    return findings
+
+
+def analyze_console_and_errors(session: CDPSession) -> list:
+    """Check console messages and errors for WASM/malware indicators."""
+    findings = []
+
+    for msg in session.console_messages:
+        text = msg.get("message", "").lower()
+        if "webassembly" in text and "compile" in text:
+            findings.append({
+                "flag": "wasm_compiled_console",
+                "weight": 25,
+                "description": f"WASM compilation logged in console: {msg['message'][:100]}",
+            })
+        elif "wasm" in text and "instantiat" in text:
+            findings.append({
+                "flag": "wasm_instantiate_console",
+                "weight": 20,
+                "description": f"WASM instantiation logged: {msg['message'][:100]}",
+            })
+
+    for err in session.errors:
+        text = (err.get("text", "") + err.get("exception", "")).lower()
+        if "webassembly" in text or "wasm" in text:
+            findings.append({
+                "flag": "wasm_error",
+                "weight": 12,
+                "description": f"WASM-related error: {text[:150]}",
+            })
+
+    return findings
+
+
+async def analyze_dom(session: CDPSession) -> list:
+    """Check rendered DOM for injected elements."""
+    findings = []
+
+    try:
+        dom_result = await session.evaluate("""
+            JSON.stringify({
+                iframes: Array.from(document.querySelectorAll('iframe')).map(f => ({
+                    src: f.src, hidden: f.hidden, display: f.style.display
+                })),
+                inlineScripts: Array.from(document.querySelectorAll('script:not([src])')).length,
+                walletObjects: {
+                    ethereum: typeof window.ethereum !== 'undefined',
+                    solana: typeof window.solana !== 'undefined',
+                    phantom: typeof window.phantom !== 'undefined',
+                },
+                hiddenElements: document.querySelectorAll('[style*="display:none"], [hidden]').length,
+                scripts: Array.from(document.querySelectorAll('script[src]')).map(s => s.src).slice(0, 20),
+            })
+        """)
+
+        if "result" in dom_result:
+            dom_data = json.loads(dom_result["result"].get("value", "{}"))
+
+            # Hidden iframes — suspicious
+            hidden_iframes = [f for f in dom_data.get("iframes", [])
+                            if f.get("hidden") or f.get("display") == "none"]
+            if hidden_iframes:
+                findings.append({
+                    "flag": "hidden_iframes",
+                    "weight": 15,
+                    "description": f"{len(hidden_iframes)} hidden iframe(s) — potential stealth loading",
+                })
+
+            # Inline scripts count
+            inline_count = dom_data.get("inlineScripts", 0)
+            if inline_count > 30:
+                findings.append({
+                    "flag": "excessive_inline_scripts",
+                    "weight": 10,
+                    "description": f"{inline_count} inline script blocks — potential obfuscation",
+                })
+
+            # Hidden elements
+            hidden_count = dom_data.get("hiddenElements", 0)
+            if hidden_count > 50:
+                findings.append({
+                    "flag": "excessive_hidden_elements",
+                    "weight": 8,
+                    "description": f"{hidden_count} hidden elements — potential stealth content",
+                })
+
+    except Exception as e:
+        pass
+
+    return findings
+
+
+# ── Scanner ──────────────────────────────────────────────────────────────────
+
+def get_or_create_tab() -> tuple:
+    """Get existing tab or create new one. Returns (ws_url, tab_id)."""
+    try:
+        resp = requests.put(f"http://{CDP_HOST}:{CDP_PORT}/json/new?about:blank", timeout=5)
+        data = resp.json()
+        return data.get("webSocketDebuggerUrl", ""), data.get("id", "")
+    except Exception:
+        try:
+            resp = requests.get(f"http://{CDP_HOST}:{CDP_PORT}/json", timeout=5)
+            tabs = resp.json()
+            for tab in tabs:
+                if tab.get("type") == "page":
+                    return tab.get("webSocketDebuggerUrl", ""), tab.get("id", "")
+        except Exception:
+            pass
+    return "", ""
+
+
+def close_cdp_tab(tab_id: str):
+    try:
+        requests.get(f"http://{CDP_HOST}:{CDP_PORT}/json/close/{tab_id}", timeout=5)
+    except Exception:
+        pass
+
+
+async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
+    """Main scan function — detonate URL in Chrome CDP and analyze."""
+    scan_id = f"urlscan-{int(time.time())}-{hashlib.md5(url.encode()).hexdigest()[:8]}"
+    scan_time = datetime.now(timezone.utc).isoformat()
+    parsed = urlparse(url)
+    base_domain = parsed.hostname or ""
+
+    result = {
+        "scan_id": scan_id,
+        "url": url,
+        "domain": base_domain,
+        "scan_date": scan_time,
+        "scanner": "cdp-url-scan v2.0",
+        "findings": [],
+        "network_summary": {},
+        "risk_score": 0,
+        "risk_level": "UNKNOWN",
+        "verdict": "",
+    }
+
+    # Check CDP
+    try:
+        resp = requests.get(f"http://{CDP_HOST}:{CDP_PORT}/json/version", timeout=5)
+        if resp.status_code != 200:
+            raise Exception("CDP not responding")
+    except Exception as e:
+        result["error"] = f"Chrome CDP not available on port {CDP_PORT}: {e}"
+        result["risk_level"] = "ERROR"
+        result["verdict"] = "Scanner unavailable — Chrome CDP not running"
+        return result
+
+    ws_url, tab_id = get_or_create_tab()
+    if not ws_url:
+        result["error"] = "Could not get CDP tab"
+        result["risk_level"] = "ERROR"
+        result["verdict"] = "Scanner unavailable — no CDP tab"
+        return result
+
+    session = CDPSession(ws_url)
+
+    try:
+        await session.connect()
+        await session.navigate(url)
+        await session.wait_for_load(timeout)
+
+        # Analyze scripts
+        script_findings = []
+        scripts_analyzed = 0
+
+        for script_meta in session.script_sources_meta:
+            script_id = script_meta.get("scriptId", "")
+            script_url = script_meta.get("url", "")
+            if not script_id:
+                continue
+            source = await session.get_script_source(script_id)
+            if source and len(source) > 10:
+                scripts_analyzed += 1
+                findings = analyze_script_source(source, script_url, base_domain)
+                script_findings.extend(findings)
+
+        # Analyze network
+        network_findings = analyze_network_requests(session.network_requests, base_domain)
+
+        # Analyze console/errors
+        console_findings = analyze_console_and_errors(session)
+
+        # Analyze DOM
+        dom_findings = await analyze_dom(session)
+
+        # Combine all findings
+        all_findings = script_findings + network_findings + console_findings + dom_findings
+
+        # Aggregate by flag — use MAX weight per flag (not sum), then cap
+        flag_scores = {}
+        for f in all_findings:
+            flag = f["flag"]
+            weight = f["weight"]
+            if flag not in flag_scores:
+                flag_scores[flag] = {
+                    "weight": 0,
+                    "count": 0,
+                    "description": f["description"],
+                    "is_library": f.get("is_library", False),
+                    "is_first_party": f.get("is_first_party", False),
+                }
+            # Use MAX weight across occurrences, not sum (avoid stacking)
+            flag_scores[flag]["weight"] = max(flag_scores[flag]["weight"], weight)
+            flag_scores[flag]["count"] += 1
+
+        # Separate high-confidence vs low-confidence findings
+        high_confidence = []  # always_suspicious or context_dependent at full weight
+        low_confidence = []   # library_common reduced weight
+        for flag, data in flag_scores.items():
+            if data["weight"] >= 15:
+                high_confidence.append(data)
+            else:
+                low_confidence.append(data)
+
+        # Score: high-confidence findings count more
+        # Cap individual flags at 20, total at 100
+        high_score = sum(min(d["weight"], 20) for d in high_confidence)
+        low_score = sum(min(d["weight"], 5) for d in low_confidence) * 0.5  # Discount low-confidence
+
+        risk_score = min(int(high_score + low_score), 100)
+
+        # Determine verdict
+        if risk_score >= 70:
+            risk_level = "CRITICAL"
+            verdict = "🛑 KNOWN THREAT — Active malicious JavaScript detected. Do not interact with this site."
+        elif risk_score >= 40:
+            risk_level = "HIGH RISK"
+            verdict = "⚠️ HIGH RISK — Suspicious JavaScript activity detected. Exercise extreme caution."
+        elif risk_score >= 20:
+            risk_level = "CAUTION"
+            verdict = "⚡ CAUTION — Some suspicious indicators found. Verify before interacting."
+        elif risk_score >= 5:
+            risk_level = "LOW RISK"
+            verdict = "✅ LOW RISK — Minor indicators found. Appears mostly safe."
+        else:
+            risk_level = "CLEAN"
+            verdict = "✅ CLEAN — No suspicious activity detected."
+
+        external_requests = [r for r in session.network_requests
+                            if r.get("url") and base_domain not in r.get("url", "")]
+
+        result.update({
+            "findings": [{"flag": k, **v} for k, v in flag_scores.items()],
+            "finding_count": len(flag_scores),
+            "network_summary": {
+                "total_requests": len(session.network_requests),
+                "external_requests": len(external_requests),
+                "external_domains": list(set(
+                    urlparse(r.get("url", "")).hostname or ""
+                    for r in external_requests
+                ))[:20],
+            },
+            "scripts_analyzed": scripts_analyzed,
+            "console_messages": len(session.console_messages),
+            "errors": len(session.errors),
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "verdict": verdict,
+            "all_findings_raw": [
+                {k: v for k, v in f.items() if k != "original_weight"}
+                for f in all_findings[:50]
+            ],
+        })
+
+    except Exception as e:
+        result["error"] = str(e)
+        result["risk_level"] = "ERROR"
+        result["verdict"] = f"Scan error: {e}"
+    finally:
+        await session.close()
+        if tab_id:
+            close_cdp_tab(tab_id)
+
+    return result
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="CDP URL Scanner — JS Detonation Analysis")
+    parser.add_argument("url", help="URL to scan")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
+                       help=f"Seconds to let page run (default: {DEFAULT_TIMEOUT})")
+    args = parser.parse_args()
+
+    if not args.url.startswith("http"):
+        args.url = "https://" + args.url
+
+    result = asyncio.run(scan_url(args.url, args.timeout))
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"\n━━━ 🔍 URL SCAN REPORT — JS Detonation Analysis ━━━\n")
+        print(f"URL:       {result.get('url', '')}")
+        print(f"Domain:    {result.get('domain', '')}")
+        print(f"Scan ID:   {result.get('scan_id', '')}")
+        print(f"Date:      {result.get('scan_date', '')}")
+        print(f"Scripts:   {result.get('scripts_analyzed', 0)} analyzed")
+        print(f"Requests:  {result.get('network_summary', {}).get('total_requests', 0)} total, "
+              f"{result.get('network_summary', {}).get('external_requests', 0)} external")
+        print(f"\n{'─'*60}")
+        print(f"Risk Score: {result.get('risk_score', 0)}/100 — {result.get('risk_level', 'UNKNOWN')}")
+        print(f"Verdict:    {result.get('verdict', '')}")
+        print(f"{'─'*60}\n")
+
+        findings = result.get("findings", [])
+        if findings:
+            print(f"Findings ({len(findings)}):\n")
+            for i, f in enumerate(findings, 1):
+                lib_tag = " [library]" if f.get("is_library") else ""
+                fp_tag = " [first-party]" if f.get("is_first_party") else ""
+                print(f"  {i}. [{f.get('weight', 0)}pts] {f.get('description', '')}{lib_tag}{fp_tag}")
+            print()
+
+        net = result.get("network_summary", {})
+        ext_domains = net.get("external_domains", [])
+        if ext_domains:
+            print(f"External domains contacted ({len(ext_domains)}):")
+            for d in ext_domains[:10]:
+                print(f"  • {d}")
+            print()
+
+        print("\n⚠️  DISCLAIMER: This scan is for educational purposes only.")
+        print("Not a guarantee of safety. Always DYOR.\n")
+
+
+if __name__ == "__main__":
+    main()
