@@ -97,62 +97,80 @@ SUSPICIOUS_DOMAINS = [
 ]
 
 # ── Threat Patterns ──────────────────────────────────────────────────────────
-# Each: {pattern, flag, base_weight, desc, context_type}
-# context_type determines how the weight is adjusted:
-#   "always_suspicious" — always full weight
-#   "library_common" — reduced if from known library domain
-#   "context_dependent" — full weight only if multiple indicators present
+# Scoring model: detect MALICIOUS behavior, not normal web patterns
+# Tier 1 (critical): always malicious — these patterns have no legitimate use
+# Tier 2 (suspicious): malicious only in combination — need 2+ to score
+# Tier 3 (noise): common on legit sites — tracked but don't add to risk score
 
 THREAT_PATTERNS = [
-    # WASM — always suspicious unless from known library
-    {"pattern": r"WebAssembly\s*\.\s*(instantiate|compile|Streaming)", "flag": "wasm_compilation", "weight": 25, "context": "context_dependent", "desc": "WebAssembly payload compilation"},
-    {"pattern": r"new\s+WebAssembly\s*\.\s*Module", "flag": "wasm_module_creation", "weight": 25, "context": "always_suspicious", "desc": "Direct WASM module creation — code assembled in browser memory"},
-    {"pattern": r"wasm\s*\[\s*0x[0-9a-fA-F]+\s*\]", "flag": "wasm_bytecode_manipulation", "weight": 20, "context": "always_suspicious", "desc": "Raw WASM bytecode manipulation"},
+    # ── TIER 1: Critical indicators (no legitimate use) ──────────────
+    # These ALWAYS score full weight — they have no innocent explanation
 
-    # Dynamic code execution
-    {"pattern": r"\beval\s*\(", "flag": "eval_execution", "weight": 15, "context": "context_dependent", "desc": "eval() dynamic code execution"},
-    {"pattern": r"new\s+Function\s*\(", "flag": "function_constructor", "weight": 12, "context": "library_common", "desc": "new Function() — dynamic code generation"},
-    {"pattern": r"setTimeout\s*\(\s*['\"]", "flag": "settimeout_string", "weight": 10, "context": "always_suspicious", "desc": "setTimeout with string — indirect eval"},
-    {"pattern": r"setInterval\s*\(\s*['\"]", "flag": "setinterval_string", "weight": 10, "context": "always_suspicious", "desc": "setInterval with string — indirect eval"},
+    # WASM in-memory malware assembly
+    {"pattern": r"new\s+WebAssembly\s*\.\s*Module", "flag": "wasm_module_creation", "weight": 30, "context": "always_suspicious", "desc": "WASM module created in browser memory — in-memory malware assembly"},
+    {"pattern": r"WebAssembly\s*\.\s*instantiate\s*\(", "flag": "wasm_instantiate", "weight": 25, "context": "context_dependent", "desc": "WASM instantiation — may be legitimate (games) or malware"},
+    {"pattern": r"wasm\s*\[\s*0x[0-9a-fA-F]+\s*\]", "flag": "wasm_bytecode_manipulation", "weight": 25, "context": "always_suspicious", "desc": "Raw WASM bytecode manipulation"},
 
-    # Obfuscation — context dependent (common in minified code)
-    {"pattern": r"atob\s*\(", "flag": "base64_decode", "weight": 5, "context": "library_common", "desc": "Base64 decoding"},
-    {"pattern": r"String\.fromCharCode\s*\(", "flag": "charcode_obfuscation", "weight": 5, "context": "library_common", "desc": "String.fromCharCode usage (common in minified code)"},
-    {"pattern": r"\\x[0-9a-fA-F]{2}", "flag": "hex_obfuscation", "weight": 5, "context": "library_common", "desc": "Hex-encoded strings (common in minified code)"},
-    {"pattern": r"unescape\s*\(", "flag": "unescape_obfuscation", "weight": 5, "context": "library_common", "desc": "unescape() usage"},
+    # Active wallet drain — sending transactions without user consent
+    {"pattern": r"ethereum\.request\s*\(\s*{\s*method:\s*['\"]eth_sendTransaction", "flag": "wallet_drain_attempt", "weight": 30, "context": "always_suspicious", "desc": "Auto-triggered ETH sendTransaction — wallet drain"},
+    {"pattern": r"signAllTransactions\s*\(", "flag": "sol_batch_sign", "weight": 15, "context": "context_dependent", "desc": "Batch Solana transaction signing — suspicious if auto-triggered"},
 
-    # Crypto wallet targeting — context dependent
-    {"pattern": r"window\.ethereum\s*=", "flag": "wallet_injection_eth", "weight": 20, "context": "context_dependent", "desc": "Ethereum wallet object injection"},
-    {"pattern": r"window\.solana\s*=", "flag": "wallet_injection_sol", "weight": 15, "context": "context_dependent", "desc": "Solana wallet object injection"},
-    {"pattern": r"window\.phantom\s*=", "flag": "wallet_injection_phantom", "weight": 20, "context": "context_dependent", "desc": "Phantom wallet object injection"},
-    {"pattern": r"ethereum\.request\s*\(\s*{\s*method:\s*['\"]eth_sendTransaction", "flag": "wallet_drain_attempt", "weight": 25, "context": "always_suspicious", "desc": "Direct ETH sendTransaction — potential wallet drain"},
-    {"pattern": r"personal_sign|eth_signTypedData", "flag": "eth_signing", "weight": 10, "context": "library_common", "desc": "Ethereum signing (common in dApps)"},
+    # Script injection via innerHTML — inserting executable scripts into DOM
+    {"pattern": r"\.innerHTML\s*=\s*['\"]<script", "flag": "script_injection", "weight": 15, "context": "context_dependent", "desc": "Script injection via innerHTML — suspicious if loading external code"},
 
-    # Credential theft — always suspicious
-    {"pattern": r"document\.forms\s*\[", "flag": "form_harvesting", "weight": 15, "context": "always_suspicious", "desc": "Form harvesting — credential theft"},
-    {"pattern": r"querySelector.*password|querySelector.*passwd", "flag": "password_field_access", "weight": 15, "context": "context_dependent", "desc": "Password field access"},
-    {"pattern": r"navigator\.credentials", "flag": "credential_api_access", "weight": 10, "context": "library_common", "desc": "Credential Manager API access (used by auth libraries)"},
+    # setTimeout/setInterval with string eval (indirect eval — rare in modern code)
+    {"pattern": r"setTimeout\s*\(\s*['\"]", "flag": "settimeout_string", "weight": 10, "context": "context_dependent", "desc": "setTimeout with string — indirect eval"},
+    {"pattern": r"setInterval\s*\(\s*['\"]", "flag": "setinterval_string", "weight": 10, "context": "context_dependent", "desc": "setInterval with string — indirect eval"},
 
-    # Clipboard — context dependent
-    {"pattern": r"navigator\.clipboard\s*\.\s*writeText", "flag": "clipboard_write", "weight": 8, "context": "library_common", "desc": "Clipboard write (used by copy-to-clipboard features)"},
-    {"pattern": r"navigator\.clipboard\s*\.\s*readText", "flag": "clipboard_read", "weight": 10, "context": "context_dependent", "desc": "Clipboard read — sensitive data access"},
+    # Form auto-submission to external endpoint — credential exfiltration
+    {"pattern": r"document\.forms\s*\[.*\].*\.submit\s*\(", "flag": "form_auto_submit", "weight": 25, "context": "always_suspicious", "desc": "Auto-submitting forms — credential exfiltration"},
 
-    # Data exfiltration
-    {"pattern": r"navigator\.sendBeacon\s*\(", "flag": "data_beacon", "weight": 10, "context": "context_dependent", "desc": "Background data beacon"},
+    # Clipboard address swap — overwriting clipboard with a crypto address
+    {"pattern": r"navigator\.clipboard\s*\.\s*writeText.*0x[a-fA-F0-9]{40}", "flag": "clipboard_address_swap", "weight": 15, "context": "context_dependent", "desc": "Clipboard overwrite with ETH address — swap pattern"},
+    {"pattern": r"navigator\.clipboard\s*\.\s*writeText.*[1-9A-HJ-NP-Za-km-z]{32,44}", "flag": "clipboard_sol_swap", "weight": 15, "context": "context_dependent", "desc": "Clipboard write with Solana address — suspicious if auto-triggered"},
 
-    # DOM injection — always suspicious
-    {"pattern": r"document\.write\s*\(", "flag": "document_write", "weight": 8, "context": "library_common", "desc": "document.write — inline DOM injection"},
-    {"pattern": r"\.innerHTML\s*=\s*['\"]<script", "flag": "script_injection", "weight": 15, "context": "context_dependent", "desc": "Script injection via innerHTML"},
+    # ── TIER 2: Suspicious (score only if 2+ found, or combined with Tier 1) ──
+    # These CAN be legitimate but are suspicious in combination
 
-    # Persistence
-    {"pattern": r"serviceWorker\s*\.\s*register", "flag": "service_worker_registration", "weight": 12, "context": "context_dependent", "desc": "Service worker registration — persistence mechanism"},
+    {"pattern": r"\beval\s*\(", "flag": "eval_execution", "weight": 10, "context": "context_dependent", "desc": "eval() — suspicious in combination"},
+    {"pattern": r"new\s+Function\s*\(", "flag": "function_constructor", "weight": 8, "context": "context_dependent", "desc": "new Function() — dynamic code generation"},
 
-    # Network
-    {"pattern": r"new\s+WebSocket\s*\(", "flag": "websocket_connection", "weight": 5, "context": "library_common", "desc": "WebSocket connection"},
-    {"pattern": r"fetch\s*\(\s*['\"]https?://", "flag": "fetch_request", "weight": 2, "context": "library_common", "desc": "Outbound fetch request"},
-    {"pattern": r"XMLHttpRequest", "flag": "xhr_request", "weight": 2, "context": "library_common", "desc": "XHR request"},
+    # Wallet object override (hijacking wallet providers)
+    {"pattern": r"window\.ethereum\s*=\s*\{", "flag": "wallet_hijack_eth", "weight": 20, "context": "context_dependent", "desc": "Ethereum wallet object override — hijack attempt"},
+    {"pattern": r"window\.solana\s*=\s*\{", "flag": "wallet_hijack_sol", "weight": 20, "context": "context_dependent", "desc": "Solana wallet object override — hijack attempt"},
+    {"pattern": r"window\.phantom\s*=\s*\{", "flag": "wallet_hijack_phantom", "weight": 20, "context": "context_dependent", "desc": "Phantom wallet override — hijack attempt"},
+
+    # Clipboard read — suspicious in combination with wallet activity
+    {"pattern": r"navigator\.clipboard\s*\.\s*readText\s*\(", "flag": "clipboard_read", "weight": 8, "context": "context_dependent", "desc": "Clipboard read — suspicious with wallet access"},
+
+    # Data exfiltration to non-standard endpoints
+    {"pattern": r"navigator\.sendBeacon\s*\(", "flag": "data_beacon", "weight": 5, "context": "context_dependent", "desc": "Background data beacon"},
+
+    # Service worker for persistence
+    {"pattern": r"serviceWorker\s*\.\s*register", "flag": "service_worker_registration", "weight": 5, "context": "context_dependent", "desc": "Service worker registration"},
+
+    # ── TIER 3: Noise (tracked as metadata, don't add to risk score) ─────
+    # Common on legitimate sites — detected but not scored
+    # UNLESS combined with Tier 1 (then flagged as corroborating evidence)
+
+    {"pattern": r"atob\s*\(", "flag": "base64_decode", "weight": 0, "context": "noise", "desc": "Base64 decoding (common in web apps)"},
+    {"pattern": r"String\.fromCharCode\s*\(", "flag": "charcode_obfuscation", "weight": 0, "context": "noise", "desc": "String.fromCharCode (common in minified code)"},
+    {"pattern": r"\\x[0-9a-fA-F]{2}", "flag": "hex_obfuscation", "weight": 0, "context": "noise", "desc": "Hex-encoded strings (common in minified code)"},
+    {"pattern": r"unescape\s*\(", "flag": "unescape_obfuscation", "weight": 0, "context": "noise", "desc": "unescape() (legacy)"},
+    {"pattern": r"document\.write\s*\(", "flag": "document_write", "weight": 0, "context": "noise", "desc": "document.write (legacy ad delivery)"},
+    {"pattern": r"document\.forms\s*\[", "flag": "form_access", "weight": 0, "context": "noise", "desc": "Form access (login/checkout forms)"},
+    {"pattern": r"querySelector.*password|querySelector.*passwd", "flag": "password_field_access", "weight": 0, "context": "noise", "desc": "Password field access (login forms)"},
+    {"pattern": r"navigator\.credentials", "flag": "credential_api_access", "weight": 0, "context": "noise", "desc": "Credential Manager API (auth libraries)"},
+    {"pattern": r"navigator\.clipboard\s*\.\s*writeText", "flag": "clipboard_write", "weight": 0, "context": "noise", "desc": "Clipboard write (copy-to-clipboard)"},
+    {"pattern": r"personal_sign|eth_signTypedData", "flag": "eth_signing", "weight": 0, "context": "noise", "desc": "Ethereum signing (dApp interaction)"},
+    {"pattern": r"new\s+WebSocket\s*\(", "flag": "websocket_connection", "weight": 0, "context": "noise", "desc": "WebSocket connection"},
+    {"pattern": r"fetch\s*\(\s*['\"]https?://", "flag": "fetch_request", "weight": 0, "context": "noise", "desc": "Outbound fetch request"},
+    {"pattern": r"XMLHttpRequest", "flag": "xhr_request", "weight": 0, "context": "noise", "desc": "XHR request"},
+    {"pattern": r"window\.ethereum", "flag": "wallet_present_eth", "weight": 0, "context": "noise", "desc": "Ethereum wallet detected (dApp)"},
+    {"pattern": r"window\.solana", "flag": "wallet_present_sol", "weight": 0, "context": "noise", "desc": "Solana wallet detected (dApp)"},
+    {"pattern": r"window\.phantom", "flag": "wallet_present_phantom", "weight": 0, "context": "noise", "desc": "Phantom wallet detected (dApp)"},
+    {"pattern": r"history\.pushState|history\.replaceState", "flag": "history_manipulation", "weight": 0, "context": "noise", "desc": "History API (SPA routing)"},
 ]
-
 
 # ── CDP Connection (async with background listener) ──────────────────────────
 
@@ -340,6 +358,7 @@ def analyze_script_source(source: str, script_url: str, base_domain: str) -> lis
             "description": check["desc"],
             "occurrences": len(matches),
             "script_url": script_url,
+            "context": check.get("context", "noise"),
             "is_library": is_lib,
             "is_first_party": is_first,
             "original_weight": check["weight"],
@@ -380,7 +399,7 @@ def analyze_network_requests(requests: list, base_domain: str) -> list:
         elif not is_safe and domain not in external_domains:
             external_domains.add(domain)
 
-    if len(external_domains) > 20:
+    if len(external_domains) > 50:
         findings.append({
             "flag": "excessive_external_connections",
             "weight": 10,
@@ -451,7 +470,8 @@ async def analyze_dom(session: CDPSession) -> list:
             if hidden_iframes:
                 findings.append({
                     "flag": "hidden_iframes",
-                    "weight": 15,
+                    "context": "context_dependent",
+                    "weight": 10,
                     "description": f"{len(hidden_iframes)} hidden iframe(s) — potential stealth loading",
                 })
 
@@ -588,6 +608,7 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
                     "weight": 0,
                     "count": 0,
                     "description": f["description"],
+                    "context": f.get("context", "noise"),
                     "is_library": f.get("is_library", False),
                     "is_first_party": f.get("is_first_party", False),
                 }
@@ -595,21 +616,51 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
             flag_scores[flag]["weight"] = max(flag_scores[flag]["weight"], weight)
             flag_scores[flag]["count"] += 1
 
-        # Separate high-confidence vs low-confidence findings
-        high_confidence = []  # always_suspicious or context_dependent at full weight
-        low_confidence = []   # library_common reduced weight
+        # ── 3-tier scoring: only score actual malicious behavior ─────────────
+        tier1_findings = []  # always_suspicious: critical, no legitimate use
+        tier2_findings = []  # context_dependent: suspicious in combination
+        tier3_findings = []  # noise: tracked but don't score
+
         for flag, data in flag_scores.items():
-            if data["weight"] >= 15:
-                high_confidence.append(data)
+            context = data.get("context", "noise")
+            if context == "always_suspicious":
+                tier1_findings.append(data)
+            elif context == "context_dependent":
+                tier2_findings.append(data)
             else:
-                low_confidence.append(data)
+                tier3_findings.append(data)
 
-        # Score: high-confidence findings count more
-        # Cap individual flags at 20, total at 100
-        high_score = sum(min(d["weight"], 20) for d in high_confidence)
-        low_score = sum(min(d["weight"], 5) for d in low_confidence) * 0.5  # Discount low-confidence
+        # Tier 1: each finding scores full weight (these are always malicious)
+        tier1_score = sum(min(d["weight"], 30) for d in tier1_findings)
 
-        risk_score = min(int(high_score + low_score), 100)
+        # Tier 2: only scores if 2+ findings, or if any Tier 1 present
+        # (single suspicious pattern alone is not enough)
+        # Cap total Tier 2 at 25 (multiple low-weight findings don't stack to critical)
+        if len(tier2_findings) >= 2 or (tier1_findings and tier2_findings):
+            tier2_score = min(sum(min(d["weight"], 15) for d in tier2_findings), 25)
+        else:
+            tier2_score = 0
+
+        # Tier 3: never scores — just metadata
+        tier3_score = 0
+
+        # Network: only suspicious domains and excessive connections score
+        # (not just having external requests — that's normal for ad-supported sites)
+        network_score = 0
+        for flag, data in flag_scores.items():
+            if flag == "suspicious_domain":
+                network_score += data["weight"]
+            elif flag == "excessive_external_connections":
+                # Only flag if 50+ external domains (very excessive)
+                network_score += min(data["weight"], 10)
+
+        # DOM: hidden iframes only score if 10+ (ad sites have a few)
+        dom_score = 0
+        for flag, data in flag_scores.items():
+            if flag == "hidden_iframes" and data["count"] >= 20:
+                dom_score += data["weight"]
+
+        risk_score = min(int(tier1_score + tier2_score + tier3_score + network_score + dom_score), 100)
 
         # Determine verdict
         if risk_score >= 70:
