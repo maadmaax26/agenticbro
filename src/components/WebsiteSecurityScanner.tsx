@@ -71,6 +71,22 @@ interface WebsiteScanResult {
   ipInfo?:           IPHostingInfo | null;
   ownCommunityReports?: number;
   findings?:         { title: string; detail: string; icon?: string }[];
+  // JS Detonation Analysis (Chrome CDP headless browser scan)
+  jsDetonation?:    JsDetonationResult | null;
+}
+
+interface JsDetonationResult {
+  riskScore:        number;
+  riskLevel:        string;
+  verdict:          string;
+  findings:         { flag: string; weight: number; count: number; description: string; is_library?: boolean; is_first_party?: boolean }[];
+  findingCount:     number;
+  networkSummary?:  { totalRequests?: number; externalRequests?: number; externalDomains?: string[] };
+  scriptsAnalyzed:  number;
+  scanId?:          string;
+  error?:           string;
+  status?:          string;
+  message?:         string;
 }
 
 type ScanStep    = 'idle' | 'checking' | 'fetching' | 'scoring' | 'done' | 'error';
@@ -199,7 +215,7 @@ export default function WebsiteSecurityScanner() {
                 ? 'Detect fake World Cup 2026 tickets, FIFA impersonation & ticket fraud'
                 : scanMode === 'crypto_casino'
                 ? 'Detect fake/unlicensed crypto casinos, withdrawal traps & rigged games'
-                : '9 checks: Safe Browsing • urlscan.io • TLD risk • IP/hosting • redirects • domain age + more'}
+                : '10 checks: Safe Browsing • urlscan.io • JS Detonation • TLD risk • IP/hosting • redirects • domain age + more'}
             </p>
           </div>
         </div>
@@ -267,7 +283,7 @@ export default function WebsiteSecurityScanner() {
             <div className="flex items-center gap-4 text-xs flex-wrap pt-1">
               {[
                 { key: 'checking', label: 'Checking databases' },
-                { key: 'fetching', label: 'Fetching 9 sources' },
+                { key: 'fetching', label: 'Fetching 10 sources' },
                 { key: 'scoring',  label: 'Scoring threats' },
                 { key: 'done',     label: 'Done' },
               ].map(({ key, label }) => {
@@ -386,6 +402,71 @@ export default function WebsiteSecurityScanner() {
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ── JS Detonation Analysis (Chrome CDP headless scan) ─────────── */}
+          {result.jsDetonation && !result.jsDetonation.error && !result.jsDetonation.status && (
+            (() => {
+              const js = result.jsDetonation!;
+              const jc = js.riskLevel === 'CRITICAL' ? { c: '#f87171', bg: 'rgba(239,68,68,0.08)', bd: 'rgba(239,68,68,0.3)' }
+                : js.riskLevel === 'HIGH RISK' ? { c: '#fb923c', bg: 'rgba(251,146,60,0.08)', bd: 'rgba(251,146,60,0.3)' }
+                : js.riskLevel === 'CAUTION' ? { c: '#fbbf24', bg: 'rgba(251,191,36,0.06)', bd: 'rgba(251,191,36,0.25)' }
+                : { c: '#4ade80', bg: 'rgba(74,222,128,0.05)', bd: 'rgba(74,222,128,0.2)' };
+              return (
+                <div className="rounded-xl p-4" style={{ background: jc.bg, border: `1px solid ${jc.bd}` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold" style={{ color: jc.c }}>🔬 JS Detonation Analysis</p>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ color: jc.c, background: jc.bg }}>{js.riskScore}/100 — {js.riskLevel}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">{js.verdict}</p>
+                  <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                    <span>📜 {js.scriptsAnalyzed} scripts</span>
+                    <span>🌐 {js.networkSummary?.totalRequests || 0} reqs</span>
+                    <span>🔗 {js.networkSummary?.externalRequests || 0} external</span>
+                  </div>
+                  {js.findings && js.findings.length > 0 && (
+                    <div className="space-y-1.5">
+                      {js.findings.map((f, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span style={{ color: f.weight >= 15 ? '#f87171' : f.weight >= 8 ? '#fb923c' : '#fbbf24' }}>[{f.weight}pts]</span>
+                          <span className="text-gray-300">
+                            {f.description}
+                            {f.is_library && <span className="ml-1 text-gray-600">[lib]</span>}
+                            {f.is_first_party && <span className="ml-1 text-gray-600">[1p]</span>}
+                            {f.count > 1 && <span className="ml-1 text-gray-600">×{f.count}</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {js.networkSummary?.externalDomains && js.networkSummary.externalDomains.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">External domains ({js.networkSummary.externalDomains.length})</summary>
+                      <div className="mt-1 space-y-0.5">
+                        {js.networkSummary.externalDomains.slice(0, 15).map((d, i) => (
+                          <div key={i} className="text-xs text-gray-600">• {d}</div>
+                        ))}
+                        {js.networkSummary.externalDomains.length > 15 && (
+                          <div className="text-xs text-gray-600">... and {js.networkSummary.externalDomains.length - 15} more</div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              );
+            })()
+          )}
+
+          {/* JS Detonation timeout/error */}
+          {result.jsDetonation?.status === 'timeout' && (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(251,146,60,0.06)', border: '1px solid rgba(251,146,60,0.2)' }}>
+              <p className="text-sm text-orange-400">⏱️ JS Detonation scan timed out — site may be slow or blocking headless browsers.</p>
+            </div>
+          )}
+          {result.jsDetonation?.error && (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <p className="text-sm text-red-400">⚠️ JS Detonation error: {result.jsDetonation.error}</p>
             </div>
           )}
 
