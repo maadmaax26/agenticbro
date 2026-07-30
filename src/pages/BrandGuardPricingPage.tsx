@@ -120,7 +120,6 @@ const PLANS: PlanTier[] = [
       'Unlimited scans',
       '24/7 real-time monitoring',
       'Multi-brand support (unlimited)',
-      'Dedicated account manager',
       'Custom reporting & SLA',
       'Bulk takedown coordination',
       'Shopify & Etsy clone-store monitoring',
@@ -659,7 +658,6 @@ export function BrandGuardPricingPage() {
                   { feature: 'Multi-brand support', free: '1 brand', guardian: '1 brand', sentinel: '5 brands', fortress: 'Unlimited' },
                   { feature: 'API access', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
                   { feature: 'Slack / webhook alerts', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
-                  { feature: 'Account manager', free: '—', guardian: '—', sentinel: '—', fortress: '✓' },
                   { feature: 'Executive threat briefings', free: '—', guardian: '—', sentinel: '—', fortress: 'Weekly' },
                   { feature: 'Support', free: 'Email', guardian: 'Priority email', sentinel: 'Priority email', fortress: 'Dedicated' },
                 ].map((row, i) => (
