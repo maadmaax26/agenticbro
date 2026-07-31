@@ -27,6 +27,7 @@ interface PaymentModalProps {
 }
 
 type PaymentMethod = 'stripe' | 'usdc-solana' | 'usdc-base' | 'agntcbro';
+const FREE_SCAN_DISPLAY_LIMIT = 5;
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,8 @@ export default function PaymentModal({
 
   const selectedPkg = CREDIT_PACKAGES.find(p => p.id === selectedPackage) || CREDIT_PACKAGES[0];
   const totalCostUSD = selectedPkg.price;
+  const freeScansUsed = Math.max(0, user?.free_scans_used ?? 0);
+  const freeScansRemaining = Math.max(0, FREE_SCAN_DISPLAY_LIMIT - freeScansUsed);
 
   // Calculate AGNTCBRO amount needed
   const agntcbroAmount = agntcbroPrice > 0 ? (totalCostUSD / agntcbroPrice) : 0;
@@ -144,9 +147,9 @@ export default function PaymentModal({
           <p className="text-3xl font-bold text-white">
             {user?.scan_credits || 0} <span className="text-purple-400 text-lg">credits</span>
           </p>
-          {(user?.free_scans_used ?? 0) < 10 && (
+          {freeScansRemaining > 0 && (
             <p className="text-xs text-green-400 mt-1">
-              + {10 - (user?.free_scans_used ?? 0)} free scans remaining
+              + {freeScansRemaining} free scans remaining
             </p>
           )}
         </div>

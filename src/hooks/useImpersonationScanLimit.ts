@@ -16,7 +16,7 @@ import { useState, useCallback, useEffect } from 'react'
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const ANON_DAILY_LIMIT   = 2
-const WALLET_DAILY_LIMIT = 3
+const WALLET_DAILY_LIMIT = 5
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ function loadCount(walletAddress: string | undefined): number {
     const data: StoredData = JSON.parse(raw)
     // Reset if stored date is not today
     if (data.date !== todayStr()) return 0
-    return data.count
+    return Math.min(walletAddress ? WALLET_DAILY_LIMIT : ANON_DAILY_LIMIT, Math.max(0, data.count))
   } catch {
     return 0
   }

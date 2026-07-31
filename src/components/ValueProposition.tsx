@@ -17,13 +17,19 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
       name: 'profile-verifier',
       icon: '🔍',
       title: 'Profile Verifier Scanner',
-      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. First 10 scans free, then $1/scan.',
+      description: 'Instantly verify any social media profile across 6 platforms. Scan X (Twitter), Telegram, Discord, Instagram, TikTok, and YouTube accounts for bot activity, fake followers, and scam signals. First 5 scans free per day, then $1/scan.',
     },
     {
       name: 'token-impersonation',
       icon: '🪙',
       title: 'Token Impersonation Scanner',
       description: 'Protect yourself from fake tokens impersonating legitimate projects. Enter any contract address and identify copycat tokens, honeypots, and contract risk before you transact.',
+    },
+    {
+      name: 'brand-guard',
+      icon: '🛡',
+      title: 'Brand Guard',
+      description: 'Brand impersonation detection that never sleeps. Monitor X, Instagram, TikTok, Facebook, Telegram, LinkedIn, Shopify, Etsy, email spoofing, lookalike domains, and vendor fraud before users get scammed.',
     },
     {
       name: 'scam-detection',
@@ -62,7 +68,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
     { value: '6', label: 'Platforms Supported' },
     { value: '5,000+', label: 'Known Scammers in Database' },
     { value: '< 30s', label: 'Average Scan Time' },
-    { value: '10 Free', label: 'Scans for Every User' },
+    { value: '5 Free', label: 'Daily Scans for Every User' },
   ];
 
   return (
@@ -83,8 +89,8 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
             </div>
             <h1 className="text-5xl font-black text-white mb-4">Why AgenticBro?</h1>
             <p className="text-xl text-purple-300 max-w-3xl mx-auto">
-              Web3 trust now spans wallets, tokens, identities, websites, domains, phone numbers, and brand impersonation.
-              AgenticBro turns those fragmented signals into AI-powered trust intelligence.
+              Digital trust now spans wallets, tokens, identities, websites, domains, phone numbers, marketplace clones,
+              email spoofing, vendor fraud, and brand impersonation. AgenticBro turns those fragmented signals into AI-powered trust intelligence.
             </p>
           </div>
         </div>
@@ -228,7 +234,7 @@ function ValueProposition({ onBack }: { onBack: () => void }) {
                 </ul>
                 <div className="mt-6 flex items-center gap-4">
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-4 py-2">
-                    <span className="text-cyan-400 font-bold">10 Free Scans</span>
+                    <span className="text-cyan-400 font-bold">5 Free Scans Daily</span>
                   </div>
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2">
                     <span className="text-purple-400 font-bold">$1/scan after</span>

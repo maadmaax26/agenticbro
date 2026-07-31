@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const FREE_TIER_SCANS = 25; // Free scans for everyone
+export const FREE_TIER_SCANS = 5; // Free scans for everyone
 export const HOLDER_TIER_SCANS = 100; // 100 ALL scans/month for Holder Tier
 export const SCAN_PRICE_USD = 1; // $1 per scan after allowance
 

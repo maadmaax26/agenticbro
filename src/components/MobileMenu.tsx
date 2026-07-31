@@ -6,9 +6,10 @@ import { useAuth } from '../lib/AuthContext'
 interface MobileMenuProps {
   onNavigate?: (section: string) => void
   onLoginClick?: () => void
+  onBuyCreditsClick?: () => void
 }
 
-export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps) {
+export default function MobileMenu({ onNavigate, onLoginClick, onBuyCreditsClick }: MobileMenuProps) {
   const [open, setOpen] = useState(false)
   const { isAuthenticated, email, walletAddress, authMethod, freeScansRemaining, scanCredits } = useAuth()
 
@@ -21,6 +22,11 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
     setOpen(false)
     onLoginClick?.()
   }, [onLoginClick])
+
+  const handleBuyCreditsClick = useCallback(() => {
+    setOpen(false)
+    onBuyCreditsClick?.()
+  }, [onBuyCreditsClick])
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -97,45 +103,68 @@ export default function MobileMenu({ onNavigate, onLoginClick }: MobileMenuProps
             {/* User Status / Login */}
             <div className="p-4 border-b border-purple-500/30">
               {isAuthenticated ? (
-                <div className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
-                      style={{
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                        color: 'white',
-                      }}
-                    >
-                      {authMethod === 'email' 
-                        ? (email?.charAt(0).toUpperCase() || 'U')
-                        : (walletAddress?.slice(0, 1) || 'W')}
+                <div className="px-4 py-3 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                          color: 'white',
+                        }}
+                      >
+                        {authMethod === 'email'
+                          ? (email?.charAt(0).toUpperCase() || 'U')
+                          : (walletAddress?.slice(0, 1) || 'W')}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-semibold text-sm truncate max-w-[170px]">
+                          {authMethod === 'email'
+                            ? email
+                            : `${walletAddress?.slice(0, 8)}...${walletAddress?.slice(-4)}`}
+                        </p>
+                        <p className="text-xs text-gray-400 capitalize">{authMethod} account</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white font-semibold text-sm truncate max-w-[150px]">
-                        {authMethod === 'email' 
-                          ? email 
-                          : `${walletAddress?.slice(0, 8)}...${walletAddress?.slice(-4)}`}
-                      </p>
-                      <p className="text-xs text-gray-400 capitalize">{authMethod} account</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-white">{totalScans}</p>
+                      <p className="text-xs text-gray-400">scans</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-white">{totalScans}</p>
-                    <p className="text-xs text-gray-400">scans</p>
-                  </div>
+                  <button
+                    onClick={handleBuyCreditsClick}
+                    className="mt-3 w-full py-3 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                    type="button"
+                  >
+                    <Coins className="h-5 w-5" />
+                    <span>Buy Scan Credits</span>
+                  </button>
                 </div>
               ) : (
-                <button
-                  onClick={handleLoginClick}
-                  className="w-full py-4 px-5 rounded-xl font-semibold text-white transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
-                  style={{
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-                  }}
-                >
-                  <LogIn className="h-5 w-5" />
-                  <span>Sign In / Sign Up</span>
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleLoginClick}
+                    className="w-full py-4 px-5 rounded-xl font-semibold text-white transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                      boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                    }}
+                    type="button"
+                  >
+                    <LogIn className="h-5 w-5" />
+                    <span>Sign In / Sign Up</span>
+                  </button>
+                  <button
+                    onClick={handleBuyCreditsClick}
+                    className="w-full py-4 px-5 rounded-xl font-semibold text-white transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
+                    style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                    type="button"
+                  >
+                    <Coins className="h-5 w-5" />
+                    <span>Buy Scan Credits</span>
+                  </button>
+                </div>
               )}
             </div>
 

@@ -46,6 +46,13 @@ export default function AuthModal({
   const [linking, setLinking] = useState(false);
   const [linkSuccess, setLinkSuccess] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError(null);
+    }
+  }, [isOpen, initialMode]);
+
   // Close on success (but not if we're showing the wallet link step)
   useEffect(() => {
     if (isAuthenticated && !showWalletLink) {

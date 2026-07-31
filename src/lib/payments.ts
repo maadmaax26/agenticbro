@@ -9,7 +9,7 @@
  * 
  * Track credits by wallet address or email
  * 
- * Free tier: 10 free scans per day (date-stamped in localStorage, auto-resets daily)
+ * Free tier: 5 free scans per day (date-stamped in localStorage, auto-resets daily)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -255,7 +255,7 @@ const TEST_WALLETS_UNLIMITED = new Set<string>([
   'J4wsP4HZHDL5SPa7kZBQGcyksrCdHoYgVFigiW1qFGuC',
 ]);
 
-const FREE_SCANS_PER_DAY = 10;
+const FREE_SCANS_PER_DAY = 5;
 
 function getTodayStr(): string {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -269,7 +269,7 @@ function loadFreeScans(storageKey: string): number {
     // New format: { date, count }
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && parsed.date === getTodayStr()) {
-      return Math.max(0, parsed.count ?? FREE_SCANS_PER_DAY);
+      return Math.min(FREE_SCANS_PER_DAY, Math.max(0, parsed.count ?? FREE_SCANS_PER_DAY));
     }
     // Old format (plain number) or stale date — treat as new day
     return FREE_SCANS_PER_DAY;

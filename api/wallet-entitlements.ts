@@ -166,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Determine tier
     let tier: 'free' | 'holder' | 'whale' = 'free';
-    let monthlyLimit = 10;
+    let monthlyLimit = 0;
 
     if (livePrice !== null && usdValue >= WHALE_TIER_USD) {
       tier = 'whale';
@@ -178,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Update Supabase if we have a userId
     let monthlyUsed = 0;
-    let freeScansRemaining = 10;
+    let freeScansRemaining = 5;
     let paidCredits = 0;
 
     if (supabase && userId) {
@@ -222,13 +222,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .from('user_profiles')
                 .update({ free_scans_used: 0, free_scans_reset_at: now.toISOString() })
                 .eq('id', userId);
-              freeScansRemaining = 10;
+              freeScansRemaining = 5;
             } catch (e) {
               console.error('[wallet-entitlements] free scan daily reset error:', e);
-              freeScansRemaining = Math.max(0, 10 - (profile.free_scans_used || 0));
+              freeScansRemaining = Math.max(0, 5 - (profile.free_scans_used || 0));
             }
           } else {
-            freeScansRemaining = Math.max(0, 10 - (profile.free_scans_used || 0));
+            freeScansRemaining = Math.max(0, 5 - (profile.free_scans_used || 0));
           }
           paidCredits = profile.scan_credits || 0;
         }
@@ -240,7 +240,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const totalRemaining =
       tier === 'whale'
         ? -1 // unlimited
-        : freeScansRemaining + paidCredits + Math.max(0, monthlyLimit - monthlyUsed);
+        : freeScansRemaining + paidCredits + (tier === 'holder' ? Math.max(0, monthlyLimit - monthlyUsed) : 0);
 
     res.status(200).json({
       walletAddress,

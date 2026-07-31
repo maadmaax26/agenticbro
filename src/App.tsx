@@ -41,19 +41,19 @@ const API_BASE = (import.meta as { env: Record<string, string> }).env.VITE_API_U
 const DEFAULT_META = {
   title: 'AgenticBro - AI Trust Intelligence Platform',
   description:
-    'AgenticBro is a hybrid AI trust ecosystem for consumers and businesses, covering social media, phone, website, email, domain, wallet, and payment fraud risk.',
+    'AgenticBro and Brand Guard deliver hybrid AI trust intelligence for scams, wallets, brand impersonation, Shopify and Etsy clones, email spoofing, lookalike domains, and vendor fraud.',
 }
 
 const BRAND_GUARD_META = {
-  title: 'Brand Guard by AgenticBro - AI Brand Protection',
+  title: 'Brand Guard - Brand Impersonation Detection That Never Sleeps',
   description:
-    'Brand Guard monitors impersonator accounts, email spoofing, lookalike domains, vendor fraud, and cross-channel threats with AgenticBro hybrid AI trust intelligence.',
+    'Brand Guard monitors X, Instagram, TikTok, Facebook, Telegram, LinkedIn, Shopify, Etsy, email spoofing, lookalike domains, and vendor fraud before users get scammed.',
 }
 
 const ABOUT_META = {
-  title: 'About Agentic Insights LLC - AgenticBro',
+  title: 'About Agentic Insights LLC - AgenticBro & Brand Guard',
   description:
-    'Agentic Insights LLC, established April 2026, builds AgenticBro, an AI trust ecosystem for consumers and businesses across social media, phones, websites, email, domains, and Web3.',
+    'Agentic Insights LLC develops AgenticBro and Brand Guard, hybrid AI trust intelligence platforms for fraud prevention, brand protection, and digital risk investigations.',
 }
 
 function updateMetaDescription(content: string) {
@@ -235,6 +235,7 @@ function MainApp() {
 
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [openPaymentAfterAuth, setOpenPaymentAfterAuth] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
 
   // Auth context is available via AuthProvider in main.tsx
@@ -657,15 +658,6 @@ function MainApp() {
             {/* Center — tier access buttons (hidden on mobile) */}
             <div className="hidden 2xl:flex items-center gap-3 shrink-0">
 
-              {/* User Menu (Login/Balance) */}
-              <UserMenu 
-                onLoginClick={() => {
-                  setAuthMode('login')
-                  setShowAuthModal(true)
-                }}
-                onBuyCreditsClick={() => setShowPaymentModal(true)}
-              />
-
               {/* Scan Credits badge */}
               <div
                 className="flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold"
@@ -681,7 +673,7 @@ function MainApp() {
                 ) : effectiveHolderTier ? (
                   <><span style={{color: '#39ff14', textShadow: '0 0 6px #39ff14'}}>✓</span> 🔍 {priorityScansRemaining}/100</>
                 ) : (
-                  <>🔍 {priorityScansRemaining}/10</>
+                  <>🔍 {priorityScansRemaining}/5</>
                 )}
               </div>
 
@@ -749,6 +741,60 @@ function MainApp() {
               >
                 🔐 Brand Guard
               </a>
+              {user ? (
+                <>
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="px-2 xl:px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                    type="button"
+                  >
+                    Buy Credits
+                  </button>
+                  <UserMenu
+                    onLoginClick={() => {
+                      setAuthMode('login')
+                      setShowAuthModal(true)
+                    }}
+                    onBuyCreditsClick={() => setShowPaymentModal(true)}
+                  />
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setOpenPaymentAfterAuth(false)
+                      setAuthMode('login')
+                      setShowAuthModal(true)
+                    }}
+                    className="px-2 xl:px-3 py-1 text-gray-300 hover:text-white border border-white/10 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                    type="button"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenPaymentAfterAuth(false)
+                      setAuthMode('register')
+                      setShowAuthModal(true)
+                    }}
+                    className="px-2 xl:px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                    type="button"
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenPaymentAfterAuth(true)
+                      setAuthMode('register')
+                      setShowAuthModal(true)
+                    }}
+                    className="px-2 xl:px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-md text-xs font-semibold transition-colors whitespace-nowrap"
+                    type="button"
+                  >
+                    Buy Credits
+                  </button>
+                </>
+              )}
               <LanguageSelector current={locale} onChange={setLocale} />
               <WalletMultiButton className="!bg-purple-600 hover:!bg-purple-700 !font-semibold !text-xs !px-3 !py-2 !rounded-md !h-auto !leading-normal !min-w-[118px] !whitespace-nowrap" />
             </div>
@@ -770,8 +816,18 @@ function MainApp() {
                 if (section === 'wallet-protection-scroll') document.getElementById('wallet-protection')?.scrollIntoView({ behavior: 'smooth' })
               }}
               onLoginClick={() => {
+                setOpenPaymentAfterAuth(false)
                 setAuthMode('login')
                 setShowAuthModal(true)
+              }}
+              onBuyCreditsClick={() => {
+                if (user) {
+                  setShowPaymentModal(true)
+                } else {
+                  setOpenPaymentAfterAuth(true)
+                  setAuthMode('register')
+                  setShowAuthModal(true)
+                }
               }}
             />
           </header>
@@ -795,7 +851,7 @@ function MainApp() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                       {[
-                        { icon: '🔍', title: 'Priority Scans', desc: '10 free scans per day' },
+                        { icon: '🔍', title: 'Priority Scans', desc: '5 free scans per day' },
                         { icon: '📊', title: 'Wallet Intelligence', desc: 'AI-assisted risk and behavior analysis' },
                         { icon: '💎', title: 'Holder Tier', desc: `Unlocks with ${tokenPriceUsd > 0 ? (15000 / tokenPriceUsd).toLocaleString(undefined, {maximumFractionDigits: 0}) : '10K'} AGNTCBRO` },
                       ].map((item) => (
@@ -829,12 +885,12 @@ function MainApp() {
                   <span>AI trust ecosystem for consumers and businesses</span>
                 </div>
                 <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-5">
-                  Verify trust before consumers or businesses are exposed.
+                  Brand impersonation detection that never sleeps.
                 </h2>
                 <p className="text-gray-300 text-lg leading-relaxed max-w-3xl mb-6">
-                  AgenticBro combines local AI agents, cloud reasoning, durable queues, and multi-source threat intelligence
-                  to detect risk across social media, phone calls and texts, websites, domains, email, brand impersonation,
-                  marketplaces, wallets, tokens, and payment flows.
+                  Brand Guard monitors X, Instagram, TikTok, Facebook, Telegram and LinkedIn for impersonator
+                  accounts, plus live Shopify and Etsy marketplace clones, email spoofing, lookalike domains,
+                  and vendor fraud. Get alerts before your users get scammed.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <button
@@ -851,7 +907,7 @@ function MainApp() {
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['Social media impersonation', 'Phone and text scams', 'Website phishing', 'Domain spoofing', 'Email spoofing', 'Wallet and token risk'].map((item) => (
+                  {['Social impersonators', 'Shopify and Etsy clones', 'Email spoofing', 'Lookalike domains', 'Vendor fraud', 'Wallet and token risk'].map((item) => (
                     <span key={item} className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-xs text-gray-300">
                       {item}
                     </span>
@@ -1134,7 +1190,7 @@ function MainApp() {
           <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 backdrop-blur-md rounded-2xl border border-purple-500/20 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">🛡️ Free Scam Protection Tools</h3>
-              <p className="text-gray-400">First 10 scans free per day — {connected ? 'logged in' : 'no wallet needed'}</p>
+              <p className="text-gray-400">First 5 scans free per day — {connected ? 'logged in' : 'no wallet needed'}</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
@@ -1280,7 +1336,8 @@ function MainApp() {
               </h2>
               <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
                 Consumers, creators, and businesses face risk across social identities, websites, phone numbers,
-                domains, payments, wallets, and impersonator brands. AgenticBro turns those fragmented signals into clear trust intelligence.
+                domains, payments, wallets, and impersonator brands. Brand Guard adds always-on monitoring for
+                social impersonators, Shopify and Etsy clones, email spoofing, lookalike domains, and vendor fraud.
               </p>
             </div>
 
@@ -1289,7 +1346,7 @@ function MainApp() {
               {[
                 { value: '260+', label: 'Scammers in Database', color: '#f87171' },
                 { value: '<30s',   label: 'Average Scan Time',    color: '#4ade80' },
-                { value: '10/day', label: 'Free Scans',            color: '#a78bfa' },
+                { value: '5/day', label: 'Free Scans',             color: '#a78bfa' },
                 { value: '100%',   label: 'On-Chain Verified',    color: '#22d3ee' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 p-4 text-center">
@@ -1359,7 +1416,7 @@ function MainApp() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#4ade80'}}>
                   <span>🎁</span>
-                  <span>First 10 scans free daily — resets every 24 hours, no token required</span>
+                  <span>First 5 scans free daily — resets every 24 hours, no token required</span>
                 </div>
               </div>
             </div>
@@ -1413,6 +1470,12 @@ function MainApp() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          if (openPaymentAfterAuth) {
+            setOpenPaymentAfterAuth(false)
+            setShowPaymentModal(true)
+          }
+        }}
         initialMode={authMode}
       />
 
