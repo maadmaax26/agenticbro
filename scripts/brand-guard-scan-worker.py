@@ -46,7 +46,7 @@ if os.path.exists(env_path):
 from typing import Optional
 from supabase import create_client
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── Logging ────────────────────────────────────────────────────────────────
 
 LOG_DIR = "/Users/efinney/.openclaw/workspace/output"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -61,17 +61,38 @@ logging.basicConfig(
 )
 log = logging.getLogger("bg-scan-worker")
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SECRET_API_KEY", "")
 WORKER_ID = f"bg-{uuid.uuid4().hex[:8]}"
-POLL_INTERVAL = 45  # seconds between polls (increased from 15s to reduce Supabase IO)
+POLL_INTERVAL = 300  # seconds between polls (increased from 45s to reduce Supabase IO)
 SCAN_TIMEOUT = 600   # 10 minutes max per scan (increased from 300s)
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# ── Paths ────────────────────────────────────────────────────────────────
 WORKSPACE = "/Users/efinney/.openclaw/workspace"
 SCRIPTS_DIR = os.path.join(WORKSPACE, "scripts")
+
+# Map scan_type → LLM critical function name (for Gemini routing)
+SCAN_TYPE_TO_LLM_FUNCTION = {
+    "impersonator": "impersonator_scan",
+    "domain": "domain_scan",
+    "vendor": "vendor_verify",
+    "threat": "threat_correlate",
+}
+
+# ── Gemini Fallback Integration ────────────────────────────────────────────
+try:
+    sys.path.insert(0, SCRIPTS_DIR)
+    from brand_guard_llm import BrandGuardLLM
+    _bg_llm = BrandGuardLLM()
+    log.info("Gemini fallback integrated — critical functions bypass Ollama for SLA")
+except ImportError:
+    _bg_llm = None
+    log.warning("brand_guard_llm not available — Gemini fallback disabled")
+except Exception as _e:
+    _bg_llm = None
+    log.warning("Gemini fallback init failed: %s — continuing without it", _e)
 
 # Map scan_type → CLI script
 SCAN_SCRIPTS = {
@@ -106,9 +127,22 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Job lifecycle ─────────────────────────────────────────────────────────────
-
-def fetch_pending_jobs() -> list:
+def is_recent_scan(brand_handle: str) -> bool:
+    """Check if a scan for this brand handle occurred in the last 24 hours."""
+    try:
+        now = datetime.now(timezone.utc)
+        yesterday = (now - timedelta(hours=24)).isoformat()
+        result = supabase.table("brand_guard_scans") \
+            .select("id") \
+            .eq("brand_handle", brand_handle) \
+            .eq("status", "complete") \
+            .gt("completed_at", yesterday) \
+            .limit(1) \
+            .execute()
+        return len(result.data) > 0
+    except Exception as exc:
+        log.error("Error checking recent scan: %s", exc)
+        return False
     """Fetch processing/pending brand_guard_scans ordered by creation time.
     
     DB constraint: status IN ('processing', 'complete', 'failed')
@@ -116,7 +150,7 @@ def fetch_pending_jobs() -> list:
     """
     try:
         result = supabase.table("brand_guard_scans") \
-            .select("id,scan_id,brand_name,brand_handle,brand_domain,platforms,status,result,created_at") \
+            .select("id,scan_id,owner_id,brand_monitor_id,brand_name,brand_handle,brand_domain,platforms,status,result,created_at") \
             .eq("status", "processing") \
             .order("created_at", desc=False) \
             .limit(5) \
@@ -214,15 +248,39 @@ def fail_job(job_id: str, error: str) -> None:
 
 # ── URL scan chaining (JS Detonation) ─────────────────────────────────────────
 
-def submit_url_scan_job(url: str, timeout: int = 20) -> str | None:
+def submit_url_scan_job(
+    url: str,
+    timeout: int = 20,
+    parent_brand_guard_scan_id: str | None = None,
+    owner_id: str | None = None,
+    brand_monitor_id: str | None = None,
+    brand_name: str | None = None,
+    brand_domain: str | None = None,
+) -> str | None:
     """Submit a URL scan job to the scan_jobs queue for JS detonation analysis."""
     try:
         import uuid as _uuid
         job_id = str(_uuid.uuid4())
+        payload = {
+            "url": url,
+            "timeout": timeout,
+            "urlscan_enrichment": True,
+        }
+        if owner_id:
+            payload["owner_id"] = owner_id
+        if parent_brand_guard_scan_id:
+            payload["parent_brand_guard_scan_id"] = parent_brand_guard_scan_id
+        if brand_monitor_id:
+            payload["brand_monitor_id"] = brand_monitor_id
+        if brand_name:
+            payload["brand_name"] = brand_name
+        if brand_domain:
+            payload["brand_domain"] = brand_domain
+        payload["brand_terms"] = [term for term in [brand_name, brand_domain] if term]
         supabase.table("scan_jobs").insert({
             "id": job_id,
             "scan_type": "url_scan",
-            "payload": {"url": url, "timeout": timeout},
+            "payload": payload,
             "status": "pending",
             "priority": 5,
         }).execute()
@@ -237,6 +295,34 @@ def submit_url_scan_job(url: str, timeout: int = 20) -> str | None:
 def run_impersonator_scan(brand_name: str, brand_handle: str, brand_domain: str,
                           platforms: list) -> dict:
     """Run brand impersonator scan using local CLI."""
+    # ── LLM-enhanced analysis via Gemini fallback (SLA-critical) ────────────
+    if _bg_llm:
+        try:
+            llm_prompt = (
+                f"Analyze brand impersonation risk for:\n"
+                f"  Brand: {brand_name}\n"
+                f"  Handle: @{brand_handle}\n"
+                f"  Domain: {brand_domain or 'N/A'}\n"
+                f"  Platforms: {', '.join(platforms) if platforms else 'all'}\n\n"
+                f"Generate search variants for impersonation detection. "
+                f"Return JSON with: variants (list of username variants to search), "
+                f"risk_indicators (list), and confidence_score (0-100)."
+            )
+            llm_result = _bg_llm.analyze(
+                "impersonator_scan", llm_prompt, json_mode=True
+            )
+            if llm_result.get("text"):
+                try:
+                    llm_data = json.loads(llm_result["text"]) if isinstance(llm_result["text"], str) else llm_result["text"]
+                    log.info("LLM impersonator analysis: model=%s, latency=%dms, source=%s",
+                             llm_result.get("model", "?"),
+                             llm_result.get("latency_ms", 0),
+                             llm_result.get("source", "?"))
+                except json.JSONDecodeError:
+                    log.warning("LLM returned non-JSON, using CLI scan only")
+        except Exception as e:
+            log.warning("LLM impersonator analysis failed (non-blocking): %s", e)
+
     script = SCAN_SCRIPTS["impersonator"]
     cmd = ["bash", script, brand_name, "--handle", brand_handle, "--json"]
     if brand_domain:
@@ -275,6 +361,26 @@ def run_impersonator_scan(brand_name: str, brand_handle: str, brand_domain: str,
 
 def run_domain_scan(domain: str, check_active: bool = False, limit: int = 50) -> dict:
     """Run domain lookalike scan using local CLI."""
+    # ── LLM-enhanced analysis via Gemini fallback (SLA-critical) ────────────
+    if _bg_llm:
+        try:
+            llm_prompt = (
+                f"Analyze domain lookalike/typosquat risk for: {domain}\n"
+                f"Generate potential lookalike domain variants. "
+                f"Return JSON with: variants (list of {domain, risk_level, category}), "
+                f"high_risk_count, and analysis_summary."
+            )
+            llm_result = _bg_llm.analyze(
+                "domain_scan", llm_prompt, json_mode=True
+            )
+            if llm_result.get("text"):
+                log.info("LLM domain analysis: model=%s, latency=%dms, source=%s",
+                         llm_result.get("model", "?"),
+                         llm_result.get("latency_ms", 0),
+                         llm_result.get("source", "?"))
+        except Exception as e:
+            log.warning("LLM domain analysis failed (non-blocking): %s", e)
+
     script = SCAN_SCRIPTS["domain"]
     cmd = ["bash", script, domain, "--json", "--limit", str(limit)]
     if check_active:
@@ -309,6 +415,28 @@ def run_domain_scan(domain: str, check_active: bool = False, limit: int = 50) ->
 def run_vendor_scan(phone: str, country: str, vendor_name: str = "",
                     context: str = "") -> dict:
     """Run vendor phone verification scan using local CLI."""
+    # ── LLM-enhanced analysis via Gemini fallback (SLA-critical) ────────────
+    if _bg_llm:
+        try:
+            llm_prompt = (
+                f"Analyze vendor/seller trust risk:\n"
+                f"  Phone: {phone} ({country})\n"
+                f"  Vendor: {vendor_name or 'Unknown'}\n"
+                f"  Context: {context or 'N/A'}\n\n"
+                f"Assess legitimacy. Return JSON with: risk_score (0-90), "
+                f"red_flags (list of {{flag, points, reason}}), verdict, and analysis."
+            )
+            llm_result = _bg_llm.analyze(
+                "vendor_verify", llm_prompt, json_mode=True
+            )
+            if llm_result.get("text"):
+                log.info("LLM vendor analysis: model=%s, latency=%dms, source=%s",
+                         llm_result.get("model", "?"),
+                         llm_result.get("latency_ms", 0),
+                         llm_result.get("source", "?"))
+        except Exception as e:
+            log.warning("LLM vendor analysis failed (non-blocking): %s", e)
+
     script = SCAN_SCRIPTS["vendor"]
     cmd = ["bash", script, phone, country, "--json"]
     if vendor_name:
@@ -346,6 +474,29 @@ def run_vendor_scan(phone: str, country: str, vendor_name: str = "",
 def run_threat_correlate(brand_name: str, brand_handle: str,
                          brand_domain: str = "") -> dict:
     """Run cross-channel threat correlation using local CLI."""
+    # ── LLM-enhanced analysis via Gemini fallback (SLA-critical) ────────────
+    if _bg_llm:
+        try:
+            llm_prompt = (
+                f"Correlate threat signals across channels for:\n"
+                f"  Brand: {brand_name}\n"
+                f"  Handle: @{brand_handle}\n"
+                f"  Domain: {brand_domain or 'N/A'}\n\n"
+                f"Synthesize cross-channel threat intelligence. "
+                f"Return JSON with: aggregate_risk_score (0-90), "
+                f"channel_threats (list), correlated_patterns, and threat_summary."
+            )
+            llm_result = _bg_llm.analyze(
+                "threat_correlate", llm_prompt, json_mode=True
+            )
+            if llm_result.get("text"):
+                log.info("LLM threat correlation: model=%s, latency=%dms, source=%s",
+                         llm_result.get("model", "?"),
+                         llm_result.get("latency_ms", 0),
+                         llm_result.get("source", "?"))
+        except Exception as e:
+            log.warning("LLM threat correlation failed (non-blocking): %s", e)
+
     script = SCAN_SCRIPTS["threat"]
     cmd = ["bash", script, brand_name, "--handle", brand_handle, "--json"]
     if brand_domain:
@@ -421,6 +572,8 @@ def process_job(job: dict) -> None:
     """Process one brand guard scan job."""
     job_id = job["id"]
     scan_id = job.get("scan_id", "")
+    owner_id = job.get("owner_id", "")
+    brand_monitor_id = job.get("brand_monitor_id", "")
     brand_name = job.get("brand_name", "")
     brand_handle = job.get("brand_handle", "")
     brand_domain = job.get("brand_domain", "") or ""
@@ -428,6 +581,12 @@ def process_job(job: dict) -> None:
 
     if not brand_name or not brand_handle:
         fail_job(job_id, "Missing brand_name or brand_handle")
+        return
+
+    # ── Job Throttling: Check for recent scans ──────────────────────────────
+    if is_recent_scan(brand_handle):
+        log.info("Skipping job %s — recent scan found for @%s", job_id, brand_handle)
+        complete_job(job_id, {"status": "skipped", "reason": "recent_scan_exists"})
         return
 
     log.info("Processing job %s (scan_id=%s) for brand: %s/@%s",
@@ -464,6 +623,8 @@ def process_job(job: dict) -> None:
         result["scan_type"] = scan_type
         result["real_scan"] = True  # Flag that this was a real scan, not theoretical
         result["data_source"] = "local_cli"
+        result["llm_enhanced"] = _bg_llm is not None
+        result["gemini_fallback_active"] = _bg_llm is not None
 
         # ── Auto-chain URL detonation for active domains ────────────────────
         # When a domain scan finds active lookalike domains, auto-submit
@@ -477,7 +638,15 @@ def process_job(job: dict) -> None:
                     top_domain = active_variants[0].get("domain", "") or ""
                     if top_domain:
                         url_to_scan = f"https://{top_domain}"
-                        url_job_id = submit_url_scan_job(url_to_scan, timeout=20)
+                        url_job_id = submit_url_scan_job(
+                            url_to_scan,
+                            timeout=20,
+                            parent_brand_guard_scan_id=job_id,
+                            owner_id=owner_id,
+                            brand_monitor_id=brand_monitor_id,
+                            brand_name=brand_name,
+                            brand_domain=brand_domain,
+                        )
                         if url_job_id:
                             result["url_scan_job_id"] = url_job_id
                             result["url_scan_url"] = url_to_scan
@@ -492,7 +661,35 @@ def process_job(job: dict) -> None:
 
     except Exception as exc:
         log.error("FAIL job %s: %s", job_id, exc)
-        fail_job(job_id, str(exc))
+        # Check retry count from the job's result metadata
+        result_data = job.get("result", {}) or {}
+        retry_count = result_data.get("_retry_count", 0) if isinstance(result_data, dict) else 0
+        if retry_count < MAX_SCAN_RETRIES:
+            log.warning("Retrying job %s (attempt %d/%d) in %ds...",
+                        job_id, retry_count + 1, MAX_SCAN_RETRIES, SCAN_RETRY_DELAY)
+            time.sleep(SCAN_RETRY_DELAY)
+            # Requeue for another attempt
+            try:
+                now_iso = datetime.now(timezone.utc).isoformat()
+                supabase.table("brand_guard_scans") \
+                    .update({
+                        "status": "processing",
+                        "result": {
+                            "_worker_id": WORKER_ID,
+                            "_retry_count": retry_count + 1,
+                            "_retry_reason": str(exc)[:200],
+                            "_requeued_at": now_iso,
+                        },
+                    }) \
+                    .eq("id", job_id) \
+                    .execute()
+                log.info("Requeued job %s for retry #%d", job_id, retry_count + 1)
+            except Exception as requeue_exc:
+                log.error("Failed to requeue job %s: %s", job_id, requeue_exc)
+                fail_job(job_id, str(exc))
+        else:
+            log.error("Job %s exceeded max retries (%d) — permanent fail", job_id, MAX_SCAN_RETRIES)
+            fail_job(job_id, f"Max retries ({MAX_SCAN_RETRIES}) reached. Last error: {exc}")
 
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -501,6 +698,7 @@ def main() -> None:
     log.info("Brand Guard Scan Worker started — %s", WORKER_ID)
     log.info("Supabase: %s", SUPABASE_URL)
     log.info("Scripts: %s", ", ".join(f"{k}={v}" for k, v in SCAN_SCRIPTS.items()))
+    log.info("Gemini fallback: %s", "ENABLED" if _bg_llm else "DISABLED")
 
     # Verify all scripts exist
     for scan_type, script_path in SCAN_SCRIPTS.items():
