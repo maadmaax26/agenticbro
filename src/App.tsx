@@ -32,7 +32,6 @@ import { BrandGuardPage } from './pages/BrandGuardPage'
 import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
 import PaymentSuccess from './pages/PaymentSuccess'
-import { AboutPage } from './pages/AboutPage'
 import { BrandGuardLegalPage } from './pages/BrandGuardLegalPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
