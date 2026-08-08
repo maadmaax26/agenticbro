@@ -16,7 +16,9 @@ import { FingerprintManager } from '../components/brand-guard/FingerprintManager
 import { MarketplaceScanner } from '../components/brand-guard/MarketplaceScanner';
 import { SubscriptionPlans } from '../components/brand-guard/SubscriptionPlans';
 import { SubscriptionManager } from '../components/brand-guard/SubscriptionManager';
+import { LegalAcceptanceModal } from '../components/brand-guard/LegalAcceptanceModal';
 import { ContactUs } from '../components/ContactUs';
+import { BRAND_GUARD_PLAN_BY_ID, type BrandGuardPlanId } from '../lib/brandGuardPlanConfig';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Mobile Detection Hook
@@ -166,6 +168,10 @@ export function BrandGuardPage() {
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   void subscriptionError;
+  const [pendingLegalPlanId, setPendingLegalPlanId] = useState<BrandGuardPlanId | null>(null);
+  const [legalReacceptRequired, setLegalReacceptRequired] = useState(false);
+  const [legalAcceptanceLoading, setLegalAcceptanceLoading] = useState(false);
+  const [legalAcceptanceError, setLegalAcceptanceError] = useState<string | null>(null);
   const checkoutStartedRef = useRef(false);
 
   // Alert bell state
@@ -643,13 +649,40 @@ export function BrandGuardPage() {
 
   useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
 
-  const startSubscriptionCheckout = useCallback(async (planId: string) => {
+  useEffect(() => {
+    if (!authToken || !subscription?.plan_id || !['guardian', 'sentinel', 'fortress'].includes(subscription.plan_id)) {
+      setLegalReacceptRequired(false);
+      return;
+    }
+    if (!['active', 'trialing', 'trial_ending'].includes(subscription.status)) {
+      setLegalReacceptRequired(false);
+      return;
+    }
+
+    let cancelled = false;
+    const checkLegalAcceptance = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/legal?plan_id=${encodeURIComponent(subscription.plan_id)}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await res.json();
+        if (!cancelled) setLegalReacceptRequired(res.ok && !data.accepted);
+      } catch {
+        if (!cancelled) setLegalReacceptRequired(false);
+      }
+    };
+
+    void checkLegalAcceptance();
+    return () => { cancelled = true; };
+  }, [authToken, subscription?.plan_id, subscription?.status]);
+
+  const createSubscriptionCheckout = useCallback(async (planId: string, legalAcceptanceId?: string) => {
     if (!authToken) throw new Error('Please sign in first');
 
     const res = await fetch(`${API_BASE}/credits/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ plan_id: planId }),
+      body: JSON.stringify({ plan_id: planId, legal_acceptance_id: legalAcceptanceId }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to create checkout session');
@@ -668,6 +701,89 @@ export function BrandGuardPage() {
     throw new Error('Invalid checkout response');
   }, [authToken]);
 
+  const startSubscriptionCheckout = useCallback(async (planId: string) => {
+    if (!authToken) throw new Error('Please sign in first');
+    if (!['guardian', 'sentinel', 'fortress'].includes(planId)) throw new Error('Invalid subscription plan');
+
+    setSubscriptionError(null);
+    setLegalAcceptanceError(null);
+
+    const statusRes = await fetch(`${API_BASE}/legal?plan_id=${encodeURIComponent(planId)}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    const status = await statusRes.json();
+    if (!statusRes.ok) throw new Error(status.error || 'Failed to check legal acceptance');
+
+    if (status.accepted && status.acceptance_id) {
+      await createSubscriptionCheckout(planId, status.acceptance_id);
+      return;
+    }
+
+    setPendingLegalPlanId(planId as BrandGuardPlanId);
+  }, [authToken, createSubscriptionCheckout]);
+
+  const closeLegalAcceptance = useCallback(() => {
+    if (legalAcceptanceLoading) return;
+    setPendingLegalPlanId(null);
+    setLegalAcceptanceError(null);
+    checkoutStartedRef.current = false;
+  }, [legalAcceptanceLoading]);
+
+  const acceptLegalAndCheckout = useCallback(async () => {
+    if (!authToken || !pendingLegalPlanId) return;
+
+    setLegalAcceptanceLoading(true);
+    setLegalAcceptanceError(null);
+    try {
+      const res = await fetch(`${API_BASE}/legal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          plan_id: pendingLegalPlanId,
+          brand_authorization_certified: true,
+          monitoring_disclaimer_accepted: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to record legal acceptance');
+
+      await createSubscriptionCheckout(pendingLegalPlanId, data.acceptance_id);
+      setPendingLegalPlanId(null);
+    } catch (err) {
+      checkoutStartedRef.current = false;
+      setLegalAcceptanceError(err instanceof Error ? err.message : 'Failed to continue to payment');
+    } finally {
+      setLegalAcceptanceLoading(false);
+    }
+  }, [authToken, createSubscriptionCheckout, pendingLegalPlanId]);
+
+  const acceptLegalReacceptance = useCallback(async () => {
+    if (!authToken || !subscription?.plan_id) return;
+
+    setLegalAcceptanceLoading(true);
+    setLegalAcceptanceError(null);
+    try {
+      const res = await fetch(`${API_BASE}/legal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          plan_id: subscription.plan_id,
+          subscription_id: subscription.id,
+          brand_authorization_certified: true,
+          monitoring_disclaimer_accepted: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to record legal acceptance');
+
+      setLegalReacceptRequired(false);
+    } catch (err) {
+      setLegalAcceptanceError(err instanceof Error ? err.message : 'Failed to record legal acceptance');
+    } finally {
+      setLegalAcceptanceLoading(false);
+    }
+  }, [authToken, subscription?.id, subscription?.plan_id]);
+
   useEffect(() => {
     if (!authToken || !subscriptionChecked || subscriptionLoading || checkoutStartedRef.current) return;
     if (!selectedPlan || !['guardian', 'sentinel', 'fortress'].includes(selectedPlan)) return;
@@ -684,6 +800,7 @@ export function BrandGuardPage() {
   // ── Subscription management handlers ────────────────────────────────────────
   const handleManageBilling = useCallback(async () => {
     if (!authToken) { setSubscriptionError('Please sign in first'); return; }
+    if (legalReacceptRequired) { setLegalAcceptanceError('Please accept the current Brand Guard legal terms before managing billing.'); return; }
     try {
       const res = await fetch(`${API_BASE}/credits/stripe-portal`, {
         method: 'POST',
@@ -704,10 +821,11 @@ export function BrandGuardPage() {
     } catch (err) {
       setSubscriptionError(err instanceof Error ? err.message : 'Failed to open billing portal');
     }
-  }, [authToken]);
+  }, [authToken, legalReacceptRequired]);
 
   const handleCancelSubscription = useCallback(async () => {
     if (!authToken) { setSubscriptionError('Please sign in first'); return; }
+    if (legalReacceptRequired) { setLegalAcceptanceError('Please accept the current Brand Guard legal terms before changing account management settings.'); return; }
     setSubscriptionLoading(true);
     try {
       const res = await fetch(`${API_BASE}/credits/cancel-subscription`, {
@@ -727,7 +845,7 @@ export function BrandGuardPage() {
     } finally {
       setSubscriptionLoading(false);
     }
-  }, [authToken]);
+  }, [authToken, legalReacceptRequired]);
 
   // ── Alert bell handlers ──────────────────────────────────────────────────────
   // (alerts, showAlertsDropdown, unreadAlerts already declared above)
@@ -1247,9 +1365,13 @@ export function BrandGuardPage() {
         <div style={{ maxWidth: '420px', width: '100%', padding: isMobile ? '16px' : '32px' }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔐</div>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Brand Guard</h1>
-            <p style={{ color: dark.textMuted, fontSize: '15px' }}>
-              AI-powered brand impersonation detection across X, Instagram, TikTok, Facebook, Telegram & LinkedIn
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
+              Brand Impersonation Detection that never sleeps
+            </h1>
+            <p style={{ color: dark.textMuted, fontSize: '15px', lineHeight: 1.6 }}>
+              Brand Guard monitors X, Instagram, TikTok, Facebook, Telegram and LinkedIn for
+              impersonator accounts, plus live Shopify and Etsy marketplace clones, email spoofing,
+              lookalike domains, and vendor fraud. Get alerts before your users get scammed.
             </p>
           </div>
 
@@ -2009,8 +2131,17 @@ export function BrandGuardPage() {
           border: `1px solid ${checkoutStatus === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
           textAlign: 'center', color: checkoutStatus === 'success' ? dark.green : '#fbbf24',
         }}>
-          {checkoutStatus === 'verifying' && 'Verifying payment and adding credits...'}
-          {checkoutStatus === 'success' && 'Payment verified. Credits have been added to your account.'}
+          {checkoutStatus === 'verifying' && 'Verifying payment and activating protection...'}
+          {checkoutStatus === 'success' && (
+            <div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Brand Guard Protection Activated</div>
+              <div style={{ color: dark.green, fontWeight: 700, marginBottom: '10px' }}>Monitoring begins immediately.</div>
+              <div style={{ color: dark.text, fontSize: '13px', lineHeight: 1.7 }}>
+                Your business is now monitored for Brand Impersonation, Lookalike Domains, Email Spoofing,
+                Marketplace Abuse, Visual Asset Copying, and Threat Intelligence.
+              </div>
+            </div>
+          )}
           {checkoutStatus === 'error' && 'We could not verify this checkout yet. Your card will only be credited after Stripe confirms payment.'}
         </div>
       )}
@@ -2772,7 +2903,7 @@ export function BrandGuardPage() {
                   )}
                   {scanResult.error ? (
                     <div style={{ color: dark.red, fontSize: '14px' }}>{String(scanResult.error)}</div>
-                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.email_security || scanResult.red_flags) ? (
+                  ) : (scanResult.success || scanResult.total_variants || scanResult.impersonators || scanResult.variants || scanResult.risk_score !== undefined || scanResult.riskScore !== undefined || scanResult.aggregate_risk_score !== undefined || scanResult.verification_level || scanResult.vendor_verification || scanResult.email_security || scanResult.red_flags) ? (
                     <div>
                       {/* Impersonator scan results */}
                       {scanType === 'impersonator' && (
@@ -2882,6 +3013,68 @@ export function BrandGuardPage() {
                         </>
                       )}
 
+                      {(scanResult.urlscan_io || scanResult.urlscan_phishing || scanResult.url_scan_job_id) && (
+                        (() => {
+                          const io = (scanResult.urlscan_io || scanResult.urlscanIo || {}) as Record<string, any>;
+                          const phishing = (scanResult.urlscan_phishing || scanResult.urlscanPhishing || {}) as Record<string, any>;
+                          const status = String(io.status || scanResult.url_scan_status || (scanResult.url_scan_job_id ? 'queued' : 'unknown'));
+                          const score = phishing.score ?? phishing.risk_score;
+                          const verdict = String(phishing.verdict || status);
+                          const normalizedVerdict = verdict.toUpperCase();
+                          const tone = normalizedVerdict.includes('CONFIRMED') || normalizedVerdict.includes('HIGH')
+                            ? { color: dark.red, bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' }
+                            : normalizedVerdict.includes('SUSPICIOUS') || normalizedVerdict.includes('SUBMITTED') || normalizedVerdict.includes('QUEUED')
+                              ? { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' }
+                              : status === 'failed'
+                                ? { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' }
+                                : { color: dark.green, bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' };
+                          const signals = phishing.signals as Record<string, unknown> | undefined;
+
+                          return (
+                            <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: tone.bg, border: `1px solid ${tone.border}` }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+                                <div style={{ color: tone.color, fontSize: '13px', fontWeight: 700 }}>URLScan.io Phishing Intelligence</div>
+                                <div style={{ color: tone.color, fontSize: '11px', fontFamily: 'monospace', fontWeight: 700 }}>
+                                  {score !== undefined ? `${String(score)}/100 - ${verdict}` : status.toUpperCase()}
+                                </div>
+                              </div>
+                              {Boolean(io.url || scanResult.url_scan_url) && (
+                                <div style={{ color: dark.textMuted, fontSize: '12px', marginBottom: '8px', overflowWrap: 'anywhere' }}>
+                                  {String(io.url || scanResult.url_scan_url)}
+                                </div>
+                              )}
+                              {status === 'queued' || status === 'submitted' || status === 'skipped' || status === 'failed' ? (
+                                <div style={{ color: dark.textMuted, fontSize: '12px' }}>
+                                  {status === 'queued' && 'Enhanced phishing analysis is queued for high-risk paid-tier scans.'}
+                                  {status === 'submitted' && 'URLScan.io analysis has been submitted and is processing.'}
+                                  {status === 'skipped' && `Enhanced analysis skipped: ${String(io.reason || 'eligibility rules did not match this scan')}.`}
+                                  {status === 'failed' && `Enhanced analysis failed: ${String(io.error || 'URLScan.io did not return a completed result')}.`}
+                                </div>
+                              ) : (
+                                <>
+                                  {Boolean(phishing.summary) && (
+                                    <div style={{ color: dark.textMuted, fontSize: '12px', marginBottom: '8px' }}>{String(phishing.summary)}</div>
+                                  )}
+                                  {signals && (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', color: dark.textMuted, fontSize: '11px', marginBottom: '8px' }}>
+                                      <span>Login form: {signals.login_form ?? signals.login_form_detected ? 'yes' : 'no'}</span>
+                                      <span>Brand terms: {signals.brand_keyword ?? signals.brand_keyword_present ? 'yes' : 'no'}</span>
+                                      <span>Redirects: {signals.redirect_chain ?? signals.redirect_chain_suspicious ? 'suspicious' : 'normal'}</span>
+                                      <span>Cert match: {(signals.cert_mismatch ?? signals.certificate_domain_match === false) ? 'mismatch' : 'ok'}</span>
+                                    </div>
+                                  )}
+                                  {Boolean(io.result_url) && (
+                                    <a href={String(io.result_url)} target="_blank" rel="noopener noreferrer" style={{ color: '#67e8f9', fontSize: '12px', textDecoration: 'none', fontWeight: 700 }}>
+                                      Open URLScan.io report
+                                    </a>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()
+                      )}
+
                       {/* Website scan results */}
                       {scanType === 'website' && (
                         <>
@@ -2907,17 +3100,80 @@ export function BrandGuardPage() {
                           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                             <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
                               <div style={{ fontSize: '12px', color: dark.textMuted }}>Risk Score</div>
-                              <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: (scanResult.risk_score ?? scanResult.overall_risk ?? 0) >= 7 ? dark.red : (scanResult.risk_score ?? scanResult.overall_risk ?? 0) >= 4 ? '#f59e0b' : dark.green }}>
-                                {String(scanResult.risk_score ?? scanResult.overall_risk ?? '?')}/10
+                              <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: (scanResult.risk_score ?? scanResult.riskScore ?? scanResult.overall_risk ?? 0) >= 7 ? dark.red : (scanResult.risk_score ?? scanResult.riskScore ?? scanResult.overall_risk ?? 0) >= 4 ? '#f59e0b' : dark.green }}>
+                                {String(scanResult.risk_score ?? scanResult.riskScore ?? scanResult.overall_risk ?? '?')}/10
                               </div>
                             </div>
                             <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${dark.border}` }}>
                               <div style={{ fontSize: '12px', color: dark.textMuted }}>Verdict</div>
                               <div style={{ fontSize: isMobile ? '14px' : '18px', fontWeight: 800, color: (scanResult.is_scam ?? scanResult.legitimate === false) ? dark.red : dark.green }}>
-                                {String(scanResult.is_scam ? 'SCAM' : scanResult.legitimate === false ? 'SUSPICIOUS' : scanResult.legitimate === true ? 'LEGITIMATE' : scanResult.verdict ?? 'UNKNOWN')}
+                                {String(scanResult.is_scam ? 'SCAM' : scanResult.legitimate === false ? 'SUSPICIOUS' : scanResult.legitimate === true ? 'LEGITIMATE' : scanResult.verdict ?? scanResult.riskLevel ?? 'UNKNOWN')}
                               </div>
                             </div>
                           </div>
+                          {scanResult.jsDetonation && !scanResult.jsDetonation.error && !scanResult.jsDetonation.status && (
+                            (() => {
+                              const js = scanResult.jsDetonation as Record<string, any>;
+                              const riskLevel = String(js.riskLevel || js.risk_level || 'UNKNOWN');
+                              const normalizedRisk = riskLevel.toUpperCase();
+                              const riskScore = js.riskScore ?? js.risk_score ?? 0;
+                              const findings = Array.isArray(js.findings) ? js.findings : [];
+                              const networkSummary = (js.networkSummary || js.network_summary || {}) as Record<string, any>;
+                              const externalDomains = Array.isArray(networkSummary.externalDomains) ? networkSummary.externalDomains : Array.isArray(networkSummary.external_domains) ? networkSummary.external_domains : [];
+                              const tone = normalizedRisk.includes('CRITICAL') ? { color: dark.red, bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' }
+                                : normalizedRisk.includes('HIGH') ? { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' }
+                                : normalizedRisk.includes('CAUTION') || normalizedRisk.includes('MEDIUM') ? { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' }
+                                : { color: dark.green, bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' };
+
+                              return (
+                                <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: tone.bg, border: `1px solid ${tone.border}` }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ color: tone.color, fontSize: '13px', fontWeight: 700 }}>🔬 JS Detonation Analysis</div>
+                                    <div style={{ color: tone.color, fontSize: '11px', fontFamily: 'monospace', fontWeight: 700 }}>{String(riskScore)}/100 — {riskLevel}</div>
+                                  </div>
+                                  {Boolean(js.verdict) && (
+                                    <div style={{ color: dark.textMuted, fontSize: '12px', marginBottom: '8px' }}>{String(js.verdict)}</div>
+                                  )}
+                                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: dark.textMuted, fontSize: '11px', marginBottom: findings.length ? '10px' : 0 }}>
+                                    <span>📜 {String(js.scriptsAnalyzed ?? js.scripts_analyzed ?? 0)} scripts</span>
+                                    <span>🌐 {String(networkSummary.totalRequests ?? networkSummary.total_requests ?? 0)} requests</span>
+                                    <span>🔗 {String(networkSummary.externalRequests ?? networkSummary.external_requests ?? 0)} external</span>
+                                  </div>
+                                  {findings.length > 0 && (
+                                    <div style={{ display: 'grid', gap: '6px' }}>
+                                      {findings.slice(0, 5).map((f: Record<string, unknown>, i: number) => (
+                                        <div key={i} style={{ fontSize: '11px', color: '#d1d5db' }}>
+                                          <span style={{ color: Number(f.weight || 0) >= 15 ? dark.red : Number(f.weight || 0) >= 8 ? '#f59e0b' : '#fbbf24', fontWeight: 700 }}>[{String(f.weight ?? 0)}pts]</span>{' '}
+                                          {String(f.description || f.flag || 'JavaScript finding')}
+                                          {Number(f.count || 0) > 1 && <span style={{ color: dark.textMuted }}> ×{String(f.count)}</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {externalDomains.length > 0 && (
+                                    <details style={{ marginTop: '8px' }}>
+                                      <summary style={{ color: dark.textMuted, fontSize: '11px', cursor: 'pointer' }}>External domains ({externalDomains.length})</summary>
+                                      <div style={{ marginTop: '4px', display: 'grid', gap: '2px' }}>
+                                        {externalDomains.slice(0, 10).map((domain: unknown, i: number) => (
+                                          <div key={i} style={{ color: '#64748b', fontSize: '11px' }}>• {String(domain)}</div>
+                                        ))}
+                                      </div>
+                                    </details>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          )}
+                          {scanResult.jsDetonation?.status === 'timeout' && (
+                            <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '12px' }}>
+                              ⏱️ JS Detonation scan timed out — site may be slow or blocking headless browsers.
+                            </div>
+                          )}
+                          {scanResult.jsDetonation?.error && (
+                            <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: dark.red, fontSize: '12px' }}>
+                              ⚠️ JS Detonation error: {String(scanResult.jsDetonation.error)}
+                            </div>
+                          )}
                           {Array.isArray(scanResult.red_flags) && scanResult.red_flags.length > 0 && (
                             <div style={{ display: 'grid', gap: '8px' }}>
                               {scanResult.red_flags.slice(0, 5).map((f: Record<string, unknown>, i: number) => (
@@ -3463,6 +3719,11 @@ export function BrandGuardPage() {
               <div style={{ fontSize: '40px', marginBottom: '8px' }}>💎</div>
               <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', margin: 0 }}>Select Your Plan</h2>
               <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Choose the perfect plan for your brand protection needs</p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '10px', fontSize: '12px' }}>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#67e8f9', textDecoration: 'none' }}>Terms</a>
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#67e8f9', textDecoration: 'none' }}>Privacy</a>
+                <a href="/acceptable-use" target="_blank" rel="noopener noreferrer" style={{ color: '#67e8f9', textDecoration: 'none' }}>Acceptable Use</a>
+              </div>
             </div>
 
             <SubscriptionPlans
@@ -3473,6 +3734,26 @@ export function BrandGuardPage() {
             />
           </div>
         </div>
+      )}
+      {pendingLegalPlanId && (
+        <LegalAcceptanceModal
+          planName={BRAND_GUARD_PLAN_BY_ID[pendingLegalPlanId].name}
+          mode="checkout"
+          loading={legalAcceptanceLoading}
+          error={legalAcceptanceError}
+          onCancel={closeLegalAcceptance}
+          onAccept={acceptLegalAndCheckout}
+        />
+      )}
+      {legalReacceptRequired && !pendingLegalPlanId && subscription?.plan_id && (
+        <LegalAcceptanceModal
+          planName={BRAND_GUARD_PLAN_BY_ID[subscription.plan_id as BrandGuardPlanId]?.name || 'Brand Guard'}
+          mode="reaccept"
+          loading={legalAcceptanceLoading}
+          error={legalAcceptanceError}
+          onCancel={() => undefined}
+          onAccept={acceptLegalReacceptance}
+        />
       )}
       {/* Subscription Manager Modal */}
       {showSubscriptionManager && (
@@ -3494,6 +3775,10 @@ export function BrandGuardPage() {
               subscription={subscription}
               onManageBilling={handleManageBilling}
               onChangePlan={() => {
+                if (legalReacceptRequired) {
+                  setLegalAcceptanceError('Please accept the current Brand Guard legal terms before changing plans.');
+                  return;
+                }
                 setShowSubscriptionManager(false);
                 setShowPlansModal(true);
               }}
@@ -3507,11 +3792,16 @@ export function BrandGuardPage() {
       <footer style={{ textAlign: 'center', padding: '16px 12px', borderTop: `1px solid ${dark.border}`, background: 'rgba(10,10,15,0.6)', color: dark.textMuted, fontSize: '13px' }}>
         <p style={{ margin: 0 }}>
           Hybrid AI brand trust intelligence •{' '}
-          <a href="https://twitter.com/AgenticBro11" target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'none' }}>@AgenticBro11</a>
+          <a href="https://twitter.com/brandguardAI" target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', textDecoration: 'none' }}>@brandguardAI</a>
           {' '}•{' '}
           <a href="https://t.me/Agenticbro1" target="_blank" rel="noopener noreferrer" style={{ color: '#06b6d4', textDecoration: 'none' }}>Telegram</a>
           {' '}•{' '}
           <ContactUs />
+        </p>
+        <p style={{ margin: '8px 0 0', display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <a href="/terms" style={{ color: '#67e8f9', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="/privacy" style={{ color: '#67e8f9', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/acceptable-use" style={{ color: '#67e8f9', textDecoration: 'none' }}>Acceptable Use Policy</a>
         </p>
       </footer>
     </div>

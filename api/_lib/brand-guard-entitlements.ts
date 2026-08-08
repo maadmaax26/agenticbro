@@ -21,12 +21,12 @@ export const PLAN_ENTITLEMENTS: Record<BrandGuardPlan, PlanDefinition> = {
   sentinel: {
     rank: 2,
     brandLimit: 10,
-    features: new Set([...BASE, 'takedown_templates', 'automated_takedowns', 'visual_fingerprints', 'developer_api', 'customer_delivery', 'custom_reports']),
+    features: new Set([...BASE, 'takedown_templates', 'automated_takedowns', 'visual_fingerprints', 'customer_delivery', 'custom_reports']),
   },
   fortress: {
     rank: 3,
     brandLimit: -1,
-    features: new Set([...BASE, 'takedown_templates', 'automated_takedowns', 'visual_fingerprints', 'developer_api', 'customer_delivery', 'custom_reports', 'enterprise_sla', 'weekly_briefings', 'account_manager']),
+    features: new Set([...BASE, 'takedown_templates', 'automated_takedowns', 'visual_fingerprints', 'customer_delivery', 'custom_reports', 'enterprise_sla', 'weekly_briefings', 'account_manager']),
   },
 };
 

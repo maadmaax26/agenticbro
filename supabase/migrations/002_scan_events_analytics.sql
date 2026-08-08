@@ -21,6 +21,34 @@
 
 -- ─── 1. Add new columns ────────────────────────────────────────────────────
 
+-- Earlier production tables were originally created manually. Keep this
+-- migration replayable for Supabase shadow databases.
+CREATE TABLE IF NOT EXISTS scan_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    event_date DATE DEFAULT CURRENT_DATE,
+    scan_type TEXT,
+    platform TEXT,
+    username TEXT,
+    risk_score NUMERIC,
+    risk_level TEXT,
+    scam_type TEXT,
+    verification_level TEXT,
+    source_table TEXT,
+    source_id TEXT,
+    metadata JSONB DEFAULT '{}'::JSONB
+);
+
+CREATE TABLE IF NOT EXISTS scan_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    risk_score NUMERIC,
+    risk_level TEXT,
+    data_source TEXT DEFAULT 'website',
+    scanned_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 'target' is the unified field for username/phone/URL/contract address
 ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS target TEXT;
 -- 'source' distinguishes website vs telegram vs api

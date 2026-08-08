@@ -10,6 +10,37 @@ import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Loader2 } from 'lu
 
 const SCAN_STORAGE_KEY = 'preconnect_scan_count'
 const FREE_SCANS = 5
+<<<<<<< Updated upstream
+=======
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function loadScansUsed(): number {
+  try {
+    const raw = localStorage.getItem(SCAN_STORAGE_KEY)
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object') {
+      return parsed.date === todayStr() ? Math.min(FREE_SCANS, Math.max(0, Number(parsed.count) || 0)) : 0
+    }
+    return Math.min(FREE_SCANS, Math.max(0, parseInt(raw, 10) || 0))
+  } catch {
+    try {
+      return Math.min(FREE_SCANS, Math.max(0, parseInt(localStorage.getItem(SCAN_STORAGE_KEY) || '0', 10)))
+    } catch {
+      return 0
+    }
+  }
+}
+
+function saveScansUsed(count: number): void {
+  try {
+    localStorage.setItem(SCAN_STORAGE_KEY, JSON.stringify({ date: todayStr(), count }))
+  } catch {}
+}
+>>>>>>> Stashed changes
 
 interface ScanResult {
   risk_score: number
@@ -210,11 +241,7 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
     return () => clearInterval(interval)
   }, [scanning])
   const [scansUsed, setScansUsed] = useState<number>(() => {
-    try {
-      return parseInt(localStorage.getItem(SCAN_STORAGE_KEY) || '0', 10)
-    } catch {
-      return 0
-    }
+    return loadScansUsed()
   })
 
   const scansLeft = FREE_SCANS - scansUsed
@@ -247,7 +274,7 @@ export default function PreConnectScanWidget({ lang = 'en' }: Props) {
         username: cleanUser,
       })
       setScansUsed(newCount)
-      localStorage.setItem(SCAN_STORAGE_KEY, String(newCount))
+      saveScansUsed(newCount)
     } catch (e) {
       setError(t.error as string)
     } finally {

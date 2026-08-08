@@ -204,6 +204,8 @@ router.get('/url/:jobId', async (req: Request, res: Response) => {
       result.network_summary = scanResult.network_summary || {};
       result.scripts_analyzed = scanResult.scripts_analyzed || 0;
       result.scan_date = scanResult.scan_date;
+      if (scanResult.urlscan_io) result.urlscan_io = scanResult.urlscan_io;
+      if (scanResult.urlscan_phishing) result.urlscan_phishing = scanResult.urlscan_phishing;
 
       // Disclaimer
       result.disclaimer = 'This scan is for educational purposes only. Not a guarantee of safety. Always DYOR.';

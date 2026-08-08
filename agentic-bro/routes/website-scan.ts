@@ -63,7 +63,7 @@ async function submitUrlScanJob(url: string, timeout: number = 30): Promise<stri
       payload: { url, timeout },
       status: 'pending',
       priority: 5,
-    }).execute();
+    });
     return jobId;
   } catch (err) {
     console.error('[website-scan] Failed to submit URL scan job:', err);
@@ -173,6 +173,8 @@ router.post('/scan', async (req: Request, res: Response) => {
         scriptsAnalyzed: jsDetonationResult.scripts_analyzed || 0,
         scanId: jsDetonationResult.scan_id,
       };
+      if (jsDetonationResult.urlscan_io) result.urlscanIo = jsDetonationResult.urlscan_io;
+      if (jsDetonationResult.urlscan_phishing) result.urlscanPhishing = jsDetonationResult.urlscan_phishing;
 
       // Merge JS detonation risk into overall score
       // JS detonation uses 0-100 scale, website scan uses 0-10 scale
@@ -337,6 +339,8 @@ router.get('/scan/:jobId', async (req: Request, res: Response) => {
       result.networkSummary = sr.network_summary || {};
       result.scriptsAnalyzed = sr.scripts_analyzed || 0;
       result.scanDate = sr.scan_date;
+      if (sr.urlscan_io) result.urlscanIo = sr.urlscan_io;
+      if (sr.urlscan_phishing) result.urlscanPhishing = sr.urlscan_phishing;
       result.disclaimer = 'This scan is for educational purposes only. Not a guarantee of safety. Always DYOR.';
     } else if (data.status === 'failed') {
       result.error = data.result?.error || 'Scan failed';

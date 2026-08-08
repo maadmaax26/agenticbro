@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
  * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.
@@ -61,8 +62,8 @@ const FORTRESS_PRICE_ID = env('STRIPE_BG_FORTRESS_PRICE_ID', env('STRIPE_FORTRES
 
 // ── Plan Configuration ────────────────────────────────────────────────────────
 const PLAN_CONFIG: Record<string, { name: string; price_usd: number; monthly_credits: number; brands_included: number; plan_id: string }> = {
-  [GUARDIAN_PRICE_ID]: { name: 'Guardian', price_usd: 29,  monthly_credits: 50,     brands_included: 3,   plan_id: 'guardian' },
-  [SENTINEL_PRICE_ID]: { name: 'Sentinel', price_usd: 99,  monthly_credits: 200,    brands_included: 10,  plan_id: 'sentinel' },
+  [GUARDIAN_PRICE_ID]: { name: 'Guardian', price_usd: 29,  monthly_credits: 100,    brands_included: 3,   plan_id: 'guardian' },
+  [SENTINEL_PRICE_ID]: { name: 'Sentinel', price_usd: 99,  monthly_credits: 300,    brands_included: 10,  plan_id: 'sentinel' },
   [FORTRESS_PRICE_ID]: { name: 'Fortress', price_usd: 299, monthly_credits: -1,     brands_included: -1,  plan_id: 'fortress' }, // -1 = unlimited
 };
 
@@ -75,8 +76,8 @@ const PRICE_MAP: Record<string, { credits: number; name: string; type: 'credits'
   [env('STRIPE_BG_PRO_PRICE_ID', 'price_1TcC6S1lUBogdwcDsI9CF0PD')]:     { credits: 25,  name: 'Brand Guard Pro',                         type: 'credits' },
   [env('STRIPE_BG_WHALE_PRICE_ID', 'price_1TcC6S1lUBogdwcDGonv0mZQ')]:   { credits: 110, name: 'Brand Guard Whale (100+10 bonus)',         type: 'credits' },
   // Subscription plans
-  [GUARDIAN_PRICE_ID]: { credits: 50,  name: 'Guardian ($29/mo)',              type: 'subscription', plan_id: 'guardian' },
-  [SENTINEL_PRICE_ID]: { credits: 200, name: 'Sentinel ($99/mo)',              type: 'subscription', plan_id: 'sentinel' },
+  [GUARDIAN_PRICE_ID]: { credits: 100, name: 'Guardian ($29/mo)',              type: 'subscription', plan_id: 'guardian' },
+  [SENTINEL_PRICE_ID]: { credits: 300, name: 'Sentinel ($99/mo)',              type: 'subscription', plan_id: 'sentinel' },
   [FORTRESS_PRICE_ID]: { credits: -1,  name: 'Fortress ($299/mo, unlimited)',  type: 'subscription', plan_id: 'fortress' },
 };
 

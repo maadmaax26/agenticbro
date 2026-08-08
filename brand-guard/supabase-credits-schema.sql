@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS brand_guard_subscriptions (
   -- Plan
   plan_id TEXT NOT NULL CHECK (plan_id IN (
     'free',           -- 25 free scans, no subscription
-    'guardian',       -- $29/mo: 50 scans/mo, 3 brands, weekly monitoring
-    'sentinel',       -- $79/mo: 200 scans/mo, 10 brands, daily monitoring
-    'fortress'        -- $199/mo: Unlimited scans, Unlimited brands, real-time monitoring
+    'guardian',       -- $29/mo: 100 scans/mo, 3 brands, 6-hour monitoring
+    'sentinel',       -- $99/mo: 300 scans/mo, 10 brands, 15-minute monitoring
+    'fortress'        -- $299/mo: Unlimited scans, Unlimited brands, real-time monitoring
   )),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'past_due', 'canceled', 'expired')),
 

@@ -185,7 +185,7 @@ CREATE POLICY "Users can view own Brand Guard pilot"
 DROP POLICY IF EXISTS "Users can manage their own reports" ON public.brand_guard_reports;
 CREATE POLICY "Users can manage their own reports"
   ON public.brand_guard_reports FOR ALL
-  USING ((select auth.uid()) = user_id);
+  USING ((select auth.uid()) = owner_id);
 
 -- ── brand_guard_scan_queue ───────────────────────────────────
 DROP POLICY IF EXISTS "Owners read scan queue" ON public.brand_guard_scan_queue;
@@ -416,6 +416,11 @@ CREATE POLICY "scan_results_service_update"
 -- ── Add missing indexes ──────────────────────────────────────
 
 -- sla_status: cleanup DELETE (WHERE timestamp < $1) was seq-scanning
+CREATE TABLE IF NOT EXISTS public.sla_status (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_sla_status_timestamp
   ON public.sla_status (timestamp);
 

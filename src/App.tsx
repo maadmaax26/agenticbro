@@ -33,6 +33,7 @@ import { BrandGuardAdminPage } from './pages/BrandGuardAdminPage'
 import { BrandGuardPricingPage } from './pages/BrandGuardPricingPage'
 import PaymentSuccess from './pages/PaymentSuccess'
 import { AboutPage } from './pages/AboutPage'
+import { BrandGuardLegalPage } from './pages/BrandGuardLegalPage'
 
 // Relative URL base — Vite proxy forwards /api/* → localhost:3001 in dev,
 // Vercel serverless functions handle /api/* in production.
@@ -1516,6 +1517,18 @@ function App() {
 
   if (location.pathname === '/brand-guard/admin' || location.pathname === '/brand-guard/admin/') {
     return <BrandGuardAdminPage />
+  }
+
+  if (location.pathname === '/terms' || location.pathname === '/terms/') {
+    return <BrandGuardLegalPage type="terms" />
+  }
+
+  if (location.pathname === '/privacy' || location.pathname === '/privacy/') {
+    return <BrandGuardLegalPage type="privacy" />
+  }
+
+  if (location.pathname === '/acceptable-use' || location.pathname === '/acceptable-use/') {
+    return <BrandGuardLegalPage type="acceptable_use" />
   }
 
   if (location.pathname === '/about' || location.pathname === '/about/') {

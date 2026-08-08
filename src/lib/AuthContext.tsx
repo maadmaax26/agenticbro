@@ -35,7 +35,7 @@ interface AuthContextType {
   
   // Auth actions
   loginWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
-  registerWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  registerWithEmail: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
   loginWithWallet: () => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   
@@ -56,6 +56,10 @@ interface AuthContextType {
   hasScanAccess: boolean;
   scansRemaining: number; // -1 = unlimited
   tier: 'free' | 'holder' | 'whale';
+  
+  // Email confirmation state
+  needsEmailConfirmation: boolean;
+  clearEmailConfirmation: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -183,12 +187,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithEmail = useCallback(async (email: string, password: string): Promise<{ error: string | null }> => {
     setLoading(true);
     try {
-      const { user: authUser, error } = await signInWithEmail(email, password);
-      
-      if (error) {
-        setLoading(false);
-        return { error: typeof error === 'string' ? error : error.message };
-      }
+     const { user: authUser, error } = await signInWithEmail(email, password);
+     
+     if (error) {
+       setLoading(false);
+        return { error: typeof error === 'string' ? error : (error as any).message || 'Sign in failed' };
+     }
 
       if (authUser) {
         let profile: UserProfile | null = null;
@@ -220,14 +224,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const registerWithEmail = useCallback(async (email: string, password: string): Promise<{ error: string | null }> => {
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
+
+  const registerWithEmail = useCallback(async (email: string, password: string): Promise<{ error: string | null; needsConfirmation?: boolean }> => {
     setLoading(true);
+    setNeedsEmailConfirmation(false);
     try {
-      const { user: authUser, error } = await signUpWithEmail(email, password);
+      const result = await signUpWithEmail(email, password);
+      const { user: authUser, error } = result;
       
-      if (error) {
+     if (error) {
+       setLoading(false);
+        return { error: typeof error === 'string' ? error : (error as any).message || 'Registration failed' };
+     }
+
+     // Email confirmation required — don't set user, show confirmation message
+      if ((result as any).needsConfirmation) {
+        setNeedsEmailConfirmation(true);
         setLoading(false);
-        return { error: typeof error === 'string' ? error : error.message };
+        return { error: null, needsConfirmation: true };
       }
 
       if (authUser) {
@@ -396,6 +411,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasScanAccess,
     scansRemaining,
     tier,
+    needsEmailConfirmation,
+    clearEmailConfirmation: () => setNeedsEmailConfirmation(false),
   };
 
   return (

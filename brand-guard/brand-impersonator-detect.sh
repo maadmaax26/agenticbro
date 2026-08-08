@@ -177,9 +177,9 @@ echo "🔎 Step 3: Cross-referencing with scammer database..."
 SCAMMER_MATCHES=0
 if [[ -f "$WORKSPACE/scammer-database.csv" ]]; then
     # Search scammer DB for brand name
-    MATCHES=$(grep -i "$BRAND_NAME\|$BRAND_HANDLE" "$WORKSPACE/scammer-database.csv" 2>/dev/null | wc -l || echo 0)
-    SCAMMER_MATCHES=$MATCHES
-    if [[ "$MATCHES" -gt 0 ]]; then
+    MATCHES=$(grep -i "$BRAND_NAME\|$BRAND_HANDLE" "$WORKSPACE/scammer-database.csv" 2>/dev/null | wc -l | tr -d '[:space:]' || echo 0)
+    SCAMMER_MATCHES="$MATCHES"
+    if [[ "$MATCHES" =~ ^[0-9]+$ && "$MATCHES" -gt 0 ]]; then
         echo "   ⚠️  Found $MATCHES entries in scammer database mentioning '$BRAND_NAME'"
     else
         echo "   ✅ No known scammer entries for '$BRAND_NAME'"

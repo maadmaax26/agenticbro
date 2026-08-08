@@ -13,7 +13,7 @@ Agentic Bro is an **AI-powered scam detection system** for Solana and crypto inv
 - Scans **X/Twitter, Instagram, TikTok, Facebook, Telegram, phone numbers, and websites**
 - **90-point unified risk scoring** with transparent red-flag detection
 - Database of **278+ confirmed scammers**, growing daily
-- Live at **agenticbro.app** — first 10 scans free every day
+- Live at **agenticbro.app** — first 5 scans free every day
 - Slogan: **"Scan first, trust later!"** 🔐
 
 ---
@@ -47,7 +47,7 @@ This means real business revenue flows back to token holders through buybacks an
 
 | Benefit | Details |
 |---------|---------|
-| Free scans | First 10 scans free every day for all users |
+| Free scans | First 5 scans free every day for all users |
 | Premium scans | Hold **$100+ $AGNTCBRO** → 100 scans/month |
 | Community access | Contests, educational content, scam-prevention discussions |
 | Ecosystem upside | Exposure to growth as platform usage and Brand Guard revenue increase |

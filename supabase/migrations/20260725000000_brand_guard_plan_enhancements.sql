@@ -25,6 +25,9 @@ BEGIN
 END $$;
 
 ALTER TABLE brand_guard_credit_transactions
+  DROP CONSTRAINT IF EXISTS brand_guard_credit_transactions_payment_method_check;
+
+ALTER TABLE brand_guard_credit_transactions
   ADD CONSTRAINT brand_guard_credit_transactions_payment_method_check
   CHECK (payment_method IN ('stripe', 'usdc_solana', 'usdc_base', 'agntcbro', 'subscription', 'admin', 'free', 'pay_as_you_go', 'refund') OR payment_method IS NULL);
 
@@ -43,6 +46,9 @@ BEGIN
 END $$;
 
 ALTER TABLE brand_guard_subscriptions
+  DROP CONSTRAINT IF EXISTS brand_guard_subscriptions_plan_id_check;
+
+ALTER TABLE brand_guard_subscriptions
   ADD CONSTRAINT brand_guard_subscriptions_plan_id_check
   CHECK (plan_id IN ('free', 'guardian', 'business', 'sentinel', 'fortress', 'agency'));
 
@@ -50,6 +56,9 @@ ALTER TABLE brand_guard_subscriptions
   ADD COLUMN IF NOT EXISTS billing_interval TEXT NOT NULL DEFAULT 'monthly'
     CHECK (billing_interval IN ('monthly', 'annual')),
   ADD COLUMN IF NOT EXISTS rollover_credits_applied INTEGER NOT NULL DEFAULT 0;
+
+DROP FUNCTION IF EXISTS initialize_brand_guard_credits(UUID, TEXT);
+DROP FUNCTION IF EXISTS initialize_brand_guard_credits(UUID);
 
 CREATE OR REPLACE FUNCTION initialize_brand_guard_credits(
   p_owner_id UUID,

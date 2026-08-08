@@ -219,6 +219,15 @@ export function SubscriptionManager({
         )}
       </div>
 
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="mb-3 text-sm font-bold text-white">Legal</div>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200">Terms of Service</a>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200">Privacy Policy</a>
+          <a href="/acceptable-use" target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200">Acceptable Use Policy</a>
+        </div>
+      </div>
+
       {/* Cancel confirmation modal */}
       {showCancelConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">

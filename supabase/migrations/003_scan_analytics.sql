@@ -6,6 +6,41 @@
 
 -- ─── 1. Add scan_type to scan_results (if not exists) ────────────────────────
 -- Tracks which type of scan was performed: social, phone, website, token, wallet
+CREATE TABLE IF NOT EXISTS scan_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    risk_score NUMERIC,
+    risk_level TEXT,
+    data_source TEXT DEFAULT 'website',
+    scanned_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS phone_scan_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    phone_number TEXT,
+    risk_score NUMERIC,
+    scanned_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS known_scammers (
+    id TEXT PRIMARY KEY DEFAULT 'SCM-' || to_char(NOW(), 'YYYYMMDD') || '-' || UPPER(substring(gen_random_uuid()::text, 1, 6)),
+    platform TEXT NOT NULL DEFAULT 'other',
+    username TEXT NOT NULL,
+    threat_level TEXT,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(platform, username)
+);
+
+CREATE TABLE IF NOT EXISTS stats (
+    id BIGSERIAL PRIMARY KEY,
+    total_scans BIGINT NOT NULL DEFAULT 0,
+    last_updated TIMESTAMPTZ DEFAULT NOW()
+);
+
 DO $$
 BEGIN
   IF NOT EXISTS (

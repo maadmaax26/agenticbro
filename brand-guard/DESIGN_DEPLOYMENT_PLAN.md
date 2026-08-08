@@ -22,7 +22,7 @@ Brand Guard extends AgenticBro's existing scam detection infrastructure to serve
 - Cross-platform identity matching (unified scammer database, 278+ entries)
 - Unified 90-point risk scoring system
 - Supabase backend (scan tracking, job queues, results storage)
-- REST API (10+ endpoints live on agenticbro.app)
+- Internal backend routes powering agenticbro.app
 - Stripe + USDC payment rails (already integrated)
 
 ---
@@ -178,7 +178,7 @@ Output: Unified Threat Profile (linked channels + aggregate risk + takedown prio
 ---
 
 ### ✅ Feature 5: Reputation Dashboard + Takedown Automation
-**Existing:** REST API (all endpoints), Supabase, scan results, phone identifier  
+**Existing:** Internal app routes, Supabase, scan results, phone identifier  
 **What to Build:** SMB-facing dashboard aggregating all threats + pre-built takedown templates
 
 #### Design
@@ -350,7 +350,7 @@ brand-guard-weekly-report   → Monday 9:00 AM EST → generate threat digest em
 | Email Spoofing Monitor | Needs email parsing + DMARC infrastructure | Sprint 4 (15-18 days) |
 | Zapier/Make Integration | Needs stable dashboard + 50+ beta users | Sprint 5 (5 days) |
 | Shopify App | Needs App Store approval process (2-4 weeks) | Sprint 5-6 (10 days) |
-| Wave Accounting Integration | Needs partnership + API access | Sprint 6 (5 days) |
+| Wave Accounting Integration | Needs partnership integration access | Sprint 6 (5 days) |
 | Google My Business API | Needs GMB API approval | Sprint 6 (5 days) |
 
 ---
@@ -363,9 +363,9 @@ brand-guard-weekly-report   → Monday 9:00 AM EST → generate threat digest em
 | Vendor Phone Verification | phone-verify.ts + phone_scorer.py + Numverify/CallControl/FTC | Vendor context layer + business phone patterns |
 | Website Lookalike Detector | website-deep-scan.ts + Supabase queue | Typosquatting generator + WHOIS + batch scanning |
 | Cross-Channel Correlation | scammer-database.csv + cross-platform identity matching | Correlation engine + threat profile schema |
-| Reputation Dashboard | REST API + Supabase + all scan results | Dashboard UI + takedown templates + email alerts |
+| Reputation Dashboard | Internal app routes + Supabase + all scan results | Dashboard UI + takedown templates + email alerts |
 | Email Spoofing Monitor | Domain analysis (partial) | DMARC/SPF/DKIM parser + email monitoring (NEW) |
-| Integration Ecosystem | REST API + Stripe | Zapier/Shopify connectors (NEW, post-launch) |
+| Integration Ecosystem | Stripe + future integration connectors | Zapier/Shopify connectors (NEW, post-launch) |
 
 ---
 

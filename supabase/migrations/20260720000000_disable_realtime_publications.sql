@@ -13,7 +13,25 @@
 -- project from the pause/restart.
 -- ============================================================
 
-ALTER PUBLICATION supabase_realtime DROP TABLE brand_guard_alerts;
-ALTER PUBLICATION supabase_realtime DROP TABLE brand_guard_subscriptions;
-ALTER PUBLICATION supabase_realtime DROP TABLE scan_jobs;
-ALTER PUBLICATION supabase_realtime DROP TABLE admin_notifications;
+DO $$
+DECLARE
+  publication_table TEXT;
+BEGIN
+  FOREACH publication_table IN ARRAY ARRAY[
+    'brand_guard_alerts',
+    'brand_guard_subscriptions',
+    'scan_jobs',
+    'admin_notifications'
+  ]
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = publication_table
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime DROP TABLE %I', publication_table);
+    END IF;
+  END LOOP;
+END $$;

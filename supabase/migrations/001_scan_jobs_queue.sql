@@ -80,6 +80,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION requeue_timed_out_jobs()
 RETURNS void AS $$
+BEGIN
   UPDATE scan_jobs
   SET
     status      = 'pending',
@@ -90,6 +91,7 @@ RETURNS void AS $$
   WHERE status IN ('claimed', 'running')
     AND updated_at < NOW() - INTERVAL '3 minutes'
     AND retry_count < max_retries;
+END;
 $$ LANGUAGE plpgsql;
 
 -- ─── 6. Enable Row Level Security (open read for anon, write for service role) ─

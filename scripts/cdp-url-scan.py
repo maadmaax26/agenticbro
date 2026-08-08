@@ -36,7 +36,7 @@ import hashlib
 import re
 import argparse
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 try:
     import websockets
@@ -95,6 +95,10 @@ SUSPICIOUS_DOMAINS = [
     "transfer.sh", "0x0.st", "file.io",
     "webhook.site", "pipedream.net", "requestbin",
 ]
+
+AFFILIATE_HASH_PARAMS = {"act", "pid", "uid", "vid", "ofid", "lid", "cid", "sid", "clickid", "subid", "s1", "s2", "s3"}
+FREE_SUBDOMAIN_SUFFIXES = ("eu.org",)
+REDIRECT_HOP_PREFIXES = ("hmd-", "clk-", "click-", "go-", "trk-", "track-", "rdr-", "redir-")
 
 # ── Threat Patterns ──────────────────────────────────────────────────────────
 # Scoring model: detect MALICIOUS behavior, not normal web patterns
@@ -409,6 +413,100 @@ def analyze_network_requests(requests: list, base_domain: str) -> list:
     return findings
 
 
+def analyze_url_structure(scan_url: str) -> list:
+    """Detect disposable redirect and affiliate-tracking URL patterns."""
+    findings = []
+    parsed = urlparse(scan_url)
+    host = (parsed.hostname or "").lower()
+    labels = host.split(".") if host else []
+    fragment_params = parse_qs(parsed.fragment, keep_blank_values=True)
+    query_params = parse_qs(parsed.query, keep_blank_values=True)
+    all_param_names = set(fragment_params) | set(query_params)
+    affiliate_params = sorted(all_param_names & AFFILIATE_HASH_PARAMS)
+
+    free_subdomain = any(host.endswith(f".{suffix}") for suffix in FREE_SUBDOMAIN_SUFFIXES)
+    redirect_hop = bool(labels and labels[0].startswith(REDIRECT_HOP_PREFIXES))
+    hash_affiliate_stack = len(set(fragment_params) & AFFILIATE_HASH_PARAMS) >= 4
+    affiliate_stack = len(affiliate_params) >= 5
+
+    if free_subdomain:
+        findings.append({
+            "flag": "free_subdomain_redirect_abuse",
+            "weight": 25,
+            "context": "always_suspicious",
+            "description": f"Free subdomain infrastructure used for redirect/tracking: {host}",
+        })
+
+    if redirect_hop:
+        findings.append({
+            "flag": "automated_redirect_hop_subdomain",
+            "weight": 25,
+            "context": "always_suspicious",
+            "description": f"Automated redirect-hop subdomain naming pattern: {labels[0]}",
+        })
+
+    if hash_affiliate_stack:
+        findings.append({
+            "flag": "hash_fragment_affiliate_evasion",
+            "weight": 30,
+            "context": "always_suspicious",
+            "description": "Affiliate tracking parameters hidden in URL fragment, invisible to normal server-side logging",
+            "parameters": sorted(set(fragment_params) & AFFILIATE_HASH_PARAMS),
+        })
+
+    if affiliate_stack:
+        findings.append({
+            "flag": "affiliate_tracking_stack",
+            "weight": 25,
+            "context": "always_suspicious",
+            "description": "Full affiliate/CPA tracking parameter stack detected",
+            "parameters": affiliate_params,
+        })
+
+    if free_subdomain and redirect_hop and hash_affiliate_stack and affiliate_stack:
+        findings.append({
+            "flag": "known_affiliate_scam_redirect_pattern",
+            "weight": 95,
+            "context": "always_suspicious",
+            "description": "Known threat pattern: disposable affiliate scam redirect using free subdomain, redirect-hop naming, and hash-fragment tracking evasion",
+        })
+
+    return findings
+
+
+def apply_url_structure_verdict(result: dict, findings: list) -> dict:
+    if not findings:
+        return result
+
+    flag_scores = {}
+    for finding in findings:
+        flag_scores[finding["flag"]] = {
+            "weight": finding["weight"],
+            "count": 1,
+            "description": finding["description"],
+            "context": finding.get("context", "always_suspicious"),
+            "is_library": False,
+            "is_first_party": True,
+        }
+        if finding.get("parameters"):
+            flag_scores[finding["flag"]]["parameters"] = finding.get("parameters")
+
+    risk_score = min(100, sum(min(f["weight"], 95) for f in findings))
+    if any(f["flag"] == "known_affiliate_scam_redirect_pattern" for f in findings):
+        risk_score = 95
+        result["verdict"] = "🛑 KNOWN THREAT — Affiliate scam redirect. Disposable tracking hop using hash-fragment evasion."
+        result["risk_level"] = "CRITICAL"
+    else:
+        result["verdict"] = "⚠️ HIGH RISK — Suspicious redirect or affiliate tracking URL structure detected."
+        result["risk_level"] = "HIGH RISK" if risk_score >= 40 else "CAUTION"
+
+    result["risk_score"] = max(int(result.get("risk_score", 0) or 0), risk_score)
+    result["findings"] = [{"flag": k, **v} for k, v in flag_scores.items()]
+    result["finding_count"] = len(flag_scores)
+    result.setdefault("all_findings_raw", findings)
+    return result
+
+
 def analyze_console_and_errors(session: CDPSession) -> list:
     """Check console messages and errors for WASM/malware indicators."""
     findings = []
@@ -545,6 +643,7 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         "risk_level": "UNKNOWN",
         "verdict": "",
     }
+    initial_url_findings = analyze_url_structure(url)
 
     # Check CDP
     try:
@@ -555,6 +654,7 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         result["error"] = f"Chrome CDP not available on port {CDP_PORT}: {e}"
         result["risk_level"] = "ERROR"
         result["verdict"] = "Scanner unavailable — Chrome CDP not running"
+        apply_url_structure_verdict(result, initial_url_findings)
         return result
 
     ws_url, tab_id = get_or_create_tab()
@@ -586,6 +686,9 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
                 findings = analyze_script_source(source, script_url, base_domain)
                 script_findings.extend(findings)
 
+        # Analyze URL structure
+        url_findings = initial_url_findings
+
         # Analyze network
         network_findings = analyze_network_requests(session.network_requests, base_domain)
 
@@ -596,7 +699,7 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         dom_findings = await analyze_dom(session)
 
         # Combine all findings
-        all_findings = script_findings + network_findings + console_findings + dom_findings
+        all_findings = url_findings + script_findings + network_findings + console_findings + dom_findings
 
         # Aggregate by flag — use MAX weight per flag (not sum), then cap
         flag_scores = {}
@@ -612,6 +715,8 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
                     "is_library": f.get("is_library", False),
                     "is_first_party": f.get("is_first_party", False),
                 }
+                if f.get("parameters"):
+                    flag_scores[flag]["parameters"] = f.get("parameters")
             # Use MAX weight across occurrences, not sum (avoid stacking)
             flag_scores[flag]["weight"] = max(flag_scores[flag]["weight"], weight)
             flag_scores[flag]["count"] += 1
@@ -661,11 +766,16 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
                 dom_score += data["weight"]
 
         risk_score = min(int(tier1_score + tier2_score + tier3_score + network_score + dom_score), 100)
+        if "known_affiliate_scam_redirect_pattern" in flag_scores:
+            risk_score = 95
 
         # Determine verdict
         if risk_score >= 70:
             risk_level = "CRITICAL"
-            verdict = "🛑 KNOWN THREAT — Active malicious JavaScript detected. Do not interact with this site."
+            if "known_affiliate_scam_redirect_pattern" in flag_scores:
+                verdict = "🛑 KNOWN THREAT — Affiliate scam redirect. Disposable tracking hop using hash-fragment evasion."
+            else:
+                verdict = "🛑 KNOWN THREAT — Active malicious JavaScript detected. Do not interact with this site."
         elif risk_score >= 40:
             risk_level = "HIGH RISK"
             verdict = "⚠️ HIGH RISK — Suspicious JavaScript activity detected. Exercise extreme caution."
@@ -709,6 +819,7 @@ async def scan_url(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         result["error"] = str(e)
         result["risk_level"] = "ERROR"
         result["verdict"] = f"Scan error: {e}"
+        apply_url_structure_verdict(result, initial_url_findings)
     finally:
         await session.close()
         if tab_id:

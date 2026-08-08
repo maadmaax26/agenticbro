@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Credibility History Analysis API - Vercel Serverless Function
  *

@@ -17,13 +17,14 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { ContactUs } from '../components/ContactUs';
+import { BRAND_GUARD_PLANS, type BrandGuardPlanId } from '../lib/brandGuardPlanConfig';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Plan Data
 // ════════════════════════════════════════════════════════════════════════════════
 
 interface PlanTier {
-  id: string;
+  id: BrandGuardPlanId;
   name: string;
   price: number;
   scans: number;
@@ -39,22 +40,8 @@ interface PlanTier {
   buttonHover: string;
 }
 
-const PLANS: PlanTier[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    scans: 25,
-    description: 'Try Brand Guard risk-free',
-    features: [
-      '25 brand scans included',
-      'Email spoof detection (SPF / DKIM / DMARC)',
-      'Social media impersonator scan',
-      'Lookalike domain discovery',
-      'Shopify & Etsy marketplace clone check',
-      'Brand health score (0–100)',
-      'Email alerts for new threats',
-    ],
+const PLAN_STYLES: Record<BrandGuardPlanId, Omit<PlanTier, 'id' | 'name' | 'price' | 'scans' | 'description' | 'features'>> = {
+  free: {
     color: 'text-gray-300',
     borderColor: 'border-gray-700',
     bgGlow: '',
@@ -62,22 +49,9 @@ const PLANS: PlanTier[] = [
     buttonBg: 'bg-gray-700 hover:bg-gray-600',
     buttonHover: '',
   },
-  {
-    id: 'guardian',
-    name: 'Guardian',
-    price: 29,
-    scans: 100,
-    description: 'For startups & small brands',
+  guardian: {
     highlight: true,
     badge: 'MOST POPULAR',
-    features: [
-      'Everything in Free, plus:',
-      '100 scans / month (resets monthly)',
-      'Continuous monitoring — 6-hour scan cycle',
-      'Regression alerts (DMARC changes, new lookalikes)',
-      'Impersonator takedown report templates',
-      'Priority email support',
-    ],
     color: 'text-blue-300',
     borderColor: 'border-blue-500/50',
     bgGlow: 'shadow-blue-900/30 shadow-2xl',
@@ -85,23 +59,7 @@ const PLANS: PlanTier[] = [
     buttonBg: 'bg-blue-600 hover:bg-blue-500',
     buttonHover: '',
   },
-  {
-    id: 'sentinel',
-    name: 'Sentinel',
-    price: 99,
-    scans: 300,
-    description: 'For growing protocols & brands',
-    features: [
-      'Everything in Guardian, plus:',
-      '300 scans / month (resets monthly)',
-      'Real-time monitoring — 15-minute scan cycle',
-      'Multi-brand support (up to 5 brands)',
-      'API access (programmatic scans & alerts)',
-      'DMCA takedown report generation',
-      'Shopify & Etsy takedown evidence',
-      'Threat correlation across platforms',
-      'Slack / webhook alert delivery',
-    ],
+  sentinel: {
     color: 'text-purple-300',
     borderColor: 'border-purple-500/50',
     bgGlow: 'shadow-purple-900/30 shadow-2xl',
@@ -109,23 +67,8 @@ const PLANS: PlanTier[] = [
     buttonBg: 'bg-purple-600 hover:bg-purple-500',
     buttonHover: '',
   },
-  {
-    id: 'fortress',
-    name: 'Fortress',
-    price: 299,
-    scans: -1,
-    description: 'Enterprise-grade brand protection',
-    features: [
-      'Everything in Sentinel, plus:',
-      'Unlimited scans',
-      '24/7 real-time monitoring',
-      'Multi-brand support (unlimited)',
-      'Custom reporting & SLA',
-      'Bulk takedown coordination',
-      'Shopify & Etsy clone-store monitoring',
-      'Phone / vendor verification scans',
-      'Executive threat briefings (weekly)',
-    ],
+<<<<<<< Updated upstream
+  fortress: {
     color: 'text-amber-300',
     borderColor: 'border-amber-500/50',
     bgGlow: 'shadow-amber-900/30 shadow-2xl',
@@ -133,7 +76,17 @@ const PLANS: PlanTier[] = [
     buttonBg: 'bg-amber-600 hover:bg-amber-500',
     buttonHover: '',
   },
-];
+};
+
+const PLANS: PlanTier[] = BRAND_GUARD_PLANS.map(plan => ({
+  id: plan.id,
+  name: plan.name,
+  price: plan.price,
+  scans: plan.scans,
+  description: plan.pricingDescription,
+  features: plan.features,
+  ...PLAN_STYLES[plan.id],
+}));
 
 // ════════════════════════════════════════════════════════════════════════════════
 // FAQ Data
@@ -216,6 +169,18 @@ const BRAND_GUARD_FIT_SIGNALS = [
 export function BrandGuardPricingPage() {
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const renderFeature = (feature: string) => {
+    if (feature !== 'Webhook Integrations') return feature;
+
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1.5" title="Send Brand Guard alerts to your existing automation, security, and business workflows in real time.">
+        <span>Webhook Integrations</span>
+        <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-normal text-cyan-200">
+          Live
+        </span>
+      </span>
+    );
+  };
 
   const handleGetStarted = (planId: string) => {
     // Navigate to brand-guard dashboard (login/signup will show)
@@ -602,7 +567,7 @@ export function BrandGuardPricingPage() {
                       <div key={idx} className="flex items-start gap-2 text-sm">
                         <span className="text-green-400 mt-0.5 shrink-0">✓</span>
                         <span className={feature.startsWith('Everything') ? 'text-gray-300 font-semibold' : 'text-gray-400'}>
-                          {feature}
+                          {renderFeature(feature)}
                         </span>
                       </div>
                     ))}
@@ -656,7 +621,7 @@ export function BrandGuardPricingPage() {
                   { feature: 'DMCA report generation', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
                   { feature: 'Bulk takedown coordination', free: '—', guardian: '—', sentinel: '—', fortress: '✓' },
                   { feature: 'Multi-brand support', free: '1 brand', guardian: '1 brand', sentinel: '5 brands', fortress: 'Unlimited' },
-                  { feature: 'API access', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
+                  { feature: 'Webhook Integrations', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
                   { feature: 'Slack / webhook alerts', free: '—', guardian: '—', sentinel: '✓', fortress: '✓' },
                   { feature: 'Executive threat briefings', free: '—', guardian: '—', sentinel: '—', fortress: 'Weekly' },
                   { feature: 'Support', free: 'Email', guardian: 'Priority email', sentinel: 'Priority email', fortress: 'Dedicated' },
@@ -737,8 +702,8 @@ export function BrandGuardPricingPage() {
             Agentic Bro
           </a>
           {' '}•{' '}
-          <a href="https://twitter.com/AgenticBro11" className="text-purple-400 hover:text-purple-300 transition-colors">
-            @AgenticBro11
+          <a href="https://twitter.com/brandguardAI" className="text-purple-400 hover:text-purple-300 transition-colors">
+            @brandguardAI
           </a>
           {' '}•{' '}
           <a href="https://t.me/Agenticbro1" className="text-cyan-400 hover:text-cyan-300 transition-colors">
@@ -746,6 +711,11 @@ export function BrandGuardPricingPage() {
           </a>
           {' '}•{' '}
           <ContactUs />
+        </p>
+        <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-gray-500">
+          <a href="/terms" className="text-cyan-400 hover:text-cyan-300 transition-colors">Terms of Service</a>
+          <a href="/privacy" className="text-cyan-400 hover:text-cyan-300 transition-colors">Privacy Policy</a>
+          <a href="/acceptable-use" className="text-cyan-400 hover:text-cyan-300 transition-colors">Acceptable Use Policy</a>
         </p>
       </footer>
     </div>

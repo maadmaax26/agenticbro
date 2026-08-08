@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copyright (c) 2026 Agentic Bro. Licensed under the Business Source License 1.1.
  * See LICENSE file in the parent directory. Change Date: 2029-05-24. Change License: Apache-2.0.

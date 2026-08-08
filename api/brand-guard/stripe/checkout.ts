@@ -17,6 +17,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import { BRAND_GUARD_LEGAL_VERSIONS, verifyLegalAcceptanceId } from '../../_lib/brand-guard-legal.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -37,7 +38,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY not configured');
     }
     stripeInstance = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20',
+      apiVersion: '2026-05-27.dahlia',
     });
   }
   return stripeInstance;
@@ -77,16 +78,16 @@ const PLANS: Record<string, PlanDefinition> = {
   guardian: {
     id: 'guardian',
     name: 'Guardian',
-    monthly_credits_included: 50,
+    monthly_credits_included: 100,
     brands_included: 3,
     scan_frequency: 'weekly',
     price_usd: 29,
     stripe_price_id: process.env.STRIPE_BG_GUARDIAN_PRICE_ID || 'price_bg_guardian',
-    description: '$29/month: 50 scans, 3 brands, weekly monitoring',
+    description: '$29/month: 100 scans, 3 brands, 6-hour monitoring',
     features: [
-      '50 scans per month included',
+      '100 scans per month included',
       '3 brands monitored',
-      'Weekly automated scans',
+      '6-hour automated monitoring',
       'Email alert notifications',
       'Dashboard access',
       'Priority support',
@@ -95,19 +96,20 @@ const PLANS: Record<string, PlanDefinition> = {
   sentinel: {
     id: 'sentinel',
     name: 'Sentinel',
-    monthly_credits_included: 200,
+    monthly_credits_included: 300,
     brands_included: 10,
-    scan_frequency: 'daily',
-    price_usd: 79,
+    scan_frequency: '15_minutes',
+    price_usd: 99,
     stripe_price_id: process.env.STRIPE_BG_SENTINEL_PRICE_ID || 'price_bg_sentinel',
-    description: '$79/month: 200 scans, 10 brands, daily monitoring',
+    description: '$99/month: 300 scans, 10 brands, 15-minute monitoring, webhook integrations',
     features: [
-      '200 scans per month included',
+      '300 scans per month included',
       '10 brands monitored',
-      'Daily automated scans',
+      '15-minute automated monitoring',
       'Email alert notifications',
       'Dashboard access',
       'Real-time monitoring',
+      'Webhook Integrations',
       'Priority support',
     ],
   },
@@ -117,9 +119,9 @@ const PLANS: Record<string, PlanDefinition> = {
     monthly_credits_included: -1, // Unlimited
     brands_included: -1, // Unlimited
     scan_frequency: 'daily',
-    price_usd: 199,
+    price_usd: 299,
     stripe_price_id: process.env.STRIPE_BG_FORTRESS_PRICE_ID || 'price_bg_fortress',
-    description: '$199/month: Unlimited scans, unlimited brands, real-time monitoring',
+    description: '$299/month: Unlimited scans, unlimited brands, real-time monitoring',
     features: [
       'Unlimited scans',
       'Unlimited brands',
@@ -127,6 +129,7 @@ const PLANS: Record<string, PlanDefinition> = {
       'Email alert notifications',
       'Dashboard access',
       'Real-time monitoring',
+      'Webhook Integrations',
       'Priority support',
     ],
   },
@@ -168,10 +171,6 @@ async function getOrCreateStripeCustomer(
       plan_id: 'free',
       status: 'active',
       stripe_customer_id: customer.id,
-    })
-    .insert({
-      owner_id: userId,
-      stripe_customer_id: customer.id,
     });
 
   return { customer_id: customer.id, created: true };
@@ -182,7 +181,7 @@ async function createStripeCheckoutSession(
   price_id: string,
   success_url: string,
   cancel_url: string,
-  promo_code?: string,
+  promotion_code_id?: string,
   trial_days?: number
 ): Promise<{ session_id: string; url: string }> {
   const stripe = getStripe();
@@ -198,8 +197,8 @@ async function createStripeCheckoutSession(
     ],
     success_url: success_url,
     cancel_url: cancel_url,
-    payment_method_types: ['card', 'google_pay', 'apple_pay'],
-    allow_promotion_codes: !!promo_code,
+    payment_method_types: ['card'],
+    allow_promotion_codes: !promotion_code_id,
     metadata: {
       plan_id: price_id,
       source: 'brand_guard',
@@ -223,8 +222,8 @@ async function createStripeCheckoutSession(
     },
   };
 
-  if (promo_code) {
-    sessionParams.promotion_code = promo_code;
+  if (promotion_code_id) {
+    sessionParams.discounts = [{ promotion_code: promotion_code_id }];
   }
 
   const session = await stripe.checkout.sessions.create(sessionParams);
@@ -237,9 +236,8 @@ async function createStripeCheckoutSession(
 
 async function validatePromoCode(
   stripe: Stripe,
-  promoCode: string,
-  customer_email: string
-): Promise<boolean> {
+  promoCode: string
+): Promise<string | null> {
   try {
     // Verify the promo code exists and is active
     const promo = await stripe.promotionCodes.list({
@@ -248,9 +246,9 @@ async function validatePromoCode(
       limit: 1,
     });
 
-    return promo.data.length > 0;
+    return promo.data[0]?.id || null;
   } catch (error) {
-    return false;
+    return null;
   }
 }
 
@@ -274,7 +272,7 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse): Promise<
     return;
   }
 
-  const { plan_id, brand_monitor_id, promo_code, redirect_url, trial_days } = body;
+  const { plan_id, brand_monitor_id, promo_code, redirect_url, trial_days, legal_acceptance_id } = body;
 
   // Validate plan_id
   if (!plan_id || !PLANS[plan_id]) {
@@ -315,14 +313,31 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse): Promise<
 
   const email = userData.email;
 
+  try {
+    const accepted = await verifyLegalAcceptanceId(supabase, userId, typeof legal_acceptance_id === 'string' ? legal_acceptance_id : null);
+    if (!accepted) {
+      res.status(428).json({
+        error: 'Legal acceptance required before checkout',
+        code: 'LEGAL_ACCEPTANCE_REQUIRED',
+        required_versions: BRAND_GUARD_LEGAL_VERSIONS,
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Legal acceptance verification failed' });
+    return;
+  }
+
   // Validate promo code if provided
+  let promotionCodeId: string | undefined;
   if (promo_code) {
     const stripe = getStripe();
-    const isValid = await validatePromoCode(stripe, promo_code, email);
-    if (!isValid) {
+    const validPromotionCodeId = await validatePromoCode(stripe, promo_code);
+    if (!validPromotionCodeId) {
       res.status(400).json({ error: 'Invalid or inactive promo code' });
       return;
     }
+    promotionCodeId = validPromotionCodeId;
   }
 
   try {
@@ -335,7 +350,7 @@ async function handleCheckout(req: VercelRequest, res: VercelResponse): Promise<
       plan.stripe_price_id,
       redirect_url || `${process.env.NEXT_PUBLIC_APP_URL}/brand-guard?payment=success`,
       `${process.env.NEXT_PUBLIC_APP_URL}/brand-guard`,
-      promo_code,
+      promotionCodeId,
       effectiveTrialDays
     );
 

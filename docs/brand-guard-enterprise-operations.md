@@ -8,12 +8,14 @@ Protected customer endpoints use `requireBrandGuardEntitlement` from `api/_lib/b
 |---|---|
 | Brand management, dashboard, scans | Free |
 | Takedown templates | Guardian |
-| Developer API, Slack/webhooks, automatic takedowns, visual fingerprints, custom reports | Sentinel |
+| Slack/webhooks, automatic takedowns, visual fingerprints, custom reports | Sentinel |
 | SLA reports, weekly briefings, dedicated account manager | Fortress |
 
 Brand limits are Free 1, Guardian 3, Sentinel 10, and Fortress unlimited.
 
-## Slack And Webhooks
+## Integrations & Automation
+
+Brand Guard currently supports Slack and signed webhook delivery. Customer-facing REST API access and programmatic scan submission are not live subscription features.
 
 Create an endpoint with an authenticated customer session:
 

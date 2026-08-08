@@ -27,7 +27,7 @@ Merge fields: `{{company}}`, `{{domain}}`, `{{contact_first_name}}`, `{{finding_
 ```
 Hi {{contact_first_name}},
 
-I'm {{sender_name}}, {{sender_title}} at Brand Guard
+I'm {{sender_name}}, {{sender_title}} of Agentic Insights LLC. We created Brand Guard, part of the AgenticBro trust ecosystem
 (agenticbro.app/brand-guard — feel free to verify us before reading on).
 
 While reviewing public records, we noticed something about {{company}}:
@@ -44,11 +44,11 @@ evidence records, and takedown workflow support.
 No card, no commitment. You'll see what continuous monitoring finds
 before deciding on a paid plan.
 
-Start your 30-day pilot here: {{trial_url}}
+Start your 30-day pilot here (create your account with email + password to onboard your brand): {{trial_url}}
 
 Best,
 {{sender_name}}
-{{sender_title}}, Brand Guard
+{{sender_title}}, Agentic Insights LLC — Brand Guard (AgenticBro trust ecosystem)
 ```
 
 **Footer:**
@@ -76,7 +76,7 @@ found via public records:
 - {{finding_2}}
 Public source: {{evidence_url}}
 
-We're Brand Guard (agenticbro.app/brand-guard), a brand-protection service.
+We're Agentic Insights LLC — we created Brand Guard (agenticbro.app/brand-guard), a brand-protection service that's part of the AgenticBro trust ecosystem.
 We're opening a limited 30-day pilot for {{company}} — a $299 value on us.
 Fortress monitors for social impersonators, lookalike domains, fake stores,
 spoofed email posture, marketplace clones, alerts, evidence records, and
@@ -86,7 +86,7 @@ No card, no commitment. Start the pilot here: {{trial_url}}
 
 Happy to provide details to a named contact if helpful.
 
-{{sender_name}} · {{sender_title}} · Brand Guard
+{{sender_name}} · {{sender_title}}, Agentic Insights LLC · Brand Guard (AgenticBro trust ecosystem)
 {{company_address}} · opt out: {{optout_url}}
 ```
 
@@ -99,7 +99,7 @@ Sorry you're dealing with this — impersonation is exhausting to chase.
 We're running a 30-day Brand Guard pilot (normally $299, free right now)
 that monitors lookalike domains, social impersonators, and email spoofing
 in one place. No card needed: {{trial_url}}
-We're Brand Guard, agenticbro.app/brand-guard. Happy to point you to
+We're Agentic Insights LLC — we created Brand Guard (agenticbro.app/brand-guard), part of the AgenticBro trust ecosystem. Happy to point you to
 takedown steps either way.
 ```
 
@@ -109,7 +109,7 @@ takedown steps either way.
 
 **Connection note (≤ 300 chars):**
 ```
-Hi {{contact_first_name}} — I'm {{sender_name}}, founder of Brand Guard. We
+Hi {{contact_first_name}} — I'm {{sender_name}}, founder of Agentic Insights LLC — we created Brand Guard (part of the AgenticBro trust ecosystem). We
 flag brand impersonation for companies like {{company}} and noticed something
 public worth a heads-up. We're running a free 30-day pilot — happy to share
 details. (agenticbro.app/brand-guard)
@@ -139,7 +139,7 @@ Subject: 30-day Brand Guard trial for Northwind Coffee Co.
 
 Hi Dana,
 
-I'm Earl Finney, Founder at Brand Guard (agenticbro.app/brand-guard —
+I'm Earl Finney, Founder of Agentic Insights LLC — we created Brand Guard (agenticbro.app/brand-guard —
 feel free to verify us before reading on).
 
 While reviewing public records, we noticed something about Northwind Coffee Co.:
@@ -158,11 +158,11 @@ evidence records, and takedown workflow support.
 No card, no commitment. You'll see what continuous monitoring finds
 before deciding on a paid plan.
 
-Start your 30-day pilot here: https://agenticbro.app/brand-guard
+Start your 30-day pilot here (create your account with email + password to onboard your brand): https://agenticbro.app/brand-guard?request_pilot=1
 
 Best,
 Earl Finney
-Founder, Brand Guard
+Founder, Agentic Insights LLC — Brand Guard (AgenticBro trust ecosystem)
 —
 Brand Guard · Agentic Insights LLC · 155 Willowbrook Blvd, Ste 110 #8469, Wayne, NJ 07470
 You received this one-time note because Northwind Coffee Co. appeared in public

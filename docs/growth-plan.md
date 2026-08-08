@@ -4,7 +4,7 @@ Welcome to the Agentic Bro community! We're building real tools that protect cry
 
 ## What is Agentic Bro?
 
-AI-powered scam detection for Solana. Scans X, Instagram, TikTok, Facebook, Telegram, phone numbers, and websites. 90-point unified risk scoring with transparent red flags. 278+ confirmed scammers in the database, growing daily. Live at agenticbro.app — first 10 scans free every day.
+AI-powered scam detection for Solana. Scans X, Instagram, TikTok, Facebook, Telegram, phone numbers, and websites. 90-point unified risk scoring with transparent red flags. 278+ confirmed scammers in the database, growing daily. Live at agenticbro.app — first 5 scans free every day.
 
 ## Why $AGNTCBRO Has Real Value
 
@@ -22,7 +22,7 @@ B2B service monitoring businesses for impersonation and brand abuse across socia
 
 ## What Holders Get
 
-- First 10 scans free/day for everyone
+- First 5 scans free/day for everyone
 - $100+ holders → 100 scans/month
 - Community contests, education, and scam-prevention resources
 - Exposure to ecosystem growth as adoption scales
@@ -55,7 +55,7 @@ We're building AI-powered scam detection for Solana. Real tools, real protection
 **Why hold $AGNTCBRO?**
 • Token is backed by real product usage — not a meme
 • $100+ holders get **100 scans/month** at agenticbro.app
-• First 10 scans free for everyone
+• First 5 scans free every day for everyone
 • **Brand Guard** (B2B impersonation monitoring) generates revenue from businesses
 • **50% of Brand Guard revenue → buybacks + community treasury**
 

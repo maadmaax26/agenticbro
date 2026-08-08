@@ -10,10 +10,11 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
+import { BRAND_GUARD_PLANS, type BrandGuardPlanId } from '../../lib/brandGuardPlanConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface Plan {
-  id: string;
+  id: BrandGuardPlanId;
   name: string;
   price: number;
   scans: number;
@@ -28,85 +29,32 @@ export interface SubscriptionPlansProps {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const PLANS: Plan[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    scans: 25,
-    features: [
-      '25 brand scans included',
-      'Real-time monitoring',
-      'Email alerts',
-      'Brand health score',
-    ],
-    description: 'Perfect for individuals',
-  },
-  {
-    id: 'guardian',
-    name: 'Guardian',
-    price: 29,
-    scans: 100,
-    features: [
-      '100 brand scans/month',
-      'Priority monitoring',
-      'Advanced threat detection',
-      'Email alerts',
-      'Brand health score',
-    ],
-    description: 'Best for small businesses',
-    highlight: false,
-  },
-  {
-    id: 'sentinel',
-    name: 'Sentinel',
-    price: 99,
-    scans: 300,
-    features: [
-      '300 brand scans/month',
-      'Real-time monitoring',
-      'Advanced threat detection',
-      'Priority support',
-      'API access',
-      'Brand health score',
-    ],
-    description: 'Recommended for enterprises',
-    highlight: true,
-  },
-  {
-    id: 'fortress',
-    name: 'Fortress',
-    price: 299,
-    scans: -1, // unlimited
-    features: [
-      'Unlimited brand scans',
-      '24/7 real-time monitoring',
-      'Advanced threat detection',
-      'Priority support',
-      'API access',
-      'Custom reporting',
-    ],
-    description: 'Ultimate protection',
-    highlight: false,
-  },
-];
+const PLANS: Plan[] = BRAND_GUARD_PLANS.map(plan => ({
+  id: plan.id,
+  name: plan.name,
+  price: plan.price,
+  scans: plan.scans,
+  features: plan.features,
+  description: plan.subscriptionDescription,
+  highlight: plan.id === 'sentinel',
+}));
 
 // ─── Plan card colors ────────────────────────────────────────────────────────
-const PLAN_COLORS = {
+const PLAN_COLORS: Record<BrandGuardPlanId, string> = {
   free: 'border-gray-600 bg-gray-900/30 hover:bg-gray-900/50',
   guardian: 'border-blue-500 bg-blue-900/20 hover:bg-blue-900/30 shadow-blue-900/20',
   sentinel: 'border-purple-500 bg-purple-900/20 hover:bg-purple-900/30 shadow-purple-900/20',
   fortress: 'border-amber-500 bg-amber-900/20 hover:bg-amber-900/30 shadow-amber-900/20',
 };
 
-const PLAN_HEADER_COLORS = {
+const PLAN_HEADER_COLORS: Record<BrandGuardPlanId, string> = {
   free: 'bg-gray-600/20 text-gray-300',
   guardian: 'bg-blue-600/20 text-blue-300',
   sentinel: 'bg-purple-600/20 text-purple-300',
   fortress: 'bg-amber-600/20 text-amber-300',
 };
 
-const PLAN_ACCENT = {
+const PLAN_ACCENT: Record<BrandGuardPlanId, string> = {
   free: 'text-gray-400',
   guardian: 'text-blue-400',
   sentinel: 'text-purple-400',
@@ -118,6 +66,18 @@ export function SubscriptionPlans({ currentPlanId, onSelectPlan }: SubscriptionP
   const { walletAddress, email } = useAuth();
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const renderFeature = (feature: string) => {
+    if (feature !== 'Webhook Integrations') return feature;
+
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1.5" title="Send Brand Guard alerts to your existing automation, security, and business workflows in real time.">
+        <span>Webhook Integrations</span>
+        <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-normal text-cyan-200">
+          Live
+        </span>
+      </span>
+    );
+  };
 
   const handleSelectPlan = async (planId: string) => {
     if (planId === 'free') {
@@ -234,7 +194,7 @@ export function SubscriptionPlans({ currentPlanId, onSelectPlan }: SubscriptionP
                 {plan.features.map((feature, idx) => (
                   <div key={idx} className="flex items-start gap-2 text-sm text-gray-300">
                     <span className="text-green-400 mt-0.5">✓</span>
-                    <span>{feature}</span>
+                    <span>{renderFeature(feature)}</span>
                   </div>
                 ))}
               </div>

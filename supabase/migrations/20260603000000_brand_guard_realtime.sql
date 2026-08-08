@@ -11,7 +11,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE brand_guard_subscriptions;
 -- Enable RLS policies for service role inserts on brand_guard_alerts
 -- (service_role bypasses RLS, but let's ensure anon/auth'd users can also
 --  read their own alerts for the dashboard)
-CREATE POLICY IF NOT EXISTS "Users can view own alerts via brand_monitor"
+DROP POLICY IF EXISTS "Users can view own alerts via brand_monitor" ON brand_guard_alerts;
+CREATE POLICY "Users can view own alerts via brand_monitor"
   ON brand_guard_alerts
   FOR SELECT
   USING (
@@ -21,7 +22,8 @@ CREATE POLICY IF NOT EXISTS "Users can view own alerts via brand_monitor"
   );
 
 -- Allow authenticated users to mark their own alerts as read
-CREATE POLICY IF NOT EXISTS "Users can update own alerts"
+DROP POLICY IF EXISTS "Users can update own alerts" ON brand_guard_alerts;
+CREATE POLICY "Users can update own alerts"
   ON brand_guard_alerts
   FOR UPDATE
   USING (

@@ -71,15 +71,49 @@ def refresh_gmail_token():
     return token["token"]
 
 
+def _body_to_html(body):
+    """Turn the plain-text body into safe HTML with real <a> anchors, so Gmail's
+    auto-linker never mangles trailing URLs or swallows the footer separator."""
+    import html as _html, re as _re
+    url_re = _re.compile(r"(https?://[^\s<>()]+)")
+    email_re = _re.compile(r"([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})")
+    out_lines = []
+    for line in body.split("\n"):
+        esc = _html.escape(line)
+        esc = url_re.sub(lambda m: f'<a href="{m.group(1)}">{m.group(1).replace("https://","").replace("http://","")}</a>', esc)
+        esc = email_re.sub(lambda m: m.group(1) if "href=" in esc[:m.start()] else f'<a href="mailto:{m.group(1)}">{m.group(1)}</a>', esc)
+        out_lines.append(esc if esc.strip() else "")
+    inner = "<br>\n".join(out_lines)
+    return (f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+            f'color:#222;line-height:1.5">{inner}</div>')
+
+
 def create_gmail_draft(access_token, to_email, subject, body):
-    """Create a Gmail draft (NEVER sends). Returns draft ID or None."""
+    """Create a Gmail draft (NEVER sends). Returns draft ID or None.
+
+    Sends multipart/alternative: a text/plain part plus a text/html part with real
+    anchors, so links render cleanly in Gmail instead of being auto-linkified
+    (which was wrapping URLs in google.com/url redirects and swallowing the footer)."""
+    html_body = _body_to_html(body)
+    boundary = "bg_alt_boundary_2026"
     raw_email = (
         f"From: efinney@brandguardhq.com\r\n"
         f"To: {to_email}\r\n"
         f"Subject: {subject}\r\n"
+        f"MIME-Version: 1.0\r\n"
+        f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
+        f"\r\n"
+        f"--{boundary}\r\n"
         f"Content-Type: text/plain; charset=utf-8\r\n"
         f"\r\n"
         f"{body}\r\n"
+        f"\r\n"
+        f"--{boundary}\r\n"
+        f"Content-Type: text/html; charset=utf-8\r\n"
+        f"\r\n"
+        f"{html_body}\r\n"
+        f"\r\n"
+        f"--{boundary}--\r\n"
     )
     encoded = base64.urlsafe_b64encode(raw_email.encode("utf-8")).decode("utf-8")
 

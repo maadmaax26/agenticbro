@@ -1,132 +1,85 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle,
+  BrainCircuit,
   BriefcaseBusiness,
   Building2,
   CheckCircle2,
   CircleUserRound,
-  Fingerprint,
+  DatabaseZap,
+  ExternalLink,
+  FileText,
   Globe2,
-  Mail,
-  MessageSquareText,
+  Landmark,
+  Linkedin,
+  MailCheck,
   Network,
-  PhoneCall,
   Radar,
   ShieldCheck,
+  Sparkles,
   Workflow,
 } from 'lucide-react'
 
-const ATTACK_SURFACES = [
+const LINKEDIN_PROFILE_URL = 'https://www.linkedin.com/in/earl-finney-60259a4'
+const LINKEDIN_COMPANY_URL = 'https://www.linkedin.com/company/agentic-insights-llc/'
+
+const AGENTICBRO_CAPABILITIES = [
+  'Website risk analysis',
+  'Brand reputation analysis',
+  'Wallet protection',
+  'Token verification',
+  'Phone fraud detection',
+  'Social identity analysis',
+  'Employer trust analysis',
+  'Continuous monitoring',
+]
+
+const BRAND_GUARD_CAPABILITIES = [
+  'Brand impersonation',
+  'Lookalike domains',
+  'Certificate Transparency discoveries',
+  'Email authentication weaknesses (SPF, DKIM, DMARC)',
+  'Marketplace abuse',
+  'Social impersonation',
+  'Vendor fraud',
+  'Reputation threats',
+]
+
+const TECHNOLOGY_POINTS = [
   {
-    icon: MessageSquareText,
-    title: 'Social media',
+    icon: BrainCircuit,
+    title: 'Autonomous AI agents',
     description:
-      'Fake profiles, impersonator accounts, fraudulent support pages, suspicious engagement, fake communities, and coordinated inauthentic behavior.',
-  },
-  {
-    icon: PhoneCall,
-    title: 'Phones and messaging',
-    description:
-      'Fraudulent calls, high-pressure texts, fake recruiters, romance scams, vendor payment changes, and suspicious phone-number patterns.',
-  },
-  {
-    icon: Globe2,
-    title: 'Websites and domains',
-    description:
-      'Phishing pages, copied storefronts, lookalike domains, spoofed landing pages, wallet-drainer sites, and suspicious DNS or certificate signals.',
-  },
-  {
-    icon: Mail,
-    title: 'Email',
-    description:
-      'Spoofable domains, weak SPF/DKIM/DMARC posture, fake invoices, executive impersonation, customer support fraud, and business email compromise signals.',
+      'OpenClaw agents coordinate investigations, evidence review, and response workflows across monitored trust surfaces.',
   },
   {
     icon: Network,
-    title: 'Web3 and payments',
+    title: 'Hybrid AI reasoning',
     description:
-      'Token impersonation, wallet-drain attempts, risky contracts, suspicious wallet behavior, payment redirection, and transaction-context risk.',
-  },
-]
-
-const PROBLEM_POINTS = [
-  'Consumers are asked to trust profiles, phone numbers, websites, job offers, sellers, wallets, and payment requests with little context.',
-  'Businesses are exposed when attackers clone their identity, spoof communications, impersonate staff, or redirect customers and vendors.',
-  'Single-surface tools miss campaigns that move between social media, phone networks, domains, email, marketplaces, and blockchain rails.',
-  'Platform response times can be too slow for scams that appear, convert victims, and disappear within days.',
-]
-
-const CAPABILITIES = [
-  {
-    icon: Fingerprint,
-    title: 'Profile and identity verification',
-    description:
-      'Analyze public profiles, handles, engagement behavior, and scam indicators across major social platforms before a user trusts the account.',
-  },
-  {
-    icon: PhoneCall,
-    title: 'Phone, job, and vendor risk signals',
-    description:
-      'Check phone numbers, vendor claims, job offers, invoices, and payment redirection patterns for consumer and business fraud risk.',
-  },
-  {
-    icon: Globe2,
-    title: 'Website and domain intelligence',
-    description:
-      'Scan websites, lookalike domains, spoofing controls, and phishing indicators that attackers use to intercept trust and payments.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Brand Guard monitoring',
-    description:
-      'Monitor for impersonator accounts, email spoofing exposure, fake storefronts, marketplace clones, suspicious domains, and vendor fraud.',
-  },
-  {
-    icon: Network,
-    title: 'Payment and Web3 protection',
-    description:
-      'Connect identity evidence with wallet, token, contract, transaction, and payment-context signals before users act.',
+      'Locally hosted large language models are combined with cloud AI reasoning to balance performance, privacy, and operating cost.',
   },
   {
     icon: Workflow,
-    title: 'Actionable response workflows',
+    title: 'Queue-based orchestration',
     description:
-      'Turn findings into alerts, evidence records, takedown drafts, trust scores, and plain-English reports for operators and customers.',
-  },
-]
-
-const AUDIENCES = [
-  {
-    icon: CircleUserRound,
-    title: 'For consumers',
-    description:
-      'AgenticBro helps people evaluate whether an account, phone number, website, employer, token, wallet interaction, or payment request looks trustworthy before they engage.',
-    examples: ['Profile checks', 'Phone scam signals', 'Website risk', 'Employer trust', 'Wallet safety'],
+      'Durable queues and workers support continuous monitoring, scheduled scans, and repeatable investigation pipelines.',
   },
   {
-    icon: BriefcaseBusiness,
-    title: 'For businesses',
+    icon: DatabaseZap,
+    title: 'Multi-source intelligence',
     description:
-      'AgenticBro helps companies protect reputation, customers, payment flows, and partner relationships from impersonation and social engineering.',
-    examples: ['Brand Guard', 'Vendor fraud review', 'Email spoofing checks', 'Domain monitoring', 'Takedown evidence'],
+      'Signals from intelligence providers, behavioral models, infrastructure data, and community reports are correlated into explainable risk scores.',
   },
 ]
 
-const BRAND_GUARD_DETAILS = [
-  'Social impersonator discovery across X, Instagram, TikTok, Facebook, Telegram, and LinkedIn',
-  'Email spoofing posture checks for SPF, DKIM, and DMARC weaknesses',
-  'Lookalike domain and typosquatting discovery using public certificate and DNS signals',
-  'Marketplace, fake listing, support account, and vendor impersonation review',
-  'Continuous monitoring schedules with alerts when new threats appear',
-  'Takedown report drafts and evidence packages for platform or domain abuse reports',
-]
-
-const PRINCIPLES = [
-  'Prevention before recovery',
-  'Evidence over hype',
-  'Trust protection for consumers and businesses',
-  'Hybrid AI with human-readable outputs',
-  'Fast action while scam campaigns are still live',
+const FUTURE_AREAS = [
+  'Advisors',
+  'Research partnerships',
+  'Awards and grants',
+  'Publications',
+  'AI architecture overview',
+  'Enterprise customers',
+  'Press mentions',
+  'Security and privacy commitments',
 ]
 
 export function AboutPage() {
@@ -141,27 +94,25 @@ export function AboutPage() {
             className="flex items-center gap-3 text-left"
             type="button"
           >
-            <img src="/icon.png" alt="Agentic Bro" className="h-10 w-10 rounded-lg ring-1 ring-cyan-400/40" />
+            <img src="/icon.png" alt="AgenticBro" className="h-10 w-10 rounded-lg ring-1 ring-cyan-400/40" />
             <div>
               <div className="font-bold text-lg leading-tight">AgenticBro</div>
-              <div className="text-xs text-cyan-200/70">AI trust ecosystem for consumers and businesses</div>
+              <div className="text-xs text-cyan-200/70">A product of Agentic Insights LLC</div>
             </div>
           </button>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/brand-guard')}
+            <a
+              href="/brand-guard"
               className="hidden sm:inline-flex px-4 py-2 rounded-lg border border-cyan-400/25 text-cyan-100 hover:bg-cyan-500/10 text-sm font-semibold transition-colors"
-              type="button"
             >
               Brand Guard
-            </button>
-            <button
-              onClick={() => navigate('/')}
+            </a>
+            <a
+              href="/"
               className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-[#071013] text-sm font-bold transition-colors"
-              type="button"
             >
-              Start Scanning
-            </button>
+              AgenticBro
+            </a>
           </div>
         </div>
       </nav>
@@ -170,50 +121,63 @@ export function AboutPage() {
         <section className="px-4 sm:px-6 lg:px-8 py-16 sm:py-20 border-b border-white/10">
           <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/25 bg-cyan-500/10 text-cyan-200 text-sm font-semibold mb-6">
+              <a
+                href={LINKEDIN_COMPANY_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/25 bg-cyan-500/10 text-cyan-200 hover:text-white hover:bg-cyan-500/15 text-sm font-semibold mb-6 transition-colors"
+              >
                 <Building2 className="h-4 w-4" aria-hidden="true" />
-                Agentic Insights LLC | Established April 2026
-              </div>
+                Agentic Insights LLC
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-6">
-                AI trust intelligence for consumers and businesses.
+                Building the future of digital trust.
               </h1>
               <p className="text-lg sm:text-xl text-gray-300 leading-relaxed max-w-3xl">
-                Agentic Insights LLC designs, develops, deploys, and commercializes AgenticBro,
-                an artificial intelligence-powered trust ecosystem for scam detection, consumer protection,
-                business identity protection, and digital risk intelligence. The platform operates at the
-                intersection of cybersecurity, behavioral AI, decentralized infrastructure, and real-world fraud prevention.
+                Agentic Insights LLC develops AI-powered trust intelligence platforms that help consumers,
+                businesses, and enterprises make safer digital decisions before trust is established.
+              </p>
+              <p className="mt-5 text-base sm:text-lg text-gray-400 leading-relaxed max-w-3xl">
+                Our mission is to combine autonomous AI agents, hybrid AI infrastructure, and multi-source
+                threat intelligence into practical solutions that detect fraud, assess digital risk, and automate
+                investigations across websites, brands, phone numbers, social identities, domains, wallets, and
+                online communications.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => navigate('/brand-guard')}
-                  className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#071013] font-black transition-colors"
-                  type="button"
+                <a
+                  href="/"
+                  className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#071013] font-black transition-colors text-center"
+                >
+                  Explore AgenticBro
+                </a>
+                <a
+                  href="/brand-guard"
+                  className="px-6 py-3 rounded-xl border border-white/15 text-white hover:bg-white/10 font-bold transition-colors text-center"
                 >
                   Explore Brand Guard
-                </button>
-                <button
-                  onClick={() => navigate('/')}
-                  className="px-6 py-3 rounded-xl border border-white/15 text-white hover:bg-white/10 font-bold transition-colors"
-                  type="button"
-                >
-                  Run a Trust Scan
-                </button>
+                </a>
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-5">
                 <Radar className="h-7 w-7 text-cyan-300" aria-hidden="true" />
-                <h2 className="text-2xl font-bold">What we protect against</h2>
+                <h2 className="text-2xl font-bold">Trust intelligence model</h2>
               </div>
+              <p className="text-gray-300 leading-relaxed mb-5">
+                Rather than relying on a single data source, our platforms correlate evidence from multiple
+                intelligence providers, behavioral AI models, and community signals to generate explainable trust
+                scores and actionable recommendations.
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
-                  'Social media impersonation',
-                  'Fraudulent calls and texts',
-                  'Fake jobs, invoices, and vendor fraud',
-                  'Coordinated fake behavior',
-                  'Email spoofing and BEC signals',
-                  'Phishing sites, spoofed domains, and wallet drains',
+                  'Autonomous investigation',
+                  'Behavioral AI models',
+                  'Threat intelligence',
+                  'Community signals',
+                  'Explainable scoring',
+                  'Actionable response',
                 ].map((item) => (
                   <div key={item} className="rounded-xl border border-cyan-400/15 bg-cyan-500/[0.06] px-4 py-3 text-sm font-semibold text-cyan-50">
                     {item}
@@ -226,98 +190,89 @@ export function AboutPage() {
 
         <section className="px-4 sm:px-6 lg:px-8 py-16 bg-white/[0.02] border-b border-white/10">
           <div className="max-w-6xl mx-auto">
-            <div className="max-w-3xl mb-10">
-              <div className="flex items-center gap-2 text-amber-200 font-semibold mb-3">
-                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-                <span>The core problem</span>
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <div className="flex items-center justify-center gap-2 text-cyan-200 font-semibold mb-3">
+                <Sparkles className="h-5 w-5" aria-hidden="true" />
+                <span>Our platforms</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Modern fraud is a trust problem.</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Products of Agentic Insights LLC</h2>
               <p className="text-gray-400 text-lg leading-relaxed">
-                Scammers win trust before money moves. They build fake identities, clone business surfaces,
-                spoof communications, and pressure victims across social, phone, web, marketplace, and payment channels
-                where delayed enforcement and single-purpose security tools cannot provide full protection.
+                AgenticBro and Brand Guard share the same hybrid AI trust infrastructure, with product experiences
+                tailored to consumer protection and business risk operations.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
-              {PROBLEM_POINTS.map((point) => (
-                <div key={point} className="bg-[#0b1016] p-6">
-                  <CheckCircle2 className="h-5 w-5 text-cyan-300 mb-4" aria-hidden="true" />
-                  <p className="text-gray-300 leading-relaxed">{point}</p>
+
+            <div className="grid lg:grid-cols-2 gap-5">
+              <article className="rounded-2xl border border-white/10 bg-[#0b1016] p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <CircleUserRound className="h-8 w-8 text-cyan-300" aria-hidden="true" />
+                  <h3 className="text-2xl font-bold">
+                    <a href="/" className="hover:text-cyan-200 transition-colors">
+                      AgenticBro
+                    </a>
+                  </h3>
                 </div>
-              ))}
-            </div>
-            <div className="mt-8 grid sm:grid-cols-3 gap-4">
-              {[
-                ['$12.5B', 'reported U.S. consumer fraud losses in 2024'],
-                ['$1.9B', 'reported social media-originated scam losses in 2024'],
-                ['$17B', 'estimated global crypto scam and fraud losses in 2025'],
-              ].map(([value, label]) => (
-                <div key={value} className="rounded-xl border border-white/10 bg-black/35 p-5">
-                  <div className="text-3xl font-black text-white mb-1">{value}</div>
-                  <div className="text-sm text-gray-400 leading-relaxed">{label}</div>
+                <p className="text-gray-400 leading-relaxed mb-6">
+                  AgenticBro is our AI-powered Trust Intelligence platform designed to help consumers identify
+                  scams and reduce financial loss before interacting with unknown websites, investments, wallets,
+                  phone numbers, social profiles, or online businesses.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {AGENTICBRO_CAPABILITIES.map((capability) => (
+                    <div key={capability} className="flex gap-3 rounded-xl border border-cyan-400/15 bg-cyan-500/[0.06] p-4">
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400 mt-0.5" aria-hidden="true" />
+                      <span className="text-sm text-gray-200 leading-relaxed">{capability}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </article>
+
+              <article className="rounded-2xl border border-white/10 bg-[#0b1016] p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <ShieldCheck className="h-8 w-8 text-purple-300" aria-hidden="true" />
+                  <h3 className="text-2xl font-bold">
+                    <a href="/brand-guard" className="hover:text-purple-200 transition-colors">
+                      Brand Guard
+                    </a>
+                  </h3>
+                </div>
+                <p className="text-gray-400 leading-relaxed mb-6">
+                  Brand Guard extends the same AI infrastructure to businesses by continuously monitoring brand,
+                  domain, communication, marketplace, social, vendor, and reputation threats.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {BRAND_GUARD_CAPABILITIES.map((capability) => (
+                    <div key={capability} className="flex gap-3 rounded-xl border border-purple-400/15 bg-purple-500/[0.06] p-4">
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400 mt-0.5" aria-hidden="true" />
+                      <span className="text-sm text-gray-200 leading-relaxed">{capability}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-6 text-gray-400 leading-relaxed">
+                  Brand Guard helps organizations detect threats early and streamline response through automated
+                  investigations, evidence collection, and takedown workflows.
+                </p>
+              </article>
             </div>
           </div>
         </section>
 
-        <section className="px-4 sm:px-6 lg:px-8 py-16">
-          <div className="max-w-6xl mx-auto mb-16">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Supported attack surfaces</h2>
-              <p className="text-gray-400 text-lg leading-relaxed">
-                AgenticBro is built for the channels where trust is created, abused, and converted into losses.
-                Web3 is one surface. The broader ecosystem covers social media, phones, websites, domains, email,
-                marketplaces, business workflows, and payment paths.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {ATTACK_SURFACES.map(({ icon: Icon, title, description }) => (
-                <div key={title} className="rounded-xl border border-white/10 bg-white/[0.035] p-5">
-                  <Icon className="h-7 w-7 text-cyan-300 mb-4" aria-hidden="true" />
-                  <h3 className="font-bold text-white mb-2">{title}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto mb-16">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">One trust layer for two audiences</h2>
-              <p className="text-gray-400 text-lg leading-relaxed">
-                AgenticBro is designed to serve people making everyday trust decisions and businesses defending the
-                public surfaces customers rely on.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              {AUDIENCES.map(({ icon: Icon, title, description, examples }) => (
-                <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-                  <Icon className="h-8 w-8 text-cyan-300 mb-5" aria-hidden="true" />
-                  <h3 className="text-2xl font-bold mb-3">{title}</h3>
-                  <p className="text-gray-400 leading-relaxed mb-5">{description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {examples.map((example) => (
-                      <span key={example} className="px-3 py-1 rounded-full border border-cyan-400/15 bg-cyan-500/[0.06] text-xs font-semibold text-cyan-100">
-                        {example}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+        <section className="px-4 sm:px-6 lg:px-8 py-16 border-b border-white/10">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">A hybrid trust intelligence platform</h2>
+            <div className="max-w-3xl mb-10">
+              <div className="flex items-center gap-2 text-cyan-200 font-semibold mb-3">
+                <BrainCircuit className="h-5 w-5" aria-hidden="true" />
+                <span>Our technology</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Hybrid AI architecture for scalable investigations</h2>
               <p className="text-gray-400 text-lg leading-relaxed">
-                AgenticBro combines scan tools, local AI workers, cloud reasoning, durable queues, and external
-                threat intelligence to create practical trust signals for consumers, businesses, brands, and organizations.
+                Our production platform combines autonomous OpenClaw AI agents, locally hosted large language
+                models, cloud AI reasoning, queue-based orchestration, continuous monitoring, multi-source threat
+                intelligence, and explainable AI risk scoring.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {CAPABILITIES.map(({ icon: Icon, title, description }) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {TECHNOLOGY_POINTS.map(({ icon: Icon, title, description }) => (
                 <div key={title} className="rounded-xl border border-white/10 bg-white/[0.035] p-6">
                   <Icon className="h-7 w-7 text-cyan-300 mb-5" aria-hidden="true" />
                   <h3 className="text-lg font-bold mb-2">{title}</h3>
@@ -325,58 +280,100 @@ export function AboutPage() {
                 </div>
               ))}
             </div>
+            <p className="mt-8 text-gray-400 text-lg leading-relaxed max-w-4xl">
+              The platform is designed for scalable AI investigations while balancing local inference with cloud
+              reasoning to optimize performance, privacy, and operational cost.
+            </p>
           </div>
         </section>
 
-        <section className="px-4 sm:px-6 lg:px-8 py-16 bg-white/[0.02] border-y border-white/10">
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14">
+        <section className="px-4 sm:px-6 lg:px-8 py-16 bg-white/[0.02] border-b border-white/10">
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-start">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-400/25 bg-purple-500/10 text-purple-200 text-sm font-semibold mb-5">
-                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Brand Guard
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/25 bg-cyan-500/10 text-cyan-200 text-sm font-semibold mb-5">
+                <Landmark className="h-4 w-4" aria-hidden="true" />
+                Founder verification
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Business trust protection built into the ecosystem.</h2>
-              <p className="text-gray-400 text-lg leading-relaxed mb-6">
-                Brand Guard is the business protection layer inside AgenticBro. It helps companies detect fake accounts,
-                spoofable email configurations, cloned domains, fraudulent listings, and vendor impersonation before
-                customers, employees, or partners are redirected into a scam.
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Founder</h2>
+              <p className="text-gray-400 text-lg leading-relaxed">
+                Agentic Insights LLC is led by a hands-on founder with enterprise architecture experience and direct
+                ownership of the deployed AI trust infrastructure.
               </p>
-              <button
-                onClick={() => navigate('/brand-guard')}
-                className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors"
-                type="button"
-              >
-                Open Brand Guard
-              </button>
             </div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {BRAND_GUARD_DETAILS.map((detail) => (
-                <div key={detail} className="flex gap-3 rounded-xl border border-purple-400/15 bg-purple-500/[0.06] p-4">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400 mt-0.5" aria-hidden="true" />
-                  <span className="text-sm text-gray-200 leading-relaxed">{detail}</span>
+            <article className="rounded-2xl border border-white/10 bg-black/35 p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold">Earl Finney</h3>
+                  <p className="text-cyan-200 font-semibold mt-1">Founder &amp; Lead Developer</p>
+                  <p className="text-gray-400">Agentic Insights LLC</p>
                 </div>
-              ))}
-            </div>
+                <a
+                  href={LINKEDIN_PROFILE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#0a66c2] hover:bg-[#0b5cad] text-white text-sm font-bold transition-colors"
+                  aria-label="Open Earl Finney LinkedIn profile"
+                >
+                  <Linkedin className="h-4 w-4" aria-hidden="true" />
+                  LinkedIn
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Earl is an Enterprise Architect with more than 30 years of experience designing enterprise
+                technology solutions for government and commercial organizations. He founded Agentic Insights LLC
+                to build production AI platforms focused on trust intelligence, fraud prevention, and autonomous AI.
+              </p>
+              <div className="mt-6 grid sm:grid-cols-2 gap-3">
+                <a
+                  href={LINKEDIN_PROFILE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-4 hover:bg-white/[0.07] transition-colors"
+                >
+                  <div className="text-sm text-gray-400 mb-1">Founder LinkedIn</div>
+                  <div className="text-cyan-100 font-semibold break-words">linkedin.com/in/earl-finney-60259a4</div>
+                </a>
+                <a
+                  href={LINKEDIN_COMPANY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-4 hover:bg-white/[0.07] transition-colors"
+                >
+                  <div className="text-sm text-gray-400 mb-1">Company LinkedIn</div>
+                  <div className="text-cyan-100 font-semibold break-words">Agentic Insights LLC</div>
+                </a>
+              </div>
+            </article>
           </div>
         </section>
 
         <section className="px-4 sm:px-6 lg:px-8 py-16">
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-start">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Company purpose</h2>
+              <div className="flex items-center gap-2 text-cyan-200 font-semibold mb-3">
+                <Globe2 className="h-5 w-5" aria-hidden="true" />
+                <span>Company mission</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Trustworthy digital decisions through intelligent automation</h2>
               <p className="text-gray-400 text-lg leading-relaxed">
-                Agentic Insights LLC exists to reduce the gap between when a scam appears and when people can recognize it.
-                The company focuses on AI-assisted intelligence, practical risk scoring, and response workflows that make
-                trust decisions faster, clearer, and more accessible for both consumers and businesses across digital channels.
+                Our vision is to build AI systems that help people and organizations make more informed, trustworthy
+                digital decisions through intelligent automation, explainable AI, and continuous trust monitoring.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/35 p-6 sm:p-8">
-              <h3 className="text-xl font-bold mb-5">Operating principles</h3>
-              <div className="space-y-4">
-                {PRINCIPLES.map((principle) => (
-                  <div key={principle} className="flex items-center gap-3">
-                    <div className="h-2.5 w-2.5 rounded-full bg-cyan-300" />
-                    <span className="text-gray-200 font-semibold">{principle}</span>
+              <h3 className="text-xl font-bold mb-5">Future credibility areas</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {FUTURE_AREAS.map((area) => (
+                  <div key={area} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3">
+                    {area.includes('Security') ? (
+                      <MailCheck className="h-5 w-5 shrink-0 text-green-300" aria-hidden="true" />
+                    ) : area.includes('Publications') || area.includes('Press') ? (
+                      <FileText className="h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
+                    ) : (
+                      <BriefcaseBusiness className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
+                    )}
+                    <span className="text-sm text-gray-200 font-semibold">{area}</span>
                   </div>
                 ))}
               </div>

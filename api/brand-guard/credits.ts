@@ -22,6 +22,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import { requireBrandGuardEntitlement } from '../_lib/brand-guard-entitlements.js';
+import { BRAND_GUARD_LEGAL_VERSIONS, verifyLegalAcceptanceId } from '../_lib/brand-guard-legal.js';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const env = (name: string, fallback = '') => (process.env[name] || fallback).trim();
@@ -40,8 +41,8 @@ const STRIPE_PRICES = {
 
 // ── Brand Guard Subscription Plans ────────────────────────────────────────────
 const SUBSCRIPTION_PLANS = [
-  { id: 'guardian', name: 'Guardian', price_usd: 29, monthly_credits: 50, brands_included: 3, stripe_price_id: STRIPE_PRICES['bg-guardian'] },
-  { id: 'sentinel', name: 'Sentinel', price_usd: 99, monthly_credits: 200, brands_included: 10, stripe_price_id: STRIPE_PRICES['bg-sentinel'] },
+  { id: 'guardian', name: 'Guardian', price_usd: 29, monthly_credits: 100, brands_included: 3, stripe_price_id: STRIPE_PRICES['bg-guardian'] },
+  { id: 'sentinel', name: 'Sentinel', price_usd: 99, monthly_credits: 300, brands_included: 10, stripe_price_id: STRIPE_PRICES['bg-sentinel'] },
   { id: 'fortress', name: 'Fortress', price_usd: 299, monthly_credits: -1, brands_included: -1, stripe_price_id: STRIPE_PRICES['bg-fortress'] }, // -1 = unlimited
 ];
 
@@ -389,6 +390,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const body = await parseBody(req);
     const planId = body.plan_id as string; // guardian | sentinel | fortress
     const email = body.email as string | undefined;
+    const legalAcceptanceId = body.legal_acceptance_id as string | undefined;
 
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
     if (!plan) {
@@ -402,6 +404,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     try {
+      const accepted = await verifyLegalAcceptanceId(serviceClient, userId, legalAcceptanceId);
+      if (!accepted) {
+        res.status(428).json({
+          error: 'Legal acceptance required before checkout',
+          code: 'LEGAL_ACCEPTANCE_REQUIRED',
+          required_versions: BRAND_GUARD_LEGAL_VERSIONS,
+        });
+        return;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Legal acceptance verification failed';
+      res.status(500).json({ error: message });
+      return;
+    }
+
+    try {
       const checkoutParams: Record<string, string> = {
         'mode': 'subscription',
         'success_url': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://agenticbro.app'}/brand-guard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -410,9 +428,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         'metadata[plan_id]': planId,
         'metadata[package_id]': plan.stripe_price_id,
         'metadata[type]': 'subscription',
+        'metadata[legal_acceptance_id]': legalAcceptanceId || '',
+        'metadata[tos_version]': BRAND_GUARD_LEGAL_VERSIONS.tos_version,
+        'metadata[privacy_version]': BRAND_GUARD_LEGAL_VERSIONS.privacy_version,
+        'metadata[acceptable_use_version]': BRAND_GUARD_LEGAL_VERSIONS.acceptable_use_version,
         'subscription_data[trial_period_days]': '7',
         'subscription_data[metadata][user_id]': userId || '',
         'subscription_data[metadata][plan_id]': planId,
+        'subscription_data[metadata][legal_acceptance_id]': legalAcceptanceId || '',
         'line_items[0][price]': plan.stripe_price_id,
         'line_items[0][quantity]': '1',
       };

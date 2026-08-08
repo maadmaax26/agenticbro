@@ -4,12 +4,47 @@
  *
  * Main entry point - Minimal working version
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
@@ -79,27 +114,25 @@ const scan_1 = __importDefault(require("../routes/scan"));
 const verify_1 = __importDefault(require("../routes/verify"));
 const sync_1 = __importDefault(require("../routes/sync"));
 const sla_1 = __importDefault(require("../routes/brand-guard/sla"));
-const takedown_1 = __importDefault(require("../routes/brand-guard/takedown"));
-const fingerprint_1 = __importDefault(require("../routes/brand-guard/fingerprint"));
-const marketplace_1 = __importDefault(require("../routes/brand-guard/marketplace"));
+const url_scan_1 = __importDefault(require("../routes/url-scan"));
+const website_scan_1 = __importDefault(require("../routes/website-scan"));
 app.use('/api/v1/scan', scan_1.default);
+app.use('/api/v1/scan', url_scan_1.default);
+app.use('/v1/website', website_scan_1.default);
 app.use('/api/v1/verify', verify_1.default);
 app.use('/api/v1/sync', sync_1.default);
 app.use('/api/brand-guard', sla_1.default);
-app.use('/api/brand-guard/takedown', takedown_1.default);
-app.use('/api/brand-guard/fingerprint', fingerprint_1.default);
-app.use('/api/brand-guard/marketplace', marketplace_1.default);
 // Serve admin dashboard
 app.get('/admin', (req, res) => {
     try {
         const adminHtml = fs.readFileSync(path.join(__dirname, '../../public/admin/index.html'), 'utf-8');
         res.set('Content-Type', 'text/html');
         return res.send(adminHtml);
-    } catch (_a) {
+    }
+    catch {
         return res.status(404).send('Admin page not found');
     }
 });
-
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
@@ -122,12 +155,27 @@ app.use((err, req, res, next) => {
         },
     });
 });
-// Vercel serverless export (app.listen for local dev)
-if (process.env.VERCEL) {
-    module.exports = app;
-} else {
-    app.listen(PORT, () => {
-        console.log('Agentic Bro API Server running on port ' + PORT);
-    });
-}
+// Start server
+app.listen(PORT, () => {
+    console.log('');
+    console.log('╔════════════════════════════════════════════╗');
+    console.log('║                                            ║');
+    console.log('║   🛡️  Agentic Bro API Server              ║');
+    console.log('║                                            ║');
+    console.log('║   Port: ' + PORT + '                              ║');
+    console.log('║   Host: ' + HOST + '                          ║');
+    console.log('║   Environment: ' + (process.env.NODE_ENV || 'development') + '                    ║');
+    console.log('║                                            ║');
+    console.log('║   Status: Running (minimal mode)           ║');
+    console.log('║                                            ║');
+    console.log('║   Endpoints:                               ║');
+    console.log('║   • GET  /health                           ║');
+    console.log('║   • GET  /api/v1                            ║');
+    console.log('║   • POST /api/v1/verify/profile             ║');
+    console.log('║   • POST /api/v1/scan/token                 ║');
+    console.log('║                                            ║');
+    console.log('╚════════════════════════════════════════════╝');
+    console.log('');
+});
 exports.default = app;
+//# sourceMappingURL=index.js.map

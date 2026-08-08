@@ -80,7 +80,7 @@ router.post('/profile', async (req: Request, res: Response) => {
             payload: { url: websiteUrl, timeout: 20 },
             status: 'pending',
             priority: 5,
-          }).execute();
+          });
           // Include the job ID so frontend can poll for JS detonation results
           result.urlScanJobId = jobId;
           result.urlScanPollUrl = `/api/v1/scan/url/${jobId}`;

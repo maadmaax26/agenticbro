@@ -111,10 +111,11 @@ def _verify_contact_email(prospect: "Prospect") -> dict[str, Any]:
 DEFAULT_SENDER = {
     "sender_name": "Earl Finney",
     "sender_title": "Founder",
+    "sender_org": "Agentic Insights LLC",
     "company_address": "155 Willowbrook Blvd, Ste 110 #8469, Wayne, New Jersey 07470",
     "optout_url": "https://agenticbro.app/brand-guard/optout",
     "scan_url": "https://agenticbro.app/brand-guard/scan",
-    "trial_url": "https://agenticbro.app/brand-guard",
+    "trial_url": "https://agenticbro.app/brand-guard?request_pilot=1",
     "site": "agenticbro.app/brand-guard",
 }
 
@@ -123,8 +124,9 @@ D_SUBJECT = "30-day Brand Guard trial for {{company}}"
 D_BODY = """\
 Hi {{contact_first_name}},
 
-I'm {{sender_name}}, {{sender_title}} at Brand Guard
-({{site}} — feel free to verify us before reading on).
+I'm {{sender_name}}, {{sender_title}} of Agentic Insights LLC. We created
+Brand Guard, a brand-protection service that's part of the AgenticBro trust
+ecosystem ({{site}} — feel free to verify us before reading on).
 
 While reviewing public records, we noticed something about {{company}}:
 - {{finding_1}}
@@ -140,13 +142,15 @@ evidence records, and takedown workflow support.
 No card, no commitment. You'll see what continuous monitoring finds
 before deciding on a paid plan.
 
-Start your 30-day pilot here: {{trial_url}}
+Start your 30-day pilot here (create your account with email + password to
+onboard your brand and open your dashboard): {{trial_url}}
 
 If this isn't relevant, no worries at all and apologies for the interruption.
 
 Best,
 {{sender_name}}
-{{sender_title}}, Brand Guard"""
+{{sender_title}}, Agentic Insights LLC
+Brand Guard — part of the AgenticBro trust ecosystem"""
 D_FOOTER = """\
 —
 Brand Guard · Agentic Insights LLC · {{company_address}}
@@ -164,31 +168,35 @@ found via public records:
 - {{finding_2}}
 Public source: {{evidence_url}}
 
-We're Brand Guard ({{site}}), a brand-protection service. We're opening a
-limited 30-day pilot for {{company}} — a $299 value on us. Fortress monitors
+We're Agentic Insights LLC — we created Brand Guard ({{site}}), a
+brand-protection service that's part of the AgenticBro trust ecosystem. We're
+opening a limited 30-day pilot for {{company}} — a $299 value on us. Fortress monitors
 for social impersonators, lookalike domains, fake stores, spoofed email
 posture, marketplace clones, alerts, evidence records, and takedown
 workflow support.
 
-No card, no commitment. Start the pilot here: {{trial_url}}
+No card, no commitment. Start the pilot here (create your account with email +
+password to onboard your brand): {{trial_url}}
 
 Happy to provide details to a named contact if helpful.
 
-{{sender_name}} · {{sender_title}} · Brand Guard
+{{sender_name}} · {{sender_title}}, Agentic Insights LLC · Brand Guard (AgenticBro trust ecosystem)
 {{company_address}} · opt out: {{optout_url}}"""
 
 A_BODY = """\
 Sorry you're dealing with this — impersonation is exhausting to chase.
 We're running a 30-day Brand Guard pilot (normally $299, free right now)
 that monitors lookalike domains, social impersonators, and email spoofing
-in one place. No card needed: {{trial_url}}
-We're Brand Guard, {{site}}. Happy to point you to takedown steps either way."""
+in one place. No card needed — create your account with email + password to
+onboard your brand: {{trial_url}}
+We're Agentic Insights LLC — we created Brand Guard ({{site}}), part of the
+AgenticBro trust ecosystem. Happy to point you to takedown steps either way."""
 
 C_CONNECTION = """\
-Hi {{contact_first_name}} — I'm {{sender_name}}, founder of Brand Guard. We
-flag brand impersonation for companies like {{company}} and noticed something
-public worth a heads-up. We're running a free 30-day pilot — happy to share
-details. ({{site}})"""
+Hi {{contact_first_name}} — I'm {{sender_name}}, founder of Agentic Insights LLC.
+We created Brand Guard (part of the AgenticBro trust ecosystem), which flags brand
+impersonation for companies like {{company}}, and noticed something public worth a
+heads-up. We're running a free 30-day pilot — happy to share details. ({{site}})"""
 C_AFTER_ACCEPT = """\
 Thanks for connecting, {{contact_first_name}}. The specific thing: {{finding_1_inline}}.
 Public source: {{evidence_url}}.
@@ -196,7 +204,8 @@ Public source: {{evidence_url}}.
 We're running a 30-day Brand Guard pilot for {{company}} — normally $299,
 free during the pilot. Fortress monitors lookalike domains, social
 impersonators, email spoofing, marketplace clones, and includes takedown
-workflow support. No card needed:
+workflow support. No card needed — create your account with email + password to
+onboard your brand:
 
 {{trial_url}}
 
@@ -439,7 +448,7 @@ def _try_llm_polish(prospect: "Prospect", findings: list[str], channel: str,
     except Exception:
         return None
 
-    sender_block = f"{sender['sender_name']}, {sender['sender_title']}, Brand Guard ({sender['site']})"
+    sender_block = f"{sender['sender_name']}, {sender['sender_title']}, {sender.get('sender_org', 'Agentic Insights LLC')} — Brand Guard, part of the AgenticBro trust ecosystem ({sender['site']})"
     findings_payload = {"findings": findings, "evidence_url": _evidence_url(prospect)}
     try:
         out = llm.draft_email(prospect.to_dict(), findings_payload, channel, sender_block)

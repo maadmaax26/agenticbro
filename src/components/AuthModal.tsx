@@ -35,6 +35,8 @@ export default function AuthModal({
     isAuthenticated,
     user,
     linkWalletToEmailAccount,
+    needsEmailConfirmation,
+    clearEmailConfirmation,
   } = useAuth();
   
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -74,6 +76,63 @@ export default function AuthModal({
   }, [mode]);
 
   if (!isOpen) return null;
+
+  // ── Email Confirmation Screen (shown after registration if confirmation needed) ──
+  if (needsEmailConfirmation && !isAuthenticated) {
+    return (
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+        onClick={(e) => e.target === e.currentTarget && (clearEmailConfirmation(), onClose())}
+      >
+        <div 
+          className="w-full max-w-md rounded-2xl p-6 relative"
+          style={{
+            background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 0, 0, 0.95) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          <button
+            onClick={() => { clearEmailConfirmation(); onClose(); }}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">📧</div>
+            <h2 className="text-2xl font-bold text-white">Check Your Email</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              We sent a confirmation link to your email. Click the link to activate your account, then sign in.
+            </p>
+          </div>
+
+          <div 
+            className="p-4 rounded-lg text-sm text-center"
+            style={{
+              background: 'rgba(139, 92, 246, 0.08)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              color: '#c4b5fd',
+            }}
+          >
+            ✉️ Didn't get the email? Check your spam folder. If you still don't see it after a few minutes, try signing in — if your email is confirmed, you'll get access.
+          </div>
+
+          <button
+            onClick={() => { clearEmailConfirmation(); setMode('login'); }}
+            className="w-full mt-4 py-3 px-6 rounded-lg font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+              boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+            }}
+          >
+            I've confirmed — Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Wallet Link Step (shown after email auth if no wallet linked) ──────────
   if (showWalletLink && isAuthenticated) {
@@ -251,11 +310,25 @@ export default function AuthModal({
         return;
       }
       
-      const { error: regError } = await registerWithEmail(email, password);
+      const result = await registerWithEmail(email, password);
+      const { error: regError, needsConfirmation } = result;
       if (regError) {
         setError(regError);
+      } else if (needsConfirmation) {
+        // Email confirmation required — the AuthModal will show the confirmation screen
+        // via needsEmailConfirmation state from useAuth()
+        // Fire Google Ads sign-up conversion on successful registration (even pre-confirmation)
+        const conversionFired = sessionStorage.getItem('gads_signup_conversion');
+        if (!conversionFired && typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'conversion', {
+            send_to: 'AW-18179207888/YqbSCI_OoLIcENDlwtxD',
+            value: 1.0,
+            currency: 'USD',
+          });
+          sessionStorage.setItem('gads_signup_conversion', '1');
+        }
       } else {
-        // Fire Google Ads sign-up conversion on successful email registration
+        // Fully registered (no confirmation needed) — fire conversion
         const conversionFired = sessionStorage.getItem('gads_signup_conversion');
         if (!conversionFired && typeof window !== 'undefined' && (window as any).gtag) {
           (window as any).gtag('event', 'conversion', {

@@ -12,7 +12,7 @@ We're building AI-powered scam detection for Solana. Real tools, real protection
 **Why hold $AGNTCBRO?**
 • Token is backed by real product usage — not a meme
 • $100+ holders get **100 scans/month** at agenticbro.app
-• First 10 scans free for everyone
+• First 5 scans free every day for everyone
 • **Brand Guard** (B2B impersonation monitoring) generates revenue from businesses
 • **50% of Brand Guard revenue → buybacks + community treasury**
 

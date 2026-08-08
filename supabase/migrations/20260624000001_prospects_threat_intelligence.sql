@@ -1,6 +1,11 @@
 -- Add threat_category and financial_impact_score columns to prospects table
 -- These integrate the outreach intelligence system with the prospects pipeline
 
+CREATE TABLE IF NOT EXISTS prospects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS threat_category text;
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS financial_impact_score numeric(5,2);
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS threat_tier text;

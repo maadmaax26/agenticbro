@@ -124,6 +124,46 @@ python3 -m crm.telegram_review callback "<callback_data>" \
   "<from_id>" "<callback_query_id>" "<chat_id>" "<message_id>"
 ```
 
+## Incident Discovery Telegram command center
+
+`incident-daily-cron-job.json` and `incident-alerts-cron-job.json` deploy the
+new `incident_discovery_agent.py` as OpenClaw command jobs:
+
+- `brand-guard-incident-daily`: `15 7 * * *` America/New_York. Posts the morning
+  Brand Guard Daily Incident Report, top outreach opportunities, industry and
+  attack summaries, trend detection, sales queue, social content pack, and the
+  Friday weekly executive/product report.
+- `brand-guard-incident-alerts`: `5 * * * *` America/New_York. Runs an hourly
+  score-90+ sweep and posts only immediate high-priority incidents. If there is
+  no qualifying incident, the command prints `NO_REPLY`.
+
+The deployed commands use:
+
+```bash
+BRANDGUARD_ENV_FILE=~/.openclaw/workspace/brand-guard-agent/.env.incidents \
+python3 incident_discovery_agent.py --live --post-telegram --max-items 40
+```
+
+Telegram delivery reads `MADMAX_TELEGRAM_BOT_TOKEN` plus
+`MADMAX_TELEGRAM_CHAT_ID` first, then falls back to `BG_BOT_TOKEN` /
+`TELEGRAM_BOT_TOKEN` and `BG_INCIDENT_CHAT_ID` / `BG_CHAT_ID`. OpenClaw fallback
+delivery is disabled on both jobs so Telegram output is controlled by the agent
+itself.
+
+To run it on demand from a Telegram/OpenClaw session, ask the agent to execute
+one of these commands:
+
+```bash
+cd ~/.openclaw/workspace/brand-guard-agent && python3 crm/incident_trigger.py daily
+cd ~/.openclaw/workspace/brand-guard-agent && python3 crm/incident_trigger.py alerts
+cd ~/.openclaw/workspace/brand-guard-agent && python3 crm/incident_trigger.py preview
+cd ~/.openclaw/workspace/brand-guard-agent && python3 crm/incident_trigger.py status
+```
+
+`daily` and `alerts` post to the configured Madmax Telegram group. `preview`
+prints a live report without posting. `status` shows the last report timestamp
+and the deployed OpenClaw job IDs.
+
 ## What this does NOT do
 
 - It does not send email. There is no transport imported anywhere in `worker.py`.
