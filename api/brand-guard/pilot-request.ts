@@ -79,6 +79,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     .select('id, status, created_at')
     .single();
 
+  // Notify admin
+  const adminMsg = `🆕 *New Pilot Request*
+🏢 *Company:* ${companyName}
+🔍 *Brand:* ${brandName}
+🌐 *Website:* ${website}
+📧 *Email:* ${email}
+🎯 *Concern:* ${concern}`;
+  
+  // 1. Send Telegram Notification
+  const botToken = process.env.BG_BOT_TOKEN;
+  const adminChatId = "2122311885"; // Madmax
+  if (botToken) {
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: adminChatId, text: adminMsg, parse_mode: 'Markdown' })
+    }).catch(e => console.error('Failed to send Telegram notification:', e));
+  }
+
+  // 2. Send Email Notification
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Brand Guard <alerts@agenticbro.app>',
+        to: ['Agenticbro@agenticbro.app'],
+        subject: `🆕 New Brand Guard Pilot Request: ${companyName}`,
+        html: adminMsg.replace(/\n/g, '<br>'),
+      }),
+    }).catch(e => console.error('Failed to send Email notification:', e));
+  }
+
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.status(200).json({ success: true, request: data });
 }
