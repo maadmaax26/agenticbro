@@ -140,6 +140,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Calls the DB function that creates the credits row if it doesn't exist
     // Supports promo codes: e.g. beta2026 grants 500 free scans
     const promoCode = (body.promo_code as string) || null;
+    
+    // Notify admin of new brand/account
+    const adminEmail = 'Agenticbro@agenticbro.app';
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Brand Guard <alerts@agenticbro.app>',
+          to: [adminEmail],
+          subject: `🆕 New Brand Guard Account Created: ${brand_name}`,
+          html: `
+            <h1>New Brand Guard Account Created</h1>
+            <p><strong>Brand:</strong> ${brand_name}</p>
+            <p><strong>Handle:</strong> @${brand_handle}</p>
+            <p><strong>Domain:</strong> ${brand_domain || 'N/A'}</p>
+            <p><strong>User ID:</strong> ${userId}</p>
+            <p><strong>Promo Code:</strong> ${promoCode || 'None'}</p>
+          `,
+        }),
+      }).catch(e => console.error('Failed to send New Account email notification:', e));
+    }
+
     try {
       const { data: creditData } = await supabase.rpc('initialize_brand_guard_credits', {
         p_owner_id: userId,
